@@ -1,0 +1,7 @@
+FUNCTIONDRIVER
+NAME		"Competition Pro Game Controller"
+VENDOR		121
+PRODUCT		6172
+TYPE		FUNCTION
+PRI		1
+DRIVER		"CompPro.usbfd"

@@ -1,0 +1,95 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+#ifndef INC_PRIVATE_USB2_ALL_H
+#error Include "usb2_all.h" first
+#endif
+
+#ifndef INC_PRIVATE_FUNCTION_H
+#define INC_PRIVATE_FUNCTION_H
+
+/***************************************************************************/
+
+struct RealFunctionNode
+{
+	struct USB2_Function			fkt_Public;					// At the moment must be first, todo: do same as EPResource or ?
+	U32								fkt_StructID;
+	S32								fkt_Locks;
+	U16								fkt_Detach;
+	U16								fkt_FreeMe;
+//	struct USB2_TaskNode *			fkt_Task; 
+	struct USB2_ASync *				fkt_ASync;
+	// --
+	S32								fkt_ActiveIOReq;
+	struct USB2_Semaphore			fkt_Semaphore;
+//	struct USB2_ASync *				fkt_HUB_ASync;
+	struct RealFunctionNode *		fkt_Parent;
+	USB2_ID							fkt_NotifyID;
+//	STR								fkt_ProcessName;
+
+	U8								fkt_SelfPowered;
+	U8								fkt_Initialized;
+//	U8								fkt_NeedPromotion;
+//	U8								fkt_Freeing;				// Used by Unlock function
+//	U8								fkt_FreeAgain;				// Some resources have been freeing
+//	U8								fkt_Pad[2];
+
+	U32								fkt_Tier;
+	U32								fkt_Address;
+	U32								fkt_PortNr;
+	U32								fkt_LanguageID;
+
+	U16								fkt_Class;
+	U16								fkt_SubClass;
+	U16								fkt_Protocol;
+//	U16								fkt_ConfigNr;
+
+	U32								fkt_Speed;					// Max Speed
+
+	U16 *							fkt_ManufacturerStr;
+	S32								fkt_ManufacturerStrLen;
+	U16 *							fkt_DeviceStr;
+	S32								fkt_DeviceStrLen;
+	U16 *							fkt_SerialStr;
+	S32								fkt_SerialStrLen;
+
+	U32								fkt_HUB_Data;				// Used by HUB
+
+//	struct USB2_Header				fkt_Drivers;				// Driver connect too this Fkt, USB2_DriverNode, use dev_Process_Semaphore
+
+	struct USB2_Node				fkt_DriverNode;				// HUB list
+	struct USB2_Node				fkt_GlobalNode;				// Device list
+
+	struct USB2_Header				fkt_Configs;
+	struct USB2_ConfigNode *		fkt_Config_Active;
+	U32								fkt_Config_Desc_Size;
+	struct USB2_Descriptor *		fkt_Config_Desc_Buf;
+
+	struct USB2_Device_Desc *		fkt_DeviceDescriptor;
+	struct USB2_HUB_Desc *			fkt_HUBDescriptor;			// Only valid when HUB Device
+
+//	#ifdef DO_IOTRACE
+//	char							fkt_FDTitle[16];
+//	#endif
+
+	struct USB2_HCDNode *			fkt_HCD;
+	struct USB2_EndPointNode *		fkt_ControlEndPoint;
+
+//	struct USB2_FunctionDriverNode *fkt_FunctionDriverNode;		// if AutoStarted via a Function Driver
+
+	S32								fkt_InterfaceClaimLocks;
+	struct RealRegister *			fkt_Owner;
+//	S32								fkt_Locks;
+//	struct USB2_Header				fkt_ExpungedList;
+//	struct USB2_Node				fkt_ResourceTrackingNode;
+};
+
+/***************************************************************************/
+
+#endif // INC_PRIVATE_FUNCTION_H

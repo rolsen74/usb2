@@ -1,0 +1,11 @@
+
+/*
+** Stack/EndPointRes
+**
+**   Endpoint resources. This section contains code to allocate endpoints
+**   and manage all related resources. Drivers need access to buffers,
+**   requesters, and other resources.
+**
+**   All support for these operations is provided here, including allocation,
+**   freeing, locking, validation, as well as obtaining and releasing resources.
+*/

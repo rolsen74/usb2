@@ -1,0 +1,7 @@
+
+/*
+** Stack/Interface
+**
+**   Interfaces are split into 3 structs: Group, Header, and Node.
+**   This function supports creating, deleting, locking, and validating.
+*/

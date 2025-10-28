@@ -1,0 +1,57 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+SEC_CODE static S32 __Get_Config( 
+		struct USB2_SetupData *sd, 
+		struct USB2_HCDNode *hn,
+UNUSED	struct USBBase *usbbase,
+		PTR buffer, 
+		U32 *max )
+{
+U16 wLength;
+U16 wValue;
+U16 wIndex;
+S32 err;
+
+	err		= USB2Err_Host_Stall;
+	wValue	= LE_SWAP16( sd->Value );
+	wIndex	= LE_SWAP16( sd->Index );
+	wLength	= LE_SWAP16( sd->Length );
+
+	/**/ if	( sd->RequestType == ( REQTYPE_Read | REQTYPE_Standard | REQTYPE_Device ))
+	{
+		if (( wValue == 0 ) && ( wIndex == 0 ) && ( wLength == 1 ))
+		{
+			U8 *Cfgnr = buffer;
+
+			Cfgnr[0]	= hn->hn_HUB_ConfigNr;
+			USBDEBUG( "__Get_Config: Get Config Nr #%lu", (U32) Cfgnr[0] );
+			*max		= 1;
+			err			= USB2Err_NoError;
+		}
+		else
+		{
+			USBDEBUG( "__Get_Config : Unknonw 2" );
+		}
+	}
+	else
+	{
+		USBDEBUG( "__Get_Config : Unknonw 1" );
+	}
+
+	return( err );
+}
+
+// --

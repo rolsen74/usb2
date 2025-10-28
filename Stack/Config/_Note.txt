@@ -1,0 +1,8 @@
+
+/*
+** Stack/Config
+**
+**   Support for device configuration.
+**   This code handles allocation, freeing, locking, validation, and parsing
+**   of configuration descriptors.
+*/

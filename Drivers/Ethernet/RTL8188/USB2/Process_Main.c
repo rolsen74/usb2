@@ -1,0 +1,87 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "All.h"
+
+// --
+
+#include "src/Process_Main_BeginIO.c"
+
+#include "Process_Main_Shutdown.c"
+//#include "Process_Main_Buffer.c"
+//#include "Process_Main_Direct.c"
+
+// --
+
+void Process_Main( struct EthernetUnit *unit )
+{
+U32 wait;
+U32 mask;
+
+	USBERROR( "RTL8188 : __myProcess_Main : Enter" );
+
+	wait = SIGBREAKF_CTRL_C;
+	wait |= unit->unit_ETH_Begin_MsgPortBit;
+	wait |= unit->unit_ETH_Abort_MsgPortBit;
+	wait |= unit->unit_Bulk_Tx_Resource->MsgPortBit;
+
+	unit->unit_Running = TRUE;
+
+	while( unit->unit_Running )
+	{
+		mask = Wait( wait );
+
+		if ( mask & unit->unit_ETH_Abort_MsgPortBit )
+		{
+
+		}
+
+		if ( mask & unit->unit_ETH_Begin_MsgPortBit )
+		{
+			__myProcess_Main_BeginIO( unit );
+		}
+
+		if ( mask & unit->unit_Bulk_Tx_Resource->MsgPortBit )
+		{
+//			if ( unit->unit_Buffer_Size )
+//			{
+//				__myProcess_Main_Buffer( unit );
+//			}
+//			else
+//			{
+//				__myProcess_Main_Direct( unit );
+//			}
+		}
+
+		if ( mask & SIGBREAKF_CTRL_C )
+		{
+			if ( unit->unit_ExitParent )
+			{
+				__myProcess_Main_Shutdown( unit );
+			}
+		}
+	}
+
+	unit->unit_StartupComplete = FALSE;
+
+	#if 0
+	USBERROR( "Lasy byte : $%02lx (%ld)", (S32) unit->unit_LastByteSend, (S32) unit->unit_LastByteSend );
+	if (( unit->unit_LastByteSend != '\f' )
+	&&	( unit->unit_Detached == 0 ))
+	{
+		Send_FormFeed( unit );
+	}
+	#endif
+
+	USBERROR( "RTL8188 : __myProcess_Main : Leave" );
+}
+
+// --

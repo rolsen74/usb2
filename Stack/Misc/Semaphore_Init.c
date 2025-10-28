@@ -1,0 +1,39 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+SEC_CODE void __Semaphore_Init( struct USBBase *usbbase, struct USB2_Semaphore *us )
+{
+struct ExecIFace *IExec;
+
+	#ifdef DO_PANIC
+
+	if ( ! us )
+	{
+		USBPANIC( "Semaphore_Init : 1 : NULL Pointer" );
+	}
+
+	if (( us->us_StructID != 0 ) && ( us->us_StructID != ID_USB2_FREED ))
+	{
+		USBPANIC( "Semaphore_Init : 2 : In use" );
+	}
+
+	#endif
+
+	IExec = usbbase->usb_IExec;
+	IExec->InitSemaphore( & us->us_Semaphore );
+	us->us_StructID = ID_USB2_SEMA;
+}
+
+// --

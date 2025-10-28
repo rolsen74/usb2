@@ -1,0 +1,37 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+SEC_CODE PTR __SetupData_Alloc( struct USBBase *usbbase )
+{
+struct RealSetupData *sd;
+
+	sd = MEMORY_ALLOC( MEMID_USBSetupData, FALSE );
+
+	if ( sd )
+	{
+		sd->rsd_Phy = ((struct Mem_FreeNode *)sd)->mfn_Addr;
+		sd->rsd_StructID = ID_USB2_SD;
+
+		USBDEBUG( "__SetupData_Alloc        : SD %p, Phy $%08lx", sd, sd->rsd_Phy );
+	}
+	else
+	{
+		USBERROR( "__SetupData_Alloc        : SD %p : Error", sd );
+	}
+
+	return( sd );
+}
+
+// --

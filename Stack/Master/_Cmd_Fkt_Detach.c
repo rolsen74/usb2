@@ -1,0 +1,65 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+SEC_CODE static S32 __Cmd_Fkt_Detach( struct USBBase *usbbase, struct intern *in UNUSED, struct FktMessage *tm )
+{
+struct RealFunctionNode *fn;
+struct USB2_DriverNode *dn;
+S32 reply;
+
+	#warning Fix me : when we get called, we deadlock on Obtain.. called from Obtain #13
+
+	USBERROR( "__Cmd_Fkt_Detach" );
+
+	reply = FALSE;
+
+	// --
+
+	fn = tm->fm_FN;
+
+	if ( FUNCTION_VALID( fn ) == VSTAT_Okay )
+	{
+		USBERROR( "Obtain 15" );
+//		SEMAPHORE_OBTAIN( & usbbase->usb_Bind_Semaphore );
+
+		dn = usbbase->usb_Bind_Header.uh_Head;
+
+		while( dn )
+		{
+			USBERROR( "__Cmd_Fkt_Detach : dn %p", dn );
+
+			if ( dn->dn_Function == fn )
+			{
+				USBERROR( "__Cmd_Fkt_Detach : Sending msg to %p", dn );
+
+				// todo send a message too Driver/Register about Detach
+			}
+
+			dn = Node_Next( dn );
+		}
+
+//		SEMAPHORE_RELEASE( & usbbase->usb_Bind_Semaphore );
+
+		FUNCTION_UNLOCK( fn );
+	}
+
+	MEM_FREEVEC( tm );
+
+	// --
+
+	return( reply );
+}
+
+// --

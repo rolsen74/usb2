@@ -1,0 +1,7 @@
+
+/*
+** Stack/EndPoint
+**
+**   Support for USB endpoints.
+**   This code handles allocation, freeing, locking, validation.
+*/

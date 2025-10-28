@@ -1,0 +1,8 @@
+
+/*
+** Stack/HCD
+**
+**   This section contains support functions for each host controller,
+**   including allocation, freeing, locking, and validation functions.
+**   Hardware drivers are not included here; see the Drivers/* directory.
+*/

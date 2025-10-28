@@ -1,0 +1,62 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+/*
+	Yes .. the point of ASync.. 
+	
+	is USB Device shutdown in async mode, 
+
+	so HUB and HCD can signal all its
+	devices to quit and wait for it
+	to finish.
+*/
+
+// --
+
+SEC_CODE void __ASync_Free( struct USBBase *usbbase, struct USB2_ASync *ua )
+{
+	USBDEBUG( "__ASync_Free             : AS %p", ua );
+
+	TASK_NAME_ENTER( "__ASync_Free" );
+
+	if (( ua == NULL )
+	||	( ua->ua_StructID == 0 ) 
+	||	( ua->ua_StructID == ID_USB2_FREED ))
+	{
+		TASK_NAME_LEAVE();
+		return;
+	}
+
+	#ifdef DO_PANIC
+
+	if ( ua->ua_StructID != ID_USB2_ASYNC )
+	{
+		USBPANIC( "ASync_Free  :  2 : Invalid ID" );
+	}
+
+	#endif
+
+	SEMAPHORE_OBTAIN( & ua->ua_Semaphore );
+
+	ua->ua_StructID = ID_USB2_FREED;
+	ua->ua_Parent = NULL;
+
+	TASK_FREESIGNAL( & ua->ua_Signal );
+	SEMAPHORE_FREE( & ua->ua_Semaphore );
+
+	TASK_NAME_LEAVE();
+}
+
+// --

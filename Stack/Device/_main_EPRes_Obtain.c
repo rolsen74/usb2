@@ -1,0 +1,58 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+/* -- Main Interface -- */
+
+static struct USB2_EPResource *_main_EPRes_ObtainList( struct USB2_IFace *Self, struct RealRegister *reg, struct TagItem *taglist )
+{
+struct USBBase *usbbase;
+PTR epres;
+
+	usbbase = (PTR) Self->Data.LibBase;
+	TASK_NAME_ENTER( "_main_EPRes_ObtainList" );
+
+	USBERROR( "USB2 Stack : _main_EPRes_ObtainList" );
+
+	epres = ENDPOINTRES_OBTAINLIST( reg, taglist );
+
+	TASK_NAME_LEAVE();
+
+	return( epres );
+}
+
+// --
+
+static struct USB2_EPResource * VARARGS68K _main_EPRes_ObtainTags( struct USB2_IFace *Self, struct RealRegister *reg, ... )
+{
+struct USBBase *usbbase;
+va_list ap;
+PTR epres;
+
+	usbbase = (PTR) Self->Data.LibBase;
+	TASK_NAME_ENTER( "_main_EPRes_ObtainTags" );
+
+	USBERROR( "USB2 Stack : _main_EPRes_ObtainTags" );
+
+	va_start( ap, reg );
+
+	epres = ENDPOINTRES_OBTAINLIST( reg, va_getlinearva( ap, struct TagItem * ));
+
+	va_end( ap );
+
+	TASK_NAME_LEAVE();
+
+	return( epres );
+}
+
+// --

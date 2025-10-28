@@ -1,0 +1,60 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+SEC_CODE void __HCD_Controllers_Stop( struct USBBase *usbbase )
+{
+struct USB2_HCDNode *next;
+struct USB2_HCDNode *hn;
+
+	USBINFO( "__HCD_Controllers_Stop   :  1 : Send CTRL to HCDs" );
+	TASK_NAME_ENTER( "HCD : __HCD_Controllers_Stop" );
+
+	hn = Header_Head( & usbbase->usb_HCDHeader );
+
+	while( hn )
+	{
+		next = Node_Next( hn );
+		// --
+		TASK_STOP_TN( hn->hn_Task );
+		// --
+		hn = next;
+	}
+
+	USBINFO( "__HCD_Controllers_Stop   :  2 : Wait for HCDs to stop" );
+
+	ASYNC_WAIT( & usbbase->usb_HCDASync );
+
+	USBINFO( "__HCD_Controllers_Stop   :  3 : HCDs have stopped, now free HN structs" );
+
+	while( TRUE )
+	{
+		hn = NODE_REMHEAD( & usbbase->usb_HCDHeader );
+
+		if ( ! hn )
+		{
+			break;
+		}
+
+		USBINFO( "__HCD_Controllers_Stop   :  4 : Freeing hn %p", hn );
+
+		HCD_FREE( hn );
+	}
+
+	USBINFO( "__HCD_Controllers_Stop   :  5 : Exit" );
+
+	TASK_NAME_LEAVE();
+}
+
+// --

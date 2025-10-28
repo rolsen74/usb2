@@ -1,0 +1,7 @@
+
+/*
+** Stack/IORequester
+**
+**   To communicate between the HCD and drivers, we need our
+**   custom IORequester. This function supports creating and deleting IOReqs.
+*/

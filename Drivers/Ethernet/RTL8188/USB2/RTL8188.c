@@ -1,0 +1,46 @@
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "All.h"
+
+// --
+
+/*
+	bsd
+	if_urtwn
+
+	https://github.com/openbsd/src/blob/master/sys/dev/usb/if_urtwn.c
+	https://lab.knightsofnii.com/kristaba/openbsd/-/blob/9ee53e869876be6a6d019c35178223271edf7c80/sys/dev/usb/if_urtwn.c
+	https://socsvn.freebsd.org/socsvn/mirror/FreeBSD/projects/bsd_rdma_4_9_stable_11/sys/dev/urtwn/if_urtwn.c
+
+*/
+
+// --
+
+struct Library *		DOSBase			= NULL;
+struct DOSIFace *		IDOS			= NULL;
+
+struct Library *		SysBase			= NULL;
+struct ExecIFace *		IExec			= NULL;
+
+struct Library *		NewlibBase		= NULL;
+struct Interface *		INewlib			= NULL;
+
+struct Library *		UtilityBase		= NULL;
+struct UtilityIFace *	IUtility		= NULL;
+
+// --
+
+struct MsgPort *		USB2MsgPort		= NULL;
+struct IORequest *		USB2IOReq		= NULL;
+struct Device *			USB2Base		= NULL;
+struct USB2_IFace *		IUSB2			= NULL;
+
+// --

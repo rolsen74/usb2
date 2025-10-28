@@ -1,0 +1,11 @@
+
+/*
+** Stack/Master
+**
+**   This is the main task that controls everything.
+**
+**   Here, we receive commands and delegate them to other
+**   tasks.
+**
+**   P.S. The task is running at priority 1.
+*/

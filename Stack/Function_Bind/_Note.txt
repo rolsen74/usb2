@@ -1,0 +1,12 @@
+
+/*
+** Stack/Function
+**
+**   Once the stack have initialized the device we try
+**   and find a driver that can control it..
+**
+**   So here we see if we can bind a device to driver(s)
+**
+**   One Device can have more than one driver.. 
+**   like a webcam may have audio and video.
+*/

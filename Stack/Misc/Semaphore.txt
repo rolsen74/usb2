@@ -1,0 +1,7 @@
+
+/*
+** Semaphore functions
+**
+**   Support functions for handling semaphores.
+**   Includes structure ID checks for enhanced safety.
+*/

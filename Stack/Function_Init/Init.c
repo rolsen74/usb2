@@ -1,0 +1,77 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+#include "Init_2_Main.c"
+
+// --
+
+SEC_CODE S32 __Function_Init( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as )
+{
+//enum TaskReturn stat;
+S32 retval;
+
+	retval = FALSE;
+
+//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Init 111 :\n##\n\n" );
+
+	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
+	{
+		USBDEBUG( "Device Init Done 1 : FN %p : Locks %ld : Init %ld", fn, (fn)?fn->fkt_Locks:0, (fn)?fn->fkt_Initialized:-1 );
+
+		if ( ! fn->fkt_Initialized )
+		{
+			// Init just retreive USB Data about the Device
+			// it do not need a ASync struct, as it returns when done
+			// hmm but do I need to start another process for that??
+			// or can I run it from kickstart/opendevice(ramlib)??
+//			stat = 
+			TASK_START(
+				USB2_WaitForTermination, TRUE,
+				TASK_Tag_Func_Main, __myMain,
+				TASK_Tag_UserData, fn,
+				TASK_Tag_ASync, as,
+				TASK_Tag_Type, TASK_Type_FKT,
+				TASK_Tag_Name, "Device Init",
+				TAG_END	
+			);
+
+//			usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Init : 000 : Stat $%08lx\n##\n\n", (U32) stat );
+		}
+
+		USBDEBUG( "Device Init Done 2 : FN %p : Locks %ld : Init %ld", fn, (fn)?fn->fkt_Locks:0, (fn)?fn->fkt_Initialized:-1 );
+
+		if ( fn->fkt_Initialized )
+		{
+			USBDEBUG( "__Function_Init          : Stat 111 --- Okay" );
+			retval = TRUE;
+		}
+		else
+		{
+			USBERROR( "__Function_Init : Stat 222 --- Failed" );
+		}
+
+		FUNCTION_UNLOCK( fn );
+	}
+	else
+	{
+		USBERROR( "__Function_Init : Function Lock Error" );
+	}
+
+//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Init 333 : Retval %ld\n##\n\n", (S32) retval );
+
+	return( retval );
+}
+
+// --

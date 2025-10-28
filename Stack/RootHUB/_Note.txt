@@ -1,0 +1,8 @@
+
+/*
+** Stack/RootHUB
+**
+** The Root HUB is a software-based hub that accesses the HCD hardware.
+**
+** This runs in the HCD task and is generic for all HCDs.
+*/

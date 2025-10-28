@@ -1,0 +1,73 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+
+SEC_CODE enum VSTAT __EndPoint_Valid( struct USBBase *usbbase UNUSED, struct USB2_EndPointNode *ep, STR file UNUSED )
+
+#else
+
+SEC_CODE enum VSTAT __EndPoint_Valid( struct USBBase *usbbase UNUSED, struct USB2_EndPointNode *ep )
+
+#endif
+
+{
+enum VSTAT vstat;
+
+	TASK_NAME_ENTER( "__EndPoint_Valid" );
+
+	/**/ if ( ! ep )
+	{
+		vstat = VSTAT_Null;
+	}
+
+	#ifdef DO_PANIC
+
+	else if ( ep == (PTR) 0x55555555 )
+	{
+		USBPANIC( "__EndPoint_Valid         : EP %p : Free'd Memory : (%s)", ep, (file)?file:"<NULL>" );
+		vstat = VSTAT_Null;
+	}
+
+	#endif
+
+	else if ( ep->ep_StructID == 0 )
+	{
+		USBDEBUG( "__EndPoint_Valid         : EP %p : Not Initalized : (%s)", ep, (file)?file:"<NULL>" );
+		vstat = VSTAT_Null;
+	} 
+	else if ( ep->ep_StructID == ID_USB2_FREED )
+	{
+		USBDEBUG( "__EndPoint_Valid         : EP %p : Structure allready freed : (%s)", ep, (file)?file:"<NULL>" );
+		vstat = VSTAT_Null;
+	}
+	else if ( ep->ep_StructID != ID_USB2_EP )
+	{
+		USBDEBUG( "__EndPoint_Valid         : EP %p : Invalid ID $%08lx : (%s)", ep, ep->ep_StructID, (file)?file:"<NULL>" );
+		vstat = VSTAT_Error;
+	}
+	else
+	{
+		vstat = VSTAT_Okay;
+	}
+
+//	USBDEBUG( "__EndPoint_Valid         : EP %p : Stat %ld", ep, vstat );
+
+	TASK_NAME_LEAVE();
+
+	return( vstat );
+}
+
+// --

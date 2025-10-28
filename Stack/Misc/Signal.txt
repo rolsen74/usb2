@@ -1,0 +1,7 @@
+
+/*
+** Signal functions
+**
+**   Support functions for handling task signals.
+**   Includes structure ID checks to enhance safety.
+*/

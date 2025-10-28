@@ -1,0 +1,30 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+SEC_CODE S32 __Misc_AddResetCallback( struct USBBase *usbbase, struct Interrupt *i )
+{
+struct ExecIFace *IExec;
+S32 retval;
+
+	USBINFO( "Adding Reset Callback %p", i );
+
+	IExec = usbbase->usb_IExec;
+
+	retval = IExec->AddResetCallback( i );
+
+	return( retval );
+}
+
+// --

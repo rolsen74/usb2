@@ -1,0 +1,64 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+/*
+** Running under Disable() and must not fail.
+*/
+
+#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+
+SEC_CODE void __MsgPort_Reinit( struct USBBase *usbbase, struct USB2_MsgPort *mp, STR file UNUSED )
+
+#else
+
+SEC_CODE void __MsgPort_Reinit( struct USBBase *usbbase, struct USB2_MsgPort *mp )
+
+#endif
+
+{
+	TASK_NAME_ENTER( "__MsgPort_Reinit" );
+
+	#ifdef DO_PANIC
+
+	if ( ! mp )
+	{
+		USBPANIC( "__MsgPort_Reinit : 1 : NULL Pointer : (%s)", file );
+	}
+
+	if ( mp->ump_StructID != ID_USB2_MP )
+	{
+		USBPANIC( "__MsgPort_Reinit : 2 : In use : (%s)", file );
+	}
+
+	#endif
+
+	// Lets just overwrite old Signals
+	mp->ump_StructID = 0;
+
+	if ( ! TASK_ALLOCSIGNAL( & mp->ump_Signal ))
+	{
+		USBERROR( "TASK_ALLOCSIGNAL failed\n" );
+	}
+
+	// Don't call MSGPORT_INIT as we need
+	// too keep the List and its nodes
+
+	mp->ump_MsgPort.mp_SigTask = TASK_FIND();
+	mp->ump_MsgPort.mp_SigBit = mp->ump_Signal.sig_Signal_Nr;
+
+	TASK_NAME_LEAVE();
+}
+
+// --

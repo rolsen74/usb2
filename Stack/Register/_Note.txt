@@ -1,0 +1,7 @@
+
+/*
+** Stack/Register
+**
+**   To take control over a function/device, we need to register it
+**   with the USB stack.
+*/

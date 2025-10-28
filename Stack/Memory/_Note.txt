@@ -1,0 +1,11 @@
+
+/*
+** Stack/Memory
+**
+** These are my queued memory buffer functions.
+**
+** Running out of memory would be problematic, so to avoid that,
+** we queue the memory nodes. This approach should also be much faster.
+**
+** Any memory nodes that are reused frequently should be managed here.
+*/

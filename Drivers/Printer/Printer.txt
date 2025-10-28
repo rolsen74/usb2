@@ -1,0 +1,55 @@
+
+
+Okay current state of usb printer .. 
+
+printing text via 
+- echo "123" > prt:  (works)
+- type code:tst.c > prt: (works)
+- print from golded (works)
+
+
+the AOS4 Sirion is not working at all.. no usb functions
+but I have tryed too prep for support
+
+I have implemented Buffered sending of data to usb
+or send direct if you set BufferSize = 0 in env
+
+AbortIO() is not implemented.. proberly only valid
+for direct mode
+
+another feature was sending the Formfeed when closing 
+the device.. proberly need a env switch.. too turn it
+off as i'm not sure this work on all printers.. ( '\f' or $0c )
+
+this driver was mainly too test out the Bulk mode in EHCI..
+.. looks very good, so far no usb problems
+
+CMD_PDQuery is untested..
+
+CMD_READ not implemented, I guess adding Cmd_Flush/Cmd_clear
+would be nice too.
+
+ohh i guess getting the USB Device ID so we can reconnect
+on USB Detach.. basicly Detach is untesteds
+
+also we should add a timer that flushes buffers once a 1sec
+or so.. in case someone send data but don't closes the
+device when finish... I think golded does this..
+
+ohh a Parallel dev have a String support if you set io_Length to -1
+this is only supported for Buffered mode atm.
+
+have not tested gfx at all..
+
+ohh not sure I flush all resources / iorequest on exit
+need to check up on this
+
+ohh in buffer mode, the io_Error is less precise than
+in direct mode.. as sending to usb is delayed
+
+okay I think that is all for now, text printing work, lets call
+that in beta for now.. we could do more for stability I guess 
+
+Regards
+Rene W. Olsen
+ 1-Sep-2025

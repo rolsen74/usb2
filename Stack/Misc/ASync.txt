@@ -1,0 +1,25 @@
+
+/*
+** ASync Add/Sub/Init/Free/Wait functions
+**
+**   I needed code to keep track of tasks while they were running,
+**   so I created a system to monitor running tasks and determine
+**   when it is safe to release resources.
+*/
+
+
+
+
+__HCD_Start_Controllers()
+
+	// add til hcd'er
+	HCD's process( & devBase->dev_HCDASync )
+
+	// starter og stopped med HUB ASync
+	FUNCTION_INIT( fn, & hn->hn_HUB_ASync );
+
+	// Function Process og DriverNode bruger HUB ASync
+	FUNCTION_BIND( fn, & hn->hn_HUB_ASync );
+
+
+

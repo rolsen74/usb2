@@ -1,0 +1,7 @@
+
+/*
+** MsgPort functions
+**
+**   Portable AmigaOS3/4 code for MsgPorts.
+**   Includes structure ID checks for improved safety.
+*/

@@ -1,0 +1,8 @@
+
+/*
+** Stack/Function
+**
+**   Device initialization.
+**   The stack starts here by reading info about the device,
+**   ie. it need to know Control EndPoint size, and other details.
+*/

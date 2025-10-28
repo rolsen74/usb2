@@ -1,0 +1,41 @@
+
+/*
+** Universal serial bus attempt by Rene W. Olsen
+**
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
+*/
+
+// --
+
+#include "usb2_all.h"
+
+// --
+
+SEC_CODE void __SetupData_Free( struct USBBase *usbbase, PTR mem )
+{
+struct RealSetupData *sd;
+
+	if ( mem )
+	{
+		sd = mem;
+
+		USBDEBUG( "__SetupData_Free         : SD %p, Phy $%08lx", sd, sd->rsd_Phy );
+
+		if ( sd->rsd_StructID == ID_USB2_SD )
+		{
+			MEMORY_FREE( MEMID_USBSetupData, sd, sd->rsd_Phy );
+		}
+		else
+		{
+			USBDEBUG( "__SetupData_Free         : SD Invalid StructID ($%08lx)", sd->rsd_StructID );
+		}
+	}
+	else
+	{
+		USBDEBUG( "__SetupData_Free         : SD %p", mem );
+	}
+}
+
+// --
