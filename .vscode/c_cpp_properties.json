@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "amigaos4",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/inc_Private/",
+                "${workspaceFolder}/inc_Public/",
+                "/SDK/include/netinclude/",
+                "/SDK/include/include_h/"
+            ],
+            "defines": [],
+            "intelliSenseMode": "linux-gcc-x86", // Or another compiler you're using
+            "compilerPath": "/home/vm/gcc/cross/bin/ppc-amigaos-gcc" // Your compiler path
+        }
+    ],
+    "version": 4
+}
