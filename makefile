@@ -1,9 +1,9 @@
 
 #
-# Universal serial bus attempt by Rene W. Olsen
+#      -+- Universal serial bus -+-
+# Copyright (c) 2012-2026 by Rene W. Olsen
 #
-# Copyright (c) 2011-2025 by Rene W. Olsen < renewolsen @ gmail . com >
-# All rights reserved.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 
 ###########################################################################
