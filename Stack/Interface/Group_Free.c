@@ -47,7 +47,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__Interface_FreeGroup" );
 
-	USBDEBUG( "__Interface_FreeGroup     : IG %p : (%s)", ig, (file)?file:"<NULL>" );
+	USBDEBUG( "__Interface_FreeGroup     : IG    %p : (%s)", ig, (file)?file:"<NULL>" );
 
 	// --
 

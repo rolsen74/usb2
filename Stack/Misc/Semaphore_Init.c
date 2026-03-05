@@ -25,7 +25,7 @@ struct ExecIFace *IExec;
 
 	if (( us->us_StructID != 0 ) && ( us->us_StructID != ID_USB2_FREED ))
 	{
-		USBPANIC( "Semaphore_Init : 2 : In use" );
+		USBPANIC( "Semaphore_Init : 2 : IN    use" );
 	}
 
 	#endif

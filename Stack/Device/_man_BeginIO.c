@@ -110,7 +110,7 @@ S32 reply;
 			if ( FUNCTION_VALID(fn) != VSTAT_Okay )
 			{
 				ioreq->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
-				USBDEBUG( "_manager_BeginIO : Invalid Function Node : FN %p", fn );
+				USBDEBUG( "_manager_BeginIO : Invalid Function Node : FN    %p", fn );
 				break;
 			}
 

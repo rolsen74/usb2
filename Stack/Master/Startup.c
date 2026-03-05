@@ -26,7 +26,7 @@ S32 retval;
 
 	retval = FALSE;
 
-	usbbase->usb_IExec->DebugPrintF( "__Master_Startup 1\n" );
+//	usbbase->usb_IExec->DebugPrintF( "__Master_Startup 1\n" );
 
 	// --
 
@@ -72,7 +72,7 @@ S32 retval;
 
 bailout:
 
-	usbbase->usb_IExec->DebugPrintF( "__Master_Startup 99 : Retval %ld\n", retval );
+//	usbbase->usb_IExec->DebugPrintF( "__Master_Startup 99 : Retval %ld\n", retval );
 
 	return( retval );
 }

@@ -34,9 +34,9 @@ struct ExecIFace *IExec;
 		USBPANIC( "__IO_Stop : NULL Pointer : (%s)", file );
 	}
 
-	if ( IS_USB_IOREQ(ioreq) ) 
+	if ( IS_USB_IOREQ( ioreq )) 
 	{
-		IOREQUEST_VALID(ioreq);
+		IOREQUEST_VALID( ioreq );
 
 		if ( usbbase->usb_LockSemaphore.us_Semaphore.ss_Owner == usbbase->usb_IExec->FindTask(NULL) )
 		{
@@ -48,16 +48,12 @@ struct ExecIFace *IExec;
 
 	IExec = usbbase->usb_IExec;
 
-	if ( IExec->CheckIO(ioreq) == NULL )
+	if ( ! IExec->CheckIO( ioreq ))
 	{	
-		IExec->AbortIO(ioreq);
-	}	
-	else
-	{
-		USBINFO( "__IO_Stop : Not acitve?? : (%s)", file );
+		IExec->AbortIO( ioreq );
 	}
 
-	IExec->WaitIO(ioreq);
+	IExec->WaitIO( ioreq );
 
 	TASK_NAME_LEAVE();
 }

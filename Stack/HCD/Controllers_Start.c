@@ -151,13 +151,13 @@ S32 pri;
 
 			if ( ! stat )
 			{
-				USBERROR( "__HCD_Controllers_Start   : Error: HN Start 3" );
+				USBERROR( "__HCD_Controllers_Start   : Error: HN    Start 3" );
 				break;
 			}
 
 //			usbbase->usb_IExec->DebugPrintF( "\n##\n## __HCD_Controllers_Start   :  5 : yay\n##\n\n" );
 
-			usbbase->usb_IExec->DebugPrintF( "Function Done\n" );
+//			usbbase->usb_IExec->DebugPrintF( "Function Done\n" );
 
 			err = FALSE;
 			break;

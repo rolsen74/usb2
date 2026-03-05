@@ -52,7 +52,7 @@ bailout:
 		epr = NULL;
 	}
 
-	USBDEBUG( "__EndPointRes_Alloc      : EPR %p : (new)", epr );
+	USBDEBUG( "__EndPointRes_Alloc      : EPR   %p : (new)", epr );
 
 	return( epr );
 }

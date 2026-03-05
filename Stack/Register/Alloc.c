@@ -65,7 +65,7 @@ bailout:
 		reg = NULL;
 	}
 
-	USBDEBUG( "__Register_Alloc         : REG %p : (new)", reg );
+	USBDEBUG( "__Register_Alloc         : REG   %p : (new)", reg );
 
 	return( reg );
 }

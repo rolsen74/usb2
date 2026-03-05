@@ -10,6 +10,7 @@
 
 #include "HCD__myHandle_Abort.c"
 #include "HCD__myHandle_Begin.c"
+#include "HCD__myHandle_HCD.c"
 #include "HCD__myHandle_WatchDog.c"
 #include "HCD__myHandle_Reset.c"
 
@@ -63,7 +64,7 @@ bailout:
 
 	// -- Exit
 
-	USBDEBUG( "__myMain (HCD)           : Leave (9) : HN %p", hn );
+	USBDEBUG( "__myMain (HCD)           : Leave (9) : HN    %p", hn );
 
 	TASK_NAME_LEAVE();
 

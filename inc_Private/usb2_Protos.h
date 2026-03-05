@@ -241,7 +241,7 @@ USB2_CREATEFUNC( enum VSTAT,					FDriver_Valid,				struct USBBase *usbbase, stru
 
 // -- Function 
 
-USB2_CREATEFUNC( struct RealFunctionNode *,		Function_Alloc,				struct USBBase *usbbase, struct USB2_HCDNode *hn, struct USB2_ASync *as, U32 Tier, STR file );
+USB2_CREATEFUNC( struct RealFunctionNode *,		Function_Alloc,				struct USBBase *usbbase, struct USB2_HCDNode *hn, struct USB2_ASync *as, U32 Speed, U32 Tier, STR file );
 USB2_CREATEFUNC( enum FSTAT,					Function_Free,				struct USBBase *usbbase, struct RealFunctionNode *fn, STR file );
 USB2_CREATEFUNC( enum LSTAT,					Function_Lock,				struct USBBase *usbbase, struct RealFunctionNode *fn, STR file );
 USB2_CREATEFUNC( void,							Function_Unlock,			struct USBBase *usbbase, struct RealFunctionNode *fn, STR file );
@@ -403,7 +403,7 @@ USB2_CREATEFUNC( enum VSTAT,					FDriver_Valid,				struct USBBase *usbbase, stru
 
 // -- Function 
 
-USB2_CREATEFUNC( struct RealFunctionNode *,		Function_Alloc,				struct USBBase *usbbase, struct USB2_HCDNode *hn, struct USB2_ASync *as, U32 Tier );
+USB2_CREATEFUNC( struct RealFunctionNode *,		Function_Alloc,				struct USBBase *usbbase, struct USB2_HCDNode *hn, struct USB2_ASync *as, U32 Speed, U32 Tier );
 USB2_CREATEFUNC( enum FSTAT,					Function_Free,				struct USBBase *usbbase, struct RealFunctionNode *fn );
 USB2_CREATEFUNC( enum LSTAT,					Function_Lock,				struct USBBase *usbbase, struct RealFunctionNode *fn );
 USB2_CREATEFUNC( void,							Function_Unlock,			struct USBBase *usbbase, struct RealFunctionNode *fn );

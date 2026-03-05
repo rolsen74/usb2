@@ -46,7 +46,7 @@
 
 SEC_CODE void HUB_Main__Shutdown( struct USBBase *usbbase UNUSED, struct intern *in UNUSED )
 {
-	USBINFO( "__myMain (HUB)            : HUB_Main__Shutdown (4)" );
+	USBINFO( "__myMain (HUB)           : HUB_Main__Shutdown (4)" );
 	USBDEBUG( "FN Shutdown Locks #%lu", in->Function->fkt_Locks );
 }
 

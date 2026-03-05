@@ -30,7 +30,7 @@ CFLAGS		+= -MMD
 CFLAGS		+= -MP
 # CFLAGS		+= -fanalyzer
 
-# Dont optimize code into memcpy function
+# Dont optimize code into memcpy functions
 CFLAGS		+= -fno-builtin
 
 # Put Data into its own section, fixes kickstart loader error
@@ -38,13 +38,11 @@ CFLAGS		+= -fno-builtin
 #CFLAGS		+= -fdata-sections
 #CFLAGS		+= -fno-section-anchors 
 
-
-
 # We do not want a clib
 LDFLAGS		:= -nostartfiles
 
 # Use Linker script
-LDFLAGS		+= -T usb2.ld
+#LDFLAGS		+= -T usb2.ld
 
 # Put link data into this file
 LDFLAGS		+= -Wl,--cref,-M,-Map=usb2.map
@@ -97,26 +95,23 @@ BINDIR		:= bin
 # DO_DEBUG		for extra info .. is a lot .. so optional
 #
 
-# Build a DEMO only binary
-#CFLAGS		+= -DDO_DEMO_MODE
-
 # Print Error Messages on serial
-CFLAGS		+= -DDO_ERROR
+#CFLAGS		+= -DDO_ERROR
 
 # Print Info Messages on serial
-CFLAGS		+= -DDO_INFO
+#CFLAGS		+= -DDO_INFO
 
 # Print extra Debug Messages on serial
-CFLAGS		+= -DDO_DEBUG
+#CFLAGS		+= -DDO_DEBUG
 
 # Add extra error code checks, 
 # for higher Stability and larger Binary file
-CFLAGS		+= -DDO_STABLE
+#CFLAGS		+= -DDO_STABLE
 
 # Overwrite memory before and after release, 
 # scramble pointer on Node Removes and so on
 # trying to trigger crashes on error
-CFLAGS		+= -DDO_PANIC
+#CFLAGS		+= -DDO_PANIC
 
 # gcc crash/debug info
 #CFLAGS		+= -gstabs
@@ -126,9 +121,6 @@ CFLAGS		+= -DDO_PANIC
 
 # Enable a Watchdog for Master and HCD processes
 #CFLAGS		+= -DDO_WATCHDOG
-
-# Set this labels to enable Demo version
-#DEMO		:= 1
 
 #CFLAGS		+= -DDO_IOTRACE
 
@@ -410,7 +402,8 @@ all: $(BINDIR)/$(TARGET)
 ###########################################################################
 
 $(BINDIR)/$(TARGET): $(OBJS) | $(BINDIR)
-	$(CC) $(LDFLAGS) -o $(BINDIR)/$(TARGET) $(OBJS) $(LIBS)
+	@echo "Linking $(BINDIR)/$(TARGET)"
+	@$(CC) $(LDFLAGS) -o $(BINDIR)/$(TARGET) $(OBJS) $(LIBS)
 
 $(BINDIR):
 	$(MKDIR) $(BINDIR)
@@ -469,15 +462,17 @@ $(OBJDIR)/%.o: %.c
 
 $(OBJDIR)/Drivers/%.o: Drivers/%.c
 	@$(MKDIR) $(dir $@)
-	$(CC) $(CFLAGS) -DSECTION_NAME=\"drivers\" -c $< -o $@
+	@echo "Compiling Driver : $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+#	@$(CC) $(CFLAGS) -DSECTION_NAME=\"drivers\" -c $< -o $@
 
 ###########################################################################
 # Put the stack into its own section
 
 $(OBJDIR)/Stack/%.o: Stack/%.c
 	@$(MKDIR) $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-#	$(CC) $(CFLAGS) -DSECTION_NAME=\"stack\" -c $< -o $@
+	@echo "Compiling Stack : $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 ###########################################################################

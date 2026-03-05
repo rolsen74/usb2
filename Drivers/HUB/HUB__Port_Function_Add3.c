@@ -68,7 +68,7 @@ U32 adr;
 
 	error = TRUE;
 
-	fn = FUNCTION_ALLOC( in->HCDNode, & in->ASync_Functions, in->Function->fkt_Tier+1 );
+	fn = FUNCTION_ALLOC( in->HCDNode, & in->ASync_Functions, speed, in->Function->fkt_Tier+1 );
 
 	if ( ! fn )
 	{
@@ -80,7 +80,6 @@ U32 adr;
 
 	fn->fkt_PortNr	= port;
 	fn->fkt_Parent	= parent;
-	fn->fkt_Speed	= speed;
 
 	// --
 
@@ -104,13 +103,13 @@ U32 adr;
 
 	if ( ! stat )
 	{
-		USBDEBUG( "HUB__Port_Function_Add : Function Init failed : FN %p : Stat $%08lx", fn, (U32) stat );
+		USBDEBUG( "HUB__Port_Function_Add : Function Init failed : FN    %p : Stat $%08lx", fn, (U32) stat );
 		goto bailout;
 	}
 
 	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
 	{
-//		USBDEBUG( "555 OKAY 444 : FN %p", fn );
+		USBDEBUG( "555 OKAY 444 : FN    %p", fn );
 
 		fn->fkt_HUB_Data = in->HUB_ID;
 		in->PortFunctions[port] = fn;
@@ -122,7 +121,7 @@ U32 adr;
 	}
 	else
 	{
-		USBDEBUG( "HUB__Port_Function_Add : Failed to Lock Function : FN %p", fn );
+		USBDEBUG( "HUB__Port_Function_Add : Failed to Lock Function : FN    %p", fn );
 	}
 
 bailout:

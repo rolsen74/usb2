@@ -29,13 +29,13 @@ S32 err;
 
 	if (( wValue == HUB_Cfg_Nr ) && ( wIndex == 0 ) && ( wLength == 0 ))
 	{
-		USBDEBUG( "__Set_Config: Setting Config Nr #%ld", (S32) wValue );
+		USBDEBUG( "__Set_Config : Setting Config Nr #%ld", (S32) wValue );
 		hn->hn_HUB_ConfigNr = wValue;
 		err = USB2Err_NoError;
 	}
 	else
 	{
-		USBDEBUG( "__Set_Config: hmm unknown 11" );
+		USBDEBUG( "__Set_Config : hmm unknown 11" );
 		err = USB2Err_Host_Stall;
 	}
 

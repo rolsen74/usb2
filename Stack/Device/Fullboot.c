@@ -13,7 +13,6 @@
 // --
 
 #if 0
-//#ifndef DO_DEMO
 
 static void Full_Boot( void );
 static void Full_Boot_Entry( void );
@@ -328,4 +327,4 @@ bailout:
 
 // --
 
-#endif // DO_DEMO
+#endif

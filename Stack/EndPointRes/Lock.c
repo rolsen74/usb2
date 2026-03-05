@@ -27,7 +27,7 @@ enum LSTAT lstat;
 
 	TASK_NAME_ENTER( "__EndPointRes_Lock" );
 
-	USBDEBUG( "__EndPointRes_Lock       : EPR %p : Locks %ld (old) : (%s)", epr, (epr)?epr->epr_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__EndPointRes_Lock       : EPR   %p : Locks %2ld (old) : (%s)", epr, (epr)?epr->epr_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -36,11 +36,11 @@ enum LSTAT lstat;
 		epr->epr_Locks++;
 		lstat = LSTAT_Okay;
 
-//		USBDEBUG( "__EndPointRes_Lock       : EPR %p : New Lock Count : %ld (+1)", epr, epr->epr_Locks );
+//		USBDEBUG( "__EndPointRes_Lock       : EPR   %p : New Lock Count : %ld (+1)", epr, epr->epr_Locks );
 	}
 	else
 	{
-		USBPANIC( "__EndPointRes_Lock       : EPR %p : Lock failed : (%s)", epr, file );
+		USBPANIC( "__EndPointRes_Lock       : EPR   %p : Lock failed : (%s)", epr, file );
 		lstat = LSTAT_Error;
 	}
 

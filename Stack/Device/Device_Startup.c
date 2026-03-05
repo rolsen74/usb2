@@ -123,7 +123,7 @@ PTR node;
 
 //	IExec = (PTR)(*(struct ExecBase **)4)->MainInterface;
 	IExec = (PTR) mySysBase->MainInterface;
-	IExec->DebugPrintF( "usb2 ROM Init\n" );
+//	IExec->DebugPrintF( "usb2 ROM Init\n" );
 
 	// Make sure we havent started
 	if ( IExec->FindName( & mySysBase->DeviceList, "usb2.device" ))
@@ -261,7 +261,8 @@ PTR node;
 	#undef USB2_CREATEFUNC
 
 	// --
-
+	
+	SEMAPHORE_INIT( & usbbase->usb_Bind_Semaphore );
 	ASYNC_INIT( & usbbase->usb_HCDASync, NULL );
 
 	usbbase->usb_CPU_CacheSize 			= 32;

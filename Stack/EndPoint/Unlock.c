@@ -25,7 +25,7 @@ SEC_CODE void __EndPoint_Unlock( struct USBBase *usbbase, struct USB2_EndPointNo
 {
 	TASK_NAME_ENTER( "__EndPoint_Unlock" );
 
-	USBDEBUG( "__EndPoint_Unlock        : EP %p : Locks %ld (old) : (%s)", ep, (ep)?ep->ep_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__EndPoint_Unlock        : EP    %p : Locks %2ld (old) : (%s)", ep, (ep)?ep->ep_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +35,16 @@ SEC_CODE void __EndPoint_Unlock( struct USBBase *usbbase, struct USB2_EndPointNo
 		{
 			ep->ep_Locks--;
 
-//			USBDEBUG( "__EndPoint_Unlock        : EP %p : New Lock Count : %ld (-1)", ep, ep->ep_Locks );
+//			USBDEBUG( "__EndPoint_Unlock        : EP    %p : New Lock Count : %ld (-1)", ep, ep->ep_Locks );
 		}
 		else
 		{
-			USBPANIC( "__EndPoint_Unlock        : EP %p : EndPoint NOT Locked (%ld)", ep, ep->ep_Locks );
+			USBPANIC( "__EndPoint_Unlock        : EP    %p : EndPoint NOT Locked (%ld)", ep, ep->ep_Locks );
 		}
 	}
 	else
 	{
-		USBPANIC( "__EndPoint_Unlock        : EP %p : Invalid EndPoint Node", ep );
+		USBPANIC( "__EndPoint_Unlock        : EP    %p : Invalid EndPoint Node", ep );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );

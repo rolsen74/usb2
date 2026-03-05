@@ -45,7 +45,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__Config_Free" );
 
-//	USBDEBUG( "__Config_Free             : CN %p : (%s)", cn, (file)?file:"<NULL>" );
+//	USBDEBUG( "__Config_Free             : CN    %p : (%s)", cn, (file)?file:"<NULL>" );
 
 	// --
 

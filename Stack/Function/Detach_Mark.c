@@ -98,7 +98,7 @@ struct USB2_ConfigNode *cn;
 
 	TASK_NAME_ENTER( "__Function_MarkDetach" );
 
-	USBDEBUG( "__Function_MarkDetach    : FN %p", fn );
+	USBDEBUG( "__Function_MarkDetach    : FN    %p", fn );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 

@@ -56,7 +56,7 @@ S32 pos;
 
 			ioreq = (PTR) epr->epr_Public.IORequests[pos];
 
-			USBINFO( "__EndPointRes_Free        : EPR %p : IOReq %p : Pos %ld", epr, ioreq, pos );
+			USBINFO( "__EndPointRes_Free       : EPR   %p : IOReq %p : Pos %ld", epr, ioreq, pos );
 
 			if ( ioreq->req_PublicStat != IORS_User )
 			{
@@ -71,7 +71,7 @@ S32 pos;
 				USBINFO( "EPR : D :" );
 			}
 
-			USBINFO( "__EndPointRes_Free        : Free IOReq %p", ioreq );
+			USBINFO( "__EndPointRes_Free       : Free IOReq %p", ioreq );
 
 			IOREQUEST_FREE( (PTR) ioreq );
 			epr->epr_Public.IORequests[pos] = NULL;
@@ -105,7 +105,7 @@ enum FSTAT fstat;
 PTR buf;
 S32 pos;
 
-	USBDEBUG( "__EndPointRes_Free        : EPR %p : (%s)", epr, (file)?file:"<NULL>" );
+	USBDEBUG( "__EndPointRes_Free       : EPR   %p : (%s)", epr, (file)?file:"<NULL>" );
 
 	// --
 
@@ -160,7 +160,7 @@ S32 pos;
 		goto bailout;
 	}
 
-	USBINFO( "__EndPointRes_Free        : Freeing %p : (%s)", epr, (file)?file:"<NULL>" );
+	USBINFO( "__EndPointRes_Free       : Freeing %p : (%s)", epr, (file)?file:"<NULL>" );
 
 	// --
 

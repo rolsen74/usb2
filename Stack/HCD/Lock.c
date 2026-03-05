@@ -27,7 +27,7 @@ enum LSTAT lstat;
 
 	TASK_NAME_ENTER( "__HCD_Lock" );
 
-	USBDEBUG( "__HCD_Lock               : HN %p : Locks %ld (old) : (%s)", hn, ( hn )?hn->hn_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__HCD_Lock               : HN    %p : Locks %2ld (old) : (%s)", hn, ( hn )?hn->hn_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -36,11 +36,11 @@ enum LSTAT lstat;
 		hn->hn_Locks++;
 		lstat = LSTAT_Okay;
 
-//		USBDEBUG( "__HCD_Lock               : HN %p : New Lock Count : %ld (+1)", hn, hn->hn_Locks );
+//		USBDEBUG( "__HCD_Lock               : HN    %p : New Lock Count : %ld (+1)", hn, hn->hn_Locks );
 	}
 	else
 	{
-		USBPANIC( "__HCD_Lock               : HN %p : Lock failed : (%s)", hn, file );
+		USBPANIC( "__HCD_Lock               : HN    %p : Lock failed : (%s)", hn, file );
 		lstat = LSTAT_Error;
 	}
 

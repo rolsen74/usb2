@@ -116,7 +116,7 @@ S32 err;
 			#endif
 
 			struct RealFunctionNode *fn = in->PortFunctions[port];
-			usbbase->usb_IExec->DebugPrintF( "HUB : Removing Device : FN %p : Port #%ld : Class %ld\n", fn, port, fn->fkt_Class );
+			usbbase->usb_IExec->DebugPrintF( "HUB : Removing Device : FN    %p : Port #%ld : Class %ld\n", fn, port, fn->fkt_Class );
 
 			HUB__Port_Function_Rem( usbbase, in, port );
 		}
@@ -138,7 +138,7 @@ S32 err;
 			else
 			{
 				struct RealFunctionNode *fn = in->PortFunctions[port];
-				usbbase->usb_IExec->DebugPrintF( "HUB : Added Device : FN %p : Port #%ld : Class %ld\n", fn, port, fn->fkt_Class );
+//				usbbase->usb_IExec->DebugPrintF( "HUB : Added Device : FN    %p : Port #%ld : Class %ld\n", fn, port, fn->fkt_Class );
 			}
 		}
 	}

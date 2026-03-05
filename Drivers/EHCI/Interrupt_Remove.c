@@ -58,7 +58,7 @@ U32 status;
 
 	// --
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+//	struct USBBase *usbbase = hn->hn_USBBase;
 
 	qh = ioreq->req_HCD.EHCI.QH_Header;
 

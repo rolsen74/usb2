@@ -56,7 +56,7 @@ U32 DevSpeed;
 U32 delay;
 S32 err;
 
-	USBDEBUG( "HUB__Port_FAdd_Retry        : Set Port Feature( PORT_RESET )" );
+	USBDEBUG( "HUB__Port_FAdd_Retry     : Set Port Feature( PORT_RESET )" );
 
 	// --
 
@@ -64,13 +64,13 @@ S32 err;
 
 	if ( err == USB2Err_Device_OwnershipChange )
 	{
-		USBDEBUG( "HUB__Port_FAdd_Retry        : Ownership Change" );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : Ownership Change" );
 		return;
 	}
 
 	if ( err != USB2Err_NoError )
 	{
-		USBDEBUG( "HUB__Port_FAdd_Retry        : Error Setting Port Reset (%ld)", err );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : Error Setting Port Reset (%ld)", err );
 		return;
 	}
 
@@ -91,19 +91,19 @@ S32 err;
 
 	for( delay=0 ; delay<20 ; delay++ )
 	{
-		USBDEBUG( "HUB__Port_FAdd_Retry        : Get Port Feature( PORT_STATUS )" );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : Get Port Feature( PORT_STATUS )" );
 
 		err = HUB__Port_Status_Get( usbbase, in, port, stat );
 
 		if ( err != USB2Err_NoError )
 		{
-			USBDEBUG( "HUB__Port_FAdd_Retry        : Error Getting Port Status (%ld)", err );
+			USBDEBUG( "HUB__Port_FAdd_Retry     : Error Getting Port Status (%ld)", err );
 			return;
 		}
 
 		if ( stat->wPortChange & PORTCHGF_Reset )
 		{
-			USBDEBUG( "HUB__Port_FAdd_Retry        : Reset done, yay" );
+			USBDEBUG( "HUB__Port_FAdd_Retry     : Reset done, yay" );
 			break;
 		}
 
@@ -112,31 +112,31 @@ S32 err;
 
 	// --
 
-	USBDEBUG( "HUB__Port_FAdd_Retry        : Clr Port Feature( PORT_CLR_RESET )" );
+	USBDEBUG( "HUB__Port_FAdd_Retry     : Clr Port Feature( PORT_CLR_RESET )" );
 
 	err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_RESET );
 
 	if ( err != USB2Err_NoError )
 	{
-		USBDEBUG( "HUB__Port_FAdd_Retry        : Error clearing Port Reset (%ld)", err );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : Error clearing Port Reset (%ld)", err );
 		return;
 	}
 
 	// --
 
-	USBDEBUG( "HUB__Port_FAdd_Retry        : Get Port Feature( PORT_STATUS )" );
+	USBDEBUG( "HUB__Port_FAdd_Retry     : Get Port Feature( PORT_STATUS )" );
 
 	err = HUB__Port_Status_Get( usbbase, in, port, stat );
 
 	if ( err != USB2Err_NoError )
 	{
-		USBDEBUG( "HUB__Port_FAdd_Retry        : Error Getting Port Status (%ld)", err );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : Error Getting Port Status (%ld)", err );
 		return;
 	}
 
 	if (( stat->wPortStatus & PORTSTATF_Connection ) == 0 )
 	{
-		USBDEBUG( "HUB__Port_FAdd_Retry        : No Device connected" );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : No Device connected" );
 		return;
 	}
 
@@ -155,17 +155,17 @@ S32 err;
 	/**/ if ( stat->wPortStatus & PORTSTATF_Super_Speed )
 	{
 		DevSpeed = USBSPEED_Super;
-		USBDEBUG( "HUB__Port_FAdd_Retry        : Found a Super Speed Device" );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : Found a Super Speed Device" );
 	}
 	else if ( stat->wPortStatus & PORTSTATF_High_Speed )
 	{
 		DevSpeed = USBSPEED_High;
-		USBDEBUG( "HUB__Port_FAdd_Retry        : Found a High Speed Device" );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : Found a High Speed Device" );
 	}
 	else if ( stat->wPortStatus & PORTSTATF_Low_Speed )
 	{
 		DevSpeed = USBSPEED_Low;
-		USBDEBUG( "HUB__Port_FAdd_Retry        : Found a Low Speed Device" );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : Found a Low Speed Device" );
 	}
 	else
 	{
@@ -179,13 +179,13 @@ S32 err;
 		{
 			DevSpeed = USBSPEED_Full;
 
-			USBDEBUG( "HUB__Port_FAdd_Retry        : Found a Full Speed Device" );
+			USBDEBUG( "HUB__Port_FAdd_Retry     : Found a Full Speed Device" );
 		}
 		else
 		{
 			DevSpeed = parent->fkt_Speed;
 
-			USBDEBUG( "HUB__Port_FAdd_Retry        : Using Funktion Speed %ld", DevSpeed );
+			USBDEBUG( "HUB__Port_FAdd_Retry     : Using Funktion Speed %ld", DevSpeed );
 		}
 	}
 
@@ -196,7 +196,7 @@ S32 err;
 
 	if ( DevSpeed > parent->fkt_Speed )
 	{
-		USBDEBUG( "HUB__Port_FAdd_Retry        : Limiting Speed to %ld from %ld", parent->fkt_Speed, DevSpeed );
+		USBDEBUG( "HUB__Port_FAdd_Retry     : Limiting Speed to %ld from %ld", parent->fkt_Speed, DevSpeed );
 
 		DevSpeed = parent->fkt_Speed ;
 	}

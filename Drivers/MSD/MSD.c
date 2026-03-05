@@ -27,7 +27,7 @@ U32 retval;
 
 	// --
 
-	#if 1
+	#if 0
 {
 	struct ExecIFace *IExec = usbbase->usb_IExec;
 	struct RealFunctionNode *fn = (PTR) msg->Function;

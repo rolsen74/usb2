@@ -25,7 +25,7 @@ SEC_CODE void __Function_Unlock( struct USBBase *usbbase, struct RealFunctionNod
 {
 	TASK_NAME_ENTER( "__Function_Unlock" );
 
-	USBDEBUG( "__Function_Unlock        : FN %p : Locks %ld (old) : (%s)", fn, fn->fkt_Locks, (file)?file:"<NULL>" );
+	USBDEBUG( "__Function_Unlock        : FN    %p : Locks %2ld (old) : (%s)", fn, fn->fkt_Locks, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +35,16 @@ SEC_CODE void __Function_Unlock( struct USBBase *usbbase, struct RealFunctionNod
 		{
 			fn->fkt_Locks--;
 
-//			USBDEBUG( "__Function_Unlock        : FN %p : New Lock Count : %ld (-1)", fn, fn->fkt_Locks );
+//			USBDEBUG( "__Function_Unlock        : FN    %p : New Lock Count : %ld (-1)", fn, fn->fkt_Locks );
 		}
 		else
 		{
-			USBPANIC( "__Function_Unlock        : FN %p : Function NOT Locked (%ld)", fn, fn->fkt_Locks );
+			USBPANIC( "__Function_Unlock        : FN    %p : Function NOT Locked (%ld)", fn, fn->fkt_Locks );
 		}
 	}
 	else
 	{
-		USBERROR( "__Function_Unlock        : FN %p : Invalid Function Node", fn );
+		USBERROR( "__Function_Unlock        : FN    %p : Invalid Function Node", fn );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );

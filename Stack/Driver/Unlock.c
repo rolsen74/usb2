@@ -25,7 +25,7 @@ SEC_CODE void __Driver_Unlock( struct USBBase *usbbase, struct USB2_DriverNode *
 {
 	TASK_NAME_ENTER( "__Driver_Unlock" );
 
-	USBDEBUG( "__Driver_Unlock          : DN %p : Locks %ld (old) : (%s)", dn, ( dn )?dn->dn_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__Driver_Unlock          : DN    %p : Locks %2ld (old) : (%s)", dn, ( dn )?dn->dn_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +35,16 @@ SEC_CODE void __Driver_Unlock( struct USBBase *usbbase, struct USB2_DriverNode *
 		{
 			dn->dn_Locks--;
 
-//			USBDEBUG( "__Driver_Unlock          : DN %p : New Lock Count : %ld (-1)", dn, dn->dn_Locks );
+//			USBDEBUG( "__Driver_Unlock          : DN    %p : New Lock Count : %ld (-1)", dn, dn->dn_Locks );
 		}
 		else
 		{
-			USBPANIC( "__Driver_Unlock          : DN %p : Driver Node NOT Locked (%ld) :(%s)", dn, dn->dn_Locks, (file)?file:"<NULL>" );
+			USBPANIC( "__Driver_Unlock          : DN    %p : Driver Node NOT Locked (%ld) :(%s)", dn, dn->dn_Locks, (file)?file:"<NULL>" );
 		}
 	}
 	else
 	{
-		USBPANIC( "__Driver_Unlock          : DN %p : Invalid Driver Node", dn );
+		USBPANIC( "__Driver_Unlock          : DN    %p : Invalid Driver Node", dn );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );

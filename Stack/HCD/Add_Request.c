@@ -287,7 +287,7 @@ S32 handled;
 
 	if ( ep->ep_Request_Active )
 	{
-		USBDEBUG( "Queuing Node for Addr $%02ld : EP $%02lx", ioreq->req_Function->fkt_Address, ep->ep_Number );
+		USBDEBUG( "Queuing Node for Addr $%02ld : EP    $%02lx", ioreq->req_Function->fkt_Address, ep->ep_Number );
 
 		ioreq->req_PublicStat = IORS_HCD_Queued;
 		NODE_ADDTAIL( & ep->ep_Request_Queue, ioreq );

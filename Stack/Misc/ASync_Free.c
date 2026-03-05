@@ -26,7 +26,7 @@
 
 SEC_CODE void __ASync_Free( struct USBBase *usbbase, struct USB2_ASync *ua )
 {
-	USBDEBUG( "__ASync_Free             : AS %p", ua );
+	USBDEBUG( "__ASync_Free             : AS    %p", ua );
 
 	TASK_NAME_ENTER( "__ASync_Free" );
 

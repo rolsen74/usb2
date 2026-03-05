@@ -30,7 +30,7 @@ S32 signal;
 
 	if ( sig->sig_StructID == ID_USB2_SIG )
 	{
-		USBPANIC( "__Task_ReallocSignal : 2 : In use" );
+		USBPANIC( "__Task_ReallocSignal : 2 : IN    use" );
 	}
 
 	#endif

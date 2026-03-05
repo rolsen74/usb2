@@ -36,7 +36,7 @@ enum VSTAT vstat;
 
 	else if ( ig == (PTR) 0x55555555 )
 	{
-		USBPANIC( "__Interface_ValidGroup   : IG %p : Free'd Memory : (%s)", ig, (file)?file:"<NULL>" );
+		USBPANIC( "__Interface_ValidGroup   : IG    %p : Free'd Memory : (%s)", ig, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 
@@ -44,17 +44,17 @@ enum VSTAT vstat;
 
 	else if ( ig->ig_StructID == 0 )
 	{
-		USBDEBUG( "__Interface_ValidGroup   : IG %p : Not Initalized", ig );
+		USBDEBUG( "__Interface_ValidGroup   : IG    %p : Not Initalized", ig );
 		vstat = VSTAT_Null;
 	} 
 	else if ( ig->ig_StructID == ID_USB2_FREED )
 	{
-		USBDEBUG( "__Interface_ValidGroup   : IG %p : Free Struct", ig );
+		USBDEBUG( "__Interface_ValidGroup   : IG    %p : Free Struct", ig );
 		vstat = VSTAT_Null;
 	}
 	else if ( ig->ig_StructID != ID_USB2_IFCG )
 	{
-		USBDEBUG( "__Interface_ValidGroup   : IG  %p : Invalid ID ($%08lx)", ig, ig->ig_StructID );
+		USBDEBUG( "__Interface_ValidGroup   : IG     %p : Invalid ID ($%08lx)", ig, ig->ig_StructID );
 		vstat = VSTAT_Error;
 	}
 	else
@@ -62,7 +62,7 @@ enum VSTAT vstat;
 		vstat = VSTAT_Okay;
 	}
 
-//	USBDEBUG( "__Interface_ValidGroup   : IG %p : Stat %ld", ig, vstat );
+//	USBDEBUG( "__Interface_ValidGroup   : IG    %p : Stat %ld", ig, vstat );
 
 	TASK_NAME_LEAVE();
 

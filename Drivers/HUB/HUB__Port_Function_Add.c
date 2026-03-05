@@ -57,7 +57,7 @@ S32 err;
 	fn = in->Function;
 
 //	usbbase->usb_IExec->Disable();
-//	usbbase->usb_IExec->DebugPrintF( "\nAdd Deivce\n" );
+//	usbbase->usb_IExec->DebugPrintF( "\nAdd Deivce (Enter)\n" );
 //	usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", fn->fkt_Tier );
 //	usbbase->usb_IExec->DebugPrintF( "Port        : %lu\n", port );
 //	usbbase->usb_IExec->Enable();
@@ -89,7 +89,7 @@ S32 err;
 		goto bailout;
 	}
 
-	USBDEBUG( "HUB__Port_Function_Add      :  2 : Port Stat $%04lx:%04lx", stat.wPortChange, stat.wPortStatus );
+	USBDEBUG( "HUB__Port_Function_Add   :  2 : Port Stat $%04lx:%04lx", stat.wPortChange, stat.wPortStatus );
 
 	// --
 
@@ -128,6 +128,13 @@ S32 err;
 	// --
 
 bailout:
+
+//	usbbase->usb_IExec->Disable();
+//	usbbase->usb_IExec->DebugPrintF( "\nAdd Deivce (Leave)\n" );
+//	usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", fn->fkt_Tier );
+//	usbbase->usb_IExec->DebugPrintF( "Port        : %lu\n", port );
+//	usbbase->usb_IExec->DebugPrintF( "retval      : %lu\n", retval );
+//	usbbase->usb_IExec->Enable();
 
 	return( retval );
 }

@@ -49,7 +49,7 @@ SEC_CODE void HUB_Main__Normal( struct USBBase *usbbase, struct intern *in )
 U32 wait;
 U32 mask;
 
-	USBDEBUG( "__myMain (HUB)            : HUB_Main__Normal (1)" );
+	USBDEBUG( "__myMain (HUB)           : HUB_Main__Normal (1)" );
 	USBDEBUG( "FN Normal Locks #%lu", in->Function->fkt_Locks );
 
 	in->Running = TRUE;
@@ -64,7 +64,7 @@ U32 mask;
 
 	while( in->Running )
 	{
-		USBDEBUG( "HUB : Adr #%ld : FN %p : Normal : Drivers: %ld, Functions: %ld, Header: %ld", 
+		USBDEBUG( "HUB : Adr #%ld : FN    %p : Normal : Drivers: %ld, Functions: %ld, Header: %ld", 
 			in->Function->fkt_Address, 
 			in->Function,
 			in->ASync_Drivers.ua_Counter, 

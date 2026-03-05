@@ -72,7 +72,7 @@ struct RealFunctionNode *fn;
 		fn->fkt_HUB_Data = 0;
 		FUNCTION_UNLOCK( fn );
 
-		USBDEBUG( "HUB__Port_Function_Rem      : FN %p : HUB_ID $%08lx : Port #%lu", fn, in->HUB_ID, port );
+		USBDEBUG( "HUB__Port_Function_Rem      : FN    %p : HUB_ID $%08lx : Port #%lu", fn, in->HUB_ID, port );
 
 		// Mark detached first
 		FUNCTION_MARKDETACH( fn );

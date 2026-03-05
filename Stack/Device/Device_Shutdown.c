@@ -28,17 +28,11 @@ PTR node;
 
 	// --
 
-	IExec->DebugPrintF( "ROMExit :: 1 :: (%s)\n", (file)?file:"<NULL>" );
-
 	HCD_CONTROLLERS_STOP();
 
 	//	HCD_FREE_CONTROLLERS
 
-	IExec->DebugPrintF( "ROMExit :: 2 ::\n" );
-
 	ASYNC_FREE( & usbbase->usb_HCDASync );
-
-	IExec->DebugPrintF( "ROMExit :: 3 ::\n" );
 
 	MASTER_SHUTDOWN();
 
@@ -46,15 +40,11 @@ PTR node;
 
 	if ( usbbase->usb_TimeRequest )
 	{
-		IExec->DebugPrintF( "ROMExit :: 4 ::\n" );
-
 		IExec->FreeSysObject( ASOT_IOREQUEST, usbbase->usb_TimeRequest );
 		usbbase->usb_TimeRequest = NULL;
 	}
 
 	// --
-
-	IExec->DebugPrintF( "ROMExit :: 5 ::\n" );
 
 	while( TRUE )
 	{
@@ -65,22 +55,14 @@ PTR node;
 			break;
 		}
 
-		IExec->DebugPrintF( "ROMExit :: 8 ::\n" );
-
 		FDRIVER_FREE( node );
 	}
 
 	// --
 
-	IExec->DebugPrintF( "ROMExit :: 9 ::\n" );
-
 	MEMORY_CLEANUP();
 
 	// -- Close Libraries
-
-	IExec->DebugPrintF( "ROMExit :: 10 ::\n" );
-
-	#ifndef DO_DEMO_MODE
 
 	if ( usbbase->usb_IDOS )
 	{
@@ -93,8 +75,6 @@ PTR node;
 		IExec->CloseLibrary( (PTR) usbbase->usb_DOSBase );
 		usbbase->usb_DOSBase = NULL;
 	}
-
-	#endif
 
 	// --
 
@@ -174,7 +154,7 @@ PTR node;
 
 	// --
 
-	IExec->DebugPrintF( "Freeing Resources done\n" );
+	return;
 }
 
 // --

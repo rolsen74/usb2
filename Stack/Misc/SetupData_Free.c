@@ -20,7 +20,7 @@ struct RealSetupData *sd;
 	{
 		sd = mem;
 
-		USBDEBUG( "__SetupData_Free         : SD %p, Phy $%08lx", sd, sd->rsd_Phy );
+		USBDEBUG( "__SetupData_Free         : SD    %p, Phy $%08lx", sd, sd->rsd_Phy );
 
 		if ( sd->rsd_StructID == ID_USB2_SD )
 		{
@@ -33,7 +33,7 @@ struct RealSetupData *sd;
 	}
 	else
 	{
-		USBDEBUG( "__SetupData_Free         : SD %p", mem );
+		USBDEBUG( "__SetupData_Free         : SD    %p", mem );
 	}
 }
 

@@ -33,10 +33,10 @@ U32 wait;
 // 		USBDEBUG( 
 // 			"__myProcess_Main (Master)\n"
 // 			"  :: Stopping ...... : %ld\n"
-// 			"  :: TM Nodes ...... : %ld (TaskMsg's)\n"
-// 			"  :: TM First ...... : %p\n"
-// 			"  :: TN Nodes ...... : %ld (Task's)\n"
-// 			"  :: TN First ...... : %p\n"
+// 			"  :: TM    Nodes ...... : %ld (TaskMsg's)\n"
+// 			"  :: TM    First ...... : %p\n"
+// 			"  :: TN    Nodes ...... : %ld (Task's)\n"
+// 			"  :: TN    First ...... : %p\n"
 // 			"  :: HCD ASync Adr . : %p\n"
 // 			"  :: HCD ASync Cnt . : %ld\n"
 // 			"  ::\n", 
@@ -54,10 +54,10 @@ U32 wait;
 		usbbase->usb_IExec->DebugPrintF(
 			"__myProcess_Main (Master)\n"
 			"  :: Stopping ...... : %ld\n"
-			"  :: TM Nodes ...... : %ld (TaskMsg's)\n"
-			"  :: TM First ...... : %p\n"
-			"  :: TN Nodes ...... : %ld (Task's)\n"
-			"  :: TN First ...... : %p\n"
+			"  :: TM    Nodes ...... : %ld (TaskMsg's)\n"
+			"  :: TM    First ...... : %p\n"
+			"  :: TN    Nodes ...... : %ld (Task's)\n"
+			"  :: TN    First ...... : %p\n"
 			"  :: HCD ASync Adr . : %p\n"
 			"  :: HCD ASync Cnt . : %ld\n"
 			"  ::\n", 

@@ -21,15 +21,13 @@ S32 retval;
 
 	// -- Add Root HUB Entry
 
-	fn = FUNCTION_ALLOC( hn, NULL, 0 );
+	fn = FUNCTION_ALLOC( hn, NULL, hn->hn_MaxSpeed, 0 );
 
 	if ( ! fn )
 	{
 		USBERROR( "__myInit (HCD)           : Error: Allocating RootHub Function" );
 		goto bailout;
 	}
-
-	fn->fkt_Speed = hn->hn_MaxSpeed;
 
 	hn->hn_Function_Array[0] = fn;
 	hn->hn_EndPoint_Array[0] = fn->fkt_ControlEndPoint;

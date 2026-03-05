@@ -30,14 +30,15 @@ S32 reply;
 
 	if ( FUNCTION_VALID( fn ) == VSTAT_Okay )
 	{
-		USBERROR( "Obtain 15" );
+
+//		USBERROR( "Obtain 15" );
 //		SEMAPHORE_OBTAIN( & usbbase->usb_Bind_Semaphore );
 
 		dn = usbbase->usb_Bind_Header.uh_Head;
 
 		while( dn )
 		{
-			USBERROR( "__Cmd_Fkt_Detach : dn %p", dn );
+			USBERROR( "__Cmd_Fkt_Detach : DN    %p", dn );
 
 			if ( dn->dn_Function == fn )
 			{

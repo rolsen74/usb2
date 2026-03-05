@@ -25,7 +25,7 @@ SEC_CODE void __Register_Unlock( struct USBBase *usbbase, struct RealRegister *r
 {
 	TASK_NAME_ENTER( "__Register_Unlock" );
 
-	USBDEBUG( "__Register_Unlock        : Reg %p : Locks %ld (old) : (%s)", reg, ( reg )?reg->reg_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__Register_Unlock        : REG   %p : Locks %2ld (old) : (%s)", reg, ( reg )?reg->reg_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +35,16 @@ SEC_CODE void __Register_Unlock( struct USBBase *usbbase, struct RealRegister *r
 		{
 			reg->reg_Locks--;
 
-//			USBDEBUG( "__Register_Unlock        : Reg %p : New Lock Count : %ld (-1)", reg, reg->reg_Locks );
+//			USBDEBUG( "__Register_Unlock        : REG   %p : New Lock Count : %ld (-1)", reg, reg->reg_Locks );
 		}
 		else
 		{
-			USBPANIC( "__Register_Unlock        : Reg %p : Register Node NOT Locked (%ld)", reg, reg->reg_Locks );
+			USBPANIC( "__Register_Unlock        : REG   %p : Register Node NOT Locked (%ld)", reg, reg->reg_Locks );
 		}
 	}
 	else
 	{
-		USBERROR( "__Register_Unlock        : Reg %p : Invalid Register Node", reg );
+		USBERROR( "__Register_Unlock        : REG   %p : Invalid Register Node", reg );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );

@@ -25,7 +25,7 @@ SEC_CODE void __Interface_UnlockNode( struct USBBase *usbbase, struct USB2_Inter
 {
 	TASK_NAME_ENTER( "__Interface_UnlockNode" );
 
-	USBDEBUG( "__Interface_UnlockNode   : IN %p : (%s)", in, (file)?file:"<NULL>" );
+	USBDEBUG( "__Interface_UnlockNode   : IN    %p : (%s)", in, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +35,16 @@ SEC_CODE void __Interface_UnlockNode( struct USBBase *usbbase, struct USB2_Inter
 		{
 			in->in_Locks--;
 
-//			USBDEBUG( "__Interface_UnlockNode   : IN %p : New Lock Count : %ld (-1)", in, in->in_Locks );
+//			USBDEBUG( "__Interface_UnlockNode   : IN    %p : New Lock Count : %ld (-1)", in, in->in_Locks );
 		}
 		else
 		{
-			USBPANIC( "__Interface_UnlockNode   : IN %p : Interface Node NOT Locked (%ld)", in, in->in_Locks );
+			USBPANIC( "__Interface_UnlockNode   : IN    %p : Interface Node NOT Locked (%ld)", in, in->in_Locks );
 		}
 	}
 	else
 	{
-		USBERROR( "__Interface_UnlockNode   : IN %p : Invalid Interface Node", in );
+		USBERROR( "__Interface_UnlockNode   : IN    %p : Invalid Interface Node", in );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );

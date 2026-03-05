@@ -22,7 +22,7 @@ struct RealRequest *ioreq;
 struct RealRequest *next;
 S32 len;
 
-	USBDEBUG( "__RootHUB_Handle_Chg : Enter" );
+	USBDEBUG( "__RootHUB_Handle_Chg     : Enter" );
 
 	ioreq = hn->hn_HUB_Interrupts.uh_Head;
 
@@ -51,7 +51,7 @@ S32 len;
 		ioreq = next;
 	}
 
-	USBDEBUG( "__RootHUB_Handle_Chg : Leave" );
+	USBDEBUG( "__RootHUB_Handle_Chg     : Leave" );
 }
 
 // --

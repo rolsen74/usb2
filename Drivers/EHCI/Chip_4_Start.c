@@ -63,7 +63,7 @@ U32 cnt;
 
 	// --
 
- 	USBDEBUG( "EHCI_Chip_Start : 1 : Set default 1024 frames" );
+ 	USBDEBUG( "EHCI_Chip_Start          : 1 : Set default 1024 frames" );
 
 	val  = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );
 	val &= ~EHCI_CMD_FLS_MASK;
@@ -100,12 +100,12 @@ U32 cnt;
 
 		case 3:
 		{
-			USBDEBUG( "EHCI_Chip_Start : Error illegal FrameList size $%08lx", val );
+			USBERROR( "EHCI_Chip_Start          : Error illegal FrameList size $%08lx", val );
 			goto bailout;
 		}
 	}
 
-	USBDEBUG( "EHCI_Chip_Start : Frame List Size: %lu", hn->hn_HCD.EHCI.FrameList_Size );
+	USBDEBUG( "EHCI_Chip_Start          : Frame List Size: %lu", hn->hn_HCD.EHCI.FrameList_Size );
 
 	// --
 	// Point to async list
@@ -121,11 +121,11 @@ U32 cnt;
 	// --
 	// Turn on controller
 
-	USBDEBUG( "EHCI_Chip_Start : 5" );
+	USBDEBUG( "EHCI_Chip_Start          : 5" );
 
 	// Start controller : RS only for now
-	val  = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD ) & EHCI_CMD_FLS_MASK;
-	val &= EHCI_CMD_FLS_MASK;
+	val  = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );
+	val &= EHCI_CMD_FLS_MASK;	// Keep FrameList Size
 	val |= EHCI_CMD_ITC_8;		// 8 microframes
 	val |= EHCI_CMD_RS;
 	PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD, val );
@@ -141,7 +141,7 @@ U32 cnt;
 	// Take over port ownership
 	#define MAXMS	20		// max 5x20 = 100ms
 
-	USBDEBUG( "EHCI_Chip_Start : 6 :" );
+	USBDEBUG( "EHCI_Chip_Start          : 6 :" );
 	PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_CONFIGFLAG, EHCI_CONF_CF );
 
 	for( cnt=0 ; cnt<MAXMS ; cnt++ )
@@ -160,7 +160,7 @@ U32 cnt;
 
 	if ( cnt == MAXMS )
 	{
-		USBDEBUG( "EHCI_Chip_Start : Taking over Port timed out" );
+		USBERROR( "EHCI_Chip_Start          : Taking over Port timed out" );
 		goto bailout;
 	}
 
@@ -170,6 +170,18 @@ U32 cnt;
 	retval = TRUE;
 
 bailout:
+
+
+{
+	val  = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );
+	USBINFO( "USBCMD: $%08lx", (U32) val );
+	val  = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS );
+	USBINFO( "USBSTS: $%08lx", (U32) val );
+	val  = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_ASYNC );
+	USBINFO( "ASYNC : $%08lx", (U32) val );
+	val  = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_PERIOD );
+	USBINFO( "PERIOD: $%08lx", (U32) val );
+}
 
 	TASK_NAME_LEAVE();
 

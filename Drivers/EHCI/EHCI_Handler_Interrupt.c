@@ -72,6 +72,10 @@ U32 sigflags;
 	}
 
 	usbbase = hn->hn_USBBase;
+
+	IExec = usbbase->usb_IExec;
+//	IExec->DebugPrintF( "EHCI Interrupt\n" );
+
 	TASK_NAME_ENTER( "EHCI : EHCI_Handler_Interrupt" );
 
 	intflags = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS );
@@ -81,8 +85,6 @@ U32 sigflags;
 	{
 		return( FALSE );
 	}
-
-	IExec = usbbase->usb_IExec;
 
 	sigflags = 0;
 
@@ -109,7 +111,7 @@ U32 sigflags;
 	if ( intflags & EHCI_STS_ERRINT )
 	{
 		sigflags |= hn->hn_HCD.EHCI.Signal_EI.sig_Signal_Mask;
-//		IExec->DebugPrintF( "EHCI: EHCI_STS_ERRINT - USB Error Interrupt\n" );
+		IExec->DebugPrintF( "EHCI: EHCI_STS_ERRINT - USB Error Interrupt\n" );
 	}
 
 	// RWC : Interrupt

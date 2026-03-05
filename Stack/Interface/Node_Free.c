@@ -45,7 +45,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__Interface_FreeNode" );
 
-	USBDEBUG( "__Register_Free           : IN %p : (%s)", in, (file)?file:"<NULL>" );
+	USBDEBUG( "__Register_Free          : IN    %p : (%s)", in, (file)?file:"<NULL>" );
 
 	// --
 

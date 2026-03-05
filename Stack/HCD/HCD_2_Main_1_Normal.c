@@ -51,23 +51,14 @@ U32 wait;
 
 		if ( mask & hn->HCD_Mask )
 		{
-//			usbbase->usb_IExec->DebugPrintF( " : Handler_HCD\n" );
+//			usbbase->usb_IExec->DebugPrintF( " : __myHandle_HCD\n" );
 
-			if ( hn->HCD_Functions.Handler_HCD )
-			{
-				hn->HCD_Functions.Handler_HCD( hn, mask & hn->HCD_Mask );
-			}
-			#ifdef DO_DEBUG
-			else
-			{
-				USBPANIC( "__myMain (HCD) : __Normal : HCD_Mask : Implement me" );
-			}
-			#endif
+			__myHandle_HCD( usbbase, hn, mask );
 		}
 
 		if ( mask & hn->hn_WatchDog_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
-			usbbase->usb_IExec->DebugPrintF( " : __myHandle_WatchDog\n" );
+//			usbbase->usb_IExec->DebugPrintF( " : __myHandle_WatchDog\n" );
 
 			__myHandle_WatchDog( usbbase, hn );
 		}
@@ -99,15 +90,17 @@ U32 wait;
 
 			if ( MSGPORT_GETMSG( & in->Tick_MsgPort ))
 			{
-				in->Tick_TimeRequest.Time.Seconds = 2;
+				in->Tick_TimeRequest.Time.Seconds = 1;
 				in->Tick_TimeRequest.Time.Microseconds = 0;
 				IO_SEND( & in->Tick_TimeRequest );
 			}
+
+			__myHandle_HCD( usbbase, hn, -1 );
 		}
 
 		if ( mask & SIGBREAKF_CTRL_C )
 		{
-			usbbase->usb_IExec->DebugPrintF( " : SIGBREAKF_CTRL_C\n" );
+//			usbbase->usb_IExec->DebugPrintF( " : SIGBREAKF_CTRL_C\n" );
 
 			if ( tn->tn_Parent )
 			{
@@ -127,12 +120,13 @@ U32 wait;
 //			usbbase->usb_IExec->DebugPrintF( " : SIGBREAKF_CTRL_D" );
 
 			USBDEBUG( "__myMain (HCD)           : Got : CTRL+D" );
+			// Used to break out of Wait so we can check ua_Counter in Stopping
 		}
 
 //		usbbase->usb_IExec->DebugPrintF( "\n" );
 	}
 
-	usbbase->usb_IExec->DebugPrintF( "HCD Shutting down\n" );
+//	usbbase->usb_IExec->DebugPrintF( "HCD Shutting down\n" );
 
 	TASK_NAME_LEAVE();
 }

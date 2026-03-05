@@ -38,7 +38,7 @@ SEC_CODE void __MsgPort_Reinit( struct USBBase *usbbase, struct USB2_MsgPort *mp
 
 	if ( mp->ump_StructID != ID_USB2_MP )
 	{
-		USBPANIC( "__MsgPort_Reinit : 2 : In use : (%s)", file );
+		USBPANIC( "__MsgPort_Reinit : 2 : IN    use : (%s)", file );
 	}
 
 	#endif

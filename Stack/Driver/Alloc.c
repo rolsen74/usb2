@@ -27,7 +27,7 @@ struct USB2_DriverNode *dn;
 struct USB2_HCDNode *hn;
 S32 error;
 
-//	USBDEBUG( "__Driver_Alloc           : FN %p : ", fn );
+//	USBDEBUG( "__Driver_Alloc           : FN    %p : ", fn );
 
 	error = TRUE;
 
@@ -77,7 +77,7 @@ bailout:
 		dn = NULL;
 	}
 
-	USBDEBUG( "__Driver_Alloc           : DN %p : (new)", dn );
+	USBDEBUG( "__Driver_Alloc           : DN    %p : (new)", dn );
 
 	return( dn );
 }

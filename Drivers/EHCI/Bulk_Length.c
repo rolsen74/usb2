@@ -69,6 +69,7 @@ U8 err;
 
 	TASK_NAME_ENTER( "EHCI : EHCI_Bulk_Length" );
 //	USBERROR( "EHCI_Bulk_Length" );
+//	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Bulk_Length : IOReq %p\n", ioreq );
 
 	usbbase	= hn->hn_USBBase;
 

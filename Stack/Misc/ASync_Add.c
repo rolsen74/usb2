@@ -26,7 +26,7 @@
 
 SEC_CODE void __ASync_Add( struct USBBase *usbbase, struct USB2_ASync *as )
 {
-//	USBDEBUG( "__ASync_Add              : AS %p", as );
+//	USBDEBUG( "__ASync_Add              : AS    %p", as );
 	TASK_NAME_ENTER( "__ASync_Add" );
 
 
@@ -55,7 +55,7 @@ SEC_CODE void __ASync_Add( struct USBBase *usbbase, struct USB2_ASync *as )
 	SEMAPHORE_OBTAIN( & as->ua_Semaphore );
 
 	as->ua_Counter++;
-//	USBDEBUG( "__ASync_Add              : AS %p : New Count : %ld (+1)", as, as->ua_Counter );
+//	USBDEBUG( "__ASync_Add              : AS    %p : New Count : %ld (+1)", as, as->ua_Counter );
 
 	SEMAPHORE_RELEASE( & as->ua_Semaphore );
 

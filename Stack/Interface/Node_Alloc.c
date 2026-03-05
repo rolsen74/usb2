@@ -94,7 +94,7 @@ bailout:
 		in = NULL;
 	}
 
-	USBDEBUG( "__Interface_AllocNode    : IN %p : (new)", in );
+	USBDEBUG( "__Interface_AllocNode    : IN    %p : (new)", in );
 
 	return( in );
 }

@@ -24,7 +24,7 @@ S32 old;
 
 	dn = userdata;
 
-//	USBDEBUG( "__myIFCT_Entry : 1 : DN %p : Call Driver", dn );
+//	USBDEBUG( "__myIFCT_Entry : 1 : DN    %p : Call Driver", dn );
 
 	// --
 
@@ -32,13 +32,13 @@ S32 old;
 	{
 		/**/ if ( dn->dn_Entry )
 		{
-//			USBERROR( "__myIFC_Entry : 2 : DN %p : Entry %p", dn, dn->dn_Entry );
+//			USBERROR( "__myIFC_Entry : 2 : DN    %p : Entry %p", dn, dn->dn_Entry );
 
 			dn->dn_Entry( usbbase, & dn->dn_Message.rdm_Public );
 		}
 		else if (( dn->dn_Filename ) && ( usbbase->usb_DriverDirLock ))
 		{
-//			USBERROR( "__myIFC_Entry : 3 : DN %p : Filename '%s'", dn, dn->dn_Filename );
+//			USBERROR( "__myIFC_Entry : 3 : DN    %p : Filename '%s'", dn, dn->dn_Filename );
 
 			proc = MISC_SETPROCWINDOW( -1 );
 
@@ -71,7 +71,7 @@ S32 old;
 		}
 		else
 		{
-			USBERROR( "__myIFC_Entry : 4 : DN %p : No Entry", dn );
+			USBERROR( "__myIFC_Entry : 4 : DN    %p : No Entry", dn );
 		}
 
 		// Driver Quit
@@ -82,7 +82,7 @@ S32 old;
 
 	// --
 
-//	USBERROR( "__myIFC_Entry : 5 : DN %p : Driver Exit", dn );
+//	USBERROR( "__myIFC_Entry : 5 : DN    %p : Driver Exit", dn );
 
 	TASK_NAME_LEAVE();
 }
@@ -159,11 +159,11 @@ U32 retval;
 	if ( ih->ih_Owner )
 	{
 		// Allready claimed
-//		USBERROR( "Skipping Interface (claimed) : FN %p : Class %ld", ig->ig_Function, ig->ig_Class );
+//		USBERROR( "Skipping Interface (claimed) : FN    %p : Class %ld", ig->ig_Function, ig->ig_Class );
 		goto bailout;
 	}
 
-//	USBERROR( "Found Interface (possible) : FN %p : Class %ld", ig->ig_Function, ig->ig_Class );
+//	USBERROR( "Found Interface (possible) : FN    %p : Class %ld", ig->ig_Function, ig->ig_Class );
 
 	dn->dn_Message.rdm_Public.Interface = (PTR) & ih->ih_Public ;
 	dn->dn_Message.rdm_Public.InterfaceDescriptor = (PTR) ih->ih_Active->in_Descriptor;
@@ -216,7 +216,6 @@ U32 retval;
 
 		// --
 
-		USBERROR( "Obtain 17" );
 		SEMAPHORE_OBTAIN(	& usbbase->usb_Bind_Semaphore );
 		NODE_ADDTAIL(		& usbbase->usb_Bind_Header, dn );
 		SEMAPHORE_RELEASE(	& usbbase->usb_Bind_Semaphore );
@@ -230,7 +229,7 @@ U32 retval;
 		if ( DRIVER_FREE( dn ) != FSTAT_Okay )
 		{
 			USBDEBUG( "_Start_Interface         : Unable to Free, parking" );
-			USBERROR( "Obtain 16" );
+
 			SEMAPHORE_OBTAIN(	& usbbase->usb_Bind_Semaphore );
 			NODE_ADDTAIL(		& usbbase->usb_Bind_Header, dn );
 			SEMAPHORE_RELEASE(	& usbbase->usb_Bind_Semaphore );

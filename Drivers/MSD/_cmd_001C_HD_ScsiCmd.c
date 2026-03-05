@@ -68,7 +68,7 @@ U32 len;
 
 // --
 
-SEC_CODE void __HDSCSI_Default( struct USBBase *usbbase, struct IOStdReq *ioreq, struct __scsi_intern *si )
+SEC_CODE void __HDSCSI_Default( struct USBBase *usbbase, struct IOStdReq *ioreq, struct __scsi_intern *si UNUSED )
 {
 struct DoBulkStruct dbs;
 struct DoBulkResult sbr;	// ReqSense Result

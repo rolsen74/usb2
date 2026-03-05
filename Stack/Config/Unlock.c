@@ -25,7 +25,7 @@ SEC_CODE void __Config_Unlock( struct USBBase *usbbase, struct USB2_ConfigNode *
 {
 	TASK_NAME_ENTER( "__Config_Unlock" );
 
-//	USBDEBUG( "__Config_Unlock          : CN %p : Locks %ld (old) : (%s)", cn, (cn)?cn->cfg_Locks:0, (file)?file:"<NULL>" );
+//	USBDEBUG( "__Config_Unlock          : CN    %p : Locks %2ld (old) : (%s)", cn, (cn)?cn->cfg_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +35,16 @@ SEC_CODE void __Config_Unlock( struct USBBase *usbbase, struct USB2_ConfigNode *
 		{
 			cn->cfg_Locks--;
 
-//			USBDEBUG( "__Config_Unlock          : CN %p : New Lock Count : %ld (-1)", cn, cn->cfg_Locks );
+//			USBDEBUG( "__Config_Unlock          : CN    %p : New Lock Count : %ld (-1)", cn, cn->cfg_Locks );
 		}
 		else
 		{
-			USBPANIC( "__Config_Unlock          : CN %p : Config NOT Locked (%ld) : (%s)", cn, cn->cfg_Locks, (file)?file:"<NULL>" );
+			USBPANIC( "__Config_Unlock          : CN    %p : Config NOT Locked (%ld) : (%s)", cn, cn->cfg_Locks, (file)?file:"<NULL>" );
 		}
 	}
 	else
 	{
-		USBPANIC( "__Config_Unlock          : CN %p : Invalid Config Node", cn );
+		USBPANIC( "__Config_Unlock          : CN    %p : Invalid Config Node", cn );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );

@@ -137,7 +137,7 @@ S32 reply;
 				}
 				else
 				{
-					USBDEBUG( "__myHandle_Begin : Function Detached : FN %p", fn );
+					USBDEBUG( "__myHandle_Begin : Function Detached : FN    %p", fn );
 					ioreq->req_Public.io_Error = USB2Err_Device_Detached;
 				}
 
@@ -147,7 +147,7 @@ S32 reply;
 			}
 			else
 			{
-				USBDEBUG( "__myHandle_Begin : Invalid Function : FN %p", fn );
+				USBDEBUG( "__myHandle_Begin : Invalid Function : FN    %p", fn );
 				ioreq->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
 			}
 

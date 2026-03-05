@@ -56,6 +56,13 @@ struct EHCI_QH *qh;
 
 //	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Control_Remove" );
+//	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Remove : IOReq %p\n", ioreq );
+
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	EHCI_Door_Bell_Init( hn, __FILE__ );
+	#else
+	EHCI_Door_Bell_Init( hn );
+	#endif
 
 	// --
 	// Find the QH before our QH
@@ -93,7 +100,11 @@ struct EHCI_QH *qh;
 
 	// --
 	// Tell HW to Flush async prefetch pointers
-	EHCI_Wait_Door_Bell( hn );
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	EHCI_Door_Bell_Wait( hn, __FILE__ );
+	#else
+	EHCI_Door_Bell_Wait( hn );
+	#endif
 
 	// --
 	// its no longer active, but still controlled by HCD

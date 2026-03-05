@@ -179,7 +179,7 @@ int error;
 
 	// --
 
-	usbbase->usb_IExec->DebugPrintF( "\nAdding FDriver Class %ld\n\n", fdn->fdn_Class );
+//	usbbase->usb_IExec->DebugPrintF( "\nAdding FDriver Class %ld\n\n", fdn->fdn_Class );
 
 	SEMAPHORE_OBTAIN(	& usbbase->usb_FDriver_Semaphore );
 	NODE_ADDTAIL(		& usbbase->usb_FDriver_Header, fdn );

@@ -27,7 +27,7 @@ enum LSTAT lstat;
 
 	TASK_NAME_ENTER( "__Config_Lock" );
 
-//	USBDEBUG( "__Config_Lock            : CN %p : Locks %ld (old) : (%s)", cn, (cn)?cn->cfg_Locks:0, (file)?file:"<NULL>" );
+//	USBDEBUG( "__Config_Lock            : CN    %p : Locks %2ld (old) : (%s)", cn, (cn)?cn->cfg_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -36,11 +36,11 @@ enum LSTAT lstat;
 		cn->cfg_Locks++;
 		lstat = LSTAT_Okay;
 
-//		USBDEBUG( "__Config_Lock            : CN %p : New Lock Count : %ld (+1)", cn, cn->cfg_Locks );
+//		USBDEBUG( "__Config_Lock            : CN    %p : New Lock Count : %ld (+1)", cn, cn->cfg_Locks );
 	}
 	else
 	{
-		USBPANIC( "__Config_Lock            : CN %p : Lock failed : (%s)", cn, file );
+		USBPANIC( "__Config_Lock            : CN    %p : Lock failed : (%s)", cn, file );
 		lstat = LSTAT_Error;
 	}
 

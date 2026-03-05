@@ -106,7 +106,7 @@ bailout:
 		ih = NULL;
 	}
 
-	USBDEBUG( "__Interface_AllocHeader  : IH %p : (new)", ih );
+	USBDEBUG( "__Interface_AllocHeader  : IH    %p : (new)", ih );
 
 	return( ih );
 }

@@ -36,7 +36,7 @@ enum VSTAT vstat;
 
 	else if ( in == (PTR) 0x55555555 )
 	{
-		USBPANIC( "__Interface_ValidNode    : IN %p : Free'd Memory : (%s)", in, (file)?file:"<NULL>" );
+		USBPANIC( "__Interface_ValidNode    : IN    %p : Free'd Memory : (%s)", in, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 
@@ -44,17 +44,17 @@ enum VSTAT vstat;
 
 	else if ( in->in_StructID == 0 )
 	{
-		USBDEBUG( "__Interface_ValidNode    : IN %p : Not Initalized", in );
+		USBDEBUG( "__Interface_ValidNode    : IN    %p : Not Initalized", in );
 		vstat = VSTAT_Null;
 	} 
 	else if ( in->in_StructID == ID_USB2_FREED )
 	{
-		USBDEBUG( "__Interface_ValidNode    : IN %p : Free Struct", in );
+		USBDEBUG( "__Interface_ValidNode    : IN    %p : Free Struct", in );
 		vstat = VSTAT_Null;
 	}
 	else if ( in->in_StructID != ID_USB2_IFCN )
 	{
-		USBDEBUG( "__Interface_ValidNode    : IN %p : Invalid ID ($%08lx)", in, in->in_StructID );
+		USBDEBUG( "__Interface_ValidNode    : IN    %p : Invalid ID ($%08lx)", in, in->in_StructID );
 		vstat = VSTAT_Error;
 	}
 	else
@@ -62,7 +62,7 @@ enum VSTAT vstat;
 		vstat = VSTAT_Okay;
 	}
 
-//	USBDEBUG( "__Interface_ValidNode    : IN %p : Stat %ld", in, vstat );
+//	USBDEBUG( "__Interface_ValidNode    : IN    %p : Stat %ld", in, vstat );
 
 	TASK_NAME_LEAVE();
 

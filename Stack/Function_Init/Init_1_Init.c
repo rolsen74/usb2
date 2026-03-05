@@ -17,7 +17,7 @@ S32 retval;
 
 	retval = FALSE;
 
-	USBDEBUG( "__myInit (Init) : Enter : DN %p", dn );
+	USBDEBUG( "__myInit (Init) : Enter : DN    %p", dn );
 
 	// --
 

@@ -83,7 +83,7 @@ U32 index;
 
 			if ( destall_ep )
 			{
-				usbbase->usb_IExec->DebugPrintF( "[%s] We successfully Destalled -- Addr %ld : EP $%02lx : EPN Info : EPNr %ld : EPDir %ld : EPSize %ld : EPType %ld\n", 
+				usbbase->usb_IExec->DebugPrintF( "[%s] We successfully Destalled -- Addr %ld : EP    $%02lx : EPN Info : EPNr %ld : EPDir %ld : EPSize %ld : EPType %ld\n", 
 					usbbase->usb_IExec->FindTask(NULL)->tc_Node.ln_Name, 
 					fn->fkt_Address, 
 					index,

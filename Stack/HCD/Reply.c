@@ -29,7 +29,7 @@ SEC_CODE void __HCD_Reply( struct USBBase *usbbase UNUSED, struct RealRequest *i
 
 	if ( IOREQUEST_LOCK( ioreq ) == LSTAT_Okay )
 	{
-//		usbbase->usb_IExec->DebugPrintF( "__HCD_Reply              : IOReq %p : Locks %ld : Stat %ld : Task %p :\n", ioreq, ioreq->req_Locks, ioreq->req_PublicStat, usbbase->usb_IExec->FindTask(NULL) );
+//		usbbase->usb_IExec->DebugPrintF( "__HCD_Reply              : IOReq %p : Locks %2ld : Stat %ld : Task %p :\n", ioreq, ioreq->req_Locks, ioreq->req_PublicStat, usbbase->usb_IExec->FindTask(NULL) );
 
 		TASK_NAME_SET( "__HCD_Reply : 2" );
 

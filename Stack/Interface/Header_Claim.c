@@ -34,7 +34,7 @@ S32 retval;
 			{
 				if (( fn->fkt_Detach ) || ( fn->fkt_FreeMe ))
 				{
-					USBERROR( "__Interface_ClaimHeader : Function Detached : FN %p", fn );
+					USBERROR( "__Interface_ClaimHeader : Function Detached : FN    %p", fn );
 					break;
 				}
 
@@ -56,7 +56,7 @@ S32 retval;
 				// hmm should I not Lock Reg instead?
 				if ( INTERFACE_LOCKHEADER(ih) != LSTAT_Okay )
 				{
-					USBERROR( "__Interface_ClaimHeader : Interface lock failed : IH %p", ih );
+					USBERROR( "__Interface_ClaimHeader : Interface lock failed : IH    %p", ih );
 					break;
 				}
 
@@ -71,14 +71,14 @@ S32 retval;
 		}
 		else
 		{
-			USBERROR( "__Interface_ClaimHeader : Invalid IH Node : IH %p", ih );
+			USBERROR( "__Interface_ClaimHeader : Invalid IH Node : IH    %p", ih );
 		}
 
 		REGISTER_UNLOCK( reg );
 	}
 	else
 	{
-		USBERROR( "__Interface_ClaimHeader : Invalid Reg Node : Reg %p", reg );
+		USBERROR( "__Interface_ClaimHeader : Invalid Reg Node : REG   %p", reg );
 	}
 
 	return( retval );

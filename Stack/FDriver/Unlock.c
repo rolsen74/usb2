@@ -25,7 +25,7 @@ SEC_CODE void __FDriver_Unlock( struct USBBase *usbbase, struct USB2_FktDriverNo
 {
 	TASK_NAME_ENTER( "__FDriver_Unlock" );
 
-	USBDEBUG( "__FDriver_Unlock         : FDN %p : Locks %ld (old) : (%s)", fdn, ( fdn )?fdn->fdn_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__FDriver_Unlock         : FDN %p : Locks %2ld (old) : (%s)", fdn, ( fdn )?fdn->fdn_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 

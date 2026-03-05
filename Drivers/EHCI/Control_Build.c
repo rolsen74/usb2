@@ -65,8 +65,9 @@ U32 val;
 U32 len;
 PTR buf;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+//	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Control_Build" );
+//	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Build : IOReq %p\n", ioreq );
 
 //	fn			= ioreq->req_Function;
 //	ep			= ioreq->req_EndPoint;
@@ -74,27 +75,27 @@ PTR buf;
 	handled		= TRUE;
 
 	#if 0
-	#ifdef DO_DEBUG
+	#ifdef USBINFO
 
 	STR Speeds[] = { "Low","Full","High","Super" };
 
-	USBDEBUG( "IORequest....... : %p",  ioreq );
-	USBDEBUG( "CommandDir...... : %s",  ioreq->req_Public.io_Command == CMD_READ ? "Read" : "Write" );
-	USBDEBUG( "SetupSize....... : %ld", ioreq->req_Public.io_SetupLength );
-	USBDEBUG( "SetupData....... : %p",  ioreq->req_Public.io_SetupData );
-	USBDEBUG( "Length.......... : %ld", ioreq->req_Public.io_Length );
-	USBDEBUG( "Data............ : %p",  ioreq->req_Public.io_Data );
-	USBDEBUG( "Address......... : %ld", fn->fkt_Address );
-	USBDEBUG( "EndPointNr...... : %ld [Control]", ep->ep_Number );
-	USBDEBUG( "MaxPacketSize... : %ld", ep->ep_MaxPacketSize );
-	USBDEBUG( "Interval........ : %ld", ep->ep_Interval );
-//	USBDEBUG( "DataToggle...... : %ld", ep->ep_DataToggle );
-	USBDEBUG( "HUB Port........ : %ld", fn->fkt_PortNr );
-	USBDEBUG( "Fkt Speed....... : %ld [%s]", fn->fkt_Speed, Speeds[fn->fkt_Speed] );
-	USBDEBUG( "Timeout......... : %ld%s", ioreq->req_Public.io_TimeOut, ( ioreq->req_Public.io_TimeOut == 0 ) ? " [Never]" : "" );
-//	USBDEBUG( "HCD Name........ : %s",  hn->hn_HCDName );
-	USBDEBUG( "HCD Number...... : %ld", hn->hn_HCDIndex );
-//	USBDEBUG( "Ping State...... : %ld", ep->ep_PingState );
+	USBINFO( "IORequest....... : %p",  ioreq );
+	USBINFO( "CommandDir...... : %s",  ioreq->req_Public.io_Command == CMD_READ ? "Read" : "Write" );
+	USBINFO( "SetupSize....... : %ld", ioreq->req_Public.io_SetupLength );
+	USBINFO( "SetupData....... : %p",  ioreq->req_Public.io_SetupData );
+	USBINFO( "Length.......... : %ld", ioreq->req_Public.io_Length );
+	USBINFO( "Data............ : %p",  ioreq->req_Public.io_Data );
+	USBINFO( "Address......... : %ld", fn->fkt_Address );
+	USBINFO( "EndPointNr...... : %ld [Control]", ep->ep_Number );
+	USBINFO( "MaxPacketSize... : %ld", ep->ep_MaxPacketSize );
+	USBINFO( "Interval........ : %ld", ep->ep_Interval );
+//	USBINFO( "DataToggle...... : %ld", ep->ep_DataToggle );
+	USBINFO( "HUB Port........ : %ld", fn->fkt_PortNr );
+	USBINFO( "Fkt Speed....... : %ld [%s]", fn->fkt_Speed, Speeds[fn->fkt_Speed] );
+	USBINFO( "Timeout......... : %ld%s", ioreq->req_Public.io_TimeOut, ( ioreq->req_Public.io_TimeOut == 0 ) ? " [Never]" : "" );
+//	USBINFO( "HCD Name........ : %s",  hn->hn_HCDName );
+	USBINFO( "HCD Number...... : %ld", hn->hn_HCDIndex );
+//	USBINFO( "Ping State...... : %ld", ep->ep_PingState );
   
 	#endif
 	#endif

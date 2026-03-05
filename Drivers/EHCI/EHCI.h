@@ -36,6 +36,18 @@ void EHCI_Dump_TD(		struct USB2_HCDNode *hn, struct EHCI_TD *td );
 
 #endif
 
+#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+
+SEC_CODE void	EHCI_Door_Bell_Init( struct USB2_HCDNode *hn, STR file );
+SEC_CODE void	EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn, STR file );
+
+#else
+
+SEC_CODE void	EHCI_Door_Bell_Init( struct USB2_HCDNode *hn );
+SEC_CODE void	EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn );
+
+#endif
+
 SEC_CODE void	EHCI_Bulk_Add( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE S32	EHCI_Bulk_Build( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE U32	EHCI_Bulk_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
@@ -79,7 +91,6 @@ SEC_CODE void	EHCI_Periodic_Start( struct USB2_HCDNode *hn );
 SEC_CODE void	EHCI_Periodic_Stop( struct USB2_HCDNode *hn );
 SEC_CODE S32	EHCI_Transfer_Check( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	EHCI_Transfer_Free( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-SEC_CODE void	EHCI_Wait_Door_Bell( struct USB2_HCDNode *hn );
 
 /***************************************************************************/
 

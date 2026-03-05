@@ -27,7 +27,7 @@ U32 mask;
 
 	retval = FALSE;
 
-	usbbase->usb_IExec->DebugPrintF( "__myMaster_StartTask 1 :\n" );
+//	usbbase->usb_IExec->DebugPrintF( "__myMaster_StartTask 1 :\n" );
 
 	if ( ! usbbase->usb_Master_Task.tn_TaskAdr )
 	{
@@ -64,7 +64,7 @@ U32 mask;
 		retval = TRUE;
 	}
 
-	usbbase->usb_IExec->DebugPrintF( "__myMaster_StartTask 99 : Retval %ld\n", retval );
+//	usbbase->usb_IExec->DebugPrintF( "__myMaster_StartTask 99 : Retval %ld\n", retval );
 
 	return( retval );
 }

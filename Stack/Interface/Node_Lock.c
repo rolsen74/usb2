@@ -27,7 +27,7 @@ enum LSTAT lstat;
 
 	TASK_NAME_ENTER( "__Interface_LockNode" );
 
-	USBDEBUG( "__Interface_LockNode     : IN %p : (%s)", in, (file)?file:"<NULL>" );
+	USBDEBUG( "__Interface_LockNode     : IN    %p : (%s)", in, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -36,11 +36,11 @@ enum LSTAT lstat;
 		in->in_Locks++;
 		lstat = LSTAT_Okay;
 
-//		USBDEBUG( "__Interface_LockNode     : IN %p : New Lock Count : %ld (+1)", in, in->in_Locks );
+//		USBDEBUG( "__Interface_LockNode     : IN    %p : New Lock Count : %ld (+1)", in, in->in_Locks );
 	}
 	else
 	{
-		USBPANIC( "__Interface_LockNode     : IN %p :Lock failed", in );
+		USBPANIC( "__Interface_LockNode     : IN    %p :Lock failed", in );
 		lstat = LSTAT_Error;
 	}
 

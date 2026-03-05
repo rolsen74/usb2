@@ -27,11 +27,11 @@ struct USB2_ConfigNode *cn2;
 struct USB2_ConfigNode *cn;
 struct RealRequest *ioreq;
 
-	USBDEBUG( "__Release                : FN %p : 1", fn );
+	USBDEBUG( "__Release                : FN    %p : 1", fn );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
-	USBDEBUG( "__Release                : FN %p : 2", fn );
+	USBDEBUG( "__Release                : FN    %p : 2", fn );
 
 	// --
 
@@ -299,8 +299,8 @@ struct USB2_HCDNode *hn;
 enum VSTAT vstat;
 enum FSTAT fstat;
 
-	USBDEBUG( "__Function_Free           : FN %p : (%s)", fn, (file)?file:"<NULL>" );
-//	USBERROR( "__Function_Free           : FN %p : (%s)", fn, (file)?file:"<NULL>" );
+	USBDEBUG( "__Function_Free           : FN    %p : (%s)", fn, (file)?file:"<NULL>" );
+//	USBERROR( "__Function_Free           : FN    %p : (%s)", fn, (file)?file:"<NULL>" );
 //	usbbase->usb_IExec->DebugPrintF( "!!!!!!!!!!!!!!!!!!!!!!!!! __Function_Free\n\n\n" );
 
 	// --
@@ -340,7 +340,7 @@ enum FSTAT fstat;
 	{
 		if ( fn->fkt_Locks > 0 )
 		{
-			USBDEBUG( "__Function_Free           : FN %p : Function Node still have %ld locks", fn, fn->fkt_Locks );
+			USBDEBUG( "__Function_Free           : FN    %p : Function Node still have %ld locks", fn, fn->fkt_Locks );
 			fstat = FSTAT_Locked;
 		}
 		else
@@ -351,7 +351,7 @@ enum FSTAT fstat;
 	}
 	else // ( vstat == VSTAT_Error )
 	{
-		USBPANIC( "__Function_Free           : FN %p : Invalid Pointer", fn );
+		USBPANIC( "__Function_Free           : FN    %p : Invalid Pointer", fn );
 		fstat = FSTAT_Error;
 	}
 

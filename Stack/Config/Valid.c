@@ -36,7 +36,7 @@ enum VSTAT vstat;
 
 	else if ( cn == (PTR) 0x55555555 )
 	{
-		USBPANIC( "__Config_Valid           : CN %p : Free'd Memory : (%s)", cn, (file)?file:"<NULL>" );
+		USBPANIC( "__Config_Valid           : CN    %p : Free'd Memory : (%s)", cn, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 
@@ -44,17 +44,17 @@ enum VSTAT vstat;
 
 	else if ( cn->cfg_StructID == 0 )
 	{
-		USBDEBUG( "__Config_Valid           : CN %p : Not Initalized : (%s)", cn, (file)?file:"<NULL>" );
+		USBDEBUG( "__Config_Valid           : CN    %p : Not Initalized : (%s)", cn, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	} 
 	else if ( cn->cfg_StructID == ID_USB2_FREED )
 	{
-		USBDEBUG( "__Config_Valid           : CN %p : Structure allready freed : (%s)", cn, (file)?file:"<NULL>" );
+		USBDEBUG( "__Config_Valid           : CN    %p : Structure allready freed : (%s)", cn, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 	else if ( cn->cfg_StructID != ID_USB2_CFG )
 	{
-		USBDEBUG( "__Config_Valid           : CN %p : Invalid ID $%08lx : (%s)", cn, cn->cfg_StructID, (file)?file:"<NULL>" );
+		USBDEBUG( "__Config_Valid           : CN    %p : Invalid ID $%08lx : (%s)", cn, cn->cfg_StructID, (file)?file:"<NULL>" );
 		vstat = VSTAT_Error;
 	}
 	else
@@ -62,7 +62,7 @@ enum VSTAT vstat;
 		vstat = VSTAT_Okay;
 	}
 
-//	USBDEBUG( "__Config_Valid           : CN %p : Stat %ld", cn, vstat );
+//	USBDEBUG( "__Config_Valid           : CN    %p : Stat %ld", cn, vstat );
 
 	TASK_NAME_LEAVE();
 

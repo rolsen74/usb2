@@ -83,7 +83,7 @@ SEC_CODE void __Task_Settle( struct USBBase *usbbase, struct USB2_TaskNode *tn )
 {
 U32 timecnt;
 
-	USBDEBUG( "__Task_Settle            : TN %p :", tn );
+	USBDEBUG( "__Task_Settle            : TN    %p :", tn );
 
 	TASKNODE_PRINT(tn);
 

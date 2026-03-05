@@ -36,7 +36,7 @@ struct ExecIFace *IExec;
 
 	if ( mp->ump_StructID != ID_USB2_MP )
 	{
-		USBPANIC( "MsgPort_PutMsg : 2 : In use : (%s)", file );
+		USBPANIC( "MsgPort_PutMsg : 2 : IN    use : (%s)", file );
 	}
 
 	if ( ! msg )

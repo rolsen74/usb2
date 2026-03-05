@@ -26,7 +26,7 @@
 
 SEC_CODE void __ASync_Sub( struct USBBase *usbbase, struct USB2_ASync *as )
 {
-//	USBDEBUG( "__ASync_Sub              : AS %p", as );
+//	USBDEBUG( "__ASync_Sub              : AS    %p", as );
 
 	TASK_NAME_ENTER( "__ASync_Sub" );
 	TASK_NAME_LEAVE();
@@ -41,7 +41,7 @@ SEC_CODE void __ASync_Sub( struct USBBase *usbbase, struct USB2_ASync *as )
 
 	if ( as->ua_StructID != ID_USB2_ASYNC )
 	{
-		USBPANIC( "ASync_Sub : 3 : Invalid ID : as %p", as );
+		USBPANIC( "ASync_Sub : 3 : Invalid ID : AS    %p", as );
 	}
 
 	#endif
@@ -58,14 +58,14 @@ SEC_CODE void __ASync_Sub( struct USBBase *usbbase, struct USB2_ASync *as )
 			TASK_SIGNAL( as->ua_Parent, SIGBREAKF_CTRL_D );
 		}
 
-//		USBDEBUG( "__ASync_Sub              : AS %p : New Count : %ld (-1)", as, as->ua_Counter );
+//		USBDEBUG( "__ASync_Sub              : AS    %p : New Count : %ld (-1)", as, as->ua_Counter );
 	}
 
 	if (( as->ua_Counter <= 0 )
 	&&	( as->ua_Task ))
 	{
 		// Signal ASync_Wait()
-		USBDEBUG( "__ASync_Sub              : Signal : AS %p", as );
+		USBDEBUG( "__ASync_Sub              : Signal : AS    %p", as );
 		TASK_SIGNAL( as->ua_Task, as->ua_Signal.sig_Signal_Mask );
 	}
 

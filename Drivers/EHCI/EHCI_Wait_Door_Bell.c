@@ -49,16 +49,25 @@
 
 // --
 
-SEC_CODE void EHCI_Wait_Door_Bell( struct USB2_HCDNode *hn )
+#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+
+SEC_CODE void EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn, STR file )
+
+#else
+
+SEC_CODE void EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn )
+
+#endif
+
 {
 U32 mask;
 U32 val;
 U32 adr;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "EHCI : EHCI_Wait_Door_Bell" );
+	TASK_NAME_ENTER( "EHCI : EHCI_Door_Bell_Wait" );
 
-//	USBDEBUG( "EHCI_Wait_Door_Bell : Enter" );
+	USBDEBUG( "EHCI_Door_Bell_Wait : Enter : '%s'", file );
 
 	#ifdef DO_DEBUG
 
@@ -66,7 +75,7 @@ U32 adr;
 
 	if ( hn->hn_Delay_InUse )
 	{
-		USBPANIC( "EHCI_Wait_Door_Bell : Error Delay in use" );		
+		USBPANIC( "EHCI_Door_Bell      : Error Delay in use" );		
 	}
 
 	hn->hn_Delay_InUse = TRUE;
@@ -77,7 +86,7 @@ U32 adr;
 	mask = hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask | hn->hn_Delay_MsgPort.ump_Signal.sig_Signal_Mask ;
 
 	// Clear Signals
-	TASK_SETSIGNAL( 0, mask );
+//	TASK_SETSIGNAL( 0, mask );
 
 	// Set Timer
 	hn->hn_Delay_IOReq.Time.Microseconds	= 1000 * 100;
@@ -104,7 +113,7 @@ U32 adr;
 
 	/**/ if ( mask & hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask )
 	{
-//		IExec->DebugPrintF( "Got Door Bell\n" );
+		IExec->DebugPrintF( "Got Door Bell\n" );
 	}
 	else if ( mask & hn->hn_Delay_MsgPort.ump_Signal.sig_Signal_Mask )
 	{
@@ -126,7 +135,38 @@ U32 adr;
 
 	#endif
 
-//	USBDEBUG( "EHCI_Wait_Door_Bell : Leave" );
+	USBDEBUG( "EHCI_Door_Bell_Wait : Leave" );
+
+	TASK_NAME_LEAVE();
+}
+
+// --
+
+#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+
+SEC_CODE void EHCI_Door_Bell_Init( struct USB2_HCDNode *hn, STR file )
+
+#else
+
+SEC_CODE void EHCI_Door_Bell_Init( struct USB2_HCDNode *hn )
+
+#endif
+
+{
+U32 mask;
+
+	struct USBBase *usbbase = hn->hn_USBBase;
+	TASK_NAME_ENTER( "EHCI : EHCI_Door_Bell_Init" );
+
+	USBDEBUG( "EHCI_Door_Bell_Init : Enter : '%s'", file );
+
+	// Set Wait Mask
+	mask = hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask | hn->hn_Delay_MsgPort.ump_Signal.sig_Signal_Mask ;
+
+	// Clear Signals
+	TASK_SETSIGNAL( 0, mask );
+
+	USBDEBUG( "EHCI_Door_Bell_Init : Leave" );
 
 	TASK_NAME_LEAVE();
 }

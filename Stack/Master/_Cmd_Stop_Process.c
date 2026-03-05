@@ -19,7 +19,7 @@ S32 reply;
 
 	tn = tm->tm_Task;
 
-	USBINFO( "__Cmd_Stop_Process       :  1 : IN %p : TM %p : TN %p :", in, tm, tn );
+	USBINFO( "__Cmd_Stop_Process       :  1 : IN    %p : TM    %p : TN    %p :", in, tm, tn );
 
 	if ((tn) && ( tn->tn_TaskAdr ))
 	{
@@ -56,7 +56,7 @@ S32 reply;
 		reply = TRUE;
 	}
 
-//	USBDEBUG( "__Cmd_Stop_Process       : 13 : TM %p : TN %p : Reply %ld :", tm, tn, reply );
+//	USBDEBUG( "__Cmd_Stop_Process       : 13 : TM    %p : TN    %p : Reply %ld :", tm, tn, reply );
 
 	return( reply );
 }
@@ -82,8 +82,8 @@ struct Message *msg;
 		// -- if we get here, a subtask have not shutdown
 		// for now.. I just restart the timer
 //		usbbase->usb_IExec->DebugPrintF( "Task Shutdown Timeout .. uhh what now\n" );
-		USBINFO( "myHandle_Task_Timeout : Task shutdown Timerout : TM %p : TN %p : DN %p :", tm, tm->tm_Task, tm->tm_Driver );
-//		USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 55 : Timeout : TM %p", tm );
+		USBINFO( "myHandle_Task_Timeout : Task shutdown Timerout : TM    %p : TN    %p : DN    %p :", tm, tm->tm_Task, tm->tm_Driver );
+//		USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 55 : Timeout : TM    %p", tm );
 
 		// -- restart timer
 		tm->tm_TimeRequest.Time.Seconds = 5;

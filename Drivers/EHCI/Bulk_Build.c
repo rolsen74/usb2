@@ -68,6 +68,7 @@ U32 l;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Bulk_Build" );
+//	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Bulk_Build : IOReq %p\n", ioreq );
 
 //	fn			= ioreq->req_Function;
 	ep			= ioreq->req_EndPoint;

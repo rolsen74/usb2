@@ -122,8 +122,6 @@ bailout:
 		IOREQUEST_FREE( (PTR) ioreq );
 	}
 
-//	usbbase->usb_IExec->DebugPrintF( "HUB__Port_Function_SetAddr : Done (%ld)\n", retval );
-
 	return( retval );
 }
 

@@ -25,7 +25,7 @@ SEC_CODE void __Interface_UnlockGroup( struct USBBase *usbbase, struct USB2_Inte
 {
 	TASK_NAME_ENTER( "__Interface_UnlockGroup" );
 
-	USBDEBUG( "__Interface_UnlockGroup  : IG %p : (%s)", ig, (file)?file:"<NULL>" );
+	USBDEBUG( "__Interface_UnlockGroup  : IG    %p : (%s)", ig, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +35,16 @@ SEC_CODE void __Interface_UnlockGroup( struct USBBase *usbbase, struct USB2_Inte
 		{
 			ig->ig_Locks--;
 
-//			USBDEBUG( "__Interface_UnlockGroup  : IG %p : New Lock Count : %ld (-1)", ig, ig->ig_Locks );
+//			USBDEBUG( "__Interface_UnlockGroup  : IG    %p : New Lock Count : %ld (-1)", ig, ig->ig_Locks );
 		}
 		else
 		{
-			USBPANIC( "__Interface_UnlockGroup  : IG %p : Interface Group NOT Locked (%ld)", ig, ig->ig_Locks );
+			USBPANIC( "__Interface_UnlockGroup  : IG    %p : Interface Group NOT Locked (%ld)", ig, ig->ig_Locks );
 		}
 	}
 	else
 	{
-		USBERROR( "__Interface_UnlockGroup  : IG %p : Invalid Interface Group", ig );
+		USBERROR( "__Interface_UnlockGroup  : IG    %p : Invalid Interface Group", ig );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );

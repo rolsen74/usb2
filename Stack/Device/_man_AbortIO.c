@@ -99,7 +99,7 @@ U32 send;
 
 		fn = ioreq->req_Function;
 
-//		usbbase->usb_IExec->DebugPrintF( "_manager_AbortIO : FN %p\n", fn );
+//		usbbase->usb_IExec->DebugPrintF( "_manager_AbortIO : FN    %p\n", fn );
 
 		if ( FUNCTION_LOCK( fn ) != LSTAT_Okay )
 		{
@@ -126,7 +126,7 @@ U32 send;
 
 		hn = fn->fkt_HCD;
 
-//		usbbase->usb_IExec->DebugPrintF( "_manager_AbortIO : HN %p\n", hn );
+//		usbbase->usb_IExec->DebugPrintF( "_manager_AbortIO : HN    %p\n", hn );
 
 		if ( HCD_LOCK( hn ) != LSTAT_Okay )
 		{

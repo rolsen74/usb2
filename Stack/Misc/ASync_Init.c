@@ -32,7 +32,7 @@ S32 retval;
 
 	retval = FALSE;
 
-	USBDEBUG( "__ASync_Init             : AS %p", ua );
+	USBDEBUG( "__ASync_Init             : AS    %p", ua );
 
 	#ifdef DO_PANIC
 
@@ -44,7 +44,7 @@ S32 retval;
 	if (( ua->ua_StructID != 0 ) && ( ua->ua_StructID != ID_USB2_FREED ))
 	{
 		USBDEBUG( "__ASync_Init : id $%08lx", ua->ua_StructID );
-		USBPANIC( "ASync_Init : 2 : In use" );
+		USBPANIC( "ASync_Init : 2 : IN    use" );
 	}
 
 	#endif

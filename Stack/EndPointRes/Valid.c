@@ -36,7 +36,7 @@ enum VSTAT vstat;
 
 	else if ( epr == (PTR) 0x55555555 )
 	{
-		USBPANIC( "__EndPointRes_Valid      : EPR %p : Free'd Memory : (%s)", epr, (file)?file:"<NULL>" );
+		USBPANIC( "__EndPointRes_Valid      : EPR   %p : Free'd Memory : (%s)", epr, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 
@@ -44,17 +44,17 @@ enum VSTAT vstat;
 
 	else if ( epr->epr_StructID == 0 )
 	{
-		USBDEBUG( "__EndPointRes_Valid      : EPR %p : Not Initalized : (%s)", epr, (file)?file:"<NULL>" );
+		USBDEBUG( "__EndPointRes_Valid      : EPR   %p : Not Initalized : (%s)", epr, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	} 
 	else if ( epr->epr_StructID == ID_USB2_FREED )
 	{
-		USBDEBUG( "__EndPointRes_Valid      : EPR %p : Structure allready freed : (%s)", epr, (file)?file:"<NULL>" );
+		USBDEBUG( "__EndPointRes_Valid      : EPR   %p : Structure allready freed : (%s)", epr, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 	else if ( epr->epr_StructID != ID_USB2_EPR )
 	{
-		USBDEBUG( "__EndPointRes_Valid      : EPR %p : Invalid ID $%08lx : (%s)", epr, epr->epr_StructID, (file)?file:"<NULL>" );
+		USBDEBUG( "__EndPointRes_Valid      : EPR   %p : Invalid ID $%08lx : (%s)", epr, epr->epr_StructID, (file)?file:"<NULL>" );
 		vstat = VSTAT_Error;
 	}
 	else
@@ -62,7 +62,7 @@ enum VSTAT vstat;
 		vstat = VSTAT_Okay;
 	}
 
-//	USBDEBUG( "__EndPointRes_Valid      : EPR %p : Stat %ld", epr, vstat );
+//	USBDEBUG( "__EndPointRes_Valid      : EPR   %p : Stat %ld", epr, vstat );
 
 	TASK_NAME_LEAVE();
 

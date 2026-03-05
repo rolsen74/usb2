@@ -20,7 +20,6 @@ struct USB2_DriverNode *dn;
 
 //	USBDEBUG( "myFree_DNs :: Enter" );
 
-//	USBERROR( "Obtain 14" );
 	SEMAPHORE_OBTAIN( & usbbase->usb_Bind_Semaphore );
 
 	dn = usbbase->usb_Bind_Header.uh_Head;

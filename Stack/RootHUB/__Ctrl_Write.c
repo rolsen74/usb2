@@ -23,7 +23,7 @@ S32 err;
 
 	if ( ! sd )
 	{
-		USBDEBUG( "Root HUB : Write : No SetupData buffer given" );
+		USBDEBUG( "RootHUB : Write : No SetupData buffer given" );
 
 		err = USB2Err_Host_Stall;
 		return;
@@ -34,7 +34,7 @@ S32 err;
 		{
 			case REQCODE_Set_Feature:
 			{
-				USBDEBUG( "Root HUB : Write : Set Feature" );
+				USBDEBUG( "RootHUB : Write : Set Feature" );
 
 				err = __Set_Feature( sd, hn, usbbase );
 				break;
@@ -42,7 +42,7 @@ S32 err;
 
 			case REQCODE_Clear_Feature:
 			{
-				USBDEBUG( "Root HUB : Write : Clear Feature" );
+				USBDEBUG( "RootHUB : Write : Clear Feature" );
 
 				err = __Clr_Feature( sd, hn, usbbase );
 				break;
@@ -50,7 +50,7 @@ S32 err;
 
 			case REQCODE_Set_Configuration:
 			{
-				USBDEBUG( "Root HUB : Write : Set Configuration Feature" );
+				USBDEBUG( "RootHUB : Write : Set Configuration Feature" );
 
 				err = __Set_Config( sd, hn, usbbase );
 				break;
@@ -58,7 +58,7 @@ S32 err;
 
 			default:
 			{
-				USBDEBUG( "Root HUB : Write : Unknown Request (%lu)", (U32) sd->RequestCode );
+				USBDEBUG( "RootHUB : Write : Unknown Request (%lu)", (U32) sd->RequestCode );
 
 				err = USB2Err_Host_Stall;
 				break;

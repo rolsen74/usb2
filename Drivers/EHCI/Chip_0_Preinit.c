@@ -63,13 +63,13 @@ U32 val;
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Preinit : 1 : Get CapLength" );
+	USBDEBUG( "EHCI_Chip_Preinit        : 1 : Get CapLength" );
 
 	hn->hn_HCD.EHCI.CapLength = PCI_READBYTE( EHCI_CAPLENGTH );
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Preinit : 2 : Get Number of Ports" );
+	USBDEBUG( "EHCI_Chip_Preinit        : 2 : Get Number of Ports" );
 
 	val = PCI_READLONG( EHCI_HCSPARAMS );
 
@@ -77,7 +77,7 @@ U32 val;
 
 	if ( ! hn->hn_HUB_NumPorts )
 	{
-		USBDEBUG( "EHCI_Chip_Preinit : HCD has no Ports connected" );
+		USBDEBUG( "EHCI_Chip_Preinit        : HCD has no Ports connected" );
 		goto bailout;
 	}
 

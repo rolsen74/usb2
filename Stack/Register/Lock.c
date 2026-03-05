@@ -27,7 +27,7 @@ enum LSTAT lstat;
 
 	TASK_NAME_ENTER( "__Register_Lock" );
 
-	USBDEBUG( "__Register_Lock          : REG %p : Locks %ld (old) : (%s)", reg, ( reg )?reg->reg_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__Register_Lock          : REG   %p : Locks %2ld (old) : (%s)", reg, ( reg )?reg->reg_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -36,11 +36,11 @@ enum LSTAT lstat;
 		reg->reg_Locks++;
 		lstat = LSTAT_Okay;
 
-//		USBDEBUG( "__Register_Lock          : REG %p : New Lock Count : %ld (+1)", reg, reg->reg_Locks );
+//		USBDEBUG( "__Register_Lock          : REG   %p : New Lock Count : %ld (+1)", reg, reg->reg_Locks );
 	}
 	else
 	{
-		USBPANIC( "__Register_Lock          : REG %p : Lock failed : (%s)", reg, file );
+		USBPANIC( "__Register_Lock          : REG   %p : Lock failed : (%s)", reg, file );
 		lstat = LSTAT_Error;
 	}
 

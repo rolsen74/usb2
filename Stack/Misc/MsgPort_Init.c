@@ -38,7 +38,7 @@ S32 retval;
 
 	if ( mp->ump_StructID == ID_USB2_MP )
 	{
-		USBPANIC( "MsgPort_Init : 2 : In use : (%s)", file );
+		USBPANIC( "MsgPort_Init : 2 : IN    use : (%s)", file );
 	}
 
 	#endif

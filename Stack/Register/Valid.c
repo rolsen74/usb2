@@ -36,7 +36,7 @@ enum VSTAT vstat;
 
 	else if ( reg == (PTR) 0x55555555 )
 	{
-		USBPANIC( "__Register_Valid         : Reg %p : Free'd Memory : (%s)", reg, (file)?file:"<NULL>" );
+		USBPANIC( "__Register_Valid         : REG   %p : Free'd Memory : (%s)", reg, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 
@@ -44,17 +44,17 @@ enum VSTAT vstat;
 
 	else if ( reg->reg_StructID == 0 )
 	{
-		USBDEBUG( "__Register_Valid         : Reg %p : Not Initalized : (%s)", reg, (file)?file:"<NULL>" );
+		USBDEBUG( "__Register_Valid         : REG   %p : Not Initalized : (%s)", reg, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	} 
 	else if ( reg->reg_StructID == ID_USB2_FREED )
 	{
-		USBDEBUG( "__Register_Valid         : Reg %p : Structure allready freed : (%s)", reg, (file)?file:"<NULL>" );
+		USBDEBUG( "__Register_Valid         : REG   %p : Structure allready freed : (%s)", reg, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 	else if ( reg->reg_StructID != ID_USB2_REG )
 	{
-		USBDEBUG( "__Register_Valid         : Reg %p : Invalid ID $%08lx : (%s)", reg, reg->reg_StructID, (file)?file:"<NULL>" );
+		USBDEBUG( "__Register_Valid         : REG   %p : Invalid ID $%08lx : (%s)", reg, reg->reg_StructID, (file)?file:"<NULL>" );
 		vstat = VSTAT_Error;
 	}
 	else
@@ -62,7 +62,7 @@ enum VSTAT vstat;
 		vstat = VSTAT_Okay;
 	}
 
-//	USBDEBUG( "__Register_Valid         : Reg %p : Stat %ld", reg, vstat );
+//	USBDEBUG( "__Register_Valid         : REG   %p : Stat %ld", reg, vstat );
 
 	TASK_NAME_LEAVE();
 

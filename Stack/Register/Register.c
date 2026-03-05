@@ -62,12 +62,12 @@ struct USB2_ConfigNode *cn;
 				
 				if ( FUNCTION_VALID( (PTR) tag->ti_Data ) == VSTAT_Okay )
 				{
-					USBINFO( "USB2Tag_Reg_Function .... : %p", tag->ti_Data );
+					USBINFO( "USB2Tag_Reg_Function ... : %p", tag->ti_Data );
 					fn = (PTR) tag->ti_Data;
 				}
 				else
 				{
-					USBERROR( "USB2Tag_Reg_Function .... : Invalid %p Fkt Node", tag->ti_Data );
+					USBERROR( "USB2Tag_Reg_Function ... : Invalid %p Fkt Node", tag->ti_Data );
 					fn = NULL;
 				}
 				break;
@@ -99,7 +99,7 @@ struct USB2_ConfigNode *cn;
 
 			case USB2Tag_Reg_TimeOut:
 			{
-				USBINFO( "USB2Tag_Reg_TimeOut ..... : %ld ms", tag->ti_Data );
+				USBINFO( "USB2Tag_Reg_TimeOut .... : %ld ms", tag->ti_Data );
 
 				// Zero is valid
 				timeout = tag->ti_Data;
@@ -109,7 +109,7 @@ struct USB2_ConfigNode *cn;
 			case USB2Tag_Reg_Title:
 			{
 				title = (STR) tag->ti_Data;
-				USBINFO( "USB2Tag_Reg_Title ....... : %s", ( title ) ? title : "<NULL>" );
+				USBINFO( "USB2Tag_Reg_Title ...... : %s", ( title ) ? title : "<NULL>" );
 				break;
 			}
 

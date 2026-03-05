@@ -86,10 +86,10 @@ U32 mask;
 	// do I need to clear signal here?? well why not
 	TASK_SETSIGNAL( 0, mask );
 
-	USBDEBUG( "__Misc_DoCommand         : CH %p : Enter", ch );
+	USBDEBUG( "__Misc_DoCommand         : CH    %p : Enter", ch );
 	MSGPORT_PUTMSG( usbbase->usb_Master_MsgPort, ch );
 	while( TASK_WAIT( mask ) != mask );
-	USBDEBUG( "__Misc_DoCommand         : CH %p : Leave", ch );
+	USBDEBUG( "__Misc_DoCommand         : CH    %p : Leave", ch );
 
 	retval = ch->cm_Result;
 

@@ -46,7 +46,7 @@
 
 SEC_CODE void HUB_Main__Signal( struct USBBase *usbbase UNUSED, struct intern *in UNUSED )
 {
-	USBINFO( "__myMain (HUB)            : HUB_Main__Signal (2)" );
+	USBINFO( "__myMain (HUB)           : HUB_Main__Signal (2)" );
 	USBDEBUG( "FN Signal Locks #%lu", in->Function->fkt_Locks );
 }
 

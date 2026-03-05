@@ -27,7 +27,7 @@ struct intern *in;
 	hn = userdata;
 	in = in_ptr;
 
-	USBDEBUG( "__myFree (HCD)           : Enter : HN %p", hn );
+	USBDEBUG( "__myFree (HCD)           : Enter : HN    %p", hn );
 	TASK_NAME_ENTER( "HCD : __myFree" );
 
 	// --

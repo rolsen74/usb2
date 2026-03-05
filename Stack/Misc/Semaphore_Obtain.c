@@ -25,8 +25,8 @@ struct ExecIFace *IExec;
 
 	#endif
 
-	if (( us->us_StructID == 0 ) 
-	||	( us->us_StructID == ID_USB2_FREED ))
+	if ( us->us_StructID == 0 ) 
+//	||	( us->us_StructID == ID_USB2_FREED ))
 	{
 		SEMAPHORE_INIT( us );
 	}

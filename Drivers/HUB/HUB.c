@@ -97,7 +97,7 @@ U32 retval;
 
 	if ( FUNCTION_VALID(fn) != VSTAT_Okay )
 	{
-		USBPANIC( "HUB : FN %p : Invalid Pointer", fn );
+		USBPANIC( "HUB : FN    %p : Invalid Pointer", fn );
 	}
 
 	#endif
@@ -199,7 +199,7 @@ bailout:
 	// --
 
 	#ifdef DO_DEBUG
-	usbbase->usb_IExec->DebugPrintF( "\n##\n## HUB_Entry : Adr #%lu (%lu) : FN %p : Locks %ld : Leave\n##\n\n", fn->fkt_Address, startadr, fn, fn->fkt_Locks );
+	usbbase->usb_IExec->DebugPrintF( "\n##\n## HUB_Entry : Adr #%lu (%lu) : FN    %p : Locks %2ld : Leave\n##\n\n", fn->fkt_Address, startadr, fn, fn->fkt_Locks );
 	#endif
 
 	TASK_NAME_LEAVE();

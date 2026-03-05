@@ -73,7 +73,7 @@ SEC_CODE void HUB_Free( struct USBBase *usbbase, struct intern *in )
 
 	if ( in->Register )
 	{
-		USBINFO( "HUB_Free                  : REG %p : Unregister", in->Register );
+		USBINFO( "HUB_Free                  : REG   %p : Unregister", in->Register );
 		REGISTER_UNREGISTER( in->Register );
 		in->Register = NULL;
 	}

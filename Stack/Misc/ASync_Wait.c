@@ -31,7 +31,7 @@ S32 retval;
 
 	TASK_NAME_ENTER( "__ASync_Wait" );
 
-	USBDEBUG( "__ASync_Wait             : AS %p", ua );
+	USBDEBUG( "__ASync_Wait             : AS    %p", ua );
 
 	retval = FALSE;
 

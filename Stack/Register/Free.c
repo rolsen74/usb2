@@ -30,11 +30,11 @@ struct USB2_ConfigNode *cn;
 
 	epr = reg->reg_EPRHeader.uh_Head;
 
-	USBDEBUG( "__Register_Free           : Trying to free EPR %p (1)", epr );
+	USBDEBUG( "__Register_Free          : Trying to free EPR %p (1)", epr );
 
 	while( epr )
 	{
-		USBDEBUG( "__Register_Free           : Trying to free EPR %p (2)", epr );
+		USBDEBUG( "__Register_Free          : Trying to free EPR %p (2)", epr );
 
 		next = Node_Next( epr );
 		// --
@@ -50,7 +50,7 @@ struct USB2_ConfigNode *cn;
 //
 //		#endif
 
-		USBDEBUG( "__Register_Free           : Trying to free EPR %p", epr );
+		USBDEBUG( "__Register_Free          : Trying to free EPR %p", epr );
 		USBDEBUG( "--> : REM 4 : EPR %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
 		NODE_REMNODE( & reg->reg_EPRHeader, & epr->epr_Node );
 
@@ -62,10 +62,10 @@ struct USB2_ConfigNode *cn;
 		}
 		else
 		{
-			USBDEBUG( "__Register_Free           : Free'd EPR %p", epr );
+			USBDEBUG( "__Register_Free          : Free'd EPR %p", epr );
 			if ( reg->reg_Public.Res_Control == & epr->epr_Public )
 			{
-				USBDEBUG( "__Register_Free           : Found Control EPR (1)" );
+				USBDEBUG( "__Register_Free          : Found Control EPR (1)" );
 				reg->reg_Public.Res_Control = NULL;
 			}
 		}
@@ -149,7 +149,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__Register_Free" );
 
-	USBERROR( "__Register_Free           : REG %p : (%s)", reg, (file)?file:"<NULL>" );
+//	USBERROR( "__Register_Free          : REG   %p : (%s)", reg, (file)?file:"<NULL>" );
 
 	// --
 
@@ -180,7 +180,7 @@ enum FSTAT fstat;
 	{
 		if ( reg->reg_Locks > 0 )
 		{
-			USBINFO( "__Register_Free           : Register Node still have %ld locks", reg->reg_Locks );
+			USBINFO( "__Register_Free          : Register Node still have %ld locks", reg->reg_Locks );
 			fstat = FSTAT_Locked;
 		}
 		else
@@ -204,7 +204,7 @@ enum FSTAT fstat;
 		goto bailout;
 	}
 
-	USBINFO( "__Register_Free           : Freeing %p : (%s)", reg, (file)?file:"<NULL>" );
+	USBINFO( "__Register_Free          : Freeing %p : (%s)", reg, (file)?file:"<NULL>" );
 
 	// --
 
@@ -213,7 +213,7 @@ enum FSTAT fstat;
 	if ((( Node_Next( reg )) && ( Node_Next( reg ) != (PTR) 0xAC111111 ))
 	||	(( Node_Prev( reg )) && ( Node_Prev( reg ) != (PTR) 0xAC222222 )))
 	{
-		USBPANIC( "__Register_Free           : REGister Node have not been removed : Self %p : Next %p : Prev %p : (%s)", reg, Node_Next( reg ), Node_Prev( reg ), file );
+		USBPANIC( "__Register_Free          : REGister Node have not been removed : Self %p : Next %p : Prev %p : (%s)", reg, Node_Next( reg ), Node_Prev( reg ), file );
 	}
 
 	#endif

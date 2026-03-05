@@ -23,7 +23,7 @@ S32 retval;
 U32 mask;
 U32 wait;
 
-	USBDEBUG( "__myTask_Main (Master)        : Running" );
+	USBDEBUG( "__myTask_Main (Master)   : Running" );
 
 	retval = MAIN_RETURN_UNSET;
 
@@ -37,10 +37,10 @@ U32 wait;
 		USBDEBUG( 
 			"__myTask_Main (Master)\n"
 			"  :: Stopping ...... : %ld\n"
-			"  :: TM Nodes ...... : %ld (TaskMsg's)\n"
-			"  :: TM First ...... : %p\n"
-			"  :: TN Nodes ...... : %ld (Task's)\n"
-			"  :: TN First ...... : %p\n"
+			"  :: TM    Nodes ...... : %ld (TaskMsg's)\n"
+			"  :: TM    First ...... : %p\n"
+			"  :: TN    Nodes ...... : %ld (Task's)\n"
+			"  :: TN    First ...... : %p\n"
 			"  :: HCD ASync Adr . : %p\n"
 			"  :: HCD ASync Cnt . : %ld\n"
 			"  ::\n", 
@@ -58,10 +58,10 @@ U32 wait;
 		usbbase->usb_IExec->DebugPrintF(
 			"__myTask_Main (Master)\n"
 			"  :: Stopping ...... : %ld\n"
-			"  :: TM Nodes ...... : %ld (TaskMsg's)\n"
-			"  :: TM First ...... : %p\n"
-			"  :: TN Nodes ...... : %ld (Task's)\n"
-			"  :: TN First ...... : %p\n"
+			"  :: TM    Nodes ...... : %ld (TaskMsg's)\n"
+			"  :: TM    First ...... : %p\n"
+			"  :: TN    Nodes ...... : %ld (Task's)\n"
+			"  :: TN    First ...... : %p\n"
 			"  :: HCD ASync Adr . : %p\n"
 			"  :: HCD ASync Cnt . : %ld\n"
 			"  ::\n", 
@@ -79,7 +79,7 @@ U32 wait;
 		&&	( in->Shutdown_TM_List.uh_Nodes <= 0 )
 		&&	( usbbase->usb_HCDASync.ua_Counter <= 0 ))
 		{
-			USBDEBUG( "__myTask_Main (Master)        : Exit" );
+			USBDEBUG( "__myTask_Main (Master)   : Exit" );
 			retval = MAIN_RETURN_EXIT;
 			break;
 		}
@@ -120,19 +120,19 @@ U32 wait;
 		{
 			if ( usbbase->usb_Master_Task.tn_Parent )
 			{
-				USBDEBUG( "__myTask_Main (Master)        : Got : CTRL+C : Exit Signal" );
+				USBDEBUG( "__myTask_Main (Master)   : Got : CTRL+C : Exit Signal" );
 				in->Stopping = TRUE;
 			}
 			else
 			{
-				USBDEBUG( "__myTask_Main (Master)        : Got : CTRL+C : Someone tryed to stop us, ignoring" );
+				USBDEBUG( "__myTask_Main (Master)   : Got : CTRL+C : Someone tryed to stop us, ignoring" );
 			}
 		}
 
 		if ( mask & SIGBREAKF_CTRL_D )
 		{
 			// Just a refresh, so we can break the Wait()
-			USBDEBUG( "__myTask_Main (Master)        : Got : CTRL+D" );
+			USBDEBUG( "__myTask_Main (Master)   : Got : CTRL+D" );
 			myFree_DNs( usbbase );
 			myFree_TNs( usbbase );
 		}
@@ -156,7 +156,7 @@ U32 wait;
 
 		if ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
-//			USBDEBUG( "__myTask_Main (Master)        : Got : Tick Timer" );
+//			USBDEBUG( "__myTask_Main (Master)   : Got : Tick Timer" );
 			if ( MSGPORT_GETMSG( & in->Tick_MsgPort ))
 			{
 				myFree_DNs( usbbase );
@@ -170,21 +170,21 @@ U32 wait;
 		// a Subtask ended
 		if ( mask & in->Task_Shutdown_Signal.sig_Signal_Mask )
 		{
-			USBDEBUG( "__myTask_Main (Master)        : Got : Task_Shutdown_Signal" );
+			USBDEBUG( "__myTask_Main (Master)   : Got : Task_Shutdown_Signal" );
 			myHandle_Task_Ended( usbbase, in );
 		}
 
 		// a Subtask dident stop in time .. timeout, crashed?
 		if ( mask & in->Task_Shutdown_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
-			USBDEBUG( "__myTask_Main (Master)        : Got : Task_Shutdown_MsgPort" );
+			USBDEBUG( "__myTask_Main (Master)   : Got : Task_Shutdown_MsgPort" );
 			myHandle_Task_Timeout( usbbase, in );
 		}
 
 		// External User Command
 		if ( mask & in->Cmd_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
-			USBDEBUG( "__myTask_Main (Master)        : Got : Cmd_MsgPort" );
+			USBDEBUG( "__myTask_Main (Master)   : Got : Cmd_MsgPort" );
 			myHandle_Cmds( usbbase, in );
 		}
 	}

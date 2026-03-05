@@ -61,7 +61,7 @@ U32 val;
 
 	retval = FALSE;
 
-	USBDEBUG( "EHCI_Chip_Reset : 1 : Reset Stop" );
+	USBDEBUG( "EHCI_Chip_Reset          : 1 : Reset Stop" );
 
 	// --
 	// EHCI : Needs an explicit Stop/Halt before Reset 
@@ -69,14 +69,14 @@ U32 val;
 
 	if ( ! hn->HCD_Functions.Chip_Stop( hn ))
 	{
-		USBDEBUG( "EHCI_Chip_Reset : Chip Halt failed" );
+		USBDEBUG( "EHCI_Chip_Reset          : Chip Halt failed" );
 		goto bailout;
 	}
 
 	// --
 	// Reset controller
 
-	USBDEBUG( "EHCI_Chip_Reset : 2 : Reset Chip" );
+	USBDEBUG( "EHCI_Chip_Reset          : 2 : Reset Chip" );
 
 	val = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );
 
@@ -106,18 +106,17 @@ U32 val;
 
 	if ( cnt == MAXMS )
 	{
-		USBDEBUG( "EHCI_Chip_Reset : Error Resetting Controller" );
+		USBDEBUG( "EHCI_Chip_Reset          : Error Resetting Controller" );
 		goto bailout;
 	}
 
 	#undef MAXMS
 	// --
 
-	if (( usbbase->usb_MachineType == MACHINETYPE_A1222 )
-	||	( usbbase->usb_MachineType == MACHINETYPE_X5000_20 )
-	||	( usbbase->usb_MachineType == MACHINETYPE_X5000_40 ))
+	if (( hn->hn_HCDType == HCDTYPE_TABOR )
+	||	( hn->hn_HCDType == HCDTYPE_P50XX ))
 	{
-		USBDEBUG( "EHCI_Chip_Reset : 3 : Change Host Mode" );
+		USBDEBUG( "EHCI_Chip_Reset          : 3 : Change Host Mode" );
 
 		// --
 		// Small settle delay
@@ -139,7 +138,7 @@ U32 val;
 
 		if (( val & 3 ) != 3 )
 		{
-			USBDEBUG( "EHCI_Chip_Reset : Error changing Mode (Mode: $%08lx)", val );
+			USBDEBUG( "EHCI_Chip_Reset          : Error changing Mode (Mode: $%08lx)", val );
 			goto bailout;
 		}
 	}

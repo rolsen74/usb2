@@ -27,7 +27,7 @@ enum LSTAT lstat;
 
 	TASK_NAME_ENTER( "__Driver_Lock" );
 
-	USBDEBUG( "__Driver_Lock            : DN %p : Locks %ld (old) : (%s)", dn, ( dn )?dn->dn_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__Driver_Lock            : DN    %p : Locks %2ld (old) : (%s)", dn, ( dn )?dn->dn_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -36,11 +36,11 @@ enum LSTAT lstat;
 		dn->dn_Locks++;
 		lstat = LSTAT_Okay;
 
-//		USBDEBUG( "__Driver_Lock            : DN %p : New Lock Count : %ld (+1)", dn, dn->dn_Locks );
+//		USBDEBUG( "__Driver_Lock            : DN    %p : New Lock Count : %ld (+1)", dn, dn->dn_Locks );
 	}
 	else
 	{
-		USBPANIC( "__Driver_Lock            : DN %p : Lock failed : (%s)", dn, file );
+		USBPANIC( "__Driver_Lock            : DN    %p : Lock failed : (%s)", dn, file );
 		lstat = LSTAT_Error;
 	}
 

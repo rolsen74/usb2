@@ -28,7 +28,7 @@ U32 mask;
 
 	retval = FALSE;
 
-	usbbase->usb_IExec->DebugPrintF( "__myMaster_StartProcess 1 :\n" );
+//	usbbase->usb_IExec->DebugPrintF( "__myMaster_StartProcess 1 :\n" );
 
 	IExec = usbbase->usb_IExec;
 
@@ -73,7 +73,7 @@ U32 mask;
 		}
 	}
 
-	usbbase->usb_IExec->DebugPrintF( "__myMaster_StartProcess 99 : Retval %ld\n", retval );
+//	usbbase->usb_IExec->DebugPrintF( "__myMaster_StartProcess 99 : Retval %ld\n", retval );
 
 	return( retval );
 }

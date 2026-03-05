@@ -214,7 +214,7 @@ U32 cnt;
 
 	while( fn )
 	{
-//		USBERROR( "USB2 Stack : _main_FindFunctionList : FN %p : FktClass %lu", fn, fn->fkt_Class );
+//		USBERROR( "USB2 Stack : _main_FindFunctionList : FN    %p : FktClass %lu", fn, fn->fkt_Class );
 
 		found = TRUE;
 

@@ -17,7 +17,7 @@ SEC_CODE S32 HID_Init( struct USBBase *usbbase, struct intern *in )
 {
 struct USB2_Interface_Desc *ifcdsc;
 struct USB2_IORequest *ioreq;
-struct USB2_SetupData *sd;
+//struct USB2_SetupData *sd;
 S32 retval;
 S32 ifcnr;
 U32 cnt;
@@ -57,7 +57,7 @@ U32 cnt;
 	in->Res_Control = in->Register->reg_Public.Res_Control;
 	ifcdsc	= in->StartMsg->InterfaceDescriptor;
 	ioreq	= in->Res_Control->IORequests[0];
-	sd		= in->Res_Control->SetupData;
+//	sd		= in->Res_Control->SetupData;
 	ifcnr	= ifcdsc->InterfaceNumber;
 
 	// --

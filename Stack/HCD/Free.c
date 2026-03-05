@@ -32,7 +32,7 @@ struct USB2_TaskNode *tn;
 		}
 		else
 		{
-			USBDEBUG( "__Driver_Free : TN and HN mismatch" );
+			USBDEBUG( "__Driver_Free : TN    and HN mismatch" );
 		}
 	}
 
@@ -62,7 +62,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__HCD_Free" );
 
-	USBDEBUG( "__HCD_Free               : HN %p : (%s)", hn, (file)?file:"<NULL>" );
+	USBDEBUG( "__HCD_Free               : HN    %p : (%s)", hn, (file)?file:"<NULL>" );
 
 	// --
 
@@ -93,7 +93,7 @@ enum FSTAT fstat;
 	{
 		if (( hn->hn_Locks > 0 ) || ( ( hn->hn_Task ) ))
 		{
-			USBDEBUG( "__HCD_Free               : HN %p : Node still have %ld locks", hn, hn->hn_Locks );
+			USBDEBUG( "__HCD_Free               : HN    %p : Node still have %ld locks", hn, hn->hn_Locks );
 			fstat = FSTAT_Locked;
 		}
 		else
@@ -104,7 +104,7 @@ enum FSTAT fstat;
 	}
 	else // ( vstat == VSTAT_Error )
 	{
-		USBPANIC( "__HCD_Free               : HN %p : Invalid Pointer", hn );
+		USBPANIC( "__HCD_Free               : HN    %p : Invalid Pointer", hn );
 		fstat = FSTAT_Error;
 	}
 

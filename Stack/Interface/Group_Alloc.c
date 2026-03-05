@@ -94,7 +94,7 @@ bailout:
 		ig = NULL;
 	}
 
-	USBDEBUG( "__Interface_AllocGroup   : IG %p : (new)", ig );
+	USBDEBUG( "__Interface_AllocGroup   : IG    %p : (new)", ig );
 
 	return( ig );
 }

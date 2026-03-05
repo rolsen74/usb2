@@ -25,7 +25,7 @@ SEC_CODE void __EndPointRes_Unlock( struct USBBase *usbbase, struct RealEndPoint
 {
 	TASK_NAME_ENTER( "__EndPointRes_Unlock" );
 
-	USBDEBUG( "__EndPointRes_Unlock     : EPR %p : Locks %ld (old) : (%s)", epr, (epr)?epr->epr_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__EndPointRes_Unlock     : EPR   %p : Locks %2ld (old) : (%s)", epr, (epr)?epr->epr_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +35,16 @@ SEC_CODE void __EndPointRes_Unlock( struct USBBase *usbbase, struct RealEndPoint
 		{
 			epr->epr_Locks--;
 
-//			USBDEBUG( "__EndPointRes_Unlock     : EPR %p : New Lock Count : %ld (-1)", epr, epr->epr_Locks );
+//			USBDEBUG( "__EndPointRes_Unlock     : EPR   %p : New Lock Count : %ld (-1)", epr, epr->epr_Locks );
 		}
 		else
 		{
-			USBPANIC( "__EndPointRes_Unlock     : EPR %p : EndPoint Resource NOT Locked (%ld)", epr, epr->epr_Locks );
+			USBPANIC( "__EndPointRes_Unlock     : EPR   %p : EndPoint Resource NOT Locked (%ld)", epr, epr->epr_Locks );
 		}
 	}
 	else
 	{
-		USBPANIC( "__EndPointRes_Unlock     : EPR %p : Invalid EndPointRes Node", epr );
+		USBPANIC( "__EndPointRes_Unlock     : EPR   %p : Invalid EndPointRes Node", epr );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );

@@ -32,7 +32,7 @@ struct USB2_TaskNode *tn;
 		}
 		else
 		{
-			USBDEBUG( "__Driver_Free : TN and DN mismatch" );
+			USBDEBUG( "__Driver_Free : TN    and DN mismatch" );
 		}
 	}
 
@@ -62,7 +62,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__Driver_Free" );
 
-	USBDEBUG( "__Driver_Free             : DN %p : (%s)", dn, (file)?file:"<NULL>" );
+	USBDEBUG( "__Driver_Free             : DN    %p : (%s)", dn, (file)?file:"<NULL>" );
 
 	// --
 
@@ -96,7 +96,7 @@ enum FSTAT fstat;
 			#ifdef DO_DEBUG
 			if ( dn->dn_Task )
 			{
-				USBPANIC( "Warning: DriverNode still have a Task %p : DN %p : (%s)", dn->dn_Task, dn, (file)?file:"<NULL>" );
+				USBPANIC( "Warning: DriverNode still have a Task %p : DN    %p : (%s)", dn->dn_Task, dn, (file)?file:"<NULL>" );
 			}
 			#endif
 

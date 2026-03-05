@@ -27,7 +27,7 @@ enum LSTAT lstat;
 
 	TASK_NAME_ENTER( "__FDriver_Lock" );
 
-	USBDEBUG( "__FDriver_Lock           : FDN %p : Locks %ld (old) : (%s)", fdn, ( fdn )?fdn->fdn_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__FDriver_Lock           : FDN %p : Locks %2ld (old) : (%s)", fdn, ( fdn )?fdn->fdn_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 

@@ -65,7 +65,7 @@ struct RealFunctionNode *fn;
 		}
 		else
 		{
-			USBPANIC( "__IORequest_Active_Add : Failed to lock : FN %p : (%s)", fn, (file)?file:"<NULL>" );
+			USBPANIC( "__IORequest_Active_Add : Failed to lock : FN    %p : (%s)", fn, (file)?file:"<NULL>" );
 		}
 
 		TASK_NAME_SET( "__IORequest_Active_Add : 7" );

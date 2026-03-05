@@ -75,7 +75,7 @@ U8 *mem;
 
 		if ( FUNCTION_VALID(fn) != VSTAT_Okay )
 		{
-			USBPANIC( "EHCI_Get_QHBuffer : FN Null Pointer" );
+			USBPANIC( "EHCI_Get_QHBuffer : FN    Null Pointer" );
 		}
 
 		if ( FUNCTION_VALID(fn->fkt_Parent) != VSTAT_Okay )
@@ -85,7 +85,7 @@ U8 *mem;
 
 		if ( ENDPOINT_VALID(ep) != VSTAT_Okay )
 		{
-			USBPANIC( "EHCI_Get_QHBuffer : FN Null Pointer" );
+			USBPANIC( "EHCI_Get_QHBuffer : FN    Null Pointer" );
 		}
 
 		#endif

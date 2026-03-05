@@ -21,7 +21,7 @@ struct RealRequest *next;
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 	// --
 
-	USBDEBUG( "Sending Abort : EP : %p : check", ep );
+	USBDEBUG( "Sending Abort : EP    : %p : check", ep );
 
 	ioreq = ep->ep_Request_Queue.uh_Head;
 
@@ -30,7 +30,7 @@ struct RealRequest *next;
 		next = Node_Next( ioreq );
 		// --
 
-		USBDEBUG( "Sending Abort : EP : %p : IOReq %p (queue)", ep, ioreq );
+		USBDEBUG( "Sending Abort : EP    : %p : IOReq %p (queue)", ep, ioreq );
 
 		if ( IOREQUEST_LOCK( ioreq ) == LSTAT_Okay )
 		{
@@ -50,7 +50,7 @@ struct RealRequest *next;
 
 	if ( ioreq )
 	{
-		USBDEBUG( "Sending Abort : EP : %p : IOReq %p (active)", ep, ioreq );
+		USBDEBUG( "Sending Abort : EP    : %p : IOReq %p (active)", ep, ioreq );
 
 		if ( IOREQUEST_LOCK( ioreq ) == LSTAT_Okay )
 		{
@@ -87,7 +87,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__EndPoint_Free" );
 
-	USBDEBUG( "__EndPoint_Free           : EP %p : (%s)", ep, (file)?file:"<NULL>" );
+	USBDEBUG( "__EndPoint_Free           : EP    %p : (%s)", ep, (file)?file:"<NULL>" );
 
 	// --
 
@@ -107,7 +107,7 @@ enum FSTAT fstat;
 		}
 		else
 		{
-			usbbase->usb_IExec->DebugPrintF( "EP %p : FN %p : fkt_ActiveIOReq %ld : Skipping\n", ep, fn, fn->fkt_ActiveIOReq );
+			usbbase->usb_IExec->DebugPrintF( "EP %p : FN    %p : fkt_ActiveIOReq %ld : Skipping\n", ep, fn, fn->fkt_ActiveIOReq );
 		}
 
 		ENDPOINT_UNLOCK(ep);

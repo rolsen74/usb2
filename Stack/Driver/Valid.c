@@ -36,7 +36,7 @@ enum VSTAT vstat;
 
 	else if ( dn == (PTR) 0x55555555 )
 	{
-		USBPANIC( "__Driver_Valid           : DN %p : Free'd Memory : (%s)", dn, (file)?file:"<NULL>" );
+		USBPANIC( "__Driver_Valid           : DN    %p : Free'd Memory : (%s)", dn, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 
@@ -44,17 +44,17 @@ enum VSTAT vstat;
 
 	else if ( dn->dn_StructID == 0 )
 	{
-		USBDEBUG( "__Driver_Valid           : DN %p : Not Initalized : (%s)", dn, (file)?file:"<NULL>" );
+		USBDEBUG( "__Driver_Valid           : DN    %p : Not Initalized : (%s)", dn, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	} 
 	else if ( dn->dn_StructID == ID_USB2_FREED )
 	{
-		USBDEBUG( "__Driver_Valid           : DN %p : Structure allready freed : (%s)", dn, (file)?file:"<NULL>" );
+		USBDEBUG( "__Driver_Valid           : DN    %p : Structure allready freed : (%s)", dn, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 	else if ( dn->dn_StructID != ID_USB2_DN )
 	{
-		USBDEBUG( "__Driver_Valid           : DN %p : Invalid ID $%08lx : (%s)", dn, dn->dn_StructID, (file)?file:"<NULL>" );
+		USBDEBUG( "__Driver_Valid           : DN    %p : Invalid ID $%08lx : (%s)", dn, dn->dn_StructID, (file)?file:"<NULL>" );
 		vstat = VSTAT_Error;
 	}
 	else
@@ -62,7 +62,7 @@ enum VSTAT vstat;
 		vstat = VSTAT_Okay;
 	}
 
-//	USBDEBUG( "__Driver_Valid           : DN %p : Stat %ld", dn, vstat );
+//	USBDEBUG( "__Driver_Valid           : DN    %p : Stat %ld", dn, vstat );
 
 	TASK_NAME_LEAVE();
 

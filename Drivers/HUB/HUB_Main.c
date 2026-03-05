@@ -60,13 +60,13 @@ struct USB2_Node *n;
 
 		if (( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ! in->Running ))
 		{
-			USBDEBUG( "HUB_Main__Free_FNs                :  1 : FN %p : Locks %ld", fn, fn->fkt_Locks );
+			USBDEBUG( "HUB_Main__Free_FNs                :  1 : FN    %p : Locks %2ld", fn, fn->fkt_Locks );
 
 			// -- Release own lock
 
 			if ( fn->fkt_HUB_Data == in->HUB_ID )
 			{
-				USBINFO( "HUB_Main__Free_FNs                :  2 : FN %p : Release own HUB lock", fn );
+				USBINFO( "HUB_Main__Free_FNs                :  2 : FN    %p : Release own HUB lock", fn );
 
 				in->PortFunctions[ fn->fkt_PortNr ] = NULL;
 				fn->fkt_HUB_Data = 0;
@@ -82,12 +82,12 @@ struct USB2_Node *n;
 			{
 				NODE_ADDHEAD( & in->FN_Header, & fn->fkt_DriverNode );
 
-				USBINFO( "HUB_Main__Free_FNs                :  3 : FN %p : Locks %ld : Failed to Free", fn, fn->fkt_Locks );
+				USBINFO( "HUB_Main__Free_FNs                :  3 : FN    %p : Locks %2ld : Failed to Free", fn, fn->fkt_Locks );
 			}
 			else
 			#endif
 			{
-				USBDEBUG( "HUB_Main__Free_FNs                :  4 : FN %p : Free'd", fn );
+				USBDEBUG( "HUB_Main__Free_FNs                :  4 : FN    %p : Free'd", fn );
 			}
 		}
 
@@ -100,7 +100,7 @@ struct USB2_Node *n;
 
 SEC_CODE void HUB_Main( struct USBBase *usbbase, struct intern *in )
 {
-	USBINFO( "__myMain (HUB)            : Enter" );
+	USBINFO( "__myMain (HUB)           : Enter" );
 
 	// --
 	// Normal running loop
@@ -121,7 +121,7 @@ SEC_CODE void HUB_Main( struct USBBase *usbbase, struct intern *in )
 	// --
 	// -- Exit
 
-	USBINFO( "__myMain (HUB)            : Leave" );
+	USBINFO( "__myMain (HUB)           : Leave" );
 	return;
 }
 

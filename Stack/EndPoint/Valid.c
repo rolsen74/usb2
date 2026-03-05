@@ -36,7 +36,7 @@ enum VSTAT vstat;
 
 	else if ( ep == (PTR) 0x55555555 )
 	{
-		USBPANIC( "__EndPoint_Valid         : EP %p : Free'd Memory : (%s)", ep, (file)?file:"<NULL>" );
+		USBPANIC( "__EndPoint_Valid         : EP    %p : Free'd Memory : (%s)", ep, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 
@@ -44,17 +44,17 @@ enum VSTAT vstat;
 
 	else if ( ep->ep_StructID == 0 )
 	{
-		USBDEBUG( "__EndPoint_Valid         : EP %p : Not Initalized : (%s)", ep, (file)?file:"<NULL>" );
+		USBDEBUG( "__EndPoint_Valid         : EP    %p : Not Initalized : (%s)", ep, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	} 
 	else if ( ep->ep_StructID == ID_USB2_FREED )
 	{
-		USBDEBUG( "__EndPoint_Valid         : EP %p : Structure allready freed : (%s)", ep, (file)?file:"<NULL>" );
+		USBDEBUG( "__EndPoint_Valid         : EP    %p : Structure allready freed : (%s)", ep, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 	else if ( ep->ep_StructID != ID_USB2_EP )
 	{
-		USBDEBUG( "__EndPoint_Valid         : EP %p : Invalid ID $%08lx : (%s)", ep, ep->ep_StructID, (file)?file:"<NULL>" );
+		USBDEBUG( "__EndPoint_Valid         : EP    %p : Invalid ID $%08lx : (%s)", ep, ep->ep_StructID, (file)?file:"<NULL>" );
 		vstat = VSTAT_Error;
 	}
 	else
@@ -62,7 +62,7 @@ enum VSTAT vstat;
 		vstat = VSTAT_Okay;
 	}
 
-//	USBDEBUG( "__EndPoint_Valid         : EP %p : Stat %ld", ep, vstat );
+//	USBDEBUG( "__EndPoint_Valid         : EP    %p : Stat %ld", ep, vstat );
 
 	TASK_NAME_LEAVE();
 

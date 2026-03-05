@@ -22,7 +22,7 @@ static const struct USB2_Device_Desc HUB11_DeviceDsc =
 /* DeviceProtocol	*/ 0x00,
 /* MaxPacketSize0	*/ 8,
 /* VendorID			*/ LE_SWAP16( 0x0000 ),
-/* DeviceID		*/ LE_SWAP16( 0x0000 ),
+/* DeviceID			*/ LE_SWAP16( 0x0000 ),
 /* DeviceID			*/ LE_SWAP16( 0x0000 ),
 /* ManufacturerStrNr*/ 0x00,
 /* DeviceStrNr		*/ 0x00,
@@ -40,7 +40,7 @@ static const struct USB2_Device_Desc HUB20_DeviceDsc =
 /* DeviceProtocol	*/ 0x00,
 /* MaxPacketSize0	*/ 64,
 /* VendorID			*/ LE_SWAP16( 0x0000 ),
-/* DeviceID		*/ LE_SWAP16( 0x0000 ),
+/* DeviceID			*/ LE_SWAP16( 0x0000 ),
 /* DeviceID			*/ LE_SWAP16( 0x0000 ),
 /* ManufacturerStrNr*/ 0x00,
 /* DeviceStrNr		*/ 0x00,
@@ -117,7 +117,7 @@ U8 buf[MAX_BUFFER];
 
 	if ( ! sd )
 	{
-		USBDEBUG( "Root HUB : Read : No SetupData buffer given" );
+		USBDEBUG( "RootHUB : Read : No SetupData buffer given" );
 
 		err = USB2Err_Host_Stall;
 	}
@@ -129,7 +129,7 @@ U8 buf[MAX_BUFFER];
 		{
 			case REQCODE_Get_Status:
 			{
-				USBDEBUG( "Root HUB : Read : Get Status" );
+				USBDEBUG( "RootHUB : Read : Get Status" );
 
 				err = __Get_Status( sd, hn, usbbase, & buf, & max );
 				break;
@@ -137,7 +137,7 @@ U8 buf[MAX_BUFFER];
 
 			case REQCODE_Get_Descriptor:
 			{
-				USBDEBUG( "Root HUB : Read : Get Descriptor" );
+				USBDEBUG( "RootHUB : Read : Get Descriptor" );
 
 				err = __Get_Descriptor( sd, hn, usbbase, & buf, & max );
 				break;
@@ -145,7 +145,7 @@ U8 buf[MAX_BUFFER];
 
 			case REQCODE_Get_Configuration:
 			{
-				USBDEBUG( "Root HUB : Read : Get Configuration" );
+				USBDEBUG( "RootHUB : Read : Get Configuration" );
 
 				err = __Get_Config( sd, hn, usbbase, & buf, & max );
 				break;
@@ -153,7 +153,7 @@ U8 buf[MAX_BUFFER];
 
 			case REQCODE_Get_Interface:
 			{
-				USBDEBUG( "Root HUB : Read : Get Interface" );
+				USBDEBUG( "RootHUB : Read : Get Interface" );
 
 				err = __Get_Interface( sd, hn, usbbase, & buf, & max );
 				break;
@@ -161,7 +161,7 @@ U8 buf[MAX_BUFFER];
 
 			default:
 			{
-				USBDEBUG( "Root HUB : Read : Unknown Request (%lu)", (U32) sd->RequestCode );
+				USBDEBUG( "RootHUB : Read : Unknown Request (%lu)", (U32) sd->RequestCode );
 
 				err = USB2Err_Host_Stall;
 				break;
@@ -172,7 +172,7 @@ U8 buf[MAX_BUFFER];
 
 		if ( max > MAX_BUFFER )
 		{
-			USBPANIC( "Root HUB : Read : DO_ERROR Buffer overflow (Max %lu, )" );
+			USBPANIC( "RootHUB : Read : DO_ERROR Buffer overflow (Max %lu, )" );
 		}
 
 		#endif

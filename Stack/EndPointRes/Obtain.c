@@ -47,7 +47,7 @@ U32 to;
 
 	// --
 
-//	USBDEBUG( "__EndPointRes_ObtainList  : REG %p : (%s)", reg, (file)?file:"<NULL>" );
+//	USBDEBUG( "__EndPointRes_ObtainList : REG   %p : (%s)", reg, (file)?file:"<NULL>" );
 //	USBDEBUG( "__EndPointRes_ObtainList" );
 
 	// --
@@ -71,7 +71,7 @@ U32 to;
 
 	if ( ! epr )
 	{
-		USBERROR( "__EndPointRes_ObtainList  : Error allocating memory" );
+		USBERROR( "__EndPointRes_ObtainList : Error allocating memory" );
 		goto bailout;
 	}
 
@@ -79,17 +79,17 @@ U32 to;
 
 	if ( REGISTER_LOCK( reg ) != LSTAT_Okay )
 	{
-		USBERROR( "__EndPointRes_ObtainList  : Invalid REG %p", reg );
+		USBERROR( "__EndPointRes_ObtainList : Invalid REG %p", reg );
 		goto bailout;
 	}
 
 	epr->epr_Register = reg;
-//	USBDEBUG( "--> : ADD 1 : EPR %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
+//	USBDEBUG( "--> : ADD 1 : EPR   %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
 	NODE_ADDTAIL( & reg->reg_EPRHeader, & epr->epr_Node );
 
 	// --
 
-//	USBDEBUG( "__EndPointRes_ObtainList  : 2 :" );
+//	USBDEBUG( "__EndPointRes_ObtainList : 2 :" );
 
 	fn = reg->reg_Function;
 
@@ -202,13 +202,13 @@ U32 to;
 
 			default:
 			{
-				USBERROR( "__EndPointRes_ObtainList  : Unknown tag [%08lx:%08lx]", tag->ti_Tag, tag->ti_Data );
+				USBERROR( "__EndPointRes_ObtainList : Unknown tag [%08lx:%08lx]", tag->ti_Tag, tag->ti_Data );
 				break;
 			}
 		}
 	}
 
-//	USBDEBUG( "__EndPointRes_ObtainList  : 3 :" );
+//	USBDEBUG( "__EndPointRes_ObtainList : 3 :" );
 
 	// ---
 
@@ -216,7 +216,7 @@ U32 to;
 
 	if ( FUNCTION_VALID(fn) != VSTAT_Okay )
 	{
-		USBERROR( "__EndPointRes_ObtainList  : NULL Pointer" );
+		USBERROR( "__EndPointRes_ObtainList : NULL Pointer" );
 		goto bailout;
 	}
 
@@ -226,21 +226,21 @@ U32 to;
 
 	/**/ if (( ep ) && ( epnr == 0 ))
 	{
-//		USBDEBUG( "__EndPointRes_ObtainList  : 4 : Use Control EP 1" );
+//		USBDEBUG( "__EndPointRes_ObtainList : 4 : Use Control EP 1" );
 //		USBERROR( "EndPoint Type ........... : 1 (Control)" );
 
 		epn = fn->fkt_ControlEndPoint;
 	}
 	else if (( ep == FALSE ) && ( eptype == EPATT_Type_Control ))
 	{
-//		USBDEBUG( "__EndPointRes_ObtainList  : 5 : Use " );
+//		USBDEBUG( "__EndPointRes_ObtainList : 5 : Use " );
 //		USBERROR( "EndPoint Type ........... : 2 (Control)" );
 
 		epn = fn->fkt_ControlEndPoint;
 	}
 	else
 	{
-//		USBDEBUG( "__EndPointRes_ObtainList  : 6 :" );
+//		USBDEBUG( "__EndPointRes_ObtainList : 6 :" );
 
 		cn = fn->fkt_Config_Active;
 		ig = ( cn ) ? cn->cfg_InterfaceGroups.uh_Head : NULL;
@@ -310,11 +310,11 @@ U32 to;
 		}
 	}
 
-//	USBDEBUG( "__EndPointRes_ObtainList  : 7 :" );
+//	USBDEBUG( "__EndPointRes_ObtainList : 7 :" );
 
 	if ( ENDPOINT_VALID(epn) != VSTAT_Okay )
 	{
-		USBERROR( "__EndPointRes_ObtainList  : EndPoint Node not found : EP %p", epn );
+		USBERROR( "__EndPointRes_ObtainList : EndPoint Node not found : EP    %p", epn );
 		goto bailout;
 	}
 
@@ -329,7 +329,7 @@ U32 to;
 
 		if ( ! epr->epr_Public.IORequests )
 		{
-			USBERROR( "__EndPointRes_ObtainList  : Error allocaing memory" );
+			USBERROR( "__EndPointRes_ObtainList : Error allocaing memory" );
 			goto bailout;
 		}
 
@@ -338,7 +338,7 @@ U32 to;
 
 		if ( ! epr->epr_Public.Buffers )
 		{
-			USBERROR( "__EndPointRes_ObtainList  : Error allocaing memory" );
+			USBERROR( "__EndPointRes_ObtainList : Error allocaing memory" );
 			goto bailout;
 		}
 
@@ -358,7 +358,7 @@ U32 to;
 				
 				default:
 				{
-					USBERROR( "__EndPointRes_ObtainList  : Error invalid Buffer size (%ld)", bs );
+					USBERROR( "__EndPointRes_ObtainList : Error invalid Buffer size (%ld)", bs );
 					goto bailout;
 				}
 			}
@@ -378,11 +378,11 @@ U32 to;
 				TAG_END
 			);
 
-//			USBDEBUG( "__EndPointRes_ObtainList  : EPR %p : IOReq %p : Pos %ld", epr, epr->epr_Public.IORequests, cnt );
+//			USBDEBUG( "__EndPointRes_ObtainList : EPR   %p : IOReq %p : Pos %ld", epr, epr->epr_Public.IORequests, cnt );
 
 			if ( ! epr->epr_Public.IORequests[cnt] )
 			{
-				USBERROR( "__EndPointRes_ObtainList  : Error creating IORequest" );
+				USBERROR( "__EndPointRes_ObtainList : Error creating IORequest" );
 				goto bailout;
 			}
 
@@ -391,14 +391,14 @@ U32 to;
 
 			if ( bs )
 			{
-//				USBDEBUG( "__EndPointRes_ObtainList  : BufferSize %ld", bs );
+//				USBDEBUG( "__EndPointRes_ObtainList : BufferSize %ld", bs );
 
 				// Clear is proberly not needed but why not to make sure
 				epr->epr_Public.Buffers[cnt] = MEM_ALLOCIOBUFFER( bs, TRUE );
 
 				if ( ! epr->epr_Public.Buffers[cnt] )
 				{
-					USBERROR( "__EndPointRes_ObtainList  : Error allocating memory" );
+					USBERROR( "__EndPointRes_ObtainList : Error allocating memory" );
 					goto bailout;
 				}
 
@@ -410,18 +410,18 @@ U32 to;
 
 	// --
 
-//	USBDEBUG( "__EndPointRes_ObtainList  : 8 :" );
+//	USBDEBUG( "__EndPointRes_ObtainList : 8 :" );
 
 	#ifdef DO_PANIC
 
 	if ( ! epr->epr_Public.IORequests )
 	{
-		USBPANIC( "__EndPointRes_ObtainList  : NULL Pointer 1" );
+		USBPANIC( "__EndPointRes_ObtainList : NULL Pointer 1" );
 	}
 
 	if ( ! epr->epr_Public.IORequests[0] )
 	{
-		USBPANIC( "__EndPointRes_ObtainList  : NULL Pointer 2" );
+		USBPANIC( "__EndPointRes_ObtainList : NULL Pointer 2" );
 	}
 
 	#endif
@@ -436,7 +436,7 @@ U32 to;
 
 		if ( ! epr->epr_Public.SetupData )
 		{
-			USBERROR( "__EndPointRes_ObtainList  : Error allocating memory" );
+			USBERROR( "__EndPointRes_ObtainList : Error allocating memory" );
 			goto bailout;
 		}
 	}
@@ -451,7 +451,7 @@ bailout:
 	{
 		if ( error )
 		{
-			USBDEBUG( "__EndPointRes_ObtainList  : 1 : EPR %p (new) : REG %p :", NULL, reg );
+			USBDEBUG( "__EndPointRes_ObtainList : 1 : EPR   %p (new) : REG %p :", NULL, reg );
 
 			if ( REGISTER_VALID( epr->epr_Register ) == VSTAT_Okay )
 			{
@@ -465,13 +465,13 @@ bailout:
 		}
 		else
 		{
-			USBDEBUG( "__EndPointRes_ObtainList  : 2 : EPR %p (new) : ERP %p (public): REG %p :", epr, & epr->epr_Public, reg );
+			USBDEBUG( "__EndPointRes_ObtainList : 2 : EPR   %p (new) : ERP %p (public) : REG %p :", epr, & epr->epr_Public, reg );
 			return( & epr->epr_Public );
 		}
 	}
 	else
 	{
-		USBDEBUG( "__EndPointRes_ObtainList  : 3 : EPR %p (new) : REG %p :", NULL, reg );
+		USBDEBUG( "__EndPointRes_ObtainList : 3 : EPR   %p (new) : REG   %p :", NULL, reg );
 		return( NULL );
 	}
 }
@@ -494,7 +494,7 @@ va_list ap;
 
 	TASK_NAME_ENTER( "__EndPointRes_ObtainTags" );
 
-//	USBDEBUG( "__EndPointRes_ObtainTags : REG %p : (%s)", reg, (file)?file:"<NULL>" );
+//	USBDEBUG( "__EndPointRes_ObtainTags : REG   %p : (%s)", reg, (file)?file:"<NULL>" );
 
 	if ( REGISTER_LOCK( reg ) == LSTAT_Okay )
 	{
@@ -512,7 +512,7 @@ va_list ap;
 		epr = NULL;
 	}
 
-//	USBDEBUG( "__EndPointRes_ObtainTags : REG %p : EPR %p (new)", reg, epr );
+//	USBDEBUG( "__EndPointRes_ObtainTags : REG   %p : EPR   %p (new)", reg, epr );
 
 	TASK_NAME_LEAVE();
 

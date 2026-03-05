@@ -16,6 +16,8 @@
 #include "Device_Shutdown.c"
 #include "Device_Startup.c"
 
+// --
+
 #include "_man_Obtain.c"
 #include "_man_Release.c"
 #include "_man_Expunge.c"
@@ -24,7 +26,8 @@
 #include "_man_BeginIO.c"
 #include "_man_AbortIO.c"
 
-#ifndef DO_DEMO_MODE
+// --
+
 #include "_main_Obtain.c"
 #include "_main_Release.c"
 
@@ -40,8 +43,6 @@
 #include "_main_EPRes_Obtain.c"
 #include "_main_EPRes_Release.c"
 #include "_main_EPRes_Destall.c"
-
-#endif
 
 // --
 
@@ -69,8 +70,6 @@ SEC_RODATA static const struct TagItem _manager_Tags[] =
 };
 
 // --
-
-#ifndef DO_DEMO
 
 SEC_RODATA static const PTR main_v1_vectors[] =
 {
@@ -110,18 +109,12 @@ SEC_RODATA static const struct TagItem _main_Tags[] =
 	{ TAG_END,			(Tag) 0					}
 };
 
-#endif
-
 // --
 
 SEC_RODATA const PTR devInterfaces[] =
 {
 	(PTR) _manager_Tags,
-
-	#ifndef DO_DEMO_MODE
 	(PTR) _main_Tags,
-	#endif
-
 	(PTR) NULL
 };
 

@@ -57,6 +57,7 @@ struct EHCI_QH *qh;
 
 //	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Control_Add" );
+//	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Add : IOReq %p\n", ioreq );
 
 	// --
 	// Find last QH and add it after
@@ -80,9 +81,9 @@ struct EHCI_QH *qh;
 
 	if ( ! last )
 	{
-		#ifdef DEBUG
+//		#ifdef DEBUG
 		hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Add : Yikes NULL Pointer\n" );
-		#endif
+//		#endif
 		return;
 	}
 
@@ -95,10 +96,6 @@ struct EHCI_QH *qh;
 
 	last->pqh_virt_next		= qh;
 	last->qh_link			= LE_SWAP32( qh->pqh_self_phy | EHCI_LINK_QH );
-
-	// --
-	// Now flush EHCI's async prefetch
-	EHCI_Wait_Door_Bell( hn );
 
 	// --
 	ioreq->req_PublicStat = IORS_HCD_Active;

@@ -285,7 +285,7 @@ struct DOSIFace *IDOS;
 struct Task *task;
 S32 reply;
 
-	USBDEBUG( "__Cmd_Start_Process : 11 : TM %p", tm );
+	USBDEBUG( "__Cmd_Start_Process : 11 : TM    %p", tm );
 
 	IExec = usbbase->usb_IExec;
 	IDOS  = usbbase->usb_IDOS;
@@ -347,7 +347,7 @@ S32 reply;
 
 	if ( task )
 	{
-//		USBDEBUG( "__Cmd_Start_Process : 14 : TN %p : Okay", tn );
+//		USBDEBUG( "__Cmd_Start_Process : 14 : TN    %p : Okay", tn );
 		SEMAPHORE_OBTAIN(	& usbbase->usb_Task_Semaphore );
 		NODE_ADDTAIL(		& usbbase->usb_Task_Header, tn );
 		SEMAPHORE_RELEASE(	& usbbase->usb_Task_Semaphore );
@@ -355,7 +355,7 @@ S32 reply;
 	}
 	else
 	{
-//		USBDEBUG( "__Cmd_Start_Process : 15 : TN %p : Failed", tn );
+//		USBDEBUG( "__Cmd_Start_Process : 15 : TN    %p : Failed", tn );
 		// Failed to start Process, we need to reply
 		TASK_FREE(tn);
 		reply = TRUE;
@@ -369,7 +369,7 @@ bailout:
 		*tm->tm_Get_TaskNode = tn;
 	}
 
-//	USBDEBUG( "__Cmd_Start_Process : 16 : TN %p : Reply %ld :", task, reply );
+//	USBDEBUG( "__Cmd_Start_Process : 16 : TN    %p : Reply %ld :", task, reply );
 
 	return( reply );
 }

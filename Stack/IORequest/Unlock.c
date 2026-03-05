@@ -25,7 +25,7 @@ SEC_CODE void __IORequest_Unlock( struct USBBase *usbbase, struct RealRequest *i
 {
 	TASK_NAME_ENTER( "__IORequest_Unlock" );
 
-	USBDEBUG( "__IORequest_Unlock       : IOReq %p : Locks %ld (old) : (%s)", ioreq, (ioreq)?ioreq->req_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__IORequest_Unlock       : IOReq %p : Locks %2ld (old) : (%s)", ioreq, (ioreq)?ioreq->req_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 

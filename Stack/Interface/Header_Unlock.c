@@ -25,7 +25,7 @@ SEC_CODE void __Interface_UnlockHeader( struct USBBase *usbbase, struct USB2_Int
 {
 	TASK_NAME_ENTER( "__Interface_UnlockHeader" );
 
-	USBDEBUG( "__Interface_UnlockHeader : IH %p : (%s)", ih, (file)?file:"<NULL>" );
+	USBDEBUG( "__Interface_UnlockHeader : IH    %p : (%s)", ih, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +35,16 @@ SEC_CODE void __Interface_UnlockHeader( struct USBBase *usbbase, struct USB2_Int
 		{
 			ih->ih_Locks--;
 
-//			USBDEBUG( "__Interface_UnlockHeader : IH %p : New Lock Count : %ld (-1)", ih, ih->ih_Locks );
+//			USBDEBUG( "__Interface_UnlockHeader : IH    %p : New Lock Count : %ld (-1)", ih, ih->ih_Locks );
 		}
 		else
 		{
-			USBPANIC( "__Interface_UnlockHeader : IH %p : Interface Header NOT Locked (%ld)", ih, ih->ih_Locks );
+			USBPANIC( "__Interface_UnlockHeader : IH    %p : Interface Header NOT Locked (%ld)", ih, ih->ih_Locks );
 		}
 	}
 	else
 	{
-		USBERROR( "__Interface_UnlockHeader : IH %p : Invalid Interface Header", ih );
+		USBERROR( "__Interface_UnlockHeader : IH    %p : Invalid Interface Header", ih );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );

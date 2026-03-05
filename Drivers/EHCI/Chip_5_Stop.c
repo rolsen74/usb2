@@ -60,7 +60,7 @@ U32 val;
 
 	retval = FALSE;
 
-	USBDEBUG( "EHCI_Chip_Stop : Halt Chip" );
+	USBDEBUG( "EHCI_Chip_Stop           : Halt Chip" );
 
 	// --
 	// Halt controller (if running)
@@ -89,7 +89,7 @@ U32 val;
 
 		if ( cnt == MAXMS )
 		{
-			USBDEBUG( "EHCI_Chip_Stop : Error Stopping Controller" );
+			USBDEBUG( "EHCI_Chip_Stop           : Error Stopping Controller" );
 			goto bailout;
 		}
 

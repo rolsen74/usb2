@@ -36,7 +36,7 @@ SEC_CODE void __MsgPort_Free( struct USBBase *usbbase, struct USB2_MsgPort *mp )
 
 	if ( mp->ump_StructID != ID_USB2_MP )
 	{
-		USBPANIC( "MsgPort_Free  :  2 : In use : (%s)", file );
+		USBPANIC( "MsgPort_Free  :  2 : IN    use : (%s)", file );
 	}
 
 	#endif

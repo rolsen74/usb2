@@ -27,7 +27,7 @@ S32 retval;
 
 	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
 	{
-		USBDEBUG( "Device Init Done 1 : FN %p : Locks %ld : Init %ld", fn, (fn)?fn->fkt_Locks:0, (fn)?fn->fkt_Initialized:-1 );
+		USBDEBUG( "Device Init Done 1       : FN    %p : Locks %2ld : Init %ld", fn, (fn)?fn->fkt_Locks:0, (fn)?fn->fkt_Initialized:-1 );
 
 		if ( ! fn->fkt_Initialized )
 		{
@@ -49,7 +49,7 @@ S32 retval;
 //			usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Init : 000 : Stat $%08lx\n##\n\n", (U32) stat );
 		}
 
-		USBDEBUG( "Device Init Done 2 : FN %p : Locks %ld : Init %ld", fn, (fn)?fn->fkt_Locks:0, (fn)?fn->fkt_Initialized:-1 );
+		USBDEBUG( "Device Init Done 2 : FN    %p : Locks %2ld : Init %ld", fn, (fn)?fn->fkt_Locks:0, (fn)?fn->fkt_Initialized:-1 );
 
 		if ( fn->fkt_Initialized )
 		{

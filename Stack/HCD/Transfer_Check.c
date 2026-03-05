@@ -24,7 +24,8 @@ SEC_CODE S32 __HCD_Transfer_Check( struct USBBase *usbbase, struct USB2_HCDNode 
 struct USB2_EndPointNode *ep;
 S32 remove;
 
-	TASK_NAME_ENTER( "HCD : __HCD_Transfer_Check : 1" );
+	TASK_NAME_ENTER( "HCD : __HCD_Transfer_Check : 1 :" );
+	USBDEBUG( "__HCD_Transfer_Check     : IOReq %p : Force %ld", ioreq, Force );
 
 	#ifdef DO_DEBUG
 
@@ -82,44 +83,22 @@ S32 remove;
 
 		// --
 
-		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 3.5" );
+		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 4" );
 
-//		if ( IOREQUEST_LOCK( ioreq ) == LSTAT_Okay )
-		{
-			TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 4" );
+		// Remove node from Active TransferList
+		NODE_REMNODE( & hn->hn_Active_Transfer_List, ioreq );
 
-			// Remove node from Active TransferList
-			NODE_REMNODE( & hn->hn_Active_Transfer_List, ioreq );
+		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 5" );
 
-			TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 5" );
+		HCD_TRANSFER_REMOVE( hn, ioreq );
 
-			HCD_TRANSFER_REMOVE( hn, ioreq );
+		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 6" );
 
-			TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 6" );
+		HCD_REPLY(ioreq);
 
-//			// Send back to user
-//			ioreq->req_PublicStat = IORS_User;
-//
-//			TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 7.1" );
-//
-//			MSGPORT_REPLYMSG(ioreq);
-//
-//			TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 7.5" );
-//
-//			IOREQUEST_ACTIVE_SUB( ioreq );
+		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 7" );
 
-			HCD_REPLY(ioreq);
-
-			TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 7" );
-
-//			IOREQUEST_UNLOCK( ioreq );
-			ioreq = NULL;
-		}
-//		else
-//		{
-//			USBPANIC( "ioreq oh no" );
-//			ioreq = NULL;
-//		}
+		ioreq = NULL;
 
 		// --
 		// Start next IOReq if there are any queued

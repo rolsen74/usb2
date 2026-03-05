@@ -45,7 +45,7 @@ STR str;
 	#ifdef DO_DEBUG
 	if ( str )
 	{
-		USBDEBUG( "--> '%s'", str );
+		USBDEBUG( "--> %s", str );
 	}
 	#endif
 

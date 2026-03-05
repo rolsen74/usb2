@@ -71,16 +71,9 @@ U32 wait;
 
 		if ( mask & hn->HCD_Mask )
 		{
-			if ( hn->HCD_Functions.Handler_HCD )
-			{
-				hn->HCD_Functions.Handler_HCD( hn, mask & hn->HCD_Mask );
-			}
-			#ifdef DO_DEBUG
-			else
-			{
-				USBPANIC( "__myMain (HCD) : __Stopping : HCD_Mask : Implement me" );
-			}
-			#endif
+			usbbase->usb_IExec->DebugPrintF( " : __myHandle_HCD\n" );
+
+			__myHandle_HCD( usbbase, hn, mask );
 		}
 
 		if ( mask & hn->hn_WatchDog_MsgPort.ump_Signal.sig_Signal_Mask )
@@ -93,11 +86,15 @@ U32 wait;
 
 		if ( mask & hn->hn_Abort_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
+			usbbase->usb_IExec->DebugPrintF( " : __myHandle_Abort\n" );
+
 			__myHandle_Abort( usbbase, hn );
 		}
 
 		if ( mask & hn->hn_Begin_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
+			usbbase->usb_IExec->DebugPrintF( " : __myHandle_Begin\n" );
+
 			__myHandle_Begin( usbbase, hn );
 		}
 
@@ -109,19 +106,23 @@ U32 wait;
 		if ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
 			USBDEBUG( "__myMain (HCD)           : Got : Tick Timer :" );
+
 			if ( MSGPORT_GETMSG( & in->Tick_MsgPort ))
 			{
 //				myFree_DNs( usbbase );
 //				myFree_TNs( usbbase );
-				in->Tick_TimeRequest.Time.Seconds = 2;
+				in->Tick_TimeRequest.Time.Seconds = 1;
 				in->Tick_TimeRequest.Time.Microseconds = 0;
 				IO_SEND( & in->Tick_TimeRequest );
 			}
+
+			__myHandle_HCD( usbbase, hn, -1 );
 		}
 
 		if ( mask & SIGBREAKF_CTRL_D )
 		{
 			USBDEBUG( "__myMain (HCD)           : Got : CTRL+D :" );
+			// Used to break out of Wait so we can check ua_Counter
 		}
 	}
 

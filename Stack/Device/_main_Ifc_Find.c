@@ -317,7 +317,7 @@ U32 cnt;
 
 	while(( fn ) && ( ig ) && ( ih ))
 	{
-		USBERROR( "USB2 Stack : _main_FindInterfaceList : FN %p : IG %p : IH %p : Ifc Class %lu", fn, ig, ih, ig->ig_Class );
+		USBERROR( "USB2 Stack : _main_FindInterfaceList : FN    %p : IG    %p : IH    %p : Ifc Class %lu", fn, ig, ih, ig->ig_Class );
 
 		found = TRUE;
 

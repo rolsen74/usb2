@@ -68,13 +68,13 @@ S32 reply;
 
 		if ( reply )
 		{
-			USBDEBUG( "myHandle_Cmds : Reply Msg : TM %p : Task %p : Mask $%08lx", msg, msg->cm_Task, msg->cm_Mask );
+			USBDEBUG( "myHandle_Cmds            : Reply Msg : TM %p : Task %p : Mask $%08lx", msg, msg->cm_Task, msg->cm_Mask );
 
 			TASK_SIGNAL( msg->cm_Task, msg->cm_Mask );
 		}
 		else
 		{
-			USBDEBUG( "myHandle_Cmds : Skipping Reply : TM %p : Task %p : Mask $%08lx", msg, msg->cm_Task, msg->cm_Mask  );
+			USBDEBUG( "myHandle_Cmds            : Skipping Reply : TM %p : Task %p : Mask $%08lx", msg, msg->cm_Task, msg->cm_Mask  );
 		}
 	}
 }

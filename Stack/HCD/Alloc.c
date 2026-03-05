@@ -57,7 +57,7 @@ bailout:
 		hn = NULL;
 	}
 
-	USBDEBUG( "__HCD_Alloc              : HN %p : (new) : Type %ld", hn, hcdtype );
+	USBDEBUG( "__HCD_Alloc              : HN    %p : (new) : Type %ld", hn, hcdtype );
 
 	TASK_NAME_LEAVE();
 

@@ -46,9 +46,9 @@ struct RealRequest *ioreq;
 		{
 			fn = ioreq->req_Function;
 
-			USBINFO( "__myHandle_Abort         : FN %p", fn );
+			USBINFO( "__myHandle_Abort         : FN    %p", fn );
 
-//			usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : FN %p\n", fn );
+//			usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : FN    %p\n", fn );
 
 			if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
 			{
@@ -56,9 +56,9 @@ struct RealRequest *ioreq;
 
 				ep = ioreq->req_EndPoint;
 
-				USBINFO( "__myHandle_Abort         : EP %p", ep );
+				USBINFO( "__myHandle_Abort         : EP    %p", ep );
 
-//				usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : EP %p\n", ep );
+//				usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : EP    %p\n", ep );
 
 				if ( ENDPOINT_LOCK(ep) == LSTAT_Okay )
 				{

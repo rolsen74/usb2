@@ -23,11 +23,11 @@ struct RealSetupData *sd;
 		sd->rsd_Phy = ((struct Mem_FreeNode *)sd)->mfn_Addr;
 		sd->rsd_StructID = ID_USB2_SD;
 
-		USBDEBUG( "__SetupData_Alloc        : SD %p, Phy $%08lx", sd, sd->rsd_Phy );
+		USBDEBUG( "__SetupData_Alloc        : SD    %p, Phy $%08lx", sd, sd->rsd_Phy );
 	}
 	else
 	{
-		USBERROR( "__SetupData_Alloc        : SD %p : Error", sd );
+		USBERROR( "__SetupData_Alloc        : SD    %p : Error", sd );
 	}
 
 	return( sd );

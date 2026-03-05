@@ -51,7 +51,7 @@ struct RealRegister *reg;
 }
 	#endif
 
-	USBDEBUG( "__myMain (Init)          : Enter : FN %p", fn );
+	USBDEBUG( "__myMain (Init)          : Enter : FN    %p", fn );
 
 	reg = NULL;
 

@@ -34,7 +34,7 @@ U32 idx;
 
 	TASK_NAME_ENTER( "__EndPointRes_Destall" );
 
-	USBERROR( "__EndPointRes_Destall       : EPR %p : (%s)", epr, (file)?file:"<NULL>" );
+	USBERROR( "__EndPointRes_Destall       : EPR   %p : (%s)", epr, (file)?file:"<NULL>" );
 
 	retval = FALSE;
 	locked = FALSE;

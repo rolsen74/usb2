@@ -51,7 +51,7 @@ U32 mask;
 
 	// -- Shutdown mode
 
-	USBINFO( "__myMain (HUB)            : HUB_Main__Stopping (3)" );
+	USBINFO( "__myMain (HUB)           : HUB_Main__Stopping (3)" );
 	USBDEBUG( "FN Stopping Locks #%lu", in->Function->fkt_Locks );
 
 	wait  = SIGBREAKF_CTRL_D;
@@ -61,7 +61,7 @@ U32 mask;
 
 	while( TRUE )
 	{
-		USBDEBUG( "HUB : Adr #%ld : FN %p : Shutdown : Drivers: %ld, Functions: %ld, Header: %ld", 
+		USBDEBUG( "HUB : Adr #%ld : FN    %p : Shutdown : Drivers: %ld, Functions: %ld, Header: %ld", 
 			in->Function->fkt_Address, 
 			in->Function,
 			in->ASync_Drivers.ua_Counter, 

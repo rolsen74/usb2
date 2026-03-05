@@ -24,7 +24,7 @@ SEC_CODE S32 __Function_Bind( struct USBBase *usbbase, struct RealFunctionNode *
 enum FDSTAT stat;
 S32 retval;
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Bind : FN %p\n##\n\n", fn );
+//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Bind : FN    %p\n##\n\n", fn );
 
 	// --
 
@@ -92,7 +92,7 @@ S32 retval;
 		else
 		{
 			// Allready claimed
-//			USBERROR( "Skipping Function (claimed) : FN %p : Class %ld", fn, fn->fkt_Class );
+//			USBERROR( "Skipping Function (claimed) : FN    %p : Class %ld", fn, fn->fkt_Class );
 		}
 
 		FUNCTION_UNLOCK( fn );

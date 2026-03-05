@@ -27,7 +27,7 @@ enum LSTAT lstat;
 
 	TASK_NAME_ENTER( "__IORequest_Lock" );
 
-	USBDEBUG( "__IORequest_Lock         : IOReq %p : Locks %ld (old) : (%s)", ioreq, (ioreq)?ioreq->req_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__IORequest_Lock         : IOReq %p : Locks %2ld (old) : (%s)", ioreq, (ioreq)?ioreq->req_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 

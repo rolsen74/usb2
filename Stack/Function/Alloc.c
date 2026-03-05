@@ -30,13 +30,23 @@ SEC_RODATA static const struct USB2_Device_Desc DefaultDeviceDescriptor =
 /* NumConfigurations */ 0x01
 };
 
-SEC_RODATA static const struct USB2_EndPoint_Desc DefaultControl =
+SEC_RODATA static const struct USB2_EndPoint_Desc DefaultControl8 =
 {
 /* Length			*/ 7,
 /* DescriptorType	*/ DSCTYPE_EndPoint,
 /* EndPointAddress	*/ 0,
 /* Attributes		*/ EPATT_Type_Control,
 /* MaxPacketSize	*/ LE_SWAP16( 8 ),
+/* Interval			*/ 0,
+};
+
+SEC_RODATA static const struct USB2_EndPoint_Desc DefaultControl64 =
+{
+/* Length			*/ 7,
+/* DescriptorType	*/ DSCTYPE_EndPoint,
+/* EndPointAddress	*/ 0,
+/* Attributes		*/ EPATT_Type_Control,
+/* MaxPacketSize	*/ LE_SWAP16( 64 ),
 /* Interval			*/ 0,
 };
 
@@ -48,6 +58,7 @@ SEC_CODE struct RealFunctionNode *__Function_Alloc(
 	struct USBBase *usbbase, 
 	struct USB2_HCDNode *hn, 
 	struct USB2_ASync *as, 
+	U32 Speed,
 	U32 Tier,
 	STR file UNUSED )
 
@@ -57,11 +68,13 @@ SEC_CODE struct RealFunctionNode *__Function_Alloc(
 	struct USBBase *usbbase, 
 	struct USB2_HCDNode *hn, 
 	struct USB2_ASync *as, 
+	U32 Speed,
 	U32 Tier )
 
 #endif
 
 {
+struct USB2_EndPointNode *epn;
 struct RealFunctionNode *fn;
 S32 error;
 
@@ -87,6 +100,7 @@ S32 error;
 	fn->fkt_NotifyID	= MISC_NEWNOTIFYID();
 //	fn->fkt_ConfigNr	= -1;
 	fn->fkt_ASync		= as;
+	fn->fkt_Speed		= Speed;
 
 	// -- Init Public
 	fn->fkt_Public.FKT_ID	= fn->fkt_NotifyID;
@@ -113,14 +127,25 @@ S32 error;
 	// Every Function has aleast the Control EndPoint
 
 	// Set Control endpoints
-	fn->fkt_ControlEndPoint = ENDPOINT_ALLOC( fn, NULL, (PTR) & DefaultControl );
 
-	if ( ! fn->fkt_ControlEndPoint )
+	if ( fn->fkt_Speed == USBSPEED_High )
+	{
+		USBINFO( "__Function_Alloc : %ld : High speed", (S32) fn->fkt_Speed );
+		epn = ENDPOINT_ALLOC( fn, NULL, (PTR) & DefaultControl64 );
+	}
+	else
+	{
+		USBINFO( "__Function_Alloc : %ld : Other speed", (S32) fn->fkt_Speed );
+		epn = ENDPOINT_ALLOC( fn, NULL, (PTR) & DefaultControl8 );
+	}
+
+	if ( ! epn )
 	{
 		USBERROR( "__Function_Alloc : Error allocating memory" );
 		goto bailout;
 	}
 
+	fn->fkt_ControlEndPoint = epn;
 	fn->fkt_DeviceDescriptor = MEM_ALLOCIOBUFFER( sizeof( struct USB2_Device_Desc ), FALSE );
 
 	if ( ! fn->fkt_DeviceDescriptor )
@@ -147,7 +172,7 @@ bailout:
 //		usbbase->usb_IExec->DebugPrintF( "FN %p : New\n", fn );
 //	}
 
-	USBDEBUG( "__Function_Alloc         : HN %p : (new) : Tier %ld", hn, Tier );
+	USBDEBUG( "__Function_Alloc         : HN    %p : (new) : Tier %ld", hn, Tier );
 
 	return( fn );
 }

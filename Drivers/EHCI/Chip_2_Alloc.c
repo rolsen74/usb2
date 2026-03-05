@@ -60,43 +60,43 @@ S32 retval;
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Alloc : 1 : Alloc EI Signal" );
+	USBDEBUG( "EHCI_Chip_Alloc          : 1 : Alloc EI Signal" );
 
 	if ( ! TASK_ALLOCSIGNAL( & hn->hn_HCD.EHCI.Signal_EI ))
 	{
-		USBDEBUG( "EHCI_Chip_Alloc : Error allocating EI Signal" );
+		USBDEBUG( "EHCI_Chip_Alloc          : Error allocating EI Signal" );
 		goto bailout;
 	}
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Alloc : 2 : Alloc INT Signal " );
+	USBDEBUG( "EHCI_Chip_Alloc          : 2 : Alloc INT Signal " );
 
 	if ( ! TASK_ALLOCSIGNAL( & hn->hn_HCD.EHCI.Signal_INT ))
 	{
-		USBDEBUG( "EHCI_Chip_Alloc : Error allocating INT Signal" );
+		USBDEBUG( "EHCI_Chip_Alloc          : Error allocating INT Signal" );
 		goto bailout;
 	}
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Alloc : 3 : Alloc IAA Signal" );
+	USBDEBUG( "EHCI_Chip_Alloc          : 3 : Alloc IAA Signal" );
 
 	if ( ! TASK_ALLOCSIGNAL( & hn->hn_HCD.EHCI.Signal_IAA ))
 	{
-		USBDEBUG( "EHCI_Chip_Alloc : Error allocating IAA Signal" );
+		USBDEBUG( "EHCI_Chip_Alloc          : Error allocating IAA Signal" );
 		goto bailout;
 	}
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Alloc : 4 : Alloc 4k FrameList" );
+	USBDEBUG( "EHCI_Chip_Alloc          : 4 : Alloc 4k FrameList" );
 
 	hn->hn_HCD.EHCI.FrameList = MEMORY_ALLOC( MEMID_HCD_4k, FALSE );
 
 	if ( ! hn->hn_HCD.EHCI.FrameList )
 	{
-		USBDEBUG( "EHCI_Chip_Alloc : Error Allocating Memory" );
+		USBDEBUG( "EHCI_Chip_Alloc          : Error Allocating Memory" );
 		goto bailout;
 	}
 
@@ -104,25 +104,25 @@ S32 retval;
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Alloc : 5 : Alloc Interrupt Frame Slots" );
+	USBDEBUG( "EHCI_Chip_Alloc          : 5 : Alloc Interrupt Frame Slots" );
 
 	hn->hn_HCD.EHCI.FrameList_ISlots = MEM_ALLOCVEC( 256 * 4, TRUE );
 
 	if ( ! hn->hn_HCD.EHCI.FrameList_ISlots )
 	{
-		USBDEBUG( "EHCI_Chip_Alloc : Error Allocating Memory" );
+		USBDEBUG( "EHCI_Chip_Alloc          : Error Allocating Memory" );
 		goto bailout;
 	}
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Alloc : 7 : Get Port Reset Change Buffer (Ports %ld)", hn->hn_HUB_NumPorts );
+	USBDEBUG( "EHCI_Chip_Alloc          : 7 : Get Port Reset Change Buffer (Ports %ld)", hn->hn_HUB_NumPorts );
 
 	hn->hn_HCD.EHCI.PortResetChange = MEM_ALLOCVEC( hn->hn_HUB_NumPorts+1, TRUE );
 
 	if ( ! hn->hn_HCD.EHCI.PortResetChange )
 	{
-		USBDEBUG( "EHCI_Chip_Alloc : Error Allocating Memory" );
+		USBDEBUG( "EHCI_Chip_Alloc          : Error Allocating Memory" );
 		goto bailout;
 	}
 

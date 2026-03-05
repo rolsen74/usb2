@@ -58,6 +58,13 @@ U32 status;
 
 	TASK_NAME_ENTER( "EHCI : EHCI_Bulk_Remove" );
 //	USBERROR( "EHCI_Bulk_Remove" );
+//	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Bulk_Remove : IOReq %p\n", ioreq );
+
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	EHCI_Door_Bell_Init( hn, __FILE__ );
+	#else
+	EHCI_Door_Bell_Init( hn );
+	#endif
 
 	// --
 	// Find the QH before our QH
@@ -95,7 +102,11 @@ U32 status;
 
 	// --
 	// Tell HW to Flush async prefetch pointers
-	EHCI_Wait_Door_Bell( hn );
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	EHCI_Door_Bell_Wait( hn, __FILE__ );
+	#else
+	EHCI_Door_Bell_Wait( hn );
+	#endif
 
 	// - Save DataToggle and Ping state
 	// - Read Status after DoorBell

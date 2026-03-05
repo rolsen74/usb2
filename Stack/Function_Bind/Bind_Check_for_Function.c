@@ -189,7 +189,6 @@ U32 retval;
 
 		// --
 
-		USBERROR( "Obtain 11" );
 		SEMAPHORE_OBTAIN(	& usbbase->usb_Bind_Semaphore );
 		NODE_ADDTAIL(		& usbbase->usb_Bind_Header, dn );
 		SEMAPHORE_RELEASE(	& usbbase->usb_Bind_Semaphore );
@@ -203,7 +202,7 @@ U32 retval;
 		if ( DRIVER_FREE( dn ) != FSTAT_Okay )
 		{
 			USBDEBUG( "_Start_Function          : Unable to Free, parking" );
-			USBERROR( "Obtain 12" );
+
 			SEMAPHORE_OBTAIN(	& usbbase->usb_Bind_Semaphore );
 			NODE_ADDTAIL(		& usbbase->usb_Bind_Header, dn );
 			SEMAPHORE_RELEASE(	& usbbase->usb_Bind_Semaphore );

@@ -45,7 +45,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__Interface_FreeHeader" );
 
-	USBDEBUG( "__Interface_FreeHeader    : IH %p : (%s)", ih, (file)?file:"<NULL>" );
+	USBDEBUG( "__Interface_FreeHeader    : IH    %p : (%s)", ih, (file)?file:"<NULL>" );
 
 	// --
 
@@ -76,7 +76,7 @@ enum FSTAT fstat;
 	{
 		if ( ih->ih_Locks > 0 )
 		{
-			USBDEBUG( "__Interface_FreeHeader    : IH %p : Interface Header still have %ld locks", ih, ih->ih_Locks );
+			USBDEBUG( "__Interface_FreeHeader    : IH    %p : Interface Header still have %ld locks", ih, ih->ih_Locks );
 			fstat = FSTAT_Locked;
 		}
 		else
@@ -87,7 +87,7 @@ enum FSTAT fstat;
 	}
 	else // ( vstat == VSTAT_Error )
 	{
-		USBPANIC( "__Interface_FreeHeader    : IH %p : Invalid Pointer", ih );
+		USBPANIC( "__Interface_FreeHeader    : IH    %p : Invalid Pointer", ih );
 		fstat = FSTAT_Error;
 	}
 
@@ -109,7 +109,7 @@ enum FSTAT fstat;
 	if ((( Node_Next(ih)) && ( Node_Next(ih) != (PTR) 0xAC111111 ))
 	||	(( Node_Prev(ih)) && ( Node_Prev(ih) != (PTR) 0xAC222222 )))
     {
-     	USBPANIC( "__Interface_FreeHeader    : IH %p : Interface Header have not been removed : Self %p : Next %p : Prev %p : (%s)", ih, Node_Next( ih ), Node_Prev(ih), file );
+     	USBPANIC( "__Interface_FreeHeader    : IH    %p : Interface Header have not been removed : Self %p : Next %p : Prev %p : (%s)", ih, Node_Next( ih ), Node_Prev(ih), file );
 	}
 
 	#endif

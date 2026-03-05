@@ -27,7 +27,7 @@ struct RealEndPointResource *real;
 struct RealRegister *reg;
 enum FSTAT stat;
 
-	USBDEBUG( "__EndPointRes_Release : EPR %p : (%s)", epr, (file)?file:"<NULL>" );
+	USBDEBUG( "__EndPointRes_Release : EPR   %p : (%s)", epr, (file)?file:"<NULL>" );
 
 	if ( ! epr )
 	{
@@ -43,7 +43,7 @@ enum FSTAT stat;
 
 			if ( reg )
 			{
-				USBDEBUG( "--> : REM 2 : EPR %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
+				USBDEBUG( "--> : REM 2 : EPR   %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
 				NODE_REMNODE( & reg->reg_EPRHeader, & real->epr_Node );
 			}
 
@@ -58,7 +58,7 @@ enum FSTAT stat;
 			{
 				if ( reg->reg_Public.Res_Control == & real->epr_Public )
 				{
-					USBDEBUG( "__Register_Free           : Found Control EPR (2)" );
+					USBDEBUG( "__Register_Free          : Found Control EPR (2)" );
 					reg->reg_Public.Res_Control = NULL;
 				}
 			}

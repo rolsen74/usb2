@@ -62,92 +62,120 @@ U32 l;
 
 	retval = TRUE;
 
-	td = qh->pqh_first_td;
-
-	while( td )
+	if ( retval )
 	{
-		status = LE_SWAP32( td->td_status );
+		// Check QH
 
-		len = EHCI_TD_GET_BYTES( status );
+		status = LE_SWAP32( qh->qh_status );
 
-		if ( status & EHCI_TD_ACTIVE )
+		/**/ if ( status & EHCI_TD_ACTIVE )
 		{
 			// Still active, nothing to be done
 			retval = FALSE;
-			break;
 		}
-
-		if ( status & EHCI_TD_STATERRS )
+		else if ( status & EHCI_TD_STATERRS )
 		{
-			#if 0
-hn->hn_USBBase->usb_IExec->Disable();
-
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> qh : %p\n", qh );
-
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> Status : %08lx\n", status );
-
-if ( status & EHCI_QTD_ACTIVE )
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> Active\n" );
-
-if ( status & EHCI_TD_HALTED )
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> Halted\n" );
-
-if ( status & EHCI_QTD_BUFERR )
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> BufErr\n" );
-
-if ( status & EHCI_QTD_BABBLE )
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> Babble\n" );
-
-if ( status & EHCI_QTD_XACTERR )
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> XactErr\n" );
-
-if ( status & EHCI_QTD_MISSEDMICRO )
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> Missed Micro\n" );
-
-if ( status & EHCI_QTD_PINGSTATE )
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> Ping State\n" );
-
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> PID : %x\n", EHCI_QTD_GET_PID( status ) );
-
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> CErr : %x\n", EHCI_QTD_GET_CERR( status ) );
-
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> CPage : %x\n", EHCI_QTD_GET_C_PAGE( status ) );
-
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> IOC : %x\n", status & EHCI_QTD_IOC );
-
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> Len : %d\n", EHCI_QTD_GET_BYTES( status ) );
-
-hn->hn_USBBase->usb_IExec->DebugPrintF( "> Toggle : %d\n", EHCI_QTD_GET_TOGGLE( status ) );
-
-hn->hn_USBBase->usb_IExec->Enable();
-
-			EHCI_dump_sqh( hn, qh );
-			#endif
-			break;
+			// Error - We are done
+			// Errors handled else were
 		}
+	}
 
-		if ( ! td->td_buffer[1] )
+	if ( retval )
+	{
+		// Check TDs
+
+		td = qh->pqh_first_td;
+
+		while( td )
 		{
-			l = 4*1024;
-		}
-		else
-		{
-			l = 20*1024;
-		}
+			status = LE_SWAP32( td->td_status );
 
-		if (( len != l ) && ( len != 0 ))
-		{
-			// Short packet
-			break;
-		}
+			len = EHCI_TD_GET_BYTES( status );
 
-		td = td->ptd_virt_next;
+			if ( status & EHCI_TD_ACTIVE )
+			{
+				// Still active, nothing to be done
+				retval = FALSE;
+				break;
+			}
+
+			if ( status & EHCI_TD_STATERRS )
+			{
+				// Error - We are done
+				// Errors handled else were
+				break;
+			}
+
+			if ( ! td->td_buffer[1] )
+			{
+				l = 4*1024;
+			}
+			else
+			{
+				l = 20*1024;
+			}
+
+			if (( len != l ) && ( len != 0 ))
+			{
+				// Short packet - We are done
+				break;
+			}
+
+			td = td->ptd_virt_next;
+		}
 	}
 
 	TASK_NAME_LEAVE();
 
 	return( retval );
 }
+
+#if 0
+#if 0
+// hn->hn_USBBase->usb_IExec->Disable();
+
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> qh : %p\n", qh );
+
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> Status : %08lx\n", status );
+
+// if ( status & EHCI_QTD_ACTIVE )
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> Active\n" );
+
+// if ( status & EHCI_TD_HALTED )
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> Halted\n" );
+
+// if ( status & EHCI_QTD_BUFERR )
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> BufErr\n" );
+
+// if ( status & EHCI_QTD_BABBLE )
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> Babble\n" );
+
+// if ( status & EHCI_QTD_XACTERR )
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> XactErr\n" );
+
+// if ( status & EHCI_QTD_MISSEDMICRO )
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> Missed Micro\n" );
+
+// if ( status & EHCI_QTD_PINGSTATE )
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> Ping State\n" );
+
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> PID : %x\n", EHCI_QTD_GET_PID( status ) );
+
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> CErr : %x\n", EHCI_QTD_GET_CERR( status ) );
+
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> CPage : %x\n", EHCI_QTD_GET_C_PAGE( status ) );
+
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> IOC : %x\n", status & EHCI_QTD_IOC );
+
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> Len : %d\n", EHCI_QTD_GET_BYTES( status ) );
+
+// hn->hn_USBBase->usb_IExec->DebugPrintF( "> Toggle : %d\n", EHCI_QTD_GET_TOGGLE( status ) );
+
+// hn->hn_USBBase->usb_IExec->Enable();
+
+			EHCI_Dump_QH( hn, qh, TRUE );
+			#endif
+#endif
 
 // --
 
@@ -174,16 +202,12 @@ S32 retval;
 	if ( qh )
 	{
 		retval = __is_QH_Finished( hn, qh );
-
-//		USBDEBUG( "EHCI_Transfer_Check : IOReq %p : Stat %ld", ioreq, retval );
 	}
-
 	else
 	{
-		USBDEBUG( "EHCI_Transfer_Check : NULL Pointer" );
+		USBERROR( "EHCI_Transfer_Check : NULL Pointer" );
 		retval = FALSE;
 	}
-
 
 	TASK_NAME_LEAVE();
 

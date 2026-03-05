@@ -41,7 +41,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__IORequest_Free" );
 
-	USBDEBUG( "__IORequest_Free          : IOReq %p : (%s)", ioreq, (file)?file:"<NULL>" );
+	USBDEBUG( "__IORequest_Free         : IOReq %p : (%s)", ioreq, (file)?file:"<NULL>" );
 
 	// --
 
@@ -70,19 +70,19 @@ enum FSTAT fstat;
 	}
 	else if ( vstat == VSTAT_Okay )
 	{
-//		usbbase->usb_IExec->DebugPrintF( "__IORequest_Free          : IOReq %p : Locks %ld : Stat %ld : Task %p :\n", ioreq, ioreq->req_Locks, ioreq->req_PublicStat, usbbase->usb_IExec->FindTask(NULL) );
+//		usbbase->usb_IExec->DebugPrintF( "__IORequest_Free         : IOReq %p : Locks %2ld : Stat %ld : Task %p :\n", ioreq, ioreq->req_Locks, ioreq->req_PublicStat, usbbase->usb_IExec->FindTask(NULL) );
 
 		if (( ioreq->req_PublicStat != IORS_User )
 		&&	( ioreq->req_PublicStat != IORS_Unset ))
 		{
-			usbbase->usb_IExec->DebugPrintF( "__IORequest_Free          : IOReq %p : Node still active (Stat %ld)\n", ioreq, ioreq->req_PublicStat );
-			USBDEBUG( "__IORequest_Free          : IOReq %p : Node still active (Stat %ld)", ioreq, ioreq->req_PublicStat );
+			usbbase->usb_IExec->DebugPrintF( "__IORequest_Free         : IOReq %p : Node still active (Stat %ld)\n", ioreq, ioreq->req_PublicStat );
+			USBDEBUG( "__IORequest_Free         : IOReq %p : Node still active (Stat %ld)", ioreq, ioreq->req_PublicStat );
 			fstat = FSTAT_Locked;
 		}
 		else if ( ioreq->req_Locks > 0 )
 		{
-			usbbase->usb_IExec->DebugPrintF( "__IORequest_Free          : IOReq %p : Node still have %ld locks\n", ioreq, ioreq->req_Locks );
-			USBDEBUG( "__IORequest_Free          : IOReq %p : Node still have %ld locks", ioreq, ioreq->req_Locks );
+			usbbase->usb_IExec->DebugPrintF( "__IORequest_Free         : IOReq %p : Node still have %ld locks\n", ioreq, ioreq->req_Locks );
+			USBDEBUG( "__IORequest_Free         : IOReq %p : Node still have %ld locks", ioreq, ioreq->req_Locks );
 			fstat = FSTAT_Locked;
 		}
 		else
@@ -106,7 +106,7 @@ enum FSTAT fstat;
 		goto bailout;
 	}
 
-	USBINFO( "__IORequest_Free          : Freeing %p : (%s)", ioreq, (file)?file:"<NULL>" );
+	USBINFO( "__IORequest_Free         : Freeing %p : (%s)", ioreq, (file)?file:"<NULL>" );
 
 	// --
 

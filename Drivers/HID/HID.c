@@ -164,7 +164,7 @@ U32 retval;
 	// --
 
 	#ifdef DO_DEBUG
-	usbbase->usb_IExec->DebugPrintF( "\n##\n## HID_Entry : Adr #%lu (%lu) : FN %p : Locks %ld : Leave\n##\n\n", fn->fkt_Address, startadr, fn, fn->fkt_Locks );
+	usbbase->usb_IExec->DebugPrintF( "\n##\n## HID_Entry : Adr #%lu (%lu) : FN    %p : Locks %2ld : Leave\n##\n\n", fn->fkt_Address, startadr, fn, fn->fkt_Locks );
 	#endif
 
 	TASK_NAME_LEAVE();

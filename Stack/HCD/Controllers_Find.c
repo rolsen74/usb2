@@ -12,12 +12,14 @@
 
 // --
 
+#include "HCD__RW_BE.c"
 #include "HCD__RW_LE.c"
 
 // --
 
 enum _FType1
 {
+	FT1_Dummy,
 	FT1_PCI,
 	FT1_Onboard,
 	FT1_Last,
@@ -25,6 +27,7 @@ enum _FType1
 
 enum _FType2
 {
+	FT2_Dummy,
 	#ifdef DRV_EHCI
 	FT2_EHCI,
 	#endif
@@ -33,7 +36,8 @@ enum _FType2
 
 enum _FEndian
 {
-//	FE_Big,
+	FE_Dummy,
+	FE_Big,
 	FE_Little,
 	FE_Last
 };
@@ -53,12 +57,14 @@ static struct _FindStruct _FindList[] =
 {
 	#ifdef DRV_EHCI
 
-{	FT1_Onboard, FT2_EHCI, FE_Little, HCDTYPE_P50XX, MACHINETYPE_X5000_20,	0xfe210100, 16 + 16 + 28 },
-{	FT1_Onboard, FT2_EHCI, FE_Little, HCDTYPE_P50XX, MACHINETYPE_X5000_20,	0xfe210100, 16 + 16 + 29 },
-{	FT1_Onboard, FT2_EHCI, FE_Little, HCDTYPE_P50XX, MACHINETYPE_X5000_40,	0xfe210100, 16 + 16 + 28 },
-{	FT1_Onboard, FT2_EHCI, FE_Little, HCDTYPE_P50XX, MACHINETYPE_X5000_40,	0xfe210100, 16 + 16 + 29 },
-{	FT1_Onboard, FT2_EHCI, FE_Little, HCDTYPE_TABOR, MACHINETYPE_A1222,		0xfe211100, 16 + 16 + 29 },
-{	FT1_Onboard, FT2_EHCI, FE_Little, HCDTYPE_TABOR, MACHINETYPE_A1222,		0xffe23100, 16 + 16 + 30 },
+{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_P50XX,	MACHINETYPE_X5000_20,	0xfe210100, 16 + 16 + 28 },
+{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_P50XX,	MACHINETYPE_X5000_40,	0xfe210100, 16 + 16 + 28 },
+
+{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_P50XX,	MACHINETYPE_X5000_20,	0xfe211100, 16 + 16 + 29 },
+{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_P50XX,	MACHINETYPE_X5000_40,	0xfe211100, 16 + 16 + 29 },
+
+{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_TABOR,	MACHINETYPE_A1222,		0xffe22100, 16 + 16 + 29 },
+{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_TABOR,	MACHINETYPE_A1222,		0xffe23100, 16 + 16 + 30 },
 
 	#endif
 
@@ -153,7 +159,6 @@ U32 pos;
 			node->HCD_WriteWord		= LE_WriteWord;
 			node->HCD_WriteLong		= LE_WriteLong;
 		}
-		#if 0
 		else if ( _FindList[pos].fs_Endian == FE_Big )
 		{
 			node->HCD_ReadByte		= BE_ReadByte;
@@ -163,7 +168,6 @@ U32 pos;
 			node->HCD_WriteWord		= BE_WriteWord;
 			node->HCD_WriteLong		= BE_WriteLong;
 		}
-		#endif
 		else
 		{
 			USBPANIC( "HCD: Unknown fs_Endian %ld", _FindList[pos].fs_Endian );
@@ -191,161 +195,6 @@ U32 pos;
 			USBPANIC( "HCD: Unknown fs_FType %ld", _FindList[pos].fs_Type2 );
 		}
 	}
-
-
-
-
-
-
-	#if 0
-	if (( usbbase->usb_MachineType == MACHINETYPE_X5000_20 )
-	|| (  usbbase->usb_MachineType == MACHINETYPE_X5000_40 ))
-	{
-		node = HCD_ALLOC( HCDTYPE_P50XX );
-
-		if ( node )
-		{
-			node->hn_PCIDevIOBase 	= 0xfe210100;
-			node->hn_HCDInterruptNr = 16 + 16 + 28;
-			node->hn_HCDIndex		= ehci++;
-			node->hn_MaxSpeed		= USBSPEED_High;
-
-			node->HCD_ReadByte		= LE_ReadByte;
-			node->HCD_ReadWord		= LE_ReadWord;
-			node->HCD_ReadLong		= LE_ReadLong;
-			node->HCD_WriteByte 	= LE_WriteByte;
-			node->HCD_WriteWord		= LE_WriteWord;
-			node->HCD_WriteLong		= LE_WriteLong;
-
-			#if 0
-			node->hn_HCDName		= "Enhanced";  // EHCI
-			node->hn_HCDName2		= "EHCI";
-			#endif
-
-			MEM_COPY( (PTR) & EHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
-
-			NODE_ADDTAIL( & usbbase->usb_HCDHeader, node );
-		}
-		else
-		{
-			USBERROR( "Error allocating EHCI HCD Node" );
-			goto bailout;
-		}
-
-		#if 1
-		node = HCD_ALLOC( HCDTYPE_P50XX );
-
-		if ( node )
-		{
-			node->hn_PCIDevIOBase 	= 0xfe211100;
-			node->hn_HCDInterruptNr = 16 + 16 + 29;
-			node->hn_HCDIndex		= ehci++;
-			node->hn_MaxSpeed		= USBSPEED_High;
-
-			node->HCD_ReadByte		= LE_ReadByte;
-			node->HCD_ReadWord		= LE_ReadWord;
-			node->HCD_ReadLong		= LE_ReadLong;
-			node->HCD_WriteByte		= LE_WriteByte;
-			node->HCD_WriteWord		= LE_WriteWord;
-			node->HCD_WriteLong		= LE_WriteLong;
-
-			#if 0
-			node->hn_HCDName		= "Enhanced";  // EHCI
-			node->hn_HCDName2		= "EHCI";
-			#endif
-
-			MEM_COPY( (PTR) & EHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
-
-			NODE_ADDTAIL( & usbbase->usb_HCDHeader, node );
-		}
-		else
-		{
-			USBERROR( "Error allocating EHCI HCD Node" );
-			goto bailout;
-		}
-		#endif
-	}
-
-	#if 1
-
-	if ( usbbase->usb_MachineType == MACHINETYPE_A1222 )
-	{
-		node = HCD_ALLOC( HCDTYPE_TABOR );
-//		node = HCD_AllocNode( devBase, NULL, HCDTYPE_TABOR );
-
-		if ( node )
-		{
-//			#ifdef DO_IOTRACE
-//			node->hn_HCDName2 = "EHCI";
-//			#endif
-
-//			node->hn_HCDName		= "Enhanced";  // EHCI
-			node->hn_PCIDevIOBase 	= 0xffe22100;
-			node->hn_HCDInterruptNr = 16 + 16 + 12;
-			node->hn_HCDIndex		= ehci++;
-			node->hn_MaxSpeed		= USBSPEED_High;
-
-			node->HCD_ReadByte		= LE_ReadByte;
-			node->HCD_ReadWord		= LE_ReadWord;
-			node->HCD_ReadLong		= LE_ReadLong;
-			node->HCD_WriteByte 	= LE_WriteByte;
-			node->HCD_WriteWord		= LE_WriteWord;
-			node->HCD_WriteLong		= LE_WriteLong;
-
-//			NODE_ADDTAIL( &devBase->dev_HCDHeader, node );
-//			MEM_COPY( &EHCIFunctions, &node->HCD_Functions, sizeof( struct HCDFunctions ));
-
-			MEM_COPY( (PTR) & EHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
-
-			NODE_ADDTAIL( & usbbase->usb_HCDHeader, node );
-		}
-		else
-		{
-			USBERROR( "Error allocating EHCI HCD Node" );
-			goto bailout;
-		}
-
-		#if 1
-		// The chip has 2 controllers but the second is not connected
-		node = HCD_ALLOC( HCDTYPE_TABOR );
-//		node = HCD_AllocNode( devBase, NULL, HCDTYPE_TABOR );
-
-		if ( node )
-		{
-//			#ifdef DO_IOTRACE
-//			node->hn_HCDName2 = "EHCI";
-//			#endif
-
-//			node->hn_HCDName		= "Enhanced";  // EHCI
-			node->hn_PCIDevIOBase 	= 0xffe23100;
-			node->hn_HCDInterruptNr = 16 + 16 + 30;
-			node->hn_HCDIndex		= ehci++;
-			node->hn_MaxSpeed		= USBSPEED_High;
-
-			node->HCD_ReadByte		= LE_ReadByte;
-			node->HCD_ReadWord		= LE_ReadWord;
-			node->HCD_ReadLong		= LE_ReadLong;
-			node->HCD_WriteByte 	= LE_WriteByte;
-			node->HCD_WriteWord		= LE_WriteWord;
-			node->HCD_WriteLong		= LE_WriteLong;
-
-//			NODE_ADDTAIL( &devBase->dev_HCDHeader, node );
-//			MEM_COPY( &EHCIFunctions, &node->HCD_Functions, sizeof( struct HCDFunctions ));
-
-			MEM_COPY( (PTR) & EHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
-
-			NODE_ADDTAIL( & usbbase->usb_HCDHeader, node );
-		}
-		else
-		{
-			USBERROR( "Error allocating EHCI HCD Node" );
-			goto bailout;
-		}
-		#endif
-	}
-	#endif
-
-	#endif
 
 	IExec = usbbase->usb_IExec;
 	IExec->Disable();

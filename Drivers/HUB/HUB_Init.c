@@ -47,8 +47,8 @@
 SEC_CODE S32 HUB_Init( struct USBBase *usbbase, struct intern *in )
 {
 struct RealFunctionNode *fn;
-struct USB2_IORequest *ioreq;
-struct USB2_SetupData *sd;
+//struct USB2_IORequest *ioreq;
+//struct USB2_SetupData *sd;
 struct Task *self;
 S32 retval;
 
@@ -79,8 +79,8 @@ S32 retval;
 
 	in->Res_Control = in->Register->reg_Public.Res_Control;
 
-	ioreq	= in->Res_Control->IORequests[0];
-	sd		= in->Res_Control->SetupData;
+//	ioreq	= in->Res_Control->IORequests[0];
+//	sd		= in->Res_Control->SetupData;
 	fn		= in->Function;
 
 	USBDEBUG( "FN Setup Locks #%lu", fn->fkt_Locks );

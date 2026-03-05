@@ -59,13 +59,13 @@ struct USB2_TaskMsg *next;
 
 	while( tm )
 	{
-		USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 68 : Ended : TM %p", tm );
+		USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 68 : Ended : TM    %p", tm );
 
 		tn = tm->tm_Task;
 
 		#if 0
 		IExec->Disable();
-		IExec->DebugPrintF( "myHandle_Task_Ended : tm %p\n", tm );
+		IExec->DebugPrintF( "myHandle_Task_Ended : TM    %p\n", tm );
 		TASKNODE_PRINT(tn);
 		IExec->DebugPrintF( "Next ............ : %08lx\n", (U32) Node_Next(tm) );
 		IExec->DebugPrintF( "Prev ............ : %08lx\n", (U32) Node_Prev(tm) );
@@ -102,12 +102,12 @@ struct USB2_TaskMsg *next;
 
 		if ( ! tn )
 		{
-//			USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 61 : Ended : No TaskNode : TM %p", tm );
+//			USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 61 : Ended : No TaskNode : TM    %p", tm );
 			myRemoveNode( tm, usbbase, in );
 		}
 		else if ( ! tn->tn_TaskAdr )
 		{
-//			USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 62 : Ended : Task Ended : TM %p", tm );
+//			USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 62 : Ended : Task Ended : TM    %p", tm );
 			myRemoveNode( tm, usbbase, in );
 		}
 

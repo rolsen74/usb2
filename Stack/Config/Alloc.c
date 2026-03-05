@@ -73,7 +73,7 @@ bailout:
 		cn = NULL;
 	}
 
-	USBDEBUG( "__Config_Alloc           : CN %p : (new)", cn );
+	USBDEBUG( "__Config_Alloc           : CN    %p : (new)", cn );
 
 	return( cn );
 }

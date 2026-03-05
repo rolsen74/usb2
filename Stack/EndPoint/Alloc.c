@@ -112,7 +112,7 @@ bailout:
 		ep = NULL;
 	}
 
-	USBDEBUG( "__EndPoint_Alloc         : EP %p : (new)", ep );
+	USBDEBUG( "__EndPoint_Alloc         : EP    %p : (new)", ep );
 
 	return( ep );
 }

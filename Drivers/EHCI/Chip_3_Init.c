@@ -94,8 +94,8 @@ U32 r;
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Init : 1 :" );
-	USBDEBUG( "EHCI_Chip_Init : 1 : ISlots %p", hn->hn_HCD.EHCI.FrameList_ISlots );
+	USBDEBUG( "EHCI_Chip_Init           : 1 :" );
+	USBDEBUG( "EHCI_Chip_Init           : 1 : ISlots %p", hn->hn_HCD.EHCI.FrameList_ISlots );
 
 	/*
 	 * Allocate the interrupt dummy QHs. These are arranged to give poll
@@ -106,11 +106,11 @@ U32 r;
 	{
 		qh = EHCI_Get_QHBuffer( hn, NULL );
 
-//		USBDEBUG( "EHCI_Chip_Init : 1 : QH %p", qh );
+//		USBDEBUG( "EHCI_Chip_Init           : 1 : QH %p", qh );
 
 		if ( ! qh )
 		{
-			USBDEBUG( "EHCI_Chip_Init : Error allocating memory" );
+			USBDEBUG( "EHCI_Chip_Init           : Error allocating memory" );
 			goto bailout;
 		}
 
@@ -119,7 +119,7 @@ U32 r;
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Init : 2 : Link Pyramide QH's" );
+	USBDEBUG( "EHCI_Chip_Init           : 2 : Link Pyramide QH's" );
 
 	/*
 	** Link ms Pyramide
@@ -163,7 +163,7 @@ U32 r;
 	// -- Periodic Frame List
 	// Point the frame list at the last level (128ms).
 
-	USBDEBUG( "EHCI_Chip_Init : 3 : Build Periodic Frame List" );
+	USBDEBUG( "EHCI_Chip_Init           : 3 : Build Periodic Frame List" );
 
 	for( i=0 ; i<128 ; i++ )
 	{
@@ -182,7 +182,7 @@ U32 r;
 	// --
 	// Allocate dummy QH that starts the async list.
 
-	USBDEBUG( "EHCI_Chip_Init : 4 : Alloc QH Dummy Header" );
+	USBDEBUG( "EHCI_Chip_Init           : 4 : Alloc QH Dummy Header" );
 
 	qh = EHCI_Get_QHBuffer( hn, NULL );
 
@@ -199,7 +199,7 @@ U32 r;
 	qh->qh_td_cur		= 0;
 	qh->qh_td_next		= EHCI_NULL;
 	qh->qh_td_alt		= EHCI_NULL;
-	qh->qh_status		= LE_SWAP32( EHCI_TD_HALTED );
+	qh->qh_status		= 0;	//LE_SWAP32( EHCI_TD_HALTED );
 	qh->pqh_virt_next	= qh;
 
 	hn->hn_HCD.EHCI.ASync_Head = qh;
@@ -210,7 +210,7 @@ U32 r;
 
 bailout:
 
-	USBDEBUG( "EHCI_Chip_Init : 9 : retval %ld", retval );
+	USBDEBUG( "EHCI_Chip_Init           : 9 : retval %ld", retval );
 
 	TASK_NAME_LEAVE();
 
