@@ -13,51 +13,69 @@
 
 // --
 
-SEC_CODE static S32 __myTask_Def_Init( struct USBBase *usbbase, struct intern *in )
+SEC_CODE static S32 __myTask_Def_Init( struct USBBase *usbbase, struct intern *in, S32 Promote )
 {
+struct ExecIFace *IExec;
 S32 retval;
 
 	retval = FALSE;
 	USBINFO( "__myTask_Def_Init (Master)" );
 
 	// 
-	if ( ! TASK_ALLOCSIGNAL( & in->Task_Shutdown_Signal ))
+
+	IExec = usbbase->usb_IExec;
+
+	if ( Promote )
 	{
-		USBERROR( "__myTask_Def_Init (Master) : 1 : Error" );
-		goto bailout;
-	}
+		IExec->Disable();
 
-	if ( ! MSGPORT_INIT( & in->Task_Shutdown_MsgPort ))
+		TASK_ALLOCSIGNAL( & in->Task_Shutdown_Signal );
+		MSGPORT_REINIT( & in->Task_Shutdown_MsgPort );
+		MSGPORT_REINIT( & in->Cmd_MsgPort );
+		MSGPORT_REINIT( & in->Tick_MsgPort );
+
+		IExec->Enable();
+	}
+	else
 	{
-		USBERROR( "__myTask_Def_Init (Master) : 2 : Error" );
-		goto bailout;
+		if ( ! TASK_ALLOCSIGNAL( & in->Task_Shutdown_Signal ))
+		{
+			USBERROR( "__myTask_Def_Init (Master) : 1 : Error" );
+			goto bailout;
+		}
+
+		if ( ! MSGPORT_INIT( & in->Task_Shutdown_MsgPort ))
+		{
+			USBERROR( "__myTask_Def_Init (Master) : 2 : Error" );
+			goto bailout;
+		}
+
+		if ( ! MSGPORT_INIT( & in->Cmd_MsgPort ))
+		{
+			USBERROR( "__myTask_Def_Init (Master) : 3 : Error" );
+			goto bailout;
+		}
+
+		usbbase->usb_Master_MsgPort = & in->Cmd_MsgPort;
+
+		// -- Timer Tick
+
+		if ( ! MSGPORT_INIT( & in->Tick_MsgPort ))
+		{
+			USBERROR( "__myTask_Def_Init (Master) : 4 : Error" );
+			goto bailout;
+		}
+	
+		MEM_COPY( usbbase->usb_TimeRequest, & in->Tick_TimeRequest, sizeof( struct TimeRequest ));
+
+		in->Tick_TimeRequest.Request.io_Message.mn_ReplyPort = & in->Tick_MsgPort.ump_MsgPort;
+		in->Tick_TimeRequest.Request.io_Command = TR_ADDREQUEST;
+		in->Tick_TimeRequest.Time.Microseconds = 0;
+		in->Tick_TimeRequest.Time.Seconds = 2;
+
+		in->Tick_TimerAdded = TRUE;
+		IO_SEND( & in->Tick_TimeRequest );
 	}
-
-	if ( ! MSGPORT_INIT( & in->Cmd_MsgPort ))
-	{
-		USBERROR( "__myTask_Def_Init (Master) : 3 : Error" );
-		goto bailout;
-	}
-
-	usbbase->usb_Master_MsgPort = & in->Cmd_MsgPort;
-
-	// -- Timer Tick
-
-	if ( ! MSGPORT_INIT( & in->Tick_MsgPort ))
-	{
-		USBERROR( "__myTask_Def_Init (Master) : 4 : Error" );
-		goto bailout;
-	}
-
-	MEM_COPY( usbbase->usb_TimeRequest, & in->Tick_TimeRequest, sizeof( struct TimeRequest ));
-
-	in->Tick_TimeRequest.Request.io_Message.mn_ReplyPort = & in->Tick_MsgPort.ump_MsgPort;
-	in->Tick_TimeRequest.Request.io_Command = TR_ADDREQUEST;
-	in->Tick_TimeRequest.Time.Microseconds = 0;
-	in->Tick_TimeRequest.Time.Seconds = 2;
-
-	in->Tick_TimerAdded = TRUE;
-	IO_SEND( & in->Tick_TimeRequest );
 
 	// --
 

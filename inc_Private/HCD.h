@@ -131,9 +131,6 @@ struct USB2_HCDNode
 	U32								hn_PCIDevIOBase;
 
 //	struct USB2_Header				hn_Drivers;
-//	#ifdef DO_IOTRACE
-//	STR								hn_HCDName2;
-//	#endif
 //	STR								hn_HCDName;
 //	struct PCIDevice *				hn_PCIDevice;
 //	U32				    	    	hn_PCIDevLock;

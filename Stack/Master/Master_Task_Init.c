@@ -22,7 +22,7 @@ S32 retval;
 
 	// --
 
-	if ( ! __myTask_Def_Init( usbbase, in ))
+	if ( ! __myTask_Def_Init( usbbase, in, FALSE ))
 	{
 		USBERROR( "__myTask_Init (Master) : 1 : Error" );
 		goto bailout;

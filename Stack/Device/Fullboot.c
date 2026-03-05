@@ -12,7 +12,7 @@
 
 // --
 
-#if 0
+#if 1
 
 static void Full_Boot( void );
 static void Full_Boot_Entry( void );
@@ -267,7 +267,7 @@ U8 usbstat;
 
 			if ( usbbase->usb_IMounterPriv )
 			{
-				IExec->DebugPrintF( "\nCalling Mount FullBoot\n\n" );
+//				IExec->DebugPrintF( "\nCalling Mount FullBoot\n\n" );
 
 				usbbase->usb_IMounterPriv->FullBooted();
 			}

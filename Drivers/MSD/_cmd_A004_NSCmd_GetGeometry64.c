@@ -66,7 +66,7 @@ U32 flags;
 	ioreq->io_Actual = actual;
 	ioreq->io_Error = 0;
 
-	#if 1
+	#if 0
 	struct ExecIFace *IExec = usbbase->usb_IExec;
 	IExec->DebugPrintF( "32 dg_SectorSize ... : %lu\n",  tmp_dg.dg_SectorSize );
 	IExec->DebugPrintF( "64 dg_Reserved1 .... : %llu\n", tmp_dg.dg_Reserved1 );

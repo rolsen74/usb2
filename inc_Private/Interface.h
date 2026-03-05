@@ -75,10 +75,7 @@ struct USB2_InterfaceHeader
 	struct USB2_FktDriverNode *		ih_FDriverNode;				// if AutoStarted via a Function Driver
 	STR								ih_ProcessName;
 
-//	#ifdef DO_IOTRACE
-//	char							ih_FDTitle[16];
-//	#endif
-//
+
 //	U8								ih_NeedPromotion;
 //	U8								ih_Pad1[3];
 

@@ -31,7 +31,7 @@ S32 retval;
 	tn = & usbbase->usb_Master_Task;
 	tn->tn_TaskAdr = TASK_FIND();
 
-	TASK_ALLOCSIGNAL( & in->Task_Shutdown_Signal );
+	TASK_REALLOCSIGNAL( & in->Task_Shutdown_Signal );
 
 	MSGPORT_REINIT( & in->Task_Shutdown_MsgPort );
 

@@ -128,7 +128,7 @@ PTR node;
 	// Make sure we havent started
 	if ( IExec->FindName( & mySysBase->DeviceList, "usb2.device" ))
 	{
-		IExec->DebugPrintF( "11\n" );
+//		IExec->DebugPrintF( "11\n" );
 		goto bailout;
 	}
 
@@ -142,7 +142,7 @@ PTR node;
 	
 	if ( ! usbbase )
 	{
-		IExec->DebugPrintF( "22\n" );
+//		IExec->DebugPrintF( "22\n" );
 		goto bailout;
 	}
 
@@ -421,7 +421,7 @@ PTR node;
 	IExec->AddDevice( (PTR) usbbase );
 
 //	USBERROR( "Rock'n Roll" );
-	IExec->DebugPrintF( "Rock'n Roll\n" );
+	IExec->DebugPrintF( "USB : Rock'n Roll\n" );
 
 //	IExec->Wait(0);
 

@@ -82,9 +82,9 @@ S32 err;
 		// Check if EP Pipe is stalled
 		if (( ep->ep_Stalled ) && ( ! ioreq->req_DoingDestall ))
 		{
-			usbbase->usb_IExec->Disable();
-			usbbase->usb_IExec->DebugPrintF( "Pipe is stalled -- Addr %ld -- EP $%02lx\n", (U32) fn->fkt_Address, (U32) ep->ep_Number );
-			usbbase->usb_IExec->Enable();
+//			usbbase->usb_IExec->Disable();
+//			usbbase->usb_IExec->DebugPrintF( "Pipe is stalled -- Addr %ld -- EP $%02lx\n", (U32) fn->fkt_Address, (U32) ep->ep_Number );
+//			usbbase->usb_IExec->Enable();
 
 			handled	= TRUE;
 			do_req	= FALSE;

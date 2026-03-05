@@ -140,8 +140,7 @@ U32 wait;
 		if ( mask & SIGBREAKF_CTRL_E )
 		{
 			// Fullboot signal, DOS is now around
-			usbbase->usb_IExec->DebugPrintF( "\nFullboot Signal\n\n" );
-//			__myTask_StartProcess( )
+//			usbbase->usb_IExec->DebugPrintF( "\nFullboot Signal\n\n" );
 
 			if ( ! in->Stopping )
 			{

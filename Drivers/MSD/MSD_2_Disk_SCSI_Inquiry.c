@@ -53,7 +53,7 @@ S32 retval;
 		goto bailout;
 	}
 
-	#if 1
+	#if 0
 
 {
 //U8 inquiry[45];

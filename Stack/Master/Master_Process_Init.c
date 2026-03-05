@@ -21,11 +21,9 @@ S32 proc;
 
 	retval = FALSE;
 
-	usbbase->usb_IExec->DebugPrintF( "__myProcess_Init (Master)\n" );
-
 	// --
 
-	if ( ! __myTask_Def_Init( usbbase, in ))
+	if ( ! __myTask_Def_Init( usbbase, in, Promote ))
 	{
 		USBERROR( "__myProcess_Init (Master) : 1 : Error" );
 		goto bailout;

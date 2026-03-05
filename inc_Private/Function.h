@@ -73,10 +73,6 @@ struct RealFunctionNode
 	struct USB2_Device_Desc *		fkt_DeviceDescriptor;
 	struct USB2_HUB_Desc *			fkt_HUBDescriptor;			// Only valid when HUB Device
 
-//	#ifdef DO_IOTRACE
-//	char							fkt_FDTitle[16];
-//	#endif
-
 	struct USB2_HCDNode *			fkt_HCD;
 	struct USB2_EndPointNode *		fkt_ControlEndPoint;
 

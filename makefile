@@ -119,11 +119,6 @@ BINDIR		:= bin
 # Enable for Notifycations.. like Ringhio Message, and USBAnalyzer change
 #CFLAGS		+= -DDO_NOTIFY
 
-# Enable a Watchdog for Master and HCD processes
-#CFLAGS		+= -DDO_WATCHDOG
-
-#CFLAGS		+= -DDO_IOTRACE
-
 ###########################################################################
 
 SRCDIRS		:=

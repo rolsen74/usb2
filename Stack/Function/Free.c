@@ -318,10 +318,10 @@ enum FSTAT fstat;
 //			usbbase->usb_IExec->DebugPrintF( "FN %p : fkt_ActiveIOReq %ld : Freeing\n", fn, fn->fkt_ActiveIOReq );
 			__Release( usbbase, fn );
 		}
-		else
-		{
-			usbbase->usb_IExec->DebugPrintF( "FN %p : fkt_ActiveIOReq %ld : Skipping\n", fn, fn->fkt_ActiveIOReq );
-		}
+//		else
+//		{
+//			usbbase->usb_IExec->DebugPrintF( "FN %p : fkt_ActiveIOReq %ld : Skipping\n", fn, fn->fkt_ActiveIOReq );
+//		}
 
 		FUNCTION_UNLOCK( fn );
 	}

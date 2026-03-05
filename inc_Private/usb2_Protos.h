@@ -121,7 +121,6 @@ USB2_CREATEFUNC( void,							Task_Signal,				struct USBBase *usbbase, PTR task, 
 USB2_CREATEFUNC( U32,							Task_SetSignal,				struct USBBase *usbbase, U32 a, U32 b );
 USB2_CREATEFUNC( void,							Task_Settle,				struct USBBase *usbbase, struct USB2_TaskNode *tn );
 USB2_CREATEFUNC( S32,							Task_SetPri,				struct USBBase *usbbase, S32 pri );
-USB2_CREATEFUNC( void,							Task_ReallocSignal,			struct USBBase *usbbase, struct USB2_Signal *sig );
 
 // -- Memory
 
@@ -328,6 +327,7 @@ USB2_CREATEFUNC( void,							Task_Stop_DN,				struct USBBase *usbbase, struct US
 USB2_CREATEFUNC( void,							Task_Stop_FN,				struct USBBase *usbbase, struct RealFunctionNode *fn, STR file );
 USB2_CREATEFUNC( S32,							Task_AllocSignal,			struct USBBase *usbbase, struct USB2_Signal *sig, STR file );
 USB2_CREATEFUNC( void,							Task_FreeSignal,			struct USBBase *usbbase, struct USB2_Signal *sig, STR file );
+USB2_CREATEFUNC( void,							Task_ReallocSignal,			struct USBBase *usbbase, struct USB2_Signal *sig, STR file );
 
 // -- Task Message
 
@@ -490,6 +490,7 @@ USB2_CREATEFUNC( void,							Task_Stop_DN,				struct USBBase *usbbase, struct US
 USB2_CREATEFUNC( void,							Task_Stop_FN,				struct USBBase *usbbase, struct RealFunctionNode *fn );
 USB2_CREATEFUNC( S32,							Task_AllocSignal,			struct USBBase *usbbase, struct USB2_Signal *sig );
 USB2_CREATEFUNC( void,							Task_FreeSignal,			struct USBBase *usbbase, struct USB2_Signal *sig );
+USB2_CREATEFUNC( void,							Task_ReallocSignal,			struct USBBase *usbbase, struct USB2_Signal *sig );
 
 // -- Task Message
 

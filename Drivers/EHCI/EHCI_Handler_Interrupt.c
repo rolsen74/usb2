@@ -111,7 +111,7 @@ U32 sigflags;
 	if ( intflags & EHCI_STS_ERRINT )
 	{
 		sigflags |= hn->hn_HCD.EHCI.Signal_EI.sig_Signal_Mask;
-		IExec->DebugPrintF( "EHCI: EHCI_STS_ERRINT - USB Error Interrupt\n" );
+//		IExec->DebugPrintF( "EHCI: EHCI_STS_ERRINT - USB Error Interrupt\n" );
 	}
 
 	// RWC : Interrupt
