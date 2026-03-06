@@ -47,7 +47,7 @@ Do NOT load any of the old USB stack components together with usb2.kmod.
 
 After saving the updated Kicklayout, reboot and select the new configuration to test the USB2 stack.
 
-There is an example of an Amiga X5000 config section.
+Here is an example of an Amiga X5000 config section.
 
 ```asm
 ; Configuration name
