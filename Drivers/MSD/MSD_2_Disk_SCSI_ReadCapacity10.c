@@ -59,7 +59,7 @@ S32 retval;
 		goto bailout;
 	}
 
-	#if 1
+	#if 0
 
 {
 U32 data[2];
