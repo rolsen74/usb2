@@ -50,8 +50,7 @@ U32 mask;
 
 	// --
 
-	if (( __myProcess_Init( usbbase, in, TRUE ))
-	&&	( __myProcess_Reinit( usbbase, in )))
+	if ( __myProcess_Init( usbbase, in, TRUE ))
 	{
 		msg->Result = TRUE;
 		TASK_SIGNAL( parent, mask );

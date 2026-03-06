@@ -15,15 +15,14 @@
 
 /***************************************************************************/
 
-#if 0
-
 struct __ohci
 {
-	struct ohci_soft_ed *	OHCI_EDHeader;
-
-	struct ohci_soft_ed *	OHCI_StartHeader;
-	U32						OHCI_StartSlot;
+	struct OHCI_ED *		ED_Header;
+	struct OHCI_ED *		Start_Header;
+	U32						Start_Slot;
 };
+
+#if 0
 
 struct __uhci
 {
@@ -100,7 +99,7 @@ struct RealRequest
 
 	union
 	{
-//		struct __ohci				OHCI;
+		struct __ohci				OHCI;
 //		struct __uhci				UHCI;
 		struct __ehci				EHCI;
 //		struct __xhci				XHCI;

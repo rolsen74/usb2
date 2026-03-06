@@ -17,8 +17,8 @@
 
 /***************************************************************************/
 
-//#ifdef DO_DEBUG
-#if 1
+#ifdef DO_DEBUG
+//#if 1
 
 void EHCI_Dump_Setup(	struct USB2_HCDNode *hn, struct USB2_SetupData *sd );
 void EHCI_Dump_QH(		struct USB2_HCDNode *hn, struct EHCI_QH *qh, int DoSetup );

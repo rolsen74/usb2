@@ -28,10 +28,11 @@ SEC_RWDATA static STR HCDNames[HCDTYPE_Last] =
 	[HCDTYPE_UHCI]		= "UHCI (PCI)",
 	[HCDTYPE_OHCI]		= "OHCI (PCI)",
 	[HCDTYPE_EHCI]		= "EHCI (PCI)",
-	[HCDTYPE_SHCI]		= "SHCI (PCI)",
+	[HCDTYPE_XHCI]		= "XHCI (PCI)",
 	[HCDTYPE_SAM440]	= "OHCI (Onboard)",
 	[HCDTYPE_SAM460]	= "OHCI (Onboard)",
-	[HCDTYPE_P50XX]		= "EHCI (Onboard)",
+	[HCDTYPE_P5020]		= "EHCI (Onboard)",
+	[HCDTYPE_P5040]		= "EHCI (Onboard)",
 	[HCDTYPE_TABOR]		= "EHCI (Onboard)",
 };
 

@@ -33,18 +33,18 @@ SEC_CODE void __MsgPort_Reinit( struct USBBase *usbbase, struct USB2_MsgPort *mp
 
 	if ( ! mp )
 	{
-		USBPANIC( "__MsgPort_Reinit : 1 : NULL Pointer : (%s)", file );
+		USBPANIC( "__MsgPort_Reinit : 1 : NULL Pointer : %s", file );
 	}
 
-	if ( mp->ump_StructID != ID_USB2_MP )
+	if (( mp->ump_StructID ) && ( mp->ump_StructID != ID_USB2_MP ))
 	{
-		USBPANIC( "__MsgPort_Reinit : 2 : IN    use : (%s)", file );
+		USBPANIC( "__MsgPort_Reinit : 2 : Invalid : %s", file );
 	}
 
 	#endif
 
 	// Lets just overwrite old Signals
-	mp->ump_StructID = 0;
+	mp->ump_Signal.sig_StructID = 0;
 
 	if ( ! TASK_ALLOCSIGNAL( & mp->ump_Signal ))
 	{

@@ -61,11 +61,11 @@ struct myHUB_Cfg
 #define HUBF_Status_Indicator			0x0200U
 
 // Change Bits
-#define HUBF_Chg_Connection			0x0400U
-#define HUBF_Chg_Enable				0x0800U
+#define HUBF_Chg_Connection				0x0400U
+#define HUBF_Chg_Enable					0x0800U
 #define HUBF_Chg_Suspend				0x1000U
-#define HUBF_Chg_Over_Current		0x2000U
-#define HUBF_Chg_Reset				0x4000U
+#define HUBF_Chg_Over_Current			0x2000U
+#define HUBF_Chg_Reset					0x4000U
 
 /***************************************************************************/
 // HUB Class Request Codes

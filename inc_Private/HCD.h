@@ -132,9 +132,9 @@ struct USB2_HCDNode
 
 //	struct USB2_Header				hn_Drivers;
 //	STR								hn_HCDName;
-//	struct PCIDevice *				hn_PCIDevice;
-//	U32				    	    	hn_PCIDevLock;
-//	struct PCIResourceRange *   	hn_PCIDevResource;
+	struct PCIDevice *				hn_PCIDevice;
+	U32								hn_PCIDevLock;
+	struct PCIResourceRange *		hn_PCIDevResource;
 //	struct Task *					hn_Task;
 //	STR								hn_TaskName;
 //	struct Task *					hn_TaskFinishing;
@@ -202,10 +202,10 @@ struct USB2_HCDNode
 
 	union
 	{
-//		struct _UHCI				UHCI;
-//		struct _OHCI				OHCI;
+		struct _UHCI				UHCI;
+		struct _OHCI				OHCI;
 		struct _EHCI				EHCI;
-//		struct _XHCI				XHCI;
+		struct _XHCI				XHCI;
 	}								hn_HCD;
 
 };

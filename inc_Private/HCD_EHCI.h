@@ -6,34 +6,34 @@
 ** SPDX-License-Identifier: GPL-3.0-or-later
 */
 
-/*-
- * Copyright (c) 2001 The NetBSD Foundation, Inc.
- * All rights reserved.
- *
- * This code is derived from software contributed to The NetBSD Foundation
- * by Lennart Augustsson (lennart@augustsson.net).
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+/*
+** Copyright (c) 2001 The NetBSD Foundation, Inc.
+** All rights reserved.
+**
+** This code is derived from software contributed to The NetBSD Foundation
+** by Lennart Augustsson (lennart@augustsson.net).
+**
+** Redistribution and use in source and binary forms, with or without
+** modification, are permitted provided that the following conditions
+** are met:
+** 1. Redistributions of source code must retain the above copyright
+**    notice, this list of conditions and the following disclaimer.
+** 2. Redistributions in binary form must reproduce the above copyright
+**    notice, this list of conditions and the following disclaimer in the
+**    documentation and/or other materials provided with the distribution.
+**
+** THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+** ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+** TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+** PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+** BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+** POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #ifndef INC_PRIVATE_USB2_ALL_H
 #error Include "usb2_all.h" first
@@ -197,7 +197,7 @@ struct EHCI_QH
 };
 
 #define EHCI_QH_ALIGN			32						// Struct min alignment
-//#define EHCI_QH_SIZE			(( sizeof( struct EHCI_QH ) + EHCI_QH_ALIGN - 1 ) / EHCI_QH_ALIGN * EHCI_QH_ALIGN )
+//#define EHCI_QH_SIZE			(( sizeof( struct EHCI_QH ) + EHCI_QH_ALIGN - 1 ) / EHCI_QH_ALIGN** EHCI_QH_ALIGN )
 //#define EHCI_QH_CHUNK			( EHCI_PAGE_SIZE / EHCI_QH_SIZE )
 #define EHCI_QH_GET_ADDR(x)		(((x) >>  0) & 0x7f)	// endpoint addr
 #define EHCI_QH_SET_ADDR(x)		(x)
@@ -267,7 +267,7 @@ struct EHCI_TD
 #define EHCI_TD_IOC				0x00008000UL
 //#define EHCI_TD_TOGGLE_MASK		0x80000000UL
 #define EHCI_TD_ALIGN			32					// Struct min alignment
-//#define EHCI_TD_SIZE			(( sizeof( struct EHCI_TD ) + EHCI_TD_ALIGN - 1 ) / EHCI_TD_ALIGN * EHCI_TD_ALIGN )
+//#define EHCI_TD_SIZE			(( sizeof( struct EHCI_TD ) + EHCI_TD_ALIGN - 1 ) / EHCI_TD_ALIGN** EHCI_TD_ALIGN )
 //#define EHCI_TD_CHUNK			( EHCI_PAGE_SIZE / EHCI_TD_SIZE )
 #define EHCI_TD_GET_STATUS(x)	(((x) >>  0) & 0xff)
 #define EHCI_TD_SET_STATUS(x)	( (x) <<  0)
@@ -292,7 +292,7 @@ struct EHCI_ITD
 };
 
 #define EHCI_ITD_ALIGN			32					// Struct min alignment
-#define EHCI_ITD_SIZE			(( sizeof( struct EHCI_ITD ) + EHCI_ITD_ALIGN - 1 ) / EHCI_ITD_ALIGN * EHCI_ITD_ALIGN )
+#define EHCI_ITD_SIZE			(( sizeof( struct EHCI_ITD ) + EHCI_ITD_ALIGN - 1 ) / EHCI_ITD_ALIGN** EHCI_ITD_ALIGN )
 #define EHCI_ITD_CHUNK			( EHCI_PAGE_SIZE / EHCI_ITD_SIZE )
 
 /***************************************************************************/

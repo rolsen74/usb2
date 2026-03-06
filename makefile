@@ -19,6 +19,9 @@ DRV_MSD		:= 1
 DRV_HID		:= 1
 DRV_HUB		:= 1
 DRV_EHCI	:= 1
+DRV_OHCI	:= 1
+DRV_UHCI	:= 1
+DRV_XHCI	:= 1
 
 CFLAGS		:= -O2
 CFLAGS		+= -I.
@@ -96,7 +99,7 @@ BINDIR		:= bin
 #
 
 # Print Error Messages on serial
-#CFLAGS		+= -DDO_ERROR
+CFLAGS		+= -DDO_ERROR
 
 # Print Info Messages on serial
 #CFLAGS		+= -DDO_INFO
@@ -106,12 +109,12 @@ BINDIR		:= bin
 
 # Add extra error code checks, 
 # for higher Stability and larger Binary file
-#CFLAGS		+= -DDO_STABLE
+CFLAGS		+= -DDO_STABLE
 
 # Overwrite memory before and after release, 
 # scramble pointer on Node Removes and so on
 # trying to trigger crashes on error
-#CFLAGS		+= -DDO_PANIC
+CFLAGS		+= -DDO_PANIC
 
 # gcc crash/debug info
 #CFLAGS		+= -gstabs
@@ -141,6 +144,21 @@ endif
 ifeq ($(DRV_EHCI),1)
 SRCDIRS		+= Drivers/EHCI
 CFLAGS		+= -DDRV_EHCI
+endif
+
+ifeq ($(DRV_OHCI),1)
+SRCDIRS		+= Drivers/OHCI
+CFLAGS		+= -DDRV_OHCI
+endif
+
+ifeq ($(DRV_UHCI),1)
+SRCDIRS		+= Drivers/UHCI
+CFLAGS		+= -DDRV_UHCI
+endif
+
+ifeq ($(DRV_XHCI),1)
+SRCDIRS		+= Drivers/XHCI
+CFLAGS		+= -DDRV_XHCI
 endif
 
 ###########################################################################

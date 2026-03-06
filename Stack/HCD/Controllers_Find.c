@@ -14,8 +14,18 @@
 
 #include "HCD__RW_BE.c"
 #include "HCD__RW_LE.c"
+#include "HCD__RW_PCI.c"
 
 // --
+
+struct intern
+{
+	U32 idx;
+	U32 uhci;
+	U32 ohci;
+	U32 ehci;
+	U32 xhci;
+};
 
 enum _FType1
 {
@@ -28,8 +38,17 @@ enum _FType1
 enum _FType2
 {
 	FT2_Dummy,
+	#ifdef DRV_UHCI
+	FT2_UHCI,
+	#endif
+	#ifdef DRV_OHCI
+	FT2_OHCI,
+	#endif
 	#ifdef DRV_EHCI
 	FT2_EHCI,
+	#endif
+	#ifdef DRV_XHCI
+	FT2_XHCI,
 	#endif
 	FT2_Last
 };
@@ -49,22 +68,43 @@ struct _FindStruct
 	enum _FEndian		fs_Endian;
 	enum USB2HCDType	fs_HCDType;
 	U32					fs_Machine;		// 
-	U32					fs_IOBase;		// For Onboard only
+	U32					fs_IOBase;		// For Onboard or PCI
 	U32					fs_IntNr;		// For Onboard only
 };
 
+// Note: EHCI before OHCI/UHCI
 static struct _FindStruct _FindList[] =
 {
+	#ifdef DRV_XHCI
+
+{	FT1_PCI,		FT2_XHCI, 0,			HCDTYPE_XHCI,	0,						0x000c0330,	0 },
+
+	#endif
+
 	#ifdef DRV_EHCI
 
-{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_P50XX,	MACHINETYPE_X5000_20,	0xfe210100, 16 + 16 + 28 },
-{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_P50XX,	MACHINETYPE_X5000_40,	0xfe210100, 16 + 16 + 28 },
+{	FT1_Onboard,	FT2_EHCI, FE_Little,	HCDTYPE_P5020,	MACHINETYPE_X5000_20,	0xfe210100, 16 + 16 + 28 },
+{	FT1_Onboard,	FT2_EHCI, FE_Little,	HCDTYPE_P5040,	MACHINETYPE_X5000_40,	0xfe210100, 16 + 16 + 28 },
+{	FT1_Onboard,	FT2_EHCI, FE_Little,	HCDTYPE_P5020,	MACHINETYPE_X5000_20,	0xfe211100, 16 + 16 + 29 },
+{	FT1_Onboard,	FT2_EHCI, FE_Little,	HCDTYPE_P5040,	MACHINETYPE_X5000_40,	0xfe211100, 16 + 16 + 29 },
+{	FT1_Onboard,	FT2_EHCI, FE_Little,	HCDTYPE_TABOR,	MACHINETYPE_A1222,		0xffe22100, 16 + 16 + 29 },
+{	FT1_Onboard,	FT2_EHCI, FE_Little,	HCDTYPE_TABOR,	MACHINETYPE_A1222,		0xffe23100, 16 + 16 + 30 },
+{	FT1_Onboard,	FT2_EHCI, FE_Little,	HCDTYPE_SAM460,	MACHINETYPE_SAM460,		0xe20d0400, 16 + 93 },
+{	FT1_PCI,		FT2_EHCI, 0,			HCDTYPE_EHCI,	0,						0x000c0320,	0 },
 
-{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_P50XX,	MACHINETYPE_X5000_20,	0xfe211100, 16 + 16 + 29 },
-{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_P50XX,	MACHINETYPE_X5000_40,	0xfe211100, 16 + 16 + 29 },
+	#endif
 
-{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_TABOR,	MACHINETYPE_A1222,		0xffe22100, 16 + 16 + 29 },
-{	FT1_Onboard, FT2_EHCI, FE_Little,	HCDTYPE_TABOR,	MACHINETYPE_A1222,		0xffe23100, 16 + 16 + 30 },
+	#ifdef DRV_OHCI
+
+{	FT1_Onboard,	FT2_OHCI, FE_Big,		HCDTYPE_SAM440,	MACHINETYPE_SAM440,		0xef601000, 16 + 40 },
+{	FT1_Onboard,	FT2_OHCI, FE_Little,	HCDTYPE_SAM460,	MACHINETYPE_SAM460,		0xe20d0000, 16 + 94 },
+{	FT1_PCI,		FT2_OHCI, FE_Little,	HCDTYPE_OHCI,	0,						0x000c0310,	0 },
+
+	#endif
+
+	#ifdef DRV_UHCI
+
+{	FT1_PCI,		FT2_UHCI, 0,			HCDTYPE_UHCI,	0,						0x000c0300,	0 },
 
 	#endif
 
@@ -73,85 +113,231 @@ static struct _FindStruct _FindList[] =
 
 // --
 
-SEC_CODE U32 __HCD_Controllers_Find( struct USBBase *usbbase )
+static void _do_Onboard( struct USBBase *usbbase, struct intern *in, struct _FindStruct *fs )
 {
 struct USB2_HCDNode *node;
-struct ExecIFace *IExec;
-U32 retval;
-U32 uhci;
-U32 ohci;
-U32 ehci;
-U32 xhci;
-U32 pos;
 
-	retval = FALSE;
-	USBDEBUG( "__HCD_Controllers_Find" );
-	TASK_NAME_ENTER( "HCD : __HCD_Controllers_Find" );
+	TASK_NAME_ENTER( "Controllers_Find : _do_Onboard" );
 
-	uhci = 0;
-	ohci = 0;
-	ehci = 0;
-	xhci = 0;
+	// --
 
-	pos = -1;
+	USBDEBUG( "Find Machine %ld", fs->fs_Machine );
+	
+	if ( fs->fs_Machine == usbbase->usb_MachineType )
+	{
+		USBDEBUG( "Find Machine Found" );
+	}
+	else
+	{
+		USBDEBUG( "Find Machine Skip" );
+		goto bailout;
+	}
+
+	// -- Create Node
+
+	node = HCD_ALLOC( fs->fs_HCDType );
+
+	USBDEBUG( "Find Node %p", node );
+
+	if ( ! node )
+	{
+		USBERROR( "Error allocating EHCI HCD Node" );
+		goto bailout;
+	}
+
+	NODE_ADDTAIL( & usbbase->usb_HCDHeader, node );
+
+	// --
+
+	node->hn_PCIDevIOBase 	= fs->fs_IOBase;
+	node->hn_HCDInterruptNr = fs->fs_IntNr;
+
+	/**/ if ( fs->fs_Endian == FE_Little )
+	{
+		node->HCD_ReadByte		= LE_ReadByte;
+		node->HCD_ReadWord		= LE_ReadWord;
+		node->HCD_ReadLong		= LE_ReadLong;
+		node->HCD_WriteByte 	= LE_WriteByte;
+		node->HCD_WriteWord		= LE_WriteWord;
+		node->HCD_WriteLong		= LE_WriteLong;
+	}
+	else if ( fs->fs_Endian == FE_Big )
+	{
+		node->HCD_ReadByte		= BE_ReadByte;
+		node->HCD_ReadWord		= BE_ReadWord;
+		node->HCD_ReadLong		= BE_ReadLong;
+		node->HCD_WriteByte 	= BE_WriteByte;
+		node->HCD_WriteWord		= BE_WriteWord;
+		node->HCD_WriteLong		= BE_WriteLong;
+	}
+	else
+	{
+		USBPANIC( "HCD: Unknown fs_Endian %ld", fs->fs_Endian );
+	}
+
+	if ( 0 )
+	{
+		// Well do nothing
+	}
+
+	#ifdef DRV_EHCI
+	else if ( fs->fs_Type2 == FT2_EHCI )
+	{
+		in->ehci++;
+
+		node->hn_HCDIndex		= in->idx++;
+		node->hn_MaxSpeed		= USBSPEED_High;
+
+		MEM_COPY( (PTR) & EHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
+	}
+	#endif
+
+	#ifdef DRV_OHCI
+	else if ( fs->fs_Type2 == FT2_OHCI )
+	{
+		in->ohci++;
+
+		node->hn_HCDIndex		= in->idx++;
+		node->hn_MaxSpeed		= USBSPEED_Full;
+
+		MEM_COPY( (PTR) & OHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
+	}
+	#endif
+	
+	#ifdef DRV_UHCI
+	else if ( fs->fs_Type2 == FT2_UHCI )
+	{
+		in->uhci++;
+
+		node->hn_HCDIndex		= in->idx++;
+		node->hn_MaxSpeed		= USBSPEED_Full;
+
+		MEM_COPY( (PTR) & UHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
+	}
+	#endif
+
+	#ifdef DRV_XHCI
+	else if ( fs->fs_Type2 == FT2_XHCI )
+	{
+		in->xhci++;
+
+		node->hn_HCDIndex		= in->idx++;
+		node->hn_MaxSpeed		= USBSPEED_Super;
+
+		MEM_COPY( (PTR) & XHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
+	}
+	#endif
+
+bailout:
+
+	TASK_NAME_LEAVE();
+}
+
+// --
+
+static void _do_PCI( struct USBBase *usbbase, struct intern *in, struct _FindStruct *fs )
+{
+struct PCIResourceRange *range;
+struct USB2_HCDNode *node;
+struct PCIDevice *pcidev;
+struct PCIIFace *IPCI;
+U32 mask;
+U32 idx;
+U32 cnt;
+
+	TASK_NAME_ENTER( "Controllers_Find : _do_PCI" );
+
+	IPCI = usbbase->usb_IPCI;
+
+	idx = 0;
 
 	while( TRUE )
 	{
-		pos++;
+		// --
 
-		USBDEBUG( "Find pos %ld", pos );
-	
-		// End of List?
-		if ( _FindList[pos].fs_Type1 == FT1_Last )
+		pcidev = IPCI->FindDeviceTags(
+			FDT_Class,      fs->fs_IOBase,	// HCD class
+			FDT_ClassMask,  0x00ffffff,
+			FDT_Index,      idx++,
+			TAG_END 
+		);
+
+		if ( ! pcidev )
 		{
-			USBDEBUG( "Find Done %ld", pos );
+			// That was the last one (if any)
 			break;
 		}
 
-		// Machine type check
-		if ( _FindList[pos].fs_Machine )
-		{
-			USBDEBUG( "Find Machine %ld", _FindList[pos].fs_Machine );
+		// --
 
-			if ( _FindList[pos].fs_Machine == usbbase->usb_MachineType )
-			{
-				USBDEBUG( "Find Machine Found" );
-			}
-			else
-			{
-				USBDEBUG( "Find Machine Skip" );
-				continue;
-			}
-		}
-
-		// -- Create Node
-
-		node = HCD_ALLOC( _FindList[pos].fs_HCDType );
-
+		node = HCD_ALLOC( fs->fs_HCDType );
+	
 		USBDEBUG( "Find Node %p", node );
 
 		if ( ! node )
 		{
 			USBERROR( "Error allocating EHCI HCD Node" );
-			goto bailout;
+			// Out of mem can't add more
+			break;
 		}
 
 		NODE_ADDTAIL( & usbbase->usb_HCDHeader, node );
 
 		// --
 
-		if ( _FindList[pos].fs_Type1 == FT1_Onboard )
+		node->hn_PCIDevLock = pcidev->Lock( PCI_LOCK_EXCLUSIVE );
+	
+		if ( ! node->hn_PCIDevLock )
 		{
-			node->hn_PCIDevIOBase 	= _FindList[pos].fs_IOBase;
-			node->hn_HCDInterruptNr = _FindList[pos].fs_IntNr;
+			USBERROR( "Error locking PCI device" );
+			continue;
 		}
+
+		// --- Enable IO, Memory, Master
+
+		mask  = pcidev->ReadConfigWord( PCI_COMMAND );
+		mask |= PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER;
+		pcidev->WriteConfigWord( PCI_COMMAND, mask );
+
+		// ---
+
+		range = NULL;
+
+		for( cnt=0 ; cnt<5 && range == NULL ; cnt++ )
+		{
+			range = pcidev->GetResourceRange( cnt );
+		}
+
+		if ( ! range )
+		{
+			USBERROR( "Error getting PCI Resource" );
+			continue;
+		}
+
+		node->hn_PCIDevResource = range;
+		node->hn_PCIDevIOBase = range->BaseAddress;
+
+		if ( ! node->hn_PCIDevIOBase )
+		{
+			USBERROR( "Error Base Address not found" );
+			continue;
+		}
+
+		node->hn_HCDInterruptNr = pcidev->MapInterrupt();
 
 		// --
 
-		/**/ if ( _FindList[pos].fs_Endian == FE_Little )
+		if ( range->Flags & PCI_RANGE_IO )
 		{
-			USBDEBUG( "Find FE_Little" );
-
+			node->HCD_ReadByte  	= PCI_ReadByte;
+			node->HCD_ReadWord  	= PCI_ReadWord;
+			node->HCD_ReadLong  	= PCI_ReadLong;
+			node->HCD_WriteByte 	= PCI_WriteByte;
+			node->HCD_WriteWord 	= PCI_WriteWord;
+			node->HCD_WriteLong		= PCI_WriteLong;
+		}
+		else
+		{
 			node->HCD_ReadByte		= LE_ReadByte;
 			node->HCD_ReadWord		= LE_ReadWord;
 			node->HCD_ReadLong		= LE_ReadLong;
@@ -159,55 +345,118 @@ U32 pos;
 			node->HCD_WriteWord		= LE_WriteWord;
 			node->HCD_WriteLong		= LE_WriteLong;
 		}
-		else if ( _FindList[pos].fs_Endian == FE_Big )
-		{
-			node->HCD_ReadByte		= BE_ReadByte;
-			node->HCD_ReadWord		= BE_ReadWord;
-			node->HCD_ReadLong		= BE_ReadLong;
-			node->HCD_WriteByte 	= BE_WriteByte;
-			node->HCD_WriteWord		= BE_WriteWord;
-			node->HCD_WriteLong		= BE_WriteLong;
-		}
-		else
-		{
-			USBPANIC( "HCD: Unknown fs_Endian %ld", _FindList[pos].fs_Endian );
-		}
 
 		// --
 
-		/**/ if ( 0 )
+		if ( 0 )
 		{
-			// Well not used
+			// Well do nothing
 		}
-		#ifdef DRV_EHCI
-		else if ( _FindList[pos].fs_Type2 == FT2_EHCI )
-		{
-			USBDEBUG( "Find FT2_EHCI" );
 
-			node->hn_HCDIndex		= ehci++;
+		#ifdef DRV_EHCI
+		else if ( fs->fs_Type2 == FT2_EHCI )
+		{
+			in->ehci++;
+
+			node->hn_HCDIndex		= in->idx++;
 			node->hn_MaxSpeed		= USBSPEED_High;
 
 			MEM_COPY( (PTR) & EHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
 		}
 		#endif
-		else
+
+		#ifdef DRV_OHCI
+		else if ( fs->fs_Type2 == FT2_OHCI )
 		{
-			USBPANIC( "HCD: Unknown fs_FType %ld", _FindList[pos].fs_Type2 );
+			in->ohci++;
+	
+			node->hn_HCDIndex		= in->idx++;
+			node->hn_MaxSpeed		= USBSPEED_Full;
+	
+			MEM_COPY( (PTR) & OHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
 		}
+		#endif
+
+		#ifdef DRV_UHCI
+		else if ( fs->fs_Type2 == FT2_UHCI )
+		{
+			in->uhci++;
+	
+			node->hn_HCDIndex		= in->idx++;
+			node->hn_MaxSpeed		= USBSPEED_Full;
+	
+			MEM_COPY( (PTR) & UHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
+		}
+		#endif
+
+		#ifdef DRV_XHCI
+		else if ( fs->fs_Type2 == FT2_XHCI )
+		{
+			in->xhci++;
+	
+			node->hn_HCDIndex		= in->idx++;
+			node->hn_MaxSpeed		= USBSPEED_Super;
+	
+			MEM_COPY( (PTR) & XHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
+		}
+		#endif
 	}
 
-	IExec = usbbase->usb_IExec;
+	TASK_NAME_LEAVE();
+}
+
+// --
+
+SEC_CODE U32 __HCD_Controllers_Find( struct USBBase *usbbase )
+{
+struct ExecIFace *IExec;
+struct intern in;
+U32 retval;
+U32 pos;
+
+	USBDEBUG( "__HCD_Controllers_Find" );
+	TASK_NAME_ENTER( "HCD : __HCD_Controllers_Find" );
+
+	IExec	= usbbase->usb_IExec;
+
+	retval	= FALSE;
+	pos		= 0;
+
+	in.idx	= 0;
+	in.uhci	= 0;
+	in.ohci	= 0;
+	in.ehci	= 0;
+	in.xhci	= 0;
+
+	while( TRUE )
+	{
+		USBDEBUG( "Find pos %ld", pos );
+	
+		/**/ if ( _FindList[pos].fs_Type1 == FT1_Onboard )
+		{
+			_do_Onboard( usbbase, & in, & _FindList[pos] );
+		}
+		else if ( _FindList[pos].fs_Type1 == FT1_PCI )
+		{
+			_do_PCI( usbbase, & in, & _FindList[pos] );
+		}
+		else if ( _FindList[pos].fs_Type1 == FT1_Last )
+		{
+			break;
+		}
+
+		pos++;
+	}
+
 	IExec->Disable();
-	IExec->DebugPrintF( "Found %ld UHCI Controller%s\n", uhci, ( uhci == 1 ) ? "" : "s" );
-	IExec->DebugPrintF( "Found %ld OHCI Controller%s\n", ohci, ( ohci == 1 ) ? "" : "s" );
-	IExec->DebugPrintF( "Found %ld EHCI Controller%s\n", ehci, ( ehci == 1 ) ? "" : "s" );
-	IExec->DebugPrintF( "Found %ld xHCI Controller%s\n", xhci, ( xhci == 1 ) ? "" : "s" );
+	IExec->DebugPrintF( "Found %ld UHCI Controller%s\n", in.uhci, ( in.uhci == 1 ) ? "" : "s" );
+	IExec->DebugPrintF( "Found %ld OHCI Controller%s\n", in.ohci, ( in.ohci == 1 ) ? "" : "s" );
+	IExec->DebugPrintF( "Found %ld EHCI Controller%s\n", in.ehci, ( in.ehci == 1 ) ? "" : "s" );
+	IExec->DebugPrintF( "Found %ld xHCI Controller%s\n", in.xhci, ( in.xhci == 1 ) ? "" : "s" );
 	IExec->Enable();
 
 	// There is no point in starting if no controller is found
-	retval = (( uhci ) || ( ohci ) || ( ehci ) || ( xhci )) ? TRUE : FALSE;
-
-bailout:
+	retval = (( in.uhci ) || ( in.ohci ) || ( in.ehci ) || ( in.xhci )) ? TRUE : FALSE;
 
 	TASK_NAME_LEAVE();
 

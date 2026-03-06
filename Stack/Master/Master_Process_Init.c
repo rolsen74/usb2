@@ -13,7 +13,7 @@
 
 // --
 
-SEC_CODE S32 __myProcess_Init( struct USBBase *usbbase, struct intern *in, S32 Promote UNUSED )
+SEC_CODE S32 __myProcess_Init( struct USBBase *usbbase, struct intern *in, S32 Promote )
 {
 struct DOSIFace *IDOS;
 S32 retval;

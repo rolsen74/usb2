@@ -28,7 +28,6 @@
 
 #include "Master_Process_LaunchDrivers.c"
 #include "Master_Process_ScanDriverDir.c"
-#include "Master_Process_Reinit.c"
 #include "Master_Process_Init.c"
 #include "Master_Process_Main.c"
 #include "Master_Process_Free.c"

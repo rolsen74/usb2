@@ -16,7 +16,16 @@
 ** Running under Disable() and must not fail.
 */
 
+#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+
+SEC_CODE void __Task_ReallocSignal( struct USBBase *usbbase, struct USB2_Signal *sig, STR file UNUSED )
+
+#else
+
 SEC_CODE void __Task_ReallocSignal( struct USBBase *usbbase, struct USB2_Signal *sig )
+
+#endif
+
 {
 struct ExecIFace *IExec;
 S32 signal;
@@ -28,9 +37,9 @@ S32 signal;
 		USBPANIC( "__Task_ReallocSignal : 1 : NULL Pointer" );
 	}
 
-	if ( sig->sig_StructID == ID_USB2_SIG )
+	if (( sig->sig_StructID ) && ( sig->sig_StructID != ID_USB2_SIG ))
 	{
-		USBPANIC( "__Task_ReallocSignal : 2 : IN    use" );
+		USBPANIC( "__Task_ReallocSignal : 2 : Invalid : %s", file );
 	}
 
 	#endif

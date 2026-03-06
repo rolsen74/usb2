@@ -247,7 +247,13 @@ PTR node;
 		MEMID_EHCI_QH, sizeof( struct EHCI_QH ));
 	usbbase->usb_IExec->DebugPrintF( "MEMID_EHCI_TD .............. : %2ld, EHCI_TD ............... : %5ld\n", 
 		MEMID_EHCI_TD, sizeof( struct EHCI_TD ));
-
+	usbbase->usb_IExec->DebugPrintF( "MEMID_OHCI_ED .............. : %2ld, OHCI_ED ............... : %5ld\n", 
+		MEMID_OHCI_ED, sizeof( struct OHCI_ED ));
+	usbbase->usb_IExec->DebugPrintF( "MEMID_OHCI_TD .............. : %2ld, OHCI_TD ............... : %5ld\n", 
+		MEMID_OHCI_TD, sizeof( struct OHCI_TD ));
+	usbbase->usb_IExec->DebugPrintF( "MEMID_OHCI_HCCA ............ : %2ld, OHCI_HCCA ............. : %5ld\n", 
+		MEMID_OHCI_HCCA, sizeof( struct OHCI_HCCA ));
+		
 	usbbase->usb_IExec->DebugPrintF( "\n" );
 	#endif
 

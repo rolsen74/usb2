@@ -655,13 +655,14 @@ enum
 
 enum USB2HCDType
 {
-	HCDTYPE_UHCI,		// PCI
-	HCDTYPE_OHCI,		// PCI
-	HCDTYPE_EHCI,		// PCI
-	HCDTYPE_SHCI,		// PCI
+	HCDTYPE_UHCI,		// PCI - USB 1.1
+	HCDTYPE_OHCI,		// PCI - USB 1.1
+	HCDTYPE_EHCI,		// PCI - USB 2.0
+	HCDTYPE_XHCI,		// PCI - USB 3.x
 	HCDTYPE_SAM440,		// Onboard OHCI controller
 	HCDTYPE_SAM460,		// Onboard OHCI controller
-	HCDTYPE_P50XX,		// Onboard EHCI controller
+	HCDTYPE_P5020,		// Onboard EHCI controller
+	HCDTYPE_P5040,		// Onboard EHCI controller
 	HCDTYPE_TABOR,		// Onboard EHCI controller
 	HCDTYPE_Last
 };

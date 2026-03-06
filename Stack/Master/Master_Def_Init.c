@@ -15,6 +15,7 @@
 
 SEC_CODE static S32 __myTask_Def_Init( struct USBBase *usbbase, struct intern *in, S32 Promote )
 {
+struct USB2_TaskNode *tn;
 struct ExecIFace *IExec;
 S32 retval;
 
@@ -28,12 +29,18 @@ S32 retval;
 	if ( Promote )
 	{
 		IExec->Disable();
-
-		TASK_ALLOCSIGNAL( & in->Task_Shutdown_Signal );
+	
+		tn = & usbbase->usb_Master_Task;
+		tn->tn_TaskAdr = TASK_FIND();
+	
+		TASK_REALLOCSIGNAL( & in->Task_Shutdown_Signal );
+	
 		MSGPORT_REINIT( & in->Task_Shutdown_MsgPort );
+	
 		MSGPORT_REINIT( & in->Cmd_MsgPort );
+	
 		MSGPORT_REINIT( & in->Tick_MsgPort );
-
+		
 		IExec->Enable();
 	}
 	else

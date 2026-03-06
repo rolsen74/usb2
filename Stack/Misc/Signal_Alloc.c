@@ -37,12 +37,12 @@ S32 retval;
 // Structure may be on stack
 //	if (( sig->sig_StructID != 0 ) && ( sig->sig_StructID != ID_USB2_FREED ))
 //	{
-//		USBPANIC( "Task_AllocSignal : 2 : IN    use" );
+//		USBPANIC( "Task_AllocSignal : 2 : IN use" );
 //	}
 
 	if ( sig->sig_StructID == ID_USB2_SIG )
 	{
-		USBPANIC( "Task_AllocSignal : 2 : IN    use" );
+		USBPANIC( "Task_AllocSignal : 2 : IN use : %s", file );
 	}
 
 	#endif
