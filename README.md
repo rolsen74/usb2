@@ -28,10 +28,8 @@ Limitations:
 ## Supported Environment
 
 - Target OS: **AmigaOS 4**
-- Architecture: PowerPC
-- USB Host Controller: **EHCI**
-
-(Other host controllers and environments are untested.)
+- Machine: Amiga X5000/20/40
+- USB Host Controller: **EHCI** (Onboard)
 
 ## Project Goals (Original)
 

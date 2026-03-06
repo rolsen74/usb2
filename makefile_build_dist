@@ -1,0 +1,57 @@
+
+#
+ROOTDIR				:= $(realpath .)
+BINDIR				:= $(ROOTDIR)/_Data
+
+###########################################################################
+
+all: build_all
+
+###########################################################################
+
+build_all: \
+	build_dir_tree \
+	build_stack \
+	build_printer \
+	build_archive
+	@echo "Done"
+
+###########################################################################
+
+build_dir_tree:
+	rm -rf $(BINDIR)
+	mkdir -p $(BINDIR)/usb2/Devs
+	mkdir -p $(BINDIR)/usb2/Libs/USB2
+	mkdir -p $(BINDIR)/usb2/Kickstart
+
+###########################################################################
+
+build_stack:
+	@echo "Building Stack"
+	cd $(ROOTDIR) && \
+	make -f makefile clean && \
+	make -f makefile && \
+	make -f makefile strip && \
+	cp bin/usb2.device $(BINDIR)/usb2/Kickstart
+	@echo "Stack done"
+
+###########################################################################
+
+build_printer:
+	@echo "Building Printer Driver"
+	cd $(ROOTDIR)/Drivers/Printer && \
+	make -f makefile USBTYPE=USB2 clean && \
+	make -f makefile USBTYPE=USB2 && \
+	make -f makefile USBTYPE=USB2 strip && \
+	cp bin/usb2_printer.device $(BINDIR)/usb2/Devs
+	@echo "Printer done"
+
+###########################################################################
+
+build_archive:
+	@echo "Building Archive"
+	@rm usb2.lha
+	lha a usb2.lha $(BINDIR)/usb2
+	@echo "Building done"
+
+###########################################################################
