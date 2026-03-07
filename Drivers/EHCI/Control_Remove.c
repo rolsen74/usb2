@@ -87,7 +87,7 @@ struct EHCI_QH *qh;
 
 	if ( ! last )
 	{
-		#ifdef DEBUG
+		#ifdef DO_DEBUG
 		hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Remove : Yikes NULL Pointer\n" );
 		#endif
 		return;

@@ -69,27 +69,27 @@ U8 *mem;
 
 	if ( ! mem )
 	{
-		USBDEBUG( "Error allocating memory" );
+		USBERROR( "EHCI_Get_20kBuffer : Error allocating memory" );
 		goto bailout;
 	}
 
 	phy = ((struct Mem_FreeNode *)mem)->mfn_Addr;
 
-	#ifdef DO_DEBUG
+	#ifdef DO_PANIC
 
 	if ( phy == 0 )
 	{
-		USBDEBUG( "Error PhyAddress is Zero ( 20k %p )", mem );
+		USBPANIC( "Error PhyAddress is Zero ( 20k %p )", mem );
 	}
 
 	if ( phy & 0xf )
 	{
-		USBDEBUG( "Bad Alignment 0x%08lx", phy );
+		USBPANIC( "Bad Alignment 0x%08lx", phy );
 	}
 
 	if ( len > 5 * 4096 )
 	{
-		USBDEBUG( "Buffer overflow ( len : %lu )", len );
+		USBPANIC( "Buffer overflow ( len : %lu )", len );
 	}
 	
 	#endif

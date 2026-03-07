@@ -32,7 +32,7 @@ S32 retval;
 
 	ih = (PTR) ( (char *) ifc - offsetof( struct USB2_InterfaceHeader, ih_Public ));
 
-	#ifdef DEBUG
+	#ifdef DO_DEBUG
 
 	// Declaim also validates IH, so not needed here
 	// but good for early error detection in debug mode

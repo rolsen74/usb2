@@ -57,7 +57,7 @@ APTR data;
 
 	ifcnode	= NULL;
 
-	if ( buffer == NULL )
+	if ( ! buffer )
 	{
 		SHOWMSG( "Storage Pointer is missing" );
 		goto bailout;
@@ -289,7 +289,7 @@ APTR data;
 
 	len		= 0;
 
-	if ( buffer == NULL )
+	if ( ! buffer )
 	{
 		SHOWMSG( "Storage Pointer is missing" );
 		goto bailout;
@@ -370,7 +370,7 @@ struct USB2_FunctionNode *fkt;
 		}
 	}
 
-	if ( fkt == NULL )
+	if ( ! fkt )
 	{
 		SEMAPHORE_RELEASE( &usbbase->usb_USBFunctionSemaphore );
 	}
@@ -454,7 +454,7 @@ struct USB2_FunctionNode *fkt;
 		fkt = Node_Next( fkt );
 	}
 
-	if ( retval == NULL )
+	if ( ! retval )
 	{
 		SEMAPHORE_RELEASE( &usbbase->usb_USBFunctionSemaphore );
 	}

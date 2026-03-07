@@ -36,6 +36,7 @@ enum MEMID
 	// HCDs buffers
 	MEMID_USBSetupData,
 	MEMID_HCD_4k,
+	MEMID_HCD_8k,
 	MEMID_HCD_20k,
 
 	// EHCI
@@ -48,7 +49,6 @@ enum MEMID
 	MEMID_OHCI_HCCA,
 
 	#if 0
-	MEMID_HCD_8k,
 
 	MEMID_UHCI_QH,
 	MEMID_UHCI_QTD,

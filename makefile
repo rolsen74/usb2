@@ -70,7 +70,6 @@ LDFLAGS		+= -Wl,--cref,-M,-Map=usb2.map
 #CFLAGS		+= -fno-merge-constants
 # test
 
-
 LIBS		:=
 
 SRCS		:=
@@ -99,7 +98,7 @@ BINDIR		:= bin
 #
 
 # Print Error Messages on serial
-CFLAGS		+= -DDO_ERROR
+#CFLAGS		+= -DDO_ERROR
 
 # Print Info Messages on serial
 #CFLAGS		+= -DDO_INFO
@@ -109,12 +108,12 @@ CFLAGS		+= -DDO_ERROR
 
 # Add extra error code checks, 
 # for higher Stability and larger Binary file
-CFLAGS		+= -DDO_STABLE
+#CFLAGS		+= -DDO_STABLE
 
 # Overwrite memory before and after release, 
 # scramble pointer on Node Removes and so on
 # trying to trigger crashes on error
-CFLAGS		+= -DDO_PANIC
+#CFLAGS		+= -DDO_PANIC
 
 # gcc crash/debug info
 #CFLAGS		+= -gstabs

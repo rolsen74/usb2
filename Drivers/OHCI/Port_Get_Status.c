@@ -97,7 +97,7 @@ U32 retval;
 	|	(( status & 0x00000200 ) ? HUBF_Status_Low_Speed : 0 )
 	);
 
-	#ifdef DEBUG
+	#ifdef DO_DEBUG
 	{
 		TEXT buf[256];
 
@@ -138,7 +138,7 @@ U32 status;
 
 	SHOWMSG( "OHCI_Get_Status( Port %ld )", port );
 
-	#ifdef DEBUG
+	#ifdef DO_DEBUG
 	if (( port == 0 ) || ( hn->HCD_NumPorts < port ))
 	{
 		SHOWMSG( "Invalid Port Number" );
@@ -176,7 +176,7 @@ U32 status;
 			|	(( status & 0x00000200 ) ? HUBF_Status_Low_Speed : 0 )
 			);
 
-	#ifdef DEBUG
+	#ifdef DO_DEBUG
     {
         TEXT buf[256];
 

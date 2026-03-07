@@ -101,7 +101,7 @@ U32 cnt;
 
 	retval = 0;
 
-	if ( str == NULL )
+	if ( ! str )
 	{
 		goto bailout;
 	}
@@ -140,7 +140,7 @@ U32 retval;
 
 	retval = 0;
 
-	if ( str == NULL )
+	if ( ! str )
 	{
 		goto bailout;
 	}

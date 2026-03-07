@@ -215,7 +215,7 @@ U8 *mem;
 
 	if ( ! mem )
 	{
-		USBDEBUG( "EHCI_Get_QHBuffer : Error allocating memory" );
+		USBERROR( "EHCI_Get_QHBuffer : Error allocating memory" );
 		goto bailout;
 	}
 

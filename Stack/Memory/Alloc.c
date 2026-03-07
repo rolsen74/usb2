@@ -93,7 +93,7 @@ U32 cnt;
 
 	if ( ! mem )
 	{
-		USBDEBUG( "__Add_Aligned : 2 : Error allocating memory" );
+		USBERROR( "__Add_Aligned : 2 : Error allocating memory" );
 		MEM_FREEVEC( mpn );
 		goto bailout;
 	}

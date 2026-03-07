@@ -48,13 +48,13 @@ struct ExecIFace *IExec;
 
 	IExec = usbbase->usb_IExec;
 
-	if ( IExec->CheckIO(ioreq) == NULL )
+	if ( ! IExec->CheckIO( ioreq ))
 	{	
-		IExec->AbortIO(ioreq);
+		IExec->AbortIO( ioreq );
 	}	
 
-	IExec->WaitIO(ioreq);
-	IExec->SendIO(ioreq);
+	IExec->WaitIO( ioreq );
+	IExec->SendIO( ioreq );
 
 	TASK_NAME_LEAVE();
 }

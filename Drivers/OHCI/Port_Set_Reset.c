@@ -53,7 +53,7 @@ SEC_CODE S32 OHCI_Port_Set_Reset( struct USB2_HCDNode *hn, U32 port )
 {
 S32 err;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+//	struct USBBase *usbbase = hn->hn_USBBase;
 	USBDEBUG( "OHCI_Port_Set_Reset( Port #%lu )", port );
 
 	if (( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ))

@@ -114,10 +114,10 @@ U32 fm;
 
 	PCI_WRITELONG( OHCI_INTERRUPT_DISABLE,	OHCI_ALL_INTRS );
 
-	PCI_WRITELONG( OHCI_CONTROL,		    OHCI_PLE | OHCI_IE | OHCI_CLE | OHCI_BLE | OHCI_RATIO_1_4 | OHCI_HCFS_OPERATIONAL | hn->hn_HCD.OHCI.Remote_Wakeup_Connect );
+	PCI_WRITELONG( OHCI_CONTROL,			OHCI_PLE | OHCI_IE | OHCI_CLE | OHCI_BLE | OHCI_RATIO_1_4 | OHCI_HCFS_OPERATIONAL | hn->hn_HCD.OHCI.Remote_Wakeup_Connect );
 
 	//
-	// The controller is now OPERATIONAL.  Set a some final
+	// The controller is now OPERATIONAL. Set a some final
 	// registers that should be set earlier, but that the
 	// controller ignores when in the SUSPEND state.
 	//
@@ -131,8 +131,8 @@ U32 fm;
 	PCI_WRITELONG( OHCI_FM_INTERVAL, 		fm );
 	PCI_WRITELONG( OHCI_PERIODIC_START, 	OHCI_PERIODIC( ival ));
 
-	PCI_WRITELONG( OHCI_RH_DESCRIPTOR_A,    OHCI_NOCP | desca );
-	PCI_WRITELONG( OHCI_RH_STATUS,          OHCI_LPSC );
+	PCI_WRITELONG( OHCI_RH_DESCRIPTOR_A,	OHCI_NOCP | desca );
+	PCI_WRITELONG( OHCI_RH_STATUS,			OHCI_LPSC );
 
 	HCD_WAIT_MS( hn, OHCI_ENABLE_POWER_DELAY );
 
@@ -143,8 +143,8 @@ U32 fm;
 //	  desca |= OHCI_PSM;
 //	  desca |= OHCI_OCPM;
 
-	PCI_WRITELONG( OHCI_RH_DESCRIPTOR_A,    desca );
-	PCI_WRITELONG( OHCI_RH_DESCRIPTOR_B,    descb ); //0xffff0000 );
+	PCI_WRITELONG( OHCI_RH_DESCRIPTOR_A, desca );
+	PCI_WRITELONG( OHCI_RH_DESCRIPTOR_B, descb ); //0xffff0000 );
 
 	HCD_WAIT_MS( hn, OHCI_GET_POTPGT( desca ) * 2 );
 

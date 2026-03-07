@@ -18,7 +18,7 @@ struct USB2_Node *n = new;
 struct USB2_Node *c = cur;
 struct USB2_Node *t;
 
-	#ifdef DEBUG
+	#ifdef DO_DEBUG
 
 	if ( ! header )
 	{
@@ -56,7 +56,7 @@ struct USB2_Node *t;
 		c->un_Prev = n;
 	}
 
-	#ifdef DEBUG
+	#ifdef DO_DEBUG
 	bailout:
 	#endif
 }

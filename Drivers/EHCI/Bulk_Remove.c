@@ -89,7 +89,7 @@ U32 status;
 
 	if ( ! last )
 	{
-		#ifdef DEBUG
+		#ifdef DO_DEBUG
 		hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Bulk_Remove : Yikes NULL Pointer\n" );
 		#endif
 		return;

@@ -63,7 +63,7 @@ U32 slot;
 
 	epn	 = ioreq->req_EndPoint;
 
-	slot = EHCI_FindSlot( hn, epn->ep_Interval );
+	slot = EHCI_Slot_Find( hn, epn->ep_Interval );
 
 	sqh	 = hn->hn_HCD.EHCI.FrameList_ISlots[ slot ];
 

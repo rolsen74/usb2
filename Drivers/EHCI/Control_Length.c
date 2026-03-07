@@ -180,7 +180,7 @@ U8 err;
 		mem		+= len;
 
 		// Check for short Packet
-		if ( EHCI_TD_GET_BYTES( status ) )
+		if ( bytes )
 		{
 			break;
 		}

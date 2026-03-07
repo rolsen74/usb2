@@ -68,7 +68,6 @@ U8 err;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Interrupt_Length" );
-//	USBDEBUG( "EHCI_Interrupt_Length : Enter" );
 
 	actual = 0;
 
@@ -145,7 +144,7 @@ U8 err;
 		mem		+= len;
 
 		// Check for short Packet
-		if ( EHCI_TD_GET_BYTES( status ) )
+		if ( bytes )
 		{
 			break;
 		}

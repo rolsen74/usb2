@@ -54,7 +54,7 @@ SEC_CODE void EHCI_Port_Disown( struct USB2_HCDNode *hn, U32 port )
 U32 val;
 U32 adr;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+//	struct USBBase *usbbase = hn->hn_USBBase;
 
 	#ifdef DO_DEBUG
 

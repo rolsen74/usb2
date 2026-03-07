@@ -65,7 +65,7 @@ U8 *mem;
 
 	if ( ! mem )
 	{
-		USBDEBUG( "EHCI_Get_TDBuffer : Error allocating memory" );
+		USBERROR( "EHCI_Get_TDBuffer : Error allocating memory" );
 		goto bailout;
 	}
 

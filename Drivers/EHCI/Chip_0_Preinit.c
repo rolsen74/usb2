@@ -55,7 +55,7 @@ SEC_CODE S32 EHCI_Chip_Preinit( struct USB2_HCDNode *hn )
 S32 retval;
 U32 val;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+//	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Preinit" );
 //	usbbase = hn->hn_USBBase;
 

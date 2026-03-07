@@ -49,7 +49,7 @@
 
 // --
 
-SEC_CODE S32 OHCI_Chip_Init( struct USB2_HCDNode *hn )
+SEC_CODE S32 OHCI_Chip_Init( struct USB2_HCDNode *hn UNUSED )
 {
 //struct USBBase *usbbase;
 // struct OHCI_QH *qh;
@@ -60,7 +60,7 @@ S32 retval;
 // U32 j;
 // U32 r;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+//	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Chip_Init" );
 
 // //	usbbase = hn->hn_USBBase;

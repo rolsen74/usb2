@@ -85,7 +85,7 @@ U32 i;
 U32 j;
 U32 r;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+//	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Init" );
 
 //	usbbase = hn->hn_USBBase;

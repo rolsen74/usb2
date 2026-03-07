@@ -79,14 +79,14 @@ U8 *mem;
 
 	if ( ! mem )
 	{
-		USBERROR( "OHCI : Init_HCCABuffer : Error allocating memory" );
+		USBERROR( "Init_HCCABuffer : Error allocating memory" );
 		goto bailout;
 	}
 
 	phy		= ((struct Mem_FreeNode *)mem)->mfn_Addr;
 	hcca	= (struct OHCI_HCCA *)mem;
 
-	#ifdef DEBUG
+	#ifdef DO_PANIC
 
 	if ( phy == 0 )
 	{

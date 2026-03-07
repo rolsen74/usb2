@@ -241,6 +241,8 @@ PTR node;
 		MEMID_USBSetupData, sizeof( struct RealSetupData ));
 	usbbase->usb_IExec->DebugPrintF( "MEMID_HCD_4k ............... : %2ld, 4k Buffer ............. : %5ld\n", 
 		MEMID_HCD_4k, 1024 * 4 );
+	usbbase->usb_IExec->DebugPrintF( "MEMID_HCD_8k ............... : %2ld, 4k 8uffer ............. : %5ld\n", 
+		MEMID_HCD_8k, 1024 * 8 );
 	usbbase->usb_IExec->DebugPrintF( "MEMID_HCD_20k .............. : %2ld, 20k Buffer ............ : %5ld\n", 
 		MEMID_HCD_20k, 1024 * 20 );
 	usbbase->usb_IExec->DebugPrintF( "MEMID_EHCI_QH .............. : %2ld, EHCI_QH ............... : %5ld\n", 
@@ -344,7 +346,6 @@ PTR node;
 	// --
 	#ifdef DRV_HUB
 
-	#warning fix me -- run hub at pri over HID .. for better disconnect
 	SEC_CODE void HUB_Entry( void );
 	node = FDRIVER_CREATETAGS(
 		USB2Tag_FDriver_Title,			"HUB",

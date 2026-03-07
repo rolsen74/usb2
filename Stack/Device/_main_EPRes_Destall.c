@@ -27,7 +27,7 @@ U32 retval;
 		goto bailout;
 	}
 
-	#ifdef DEBUG
+	#ifdef DO_DEBUG
 
 	struct RealEndPointResource *real;
 	real = (PTR) ( (char *) epr - offsetof( struct RealEndPointResource, epr_Public ));

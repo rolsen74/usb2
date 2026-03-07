@@ -51,7 +51,6 @@
 
 SEC_RODATA const struct HCDFunctions OHCIFunctions =
 {
-
 	// -- Chip
 
 	.Chip_Preinit				= OHCI_Chip_Preinit,
@@ -59,20 +58,20 @@ SEC_RODATA const struct HCDFunctions OHCIFunctions =
 	.Chip_Alloc					= OHCI_Chip_Alloc,
 	.Chip_Init					= OHCI_Chip_Init,
 	.Chip_Start					= OHCI_Chip_Start,
-	// .Chip_Stop				= OHCI_Chip_Stop,
-	// .Chip_Deinit			= OHCI_Chip_Deinit,
-	// .Chip_Dealloc			= OHCI_Chip_Dealloc,
+	.Chip_Stop					= OHCI_Chip_Stop,
+	.Chip_Deinit				= OHCI_Chip_Deinit,
+	.Chip_Dealloc				= OHCI_Chip_Dealloc,
 
-	// // -- Handlers
+	// -- Handlers
 
-	// .Handler_HCD			= OHCI_Handler_HCD,
+	.Handler_HCD				= OHCI_Handler_HCD,
 	.Handler_Reset				= OHCI_Handler_Reset,
 	.Handler_Interrupt			= OHCI_Handler_Interrupt,
 
 	// -- IORequest Transfers
 
-	// .Transfer_Check			= OHCI_Transfer_Check,
-	// .Transfer_Free			= OHCI_Transfer_Free,
+	.Transfer_Check				= OHCI_Transfer_Check,
+	.Transfer_Free				= OHCI_Transfer_Free,
 
 	// -- Port Functions
 
@@ -96,25 +95,21 @@ SEC_RODATA const struct HCDFunctions OHCIFunctions =
 	.Port_Set_Indicator			= OHCI_Port_Set_Indicator,
 
 	// -- Control / Interrupt / Bulk / Isochronous
+	
+	.Bulk_Add					= OHCI_Bulk_Add,
+	.Bulk_Build					= OHCI_Bulk_Build,
+	.Bulk_Length				= OHCI_Bulk_Length,
+	.Bulk_Remove				= OHCI_Bulk_Remove,
 
-	// .Control_Add			= OHCI_Control_Add,
-	// .Control_Build			= OHCI_Control_Build,
-	// .Control_Length			= OHCI_Control_Length,
-	// .Control_Remove			= OHCI_Control_Remove,
+	.Control_Add				= OHCI_Control_Add,
+	.Control_Build				= OHCI_Control_Build,
+	.Control_Length				= OHCI_Control_Length,
+	.Control_Remove				= OHCI_Control_Remove,
 
-	// .Interrupt_Add			= OHCI_Interrupt_Add,
-	// .Interrupt_Build		= OHCI_Interrupt_Build,
-	// .Interrupt_Length		= OHCI_Interrupt_Length,
-	// .Interrupt_Remove		= OHCI_Interrupt_Remove,
-
-	// .Bulk_Add				= OHCI_Bulk_Add,
-	// .Bulk_Build				= OHCI_Bulk_Build,
-	// .Bulk_Length			= OHCI_Bulk_Length,
-	// .Bulk_Remove			= OHCI_Bulk_Remove,
-
-	// // --
-
-	// // -- Buffer Functions --
+	.Interrupt_Add				= OHCI_Interrupt_Add,
+	.Interrupt_Build			= OHCI_Interrupt_Build,
+	.Interrupt_Length			= OHCI_Interrupt_Length,
+	.Interrupt_Remove			= OHCI_Interrupt_Remove,
 
 	// S32		( *Isochronous_Build )				( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 	// void	( *Isochronous_Add )				( struct USB2_HCDNode *hn, struct RealRequest *ioreq );

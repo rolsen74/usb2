@@ -81,7 +81,7 @@ U32 status;
 		goto bailout;
 	}
 
-	EHCI_FreeSlot( hn, ioreq->req_HCD.EHCI.Start_Slot );
+	EHCI_Slot_Free( hn, ioreq->req_HCD.EHCI.Start_Slot );
 
 	// --
 	// -- Stop / Start .. around unlink

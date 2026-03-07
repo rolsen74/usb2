@@ -141,6 +141,11 @@ STR buf;
 
 bailout:
 
+	if (( buf ) && ( ioreq->io_Error ))
+	{
+		// todo : Destall
+	}
+
 	MEM_FREEIOBUFFER( buf );
 
 	return( retval );
@@ -224,7 +229,7 @@ U32 id;
 			goto bailout;
 		}
 
-		USBDEBUG( "Using LanguageID: 0x%04lx", fn->fkt_LanguageID );
+		USBINFO( "Using LanguageID: 0x%04lx", fn->fkt_LanguageID );
 
 		/*
 		** Get Manufacturer String
@@ -233,11 +238,11 @@ U32 id;
 		id = fn->fkt_DeviceDescriptor->ManufacturerStrNr;
 		if ( id )
 		{
-			USBDEBUG( "Getting Manufacturer String (%lu)", id );
+			USBINFO( "Getting Manufacturer String (%lu)", id );
 			if ( ! __GETSTRING( id, & fn->fkt_ManufacturerStr, & fn->fkt_ManufacturerStrLen ))
 			{
 				USBERROR( "__myGetString: Error Getting Device String (%ld)", (S32) ioreq->io_Error );
-				goto bailout;
+//				goto bailout;
 			}
 		}
 
@@ -248,11 +253,11 @@ U32 id;
 		id = fn->fkt_DeviceDescriptor->DeviceStrNr;
 		if ( id )
 		{
-			USBDEBUG( "Getting Device String (%lu)", id );
+			USBINFO( "Getting Device String (%lu)", id );
 			if ( ! __GETSTRING( id, & fn->fkt_DeviceStr, & fn->fkt_DeviceStrLen ))
 			{
 				USBERROR( "__myGetString: Error Getting Device String (%ld)", (S32) ioreq->io_Error );
-				goto bailout;
+//				goto bailout;
 			}
 		}
 
@@ -263,11 +268,11 @@ U32 id;
 		id = fn->fkt_DeviceDescriptor->SerialStrNr;
 		if ( id )
 		{
-			USBDEBUG( "Getting Serial String (%lu)", id );
+			USBINFO( "Getting Serial String (%lu)", id );
 			if ( ! __GETSTRING( id, & fn->fkt_SerialStr, & fn->fkt_SerialStrLen ))
 			{
 				USBERROR( "__myGetString: Error Getting Serial String (%ld)", (S32) ioreq->io_Error );
-				goto bailout;
+//				goto bailout;
 			}
 		}
 
@@ -285,12 +290,12 @@ U32 id;
 
 			if ( id )
 			{
-				USBDEBUG( "Get Configuration String (%lu)", id );
+				USBINFO( "Get Configuration String (%lu)", id );
 
 				if ( ! __GETSTRING( id, & cn->cfg_String, & cn->cfg_StringLen ))
 				{
 					USBERROR( "__myGetString: Error Getting Config String (%ld)", (S32) ioreq->io_Error );
-					goto bailout;
+//					goto bailout;
 				}
 
 				cn->cfg_StringID = MISC_NEWNOTIFYID();
@@ -314,12 +319,12 @@ U32 id;
 
 						if ( id )
 						{
-							USBDEBUG( "Get Interface String (%lu)", id );
+							USBINFO( "Get Interface String (%lu)", id );
 
 							if ( ! __GETSTRING( id, & in->in_String, & in->in_StringLen ))
 							{
 								USBERROR( "__myGetString: Error Getting Interface String (%ld)", (S32) ioreq->io_Error );
-								goto bailout;
+//								goto bailout;
 							}
 
 							in->in_StringID = MISC_NEWNOTIFYID();
@@ -341,7 +346,7 @@ U32 id;
 	}
 	else
 	{
-		USBDEBUG( "No Strings Found, skipping" );
+		USBINFO( "No Strings Found, skipping" );
 	}
 
 	retval = TRUE;

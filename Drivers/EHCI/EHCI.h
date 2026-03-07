@@ -17,8 +17,7 @@
 
 /***************************************************************************/
 
-#ifdef DO_DEBUG
-//#if 1
+#if defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 
 void EHCI_Dump_Setup(	struct USB2_HCDNode *hn, struct USB2_SetupData *sd );
 void EHCI_Dump_QH(		struct USB2_HCDNode *hn, struct EHCI_QH *qh, int DoSetup );
@@ -82,8 +81,8 @@ SEC_CODE struct EHCI_QH *EHCI_Get_QHBuffer( struct USB2_HCDNode *hn, struct Real
 SEC_CODE struct EHCI_TD *EHCI_Get_TDBuffer( struct USB2_HCDNode *hn );
 
 SEC_CODE S32	EHCI_Enough_Bandwidth( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-SEC_CODE S32	EHCI_FindSlot( struct USB2_HCDNode *hn, U32 interval );
-SEC_CODE void	EHCI_FreeSlot( struct USB2_HCDNode *hn, U32 slot );
+SEC_CODE S32	EHCI_Slot_Find( struct USB2_HCDNode *hn, U32 interval );
+SEC_CODE void	EHCI_Slot_Free( struct USB2_HCDNode *hn, U32 slot );
 SEC_CODE void	EHCI_Handler_HCD( struct USB2_HCDNode *hn, U32 mask );
 SEC_CODE U32	EHCI_Handler_Interrupt( struct ExceptionContext *Context, struct ExecBase *SysBase, PTR userData );
 SEC_CODE U32	EHCI_Handler_Reset( struct ExceptionContext *Context, struct ExecBase *SysBase, PTR userData );

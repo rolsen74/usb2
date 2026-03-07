@@ -64,7 +64,7 @@ U32 ports;
 	//-------------
 	// Version Check
 
-	#ifdef DEBUG
+	#ifdef DO_DEBUG
 	U32 rev;
 
 	rev = PCI_READLONG( OHCI_REVISION );

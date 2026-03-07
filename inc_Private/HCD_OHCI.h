@@ -73,14 +73,14 @@
 #define  OHCI_HCFS_RESET		0x00000000
 // #define  OHCI_HCFS_RESUME		0x00000040
 #define  OHCI_HCFS_OPERATIONAL	0x00000080
-// #define  OHCI_HCFS_SUSPEND		0x000000c0
+#define  OHCI_HCFS_SUSPEND		0x000000c0
 #define  OHCI_IR				0x00000100 /* Interrupt Routing */
 #define  OHCI_RWC				0x00000200 /* Remote Wakeup Connected */
 // #define  OHCI_RWE				0x00000400 /* Remote Wakeup Enabled */
 #define OHCI_COMMAND_STATUS		0x08
 #define  OHCI_HCR				0x00000001 /* Host Controller Reset */
-// #define  OHCI_CLF				0x00000002 /* Control List Filled */
-// #define  OHCI_BLF				0x00000004 /* Bulk List Filled */
+#define  OHCI_CLF				0x00000002 /* Control List Filled */
+#define  OHCI_BLF				0x00000004 /* Bulk List Filled */
 #define  OHCI_OCR				0x00000008 /* Ownership Change Request */
 // #define  OHCI_SOC_MASK			0x00030000 /* Scheduling Overrun Count */
 #define OHCI_INTERRUPT_STATUS	0x0c
@@ -187,27 +187,27 @@ struct OHCI_ED
 
 // typedef struct {
 // 	U32	 ed_flags;
-// #define OHCI_ED_GET_FA(s)	((s) & 0x7f)
+#define OHCI_ED_GET_FA(s)	((s) & 0x7f)
 // #define OHCI_ED_ADDRMASK	0x0000007f
 #define OHCI_ED_SET_FA(s)	(s)
-// #define OHCI_ED_GET_EN(s)	(((s) >> 7) & 0xf)
+#define OHCI_ED_GET_EN(s)	(((s) >> 7) & 0xf)
 #define OHCI_ED_SET_EN(s)	((s) << 7)
-// #define OHCI_ED_DIR_MASK	0x00001800
+#define OHCI_ED_DIR_MASK	0x00001800
 #define  OHCI_ED_DIR_TD		0x00000000
 // #define  OHCI_ED_DIR_OUT	0x00000800
 // #define  OHCI_ED_DIR_IN		0x00001000
 #define OHCI_ED_SPEED		0x00002000
 #define OHCI_ED_SKIP		0x00004000
 #define OHCI_ED_FORMAT_GEN	0x00000000
-// #define OHCI_ED_FORMAT_ISO	0x00008000
-// #define OHCI_ED_GET_MAXP(s)	(((s) >> 16) & 0x07ff)
+#define OHCI_ED_FORMAT_ISO	0x00008000
+#define OHCI_ED_GET_MAXP(s)	(((s) >> 16) & 0x07ff)
 #define OHCI_ED_SET_MAXP(s)	((s) << 16)
 // #define OHCI_ED_MAXPMASK	(0x7ff << 16)
 // 	ohci_physaddr_t	ed_tailp;
 // 	ohci_physaddr_t	ed_headp;
-// #define OHCI_HALTED		0x00000001
-// #define OHCI_TOGGLECARRY	0x00000002
-// #define OHCI_HEADMASK		0xfffffffc
+#define OHCI_HALTED			0x00000001
+#define OHCI_TOGGLECARRY	0x00000002
+#define OHCI_HEADMASK		0xfffffffc
 // 	ohci_physaddr_t	ed_nexted;
 // } ohci_ed_t;
 // /* #define OHCI_ED_SIZE 16 */
@@ -234,29 +234,29 @@ struct OHCI_TD
 
 // typedef struct {
 // 	U32	 td_flags;
-// #define OHCI_TD_R		0x00040000		/* Buffer Rounding  */
-// #define OHCI_TD_DP_MASK		0x00180000		/* Direction / PID */
-// #define  OHCI_TD_SETUP		0x00000000
-// #define  OHCI_TD_OUT		0x00080000
-// #define  OHCI_TD_IN			0x00100000
-// #define OHCI_TD_GET_DI(x)	(((x) >> 21) & 7)	/* Delay Interrupt */
-// #define OHCI_TD_SET_DI(x)	((x) << 21)
-// #define  OHCI_TD_NOINTR		0x00e00000
-// #define  OHCI_TD_INTR_MASK	0x00e00000
+#define OHCI_TD_R				0x00040000		/* Buffer Rounding  */
+#define OHCI_TD_DP_MASK			0x00180000		/* Direction / PID */
+#define  OHCI_TD_SETUP			0x00000000
+#define  OHCI_TD_OUT			0x00080000
+#define  OHCI_TD_IN				0x00100000
+#define OHCI_TD_GET_DI(x)		(((x) >> 21) & 7)	/* Delay Interrupt */
+#define OHCI_TD_SET_DI(x)		((x) << 21)
+#define  OHCI_TD_NOINTR			0x00e00000
+#define  OHCI_TD_INTR_MASK		0x00e00000
 // #define OHCI_TD_TOGGLE_CARRY	0x00000000
-// #define OHCI_TD_TOGGLE_0	0x02000000
-// #define OHCI_TD_TOGGLE_1	0x03000000
-// #define OHCI_TD_TOGGLE_MASK	0x03000000
-// #define OHCI_TD_GET_EC(x)	(((x) >> 26) & 3)	/* Error Count */
-// #define OHCI_TD_GET_CC(x)	((x) >> 28)		/* Condition Code */
-// #define  OHCI_TD_NOCC		0xf0000000
+#define OHCI_TD_TOGGLE_0		0x02000000
+#define OHCI_TD_TOGGLE_1		0x03000000
+#define OHCI_TD_TOGGLE_MASK		0x03000000
+#define OHCI_TD_GET_EC(x)		(((x) >> 26) & 3)	/* Error Count */
+#define OHCI_TD_GET_CC(x)		((x) >> 28)		/* Condition Code */
+#define  OHCI_TD_NOCC			0xf0000000
 // 	ohci_physaddr_t	td_cbp;		/* Current Buffer Pointer */
 // 	ohci_physaddr_t td_nexttd;	/* Next TD */
 // 	ohci_physaddr_t td_be;		/* Buffer End */
 // } ohci_td_t;
 // /* #define OHCI_TD_SIZE 16 */
 
-#define OHCI_TD_ALIGN		16
+#define OHCI_TD_ALIGN			16
 
 /***************************************************************************/
 // Queue Header (QH) Structure
@@ -301,20 +301,20 @@ struct OHCI_ITD
 
 /***************************************************************************/
 
-// #define OHCI_CC_NO_ERROR		0
-// #define OHCI_CC_CRC			1
-// #define OHCI_CC_BIT_STUFFING		2
-// #define OHCI_CC_DATA_TOGGLE_MISMATCH	3
-// #define OHCI_CC_STALL			4
-// #define OHCI_CC_DEVICE_NOT_RESPONDING	5
-// #define OHCI_CC_PID_CHECK_FAILURE	6
-// #define OHCI_CC_UNEXPECTED_PID		7
-// #define OHCI_CC_DATA_OVERRUN		8
-// #define OHCI_CC_DATA_UNDERRUN		9
-// #define OHCI_CC_BUFFER_OVERRUN		12
-// #define OHCI_CC_BUFFER_UNDERRUN		13
-// #define OHCI_CC_NOT_ACCESSED		14
-// #define OHCI_CC_NOT_ACCESSED_MASK	14
+#define OHCI_CC_NO_ERROR				0
+#define OHCI_CC_CRC						1
+#define OHCI_CC_BIT_STUFFING			2
+#define OHCI_CC_DATA_TOGGLE_MISMATCH	3
+#define OHCI_CC_STALL					4
+#define OHCI_CC_DEVICE_NOT_RESPONDING	5
+#define OHCI_CC_PID_CHECK_FAILURE		6
+#define OHCI_CC_UNEXPECTED_PID			7
+#define OHCI_CC_DATA_OVERRUN			8
+#define OHCI_CC_DATA_UNDERRUN			9
+#define OHCI_CC_BUFFER_OVERRUN			12
+#define OHCI_CC_BUFFER_UNDERRUN			13
+#define OHCI_CC_NOT_ACCESSED			14
+#define OHCI_CC_NOT_ACCESSED_MASK		14
 
 // /* Some delay needed when changing certain registers. */
 #define OHCI_ENABLE_POWER_DELAY	5
@@ -337,7 +337,7 @@ struct _OHCI
 	struct OHCI_ED *			Isoc_Head;
 	struct OHCI_HCCA *			HCCA_Table;
 	struct OHCI_ED *			HCCA_EDArray[OHCI_NO_EDS];
-//	S32							BandWidth[OHCI_NO_EDS];
+	S32							BandWidth[OHCI_NO_EDS];
 };
 
 /***************************************************************************/

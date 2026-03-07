@@ -48,7 +48,7 @@
 #include "EHCI.h"
 
 // --
-#ifdef DO_DEBUG
+#if defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 
 SEC_CODE void EHCI_Dump_Setup( struct USB2_HCDNode *hn, struct USB2_SetupData *sd )
 {

@@ -56,7 +56,7 @@
 SEC_CODE U32 OHCI_Handler_Interrupt( struct ExceptionContext *Context UNUSED, struct ExecBase *SysBase UNUSED, PTR userData )
 {
 struct USB2_HCDNode *hn;
-struct ExecIFace *IExec;
+//struct ExecIFace *IExec;
 struct USBBase *usbbase;
 U32 intflags;
 U32 sigflags;
@@ -65,9 +65,9 @@ U32 sigflags;
 
 	hn		= (PTR) userData;
 	usbbase = hn->hn_USBBase;
-	IExec	= usbbase->usb_IExec;
+//	IExec	= usbbase->usb_IExec;
 
-	IExec->DebugPrintF( "OHCI Interrupt\n" );
+//	IExec->DebugPrintF( "OHCI Interrupt\n" );
 
 	intflags = PCI_READLONG( OHCI_INTERRUPT_STATUS );
 	sigflags = 0;
@@ -84,7 +84,7 @@ U32 sigflags;
 	/* Writeback Done Head */
 	if ( intflags & OHCI_WDH )
 	{
-		IExec->DebugPrintF( "OHCI: OHCI_WDH - Writeback Done Head\n" );
+//		IExec->DebugPrintF( "OHCI: OHCI_WDH - Writeback Done Head\n" );
 		intflags &= ~OHCI_WDH;
 		sigflags |= hn->hn_HCD.OHCI.Signal_WDH.sig_Signal_Mask;
 	}
@@ -92,7 +92,7 @@ U32 sigflags;
 	/* Root Hub Status Change */
 	if ( intflags & OHCI_RHSC )
 	{
-		IExec->DebugPrintF( "OHCI: OHCI_RHSC - Root Hub Status Change\n" );
+//		IExec->DebugPrintF( "OHCI: OHCI_RHSC - Root Hub Status Change\n" );
 		sigflags |= hn->hn_HUB_Signal.sig_Signal_Mask;
 		intflags &= ~OHCI_RHSC;
 	}
@@ -100,20 +100,27 @@ U32 sigflags;
 	/* Master Interrupt Enable */
 	if ( intflags & OHCI_MIE )
 	{
-		IExec->DebugPrintF( "OHCI: OHCI_MIE - Master Interrupt Enable\n" );
+//		IExec->DebugPrintF( "OHCI: OHCI_MIE - Master Interrupt Enable\n" );
 		intflags &= ~OHCI_MIE;
+	}
+
+	/* Start of Frame */
+	if ( intflags & OHCI_SF )
+	{
+		// This is just a Info Flag, we don't use it 
+		intflags &= ~OHCI_SF;
 	}
 
 	if ( intflags )
 	{
-		IExec->DebugPrintF( "OHCI: Unprocessed flags 0x%08lx\n", intflags );
+//		IExec->DebugPrintF( "OHCI: Unprocessed flags 0x%08lx\n", intflags );
 		/* Block unprocessed interrupts. */
 		PCI_WRITELONG( OHCI_INTERRUPT_DISABLE, intflags );
 	}
 
 	if ( sigflags )
 	{
-		IExec->DebugPrintF( "OHCI: Task %p, Signal %08lx\n", hn->hn_Task->tn_TaskAdr, sigflags );
+//		IExec->DebugPrintF( "OHCI: Task %p, Signal %08lx\n", hn->hn_Task->tn_TaskAdr, sigflags );
 		TASK_SIGNAL( hn->hn_Task->tn_TaskAdr, sigflags );
 	}
 
@@ -128,106 +135,3 @@ bailout:
 }
 
 // --
-
-#if 0
-
-sigflags = 0;
-intflags = PCI_READLONG( OHCI_INTERRUPT_STATUS );
-
-if ( intflags )
-{
-	/* Acknowledge */
-	PCI_WRITELONG( OHCI_INTERRUPT_STATUS, intflags );
-
-	#ifdef DEBUG
-
-	/* Scheduling Overrun */
-	if ( intflags & OHCI_SO )
-	{
-		IExec->DebugPrintF( "OHCI: OHCI_SO - Scheduling Overrun\n" );
-	}
-	
-	/* Start of Frame */
-	if ( intflags & OHCI_SF )
-	{
-		intflags &= ~OHCI_SF;
-
-//			  IExec->DebugPrintF( "OHCI: OHCI_SF - Start of Frame\n" );
-	}
-
-	/* Resume Detected */
-	if ( intflags & OHCI_RD )
-	{
-		IExec->DebugPrintF( "OHCI: OHCI_RD - Resume Detected\n" );
-	}
-  
-	/* Unrecoverable Error */
-	if ( intflags & OHCI_UE )
-	{
-		IExec->DebugPrintF( "OHCI: OHCI_UE - Unrecoverable Error\n" );
-	}
-
-	/* Frame Number Overflow */
-	// This is not an error
-//        if ( intflags & OHCI_FNO )
-//        {
-//		      IExec->DebugPrintF( "OHCI: OHCI_FNO - Frame Number Overflow\n" );
-//        }
-  
-	/* Ownership Change */
-	if ( intflags & OHCI_OC )
-	{
-		IExec->DebugPrintF( "OHCI: OHCI_OC - Ownership Change\n" );
-	}
-
-	#endif
-
-	/* Writeback Done Head */
-	if ( intflags & OHCI_WDH )
-	{
-		intflags &= ~OHCI_WDH;
-		sigflags |= hn->hn_HCD.OHCI.Interrupt_WDH_SignalBit;
-
-//			  #ifdef DEBUG
-//			  IExec->DebugPrintF( "OHCI: OHCI_WDH - Writeback Done Head\n" );
-//			  #endif
-	}
-
-	/* Root Hub Status Change */
-	if ( intflags & OHCI_RHSC )
-	{
-		sigflags |= hn->HCD_PortChange_SignalBit;
-		intflags &= ~OHCI_RHSC;
-
-//			  #ifdef DEBUG
-//			  IExec->DebugPrintF( "OHCI: OHCI_RHSC - Root Hub Status Change\n" );
-//			  #endif
-	}
-
-	/* Master Interrupt Enable */
-	if ( intflags & OHCI_MIE )
-	{
-		intflags &= ~OHCI_MIE;
-
-//			  #ifdef DEBUG
-//			  IExec->DebugPrintF( "OHCI: OHCI_MIE - Master Interrupt Enable\n" );
-//			  #endif
-	}
-
-	if ( intflags )
-	{
-		/* Block unprocessed interrupts. */
-		PCI_WRITELONG( OHCI_INTERRUPT_DISABLE, intflags );
-
-//			  #ifdef DEBUG
-//			  IExec->DebugPrintF( "OHCI: Unprocessed flags 0x%08lx\n", intflags );
-//			  #endif
-	}
-
-	if ( sigflags )
-	{
-		TASK_SIGNAL( hn->hn_Task, sigflags );
-	}
-}
-
-#endif

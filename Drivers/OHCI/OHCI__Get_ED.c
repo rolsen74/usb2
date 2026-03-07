@@ -62,7 +62,9 @@ U8 *mem;
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Get_EDBuffer" );
 
-	ed		= NULL;
+	ed = NULL;
+
+	// --
 
 	if ( ioreq )
 	{
@@ -118,7 +120,7 @@ U8 *mem;
 
 	if ( ! mem )
 	{
-		USBDEBUG( "OHCI_Get_EdBuffer : Error allocating memory" );
+		USBERROR( "OHCI_Get_EDBuffer : Error allocating memory" );
 		goto bailout;
 	}
 
