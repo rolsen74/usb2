@@ -20,7 +20,7 @@
 // struct Library *				ButtonBase			= NULL;
 // struct Library *				ChooserBase			= NULL;
 // struct Library *				CyberGfxBase		= NULL;
-// struct Library *				DOSBase				= NULL;
+struct Library *				DOSBase				= NULL;
 struct Library *				GfxBase				= NULL;
 struct Library *				IntuitionBase		= NULL;
 // struct Library *				LabelBase			= NULL;
@@ -43,7 +43,7 @@ struct Library *				UtilityBase			= NULL;
 // struct ApplicationIFace *	IApplication 		= NULL;
 // struct AslIFace *			IAsl				= NULL;
 // struct CyberGfxIFace *		ICyberGfx			= NULL;
-// struct DOSIFace *			IDOS				= NULL;
+struct DOSIFace *				IDOS				= NULL;
 struct ExecIFace *				IExec				= NULL;
 struct GraphicsIFace *			IGraphics			= NULL;
 struct IntuitionIFace *			IIntuition			= NULL;
@@ -103,7 +103,7 @@ static struct OpenStruct OpenList[] =
 //	{ OT_Library,		"application.library",		50,		& ApplicationBase,	NULL },
 //	{ OT_Library,		"asl.library",				50,		& AslBase,			NULL },
 //	{ OT_Library,		"cybergraphics.library",	42,		& CyberGfxBase,		NULL },
-//	{ OT_Library,		"dos.library",				50,		& DOSBase,			NULL },
+	{ OT_Library,		"dos.library",				50,		& DOSBase,			NULL },
 	{ OT_Library,		"graphics.library",			50,		& GfxBase,			NULL },
 	{ OT_Library,		"intuition.library",		50,		& IntuitionBase,	NULL },
 //	{ OT_Library,		"Picasso96API.library",		50,		& P96Base,			NULL },
@@ -115,7 +115,7 @@ static struct OpenStruct OpenList[] =
 //	{ OT_Interface,		"prefsobjects",				2,		& ApplicationBase,	& IPrefsObjects },
 //	{ OT_Interface,		"main",						1,		& AslBase,			& IAsl },
 //	{ OT_Interface,		"main",						1,		& CyberGfxBase,		& ICyberGfx },
-//	{ OT_Interface,		"main",						1,		& DOSBase,			& IDOS },
+	{ OT_Interface,		"main",						1,		& DOSBase,			& IDOS },
 	{ OT_Interface,		"main",						1,		& GfxBase,			& IGraphics },
 	{ OT_Interface,		"main",						1,		& IntuitionBase,	& IIntuition },
 //	{ OT_Interface,		"main",						1,		& P96Base,			& IP96 },
@@ -141,7 +141,7 @@ S32 retval;
 S32 pos;
 PTR ptr;
 
-	MYERROR( "Library : myOpenResources" );
+	MYERROR( "PTP : myOpenResources" );
 
 	retval = FALSE;
 
@@ -160,7 +160,7 @@ PTR ptr;
 
 				if ( ! base )
 				{
-					MYERROR( "Library : Error missing base pointer" );
+					MYERROR( "PTP : Error missing base pointer" );
 					goto bailout;
 				}
 
@@ -169,13 +169,13 @@ PTR ptr;
 					STR name = OpenList[pos].OS_LIB_NAME;
 					U32 vers = OpenList[pos].OS_LIB_VERS;
 
-					MYINFO( "Library : Opening library '%s' v%lu", name, vers );
+					MYINFO( "PTP : Opening library '%s' v%lu", name, vers );
 
 					ptr = OpenLibrary( name, vers );
 
 					if ( ! ptr )
 					{
-						MYERROR( "Library : Error opening library '%s' v%lu", name, vers );
+						MYERROR( "PTP : Error opening library '%s' v%lu", name, vers );
 						goto bailout;
 					}
 
@@ -190,7 +190,7 @@ PTR ptr;
 
 				if ( ! ifc )
 				{
-					MYERROR( "Library : Error missing interface pointer" );
+					MYERROR( "PTP : Error missing interface pointer" );
 					goto bailout;
 				}
 
@@ -200,13 +200,13 @@ PTR ptr;
 					STR name = OpenList[pos].OS_IFC_NAME;
 					U32 vers = OpenList[pos].OS_IFC_VERS;
 
-					MYINFO( "Library : Getting interface pos #%lu", pos );
+					MYINFO( "PTP : Getting interface pos #%lu", pos );
 
 					ptr = GetInterface( *base, name, vers, NULL );
 
 					if ( ! ptr )
 					{
-						MYERROR( "Library : Error getting interface pos #%lu", pos );
+						MYERROR( "PTP : Error getting interface pos #%lu", pos );
 						goto bailout;
 					}
 
@@ -221,7 +221,7 @@ PTR ptr;
 
 				if ( ! base )
 				{
-					MYERROR( "Library : Error missing class pointer" );
+					MYERROR( "PTP : Error missing class pointer" );
 					goto bailout;
 				}
 
@@ -230,7 +230,7 @@ PTR ptr;
 					// Make sure you have opened Intuition first
 					if ( ! IIntuition )
 					{
-						MYERROR( "Library : Error need Intuition" );
+						MYERROR( "PTP : Error need Intuition" );
 						goto bailout;
 					}
 
@@ -238,13 +238,13 @@ PTR ptr;
 					STR name = OpenList[pos].OS_CLS_NAME;
 					U32 vers = OpenList[pos].OS_CLS_VERS;
 
-					MYINFO( "Library : Opening class '%s'", name );
+					MYINFO( "PTP : Opening class '%s'", name );
 
 					ptr = OpenClass( name, vers, cls );
 
 					if ( ! ptr )
 					{
-						MYERROR( "Library : Error opening class '%s' pos #%lu", name, pos );
+						MYERROR( "PTP : Error opening class '%s' pos #%lu", name, pos );
 						goto bailout;
 					}
 
@@ -255,7 +255,7 @@ PTR ptr;
 
 			default:
 			{
-				MYERROR( "Library : Unknown Resource type (%lu)", OpenList[pos].os_Type );
+				MYERROR( "PTP : Unknown Resource type (%lu)", OpenList[pos].os_Type );
 				goto bailout;
 			}
 		}
@@ -274,7 +274,7 @@ void myCloseResources( void )
 {
 S32 pos;
 
-	MYERROR( "Library : myCloseResources" );
+	MYERROR( "PTP : myCloseResources" );
 
 	// -- Find End of List
 	for( pos=0 ; TRUE ; pos++ )
@@ -291,7 +291,7 @@ S32 pos;
 	while( pos > 2 )
 	{
 		pos--;
-		MYERROR( "Library : Processing : %s", OpenList[pos].os_STR );
+		MYERROR( "PTP : Processing : %s", OpenList[pos].os_STR );
 
 		switch( OpenList[pos].os_Type )
 		{

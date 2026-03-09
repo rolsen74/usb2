@@ -19,23 +19,14 @@
 **  allocate any signals, do it in manager_open (the caller’s process context).
 */
 
-PTR _manager_Init( PTR Dummy UNUSED, PTR SegList, struct ExecBase *mySysBase )
+PTR _man_Init( PTR Dummy UNUSED, PTR SegList, struct ExecBase *mySysBase )
 {
 struct PTPBase *libBase;
 
 	SysBase = (PTR) mySysBase;
 	IExec = (PTR) mySysBase->MainInterface;
 
-	MYDEBUG( "Gadget : _manager_Init" );
-
-	// Make sure we havent started
-	libBase = (PTR) FindName( & mySysBase->LibList, LIBNAME );
-
-	if ( libBase )
-	{
-		MYERROR( "_manager_Init : Library allready loaded" );
-		goto bailout;
-	}
+	MYDEBUG( "PTP : _manager_Init" );
 
 	// Create library, but still not public
 	extern const PTR libInterfaces[];
@@ -48,7 +39,7 @@ struct PTPBase *libBase;
 
 	if ( ! libBase )
 	{
-		MYERROR( "_manager_Init : Failed to create device" );
+		MYERROR( "PTP : _manager_Init : Failed to create device" );
 		goto bailout;
 	}
 
@@ -69,17 +60,17 @@ struct PTPBase *libBase;
 
 	if ( Resources_Init( libBase ))
 	{
-		MYDEBUG( "Gadget : Opening Resources...  Success" );
+		MYDEBUG( "PTP : Opening Resources...  Success" );
 
 		/* Make it public */
 		AddLibrary( (PTR) libBase );
 
 		/* Optional: small startup message */
-		DebugPrintF( "Gadget : Rock'n Roll\n" );
+		DebugPrintF( "PTP : Rock'n Roll\n" );
 	}
 	else
 	{
-		MYERROR( "Gadget : Opening Resources...  Failed" );
+		MYERROR( "PTP : Opening Resources...  Failed" );
 
 		Resources_Free( libBase );
 

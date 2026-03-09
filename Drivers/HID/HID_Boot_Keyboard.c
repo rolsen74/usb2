@@ -24,6 +24,8 @@ U16 key;
 
 	TASK_NAME_ENTER( "HID_Boot_Keyboard : HID_SendRawKey" );
 
+	// --
+
 	Event = & in->Input_Event;
 	Event->ie_NextEvent		= NULL;
 	Event->ie_Class			= IECLASS_RAWKEY;
@@ -65,6 +67,45 @@ U16 key;
 		in->Type.Boot_Keyboard.PrevQual[0] = in->Qualifiers;
 	}
 
+	// --
+
+	TASK_NAME_LEAVE();
+}
+
+// --
+
+SEC_CODE void HID_SendLED( struct USBBase *usbbase, struct intern *in )
+{
+struct USB2_IORequest *ioreq;
+struct USB2_SetupData *sd;
+U16 ifcnr;
+U8 leds;
+
+	// --
+
+	TASK_NAME_ENTER( "HID_SendLED : HID_SendLED" );
+
+	// --
+
+	leds	= in->Type.Boot_Keyboard.Key_LEDs;
+	ifcnr	= in->StartMsg->InterfaceDescriptor->InterfaceNumber;
+
+	sd = in->Res_Control->SetupData;
+	sd->RequestType			= REQTYPE_Write | REQTYPE_Class | REQTYPE_Interface;
+	sd->RequestCode			= REQCODE_Set_Report;
+	sd->Value				= LE_SWAP16( 0x0200 );	// Output Report | ID 0
+	sd->Index				= LE_SWAP16( ifcnr );
+	sd->Length				= LE_SWAP16( 1 );
+
+	ioreq = in->Res_Control->IORequests[0];
+	ioreq->io_Command		= CMD_WRITE;
+	ioreq->io_Data			= & leds;
+	ioreq->io_Length		= 1;
+	ioreq->io_SetupData		= sd;
+	ioreq->io_SetupLength	= sizeof( struct USB2_SetupData );
+
+	IO_DO( ioreq );
+	
 	// --
 
 	TASK_NAME_LEAVE();
@@ -182,9 +223,35 @@ U32 newpos;
 			// No we have handled this one before
 			continue;
 		}
+		
+		// --
+		// not sure this is the best place to handle 'Locks'
+	
+		if ( usbkey == 57 )
+		{
+			// Handle CapsLock... 
+			in->Qualifiers ^= IEQUALIFIER_CAPSLOCK;
+			in->Type.Boot_Keyboard.Key_LEDs ^= HID_LED_CapsLock;
+			HID_SendLED( usbbase, in );
+		}
+	
+		if ( usbkey == 71 )
+		{
+			// Handle ScrollLock
+			in->Type.Boot_Keyboard.Key_LEDs ^= HID_LED_ScrollLock;
+			HID_SendLED( usbbase, in );
+		}
+
+		if ( usbkey == 83 )
+		{
+			// Handle NumLock
+			in->Qualifiers ^= IEQUALIFIER_NUMERICPAD;
+			in->Type.Boot_Keyboard.Key_LEDs ^= HID_LED_NumLock;
+			HID_SendLED( usbbase, in );
+		}
 
 		// Conver USB Keycode to Amiga Keycode
-		amikey = USBKeyMap1[ usbkey ];
+		amikey = ( in->Qualifiers & IEQUALIFIER_NUMERICPAD ) ? USBKeyMap1[ usbkey ] : USBKeyMap2[ usbkey ] ;
 
 		// a Nagative, mean key is not mapped
 		if ( amikey < 0 )
@@ -247,8 +314,7 @@ S16 usbkey;
 		}
 
 		// Map key press to Amiga raw key code
-		#warning fix me -- add num lock support
-		amikey = USBKeyMap1[ usbkey ];
+		amikey = ( in->Qualifiers & IEQUALIFIER_NUMERICPAD ) ? USBKeyMap1[ usbkey ] : USBKeyMap2[ usbkey ] ;
 
 		// a Nagative, mean key is not mapped
 		if ( amikey < 0 )
@@ -412,10 +478,7 @@ S16 amikey;
 	}
 
 	// -1 = Key not Mapped
-	amikey = USBKeyMap1[ repeat ];
-//	key = ( in->Mode.Keyboard.KbdReport[0] & USBHID_BOOTKBD_LEDF_NUMLOCK )
-//	?	USBKeyMap1[ in->Type.Boot_Keyboard.RepeatKey2 ]
-//	:	USBKeyMap2[ in->Type.Boot_Keyboard.RepeatKey2 ];
+	amikey = ( in->Qualifiers & IEQUALIFIER_NUMERICPAD ) ? USBKeyMap1[ repeat ] : USBKeyMap2[ repeat ] ;
 
 	// a Nagative, mean key is not mapped
 	if ( amikey < 0 )

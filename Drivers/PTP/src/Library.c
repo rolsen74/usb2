@@ -14,13 +14,13 @@
 
 static const PTR _manager_Vectors[] =
 {
-	// (PTR) _manager_Obtain,
-	// (PTR) _manager_Release,
-	// (PTR) NULL,
-	// (PTR) NULL,
-	// (PTR) _manager_Open,
-	// (PTR) _manager_Close,
-	// (PTR) _manager_Expunge,
+	(PTR) _man_Obtain,
+	(PTR) _man_Release,
+	(PTR) NULL,
+	(PTR) NULL,
+	(PTR) _man_Open,
+	(PTR) _man_Close,
+	(PTR) _man_Expunge,
 	(PTR) NULL,
 	(PTR) -1
 };
@@ -37,17 +37,15 @@ static const struct TagItem _manager_Tags[] =
 
 static const PTR _main_Vectors[] =
 {
-	// (PTR) _blanker_Obtain,
-	// (PTR) _blanker_Release,
-	// (PTR) _blanker_Expunge,
-	// (PTR) _blanker_Clone,
-	// (PTR) _blanker_Get,
-	// (PTR) _blanker_Set,
-	// (PTR) _blanker_Blank,
+	(PTR) _main_Obtain,
+	(PTR) _main_Release,
+	(PTR) NULL,	// _main_Expunge,
+	(PTR) NULL,	// _main_Clone,
+	(PTR) _main_Driver_Entry,
 	(PTR) -1
 };
 
-const struct TagItem _main_Tags[] =
+static const struct TagItem _main_Tags[] =
 {
 	{ MIT_Name,			(Tag) "main"			},
 	{ MIT_VectorTable,	(Tag) _main_Vectors		},
@@ -87,7 +85,7 @@ static USED const struct Resident lib_res =
 /* rt_Pri		*/			LIBPRI,
 /* rt_Name		*/ (STR)	LIBNAME,
 /* rt_IdString	*/ (STR)	VSTRING,
-/* rt_Init		*/ (PTR)	_manager_Init
+/* rt_Init		*/ (PTR)	_man_Init
 };
 
 // --

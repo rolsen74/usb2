@@ -27,6 +27,7 @@
 // #include <proto/Picasso96API.h>
 // #include <proto/slider.h>
 // #include <proto/space.h>
+#include <proto/usb2.h>
 #include <proto/utility.h>
 
 // #undef __USE_INLINE__
@@ -59,8 +60,11 @@
 #include "inc/Types.h"
 #include "inc/Version.h"
 // --
-#include "inc/Debug.h"
 #include "inc/Base.h"
+#include "inc/Command.h"
+#include "inc/Debug.h"
+#include "inc/FileSystem.h"
+#include "inc/Intern.h"
 // --
 #include "inc/Protos.h"
 // --

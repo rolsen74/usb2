@@ -17,48 +17,58 @@
 
 // --
 // Manager Interface
-// U32 _manager_Obtain( struct LibraryManagerInterface *Self );
-// U32 _manager_Release( struct LibraryManagerInterface *Self );
-// PTR _manager_Open( struct LibraryManagerInterface *Self, U32 version );
-// PTR _manager_Close( struct LibraryManagerInterface *Self );
-// PTR _manager_Expunge( struct LibraryManagerInterface *Self );
-PTR _manager_Init( PTR Dummy, PTR SegList, struct ExecBase *mySysBase );
+U32 _man_Obtain(		struct LibraryManagerInterface *Self );
+U32 _man_Release(		struct LibraryManagerInterface *Self );
+PTR _man_Open(			struct LibraryManagerInterface *Self, U32 version );
+PTR _man_Close(			struct LibraryManagerInterface *Self );
+PTR _man_Expunge(		struct LibraryManagerInterface *Self );
+PTR _man_Init(			PTR Dummy, PTR SegList, struct ExecBase *mySysBase );
 
-// // --
-// // Blanker Interface
-// U32 _blanker_Obtain( struct BlankerModuleIFace *Self );
-// U32 _blanker_Release( struct BlankerModuleIFace *Self );
-// U32	_blanker_Expunge( struct BlankerModuleIFace *Self );
-// PTR _blanker_Clone( struct BlankerModuleIFace *Self );
-// BOOL _blanker_Get( struct BlankerModuleIFace *Self, U32 msgType, U32 *msgData );
-// BOOL _blanker_Set( struct BlankerModuleIFace *Self, U32 msgType, U32 msgData );
-// void _blanker_Blank( struct BlankerModuleIFace *Self );
+// --
+// Main Interface
+U32 _main_Obtain(		struct USB2_DriverIFace *Self );
+U32 _main_Release(		struct USB2_DriverIFace *Self );
+U32 _main_Driver_Entry(	struct USB2_DriverIFace *Self, struct USB2_DriverMessage *msg );
 
 // --
 // Device Resources Functions
-S32 Resources_Init( struct PTPBase *libBase );
-void Resources_Free( struct PTPBase *libBase );
-S32 myOpenResources( int max_libs );
-void myCloseResources( void );
+S32		Resources_Init(		struct PTPBase *libBase );
+void	Resources_Free(		struct PTPBase *libBase );
+S32		myOpenResources(	int max_libs );
+void	myCloseResources(	void );
 
-// // -- Blanker
-// S32 Blanker_Init( struct BlankerData *data );
-// void Blanker_Free( struct BlankerData *data );
-// void Blanker_Render_Main( struct BlankerData *data, struct Screen *scr, struct RastPort *rp, S32 w, S32 h );
-// void Blanker_Render_Preview( struct BlankerData *data );
-// void Blanker_Render_Screen( struct BlankerData *data );
+// --
+// FileSystem
+U32					_fs_Handler(					void );
+S32					_fs_Handler_Init(				struct PTP_FSStruct *fs );
+void				_fs_Handler_Free(				struct PTP_FSStruct *fs );
+void				_fs_Handler_Loop(				struct PTP_FSStruct *fs );
+void				_fs_Handler__FSVector(			struct PTP_FSStruct *fs );
+void				_fs_Handler__Commands(			struct PTP_FSStruct *fs );
+struct FS_ObjNode *	_fs_Node_CreateDir(				struct PTP_FSStruct *fs, S32 *res2, STR oname );
+void				_fs_Node_Delete(				struct PTP_FSStruct *fs, struct FS_ObjNode *node );
+struct FS_ObjNode *	_fs_Node_Locate_Rel(			struct PTP_FSStruct *fs, struct FS_ObjNode **parent, struct FS_ObjLock *lock, int32 follow_links, int32 *res2, STR name );
+struct FS_ObjLock * _fs_Node_NewLock(				struct PTP_FSStruct *fs, struct FS_ObjNode *objnode, int32 *res2, int32 access );
+int32				_fs_Lock_Free(					struct PTP_FSStruct *fs, struct FS_ObjLock *lock );
+void				_fs_Recursive_Change_Update(	struct PTP_FSStruct *fs, struct FS_ObjNode *node );
 
-// // --
-// // GUI
-// S32 GUI_Create( struct BlankerData *data, struct BlankerPrefsWindowSetup *bpws );
-// U32 GUI_Event_Func( struct Hook *hook, struct BlankerModuleIFace *Self, struct BlankerPrefsWinGUIEvent *event );
-// U32 GUI_IDCMP_Func( struct Hook *hook, struct BlankerModuleIFace *Self, struct BlankerPrefsWinIDCMPEvent *event );
-// void GUI_Refresh( struct BlankerData *data );
+int32				_fs__FSDeviceInfoData(			struct FSVP *vp, int32 *res2, struct InfoData *id );
+struct Lock *		_fs__FSDupLock(					struct FSVP *vp, int32 *res2, struct Lock *lockin );
+struct Lock *		_fs__FSDupLockFromFH(			struct FSVP *vp, int32 *res2, struct FileHandle *file );
+int32				_fs__FSExamineDir(				struct FSVP *vp, int32 *res2, struct PRIVATE_ExamineDirContext *ctx );
+struct ExamineData *_fs__FSExamineFile(				struct FSVP *vp, int32 *res2, struct FileHandle *fh );
+struct ExamineData *_fs__FSExamineLock(				struct FSVP *vp, int32 *res2, struct Lock *objLock );
+struct Lock *		_fs__FSLock(					struct FSVP *vp, int32 *res2, struct Lock *rel_lock, CONST_STRPTR name, int32 mode );
+struct Lock *		_fs__FSParentDir(				struct FSVP *vp, int32 *res2, struct Lock *dirlock );
+struct Lock *		_fs__FSParentOfFH(				struct FSVP *vp, int32 *res2, struct FileHandle *file );
+int32				_fs__FSUnLock(					struct FSVP *vp, int32 *res2, struct Lock *lock );
+int32				_fs__FSVolumeInfoData(			struct FSVP *vp, int32 *res2, struct InfoData *info );
 
-// // --
-// // Misc
-// void Settings_Default( struct BlankerData *data );
-// void Settings_Load( struct BlankerData *data, PrefsObject *dict );
-// void Settings_Save( struct BlankerData *data, PrefsObject *dict );
+// --
+// Master
+void	Master_Entry(		void );
+S32		Master_Init(		struct intern *in );
+void	Master_Free(		struct intern *in );
+void	Master_Loop(		struct intern *in );
 
 #endif

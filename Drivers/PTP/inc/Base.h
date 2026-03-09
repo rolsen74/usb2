@@ -19,8 +19,8 @@
 
 struct PTPBase
 {
-	struct Library					lib_Base;
-	PTR								lib_SegList;
+	struct Library		lib_Base;
+	PTR					lib_SegList;
 };
 
 // --
@@ -28,20 +28,15 @@ struct PTPBase
 struct PTPData
 {
 	int	dummy;
-	// struct BlankerRender *			bd_BlankerRender;
-	// U32								bd_BlankingMode;
-	// U32								bd_ScreenMode;
-	// enum ScreenType					bd_ScreenType;
-	// U32								bd_SliderValue;
-	// U32								bd_RefetchSettings;
-	// U32								bd_DoScreenSync;
-	// struct BlankerPrefsWindowInfo	bd_WinInfo;
-	// struct ScreenModeRequester *	bd_ScreenModeRequester;
-	// Object *						bd_MouseObject;
-	// // ---
-	// Object *						Gad_ScreenType;
-	// Object *						Gad_ScreenMode;
-	// Object *						Gad_Slider;
+};
+
+// --
+
+struct TaskStartMsg
+{
+	U32					Result;
+	struct Task *		Parent;
+	U32					Mask;
 };
 
 // --

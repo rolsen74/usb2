@@ -18,8 +18,14 @@
 /***************************************************************************/
 
 #define HID_IOReqCount				3
+#define HID_LED_NumLock				1
+#define HID_LED_CapsLock			2
+#define HID_LED_ScrollLock			4
+#define HID_LED_Compose				8
+#define HID_LED_Kana				16
 
 // --
+
 
 enum HID_Driver_Type
 {
@@ -74,9 +80,10 @@ struct _Boot_Keyboard
 	struct TimeVal					Time_Repeat;
 	struct TimeRequest				Timer_IOReq;
 	struct USB2_MsgPort				Timer_MsgPort;
-	U32		Timer_Added;
+	U16		Timer_Added;
 	S16		PrevCode[2];
 	U16		PrevQual[2];
+	U16		Key_LEDs;
 	S16		Key_Last;		// We want this key to become active
 	S16		Key_Repeat;		// Active key
 };
@@ -121,113 +128,7 @@ struct intern
 		struct _Boot_Keyboard		Boot_Keyboard;
 		struct _Boot_Mouse			Boot_Mouse;
 	} 								Type;
-
-//	struct TimeRequest				Delay_IOReq;
-//	struct USB2_MsgPort				Delay_MsgPort;
-//	struct RealFunctionNode **		PortFunctions;
-//	struct RealFunctionNode *		Function;
-//	struct USB2_HCDNode *			HCDNode;
-//	U32		Ports;
 };
-
-	#if 0
-
-#pragma pack(1)
-
-struct USB2_BootMouse
-{
-    uint8   Buttons;
-    int8    X;
-    int8    Y;
-};
-
-struct USB2_BootKeyboard
-{
-	uint8   Modifier;
-    uint8   reserved;
-	uint8   Keycode[USBKBD_KEYCODEFIELDS];
-};
-
-#pragma pack(0)
-
-struct mouse
-{
-	uint16							Buttons;		// Old State
-};
-
-struct keyboard
-{
-	struct USB2_BootKeyboard			 KeyboardData;
-	struct Preferences				PrefsBuffer;
-
-	struct TimeVal					KbdThreshTime;
-	struct TimeVal					KbdRepeatTime;
-	uint8 *							KbdReport;
-	uint8							KbdPrevCode[2];
-	uint8							KbdPrevQual[2];
-	uint8							KbdRepeatKey;
-	uint8							KbdPad[3];
-};
-
-
-struct hidintern
-{
-	struct USB2_StartupMessage *		 StartMsg;
-	struct RealFunctionNode *		 Function;
-	APTR							HCDNode;
-
-	struct TimeRequest			    TimerIOReq;
-	struct USB2_MsgPort				 TimerMsgPort;
-	U32						    TimerMsgPortBit;
-	int							TimerUsed;
-
-	struct IOStdReq				    InputIOReq;
-	struct USB2_MsgPort				 InputMsgPort;
-	U32					        InputMsgPortBit;
-	struct InputEvent       	    InputEvent;
-	APTR							InputBuffer;
-	U32							InputBufferSize;
-
-	struct RealRegister *		    Register;
-
-	struct USB2_EPResource *    Control_Resource;
-	struct USB2_EPResource *    Interrupt_Resource;
-	struct USB2_InterfaceDescriptor * Interface_Descriptor;
-
-	struct USB2_Header				 Reports;
-
-
-	APTR							ReportBuffer;
-	U32							ReportSize;
-	U32							DriverType;
-
-	// --
-
-	uint16						    ErrorCount;
-	uint16						    Qualifiers;
-
-	int							UsesReportID;
-	int						    ReportMode;
-//--	U32							FreeSignals;
-	S32							retval;
-
-	union
-	{
-		struct mouse    			Mouse;
-		struct keyboard 			Keyboard;
-//		  struct report   			  Report;
-	}								Mode;
-};
-
-struct KeyboardMask
-{
-	uint8	Mask1;
-	uint8	Mask2;
-	uint8	KeyCode;
-	uint8	Pad;
-};
-
-	#endif
 
 extern const struct KeyboardMask KeyboardData[];
 extern const S16 USBNumPadMap[256];
