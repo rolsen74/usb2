@@ -18,8 +18,6 @@ struct RealFunctionNode *fn;
 struct USB2_DriverNode *dn;
 S32 reply;
 
-	#warning Fix me : when we get called, we deadlock on Obtain.. called from Obtain #13
-
 	USBERROR( "__Cmd_Fkt_Detach" );
 
 	reply = FALSE;

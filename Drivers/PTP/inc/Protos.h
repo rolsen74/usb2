@@ -22,7 +22,7 @@
 // PTR _manager_Open( struct LibraryManagerInterface *Self, U32 version );
 // PTR _manager_Close( struct LibraryManagerInterface *Self );
 // PTR _manager_Expunge( struct LibraryManagerInterface *Self );
-// PTR _manager_Init( PTR Dummy, PTR SegList, struct ExecBase *mySysBase );
+PTR _manager_Init( PTR Dummy, PTR SegList, struct ExecBase *mySysBase );
 
 // // --
 // // Blanker Interface
@@ -34,12 +34,12 @@
 // BOOL _blanker_Set( struct BlankerModuleIFace *Self, U32 msgType, U32 msgData );
 // void _blanker_Blank( struct BlankerModuleIFace *Self );
 
-// // --
-// // Device Resources Functions
-// S32 Resources_Init( struct BlankerBase *devBase );
-// void Resources_Free( struct BlankerBase *devBase );
-// S32 myOpenResources( int max_libs );
-// void myCloseResources( void );
+// --
+// Device Resources Functions
+S32 Resources_Init( struct PTPBase *libBase );
+void Resources_Free( struct PTPBase *libBase );
+S32 myOpenResources( int max_libs );
+void myCloseResources( void );
 
 // // -- Blanker
 // S32 Blanker_Init( struct BlankerData *data );

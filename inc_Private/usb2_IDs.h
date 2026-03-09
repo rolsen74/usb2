@@ -40,6 +40,7 @@
 #define ID_USB2_SEMA		0xC09CE5F2		// struct USB2_Semaphore
 #define ID_USB2_SIG			0x756DCC2A		// struct USB2_Signal
 #define ID_USB2_TN			0x3BA9D5E8		// struct USB2_TaskNode
+#define ID_USB2_NN			0xAA1F5CB3		// struct USB2_NotifyNode
 
 #ifdef DO_DEBUG
 #define	ID_IN_MASTER		0x545CCF7B		// Intern struct For Master Task
@@ -53,7 +54,7 @@
 
 #if 0
 
-AA1F5CB3
+
 4A640E26
 32A0DBBA
 F558C6DD
@@ -72,7 +73,6 @@ EACBDCBF
 
 
 #define StructID_LOG    1661
-#define StructID_NFY  	1991	// Notify
 #define StructID_MDN	2442	// Masstorage Device [Unit] Node
 //#define StructID_ENV	  ( (U32)'S'<<24 | (U32)'E'<<16 | (U32)'N'<<8 | (U32)'V'<<0 )
 

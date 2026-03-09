@@ -56,7 +56,10 @@ S32 retval;
 U32 status;
 U32 len;
 
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "OHCI : __is_ED_Finished" );
 
 	retval = TRUE;
@@ -209,7 +212,10 @@ SEC_CODE S32 OHCI_Transfer_Check( struct USB2_HCDNode *hn, struct RealRequest *i
 struct OHCI_ED *ed;
 S32 retval;
 
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "OHCI : OHCI_Transfer_Check" );
 
 	ed = ioreq->req_HCD.OHCI.ED_Header;

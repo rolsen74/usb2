@@ -21,14 +21,19 @@
 
 /***************************************************************************/
 
+#ifndef LE_SWAP16
 #define LE_SWAP16(x)	( (( (x) & 0x00ffU ) << 8 ) \
 						| (( (x) & 0xff00U ) >> 8 ) )
+#endif
 
+#ifndef LE_SWAP32
 #define LE_SWAP32(x)	( (( (x) & 0x000000ffUL ) << 24 ) \
 						| (( (x) & 0x0000ff00UL ) << 8  ) \
 						| (( (x) & 0x00ff0000UL ) >> 8  ) \
 						| (( (x) & 0xff000000UL ) >> 24 ) )
+#endif
 
+#ifndef LE_SWAP64
 #define LE_SWAP64(x)	( (( (x) & 0x00000000000000ffULL ) << 56 ) \
 						| (( (x) & 0x000000000000ff00ULL ) << 40 ) \
 						| (( (x) & 0x0000000000ff0000ULL ) << 24 ) \
@@ -37,10 +42,19 @@
 						| (( (x) & 0x0000ff0000000000ULL ) >> 24 ) \
 						| (( (x) & 0x00ff000000000000ULL ) >> 40 ) \
 						| (( (x) & 0xff00000000000000ULL ) >> 56 ) )
+#endif
 
+#ifndef BE_SWAP16
 #define BE_SWAP16(x)	(x)
+#endif
+
+#ifndef BE_SWAP32
 #define BE_SWAP32(x)	(x)
+#endif
+
+#ifndef BE_SWAP64
 #define BE_SWAP64(x)	(x)
+#endif
 
 #ifndef USB2_ID
 typedef uint64_t		USB2_ID;
@@ -517,7 +531,6 @@ struct USB2_NotifyMessage
 	U16					nm_Command;
 	USB2_ID				nm_ID;
 
-	#if 0
 	union
 	{
 		struct
@@ -548,10 +561,8 @@ struct USB2_NotifyMessage
 			PTR			nm_Data;
 		}				nm_Promote;
 	}					nm_Data;
-	#endif
 };
 
-#if 0
 enum USBNotifyTypes
 {
 	USBNT_Stack = 0,
@@ -572,7 +583,6 @@ enum USBNotifyCommand
 	USBNC_Last
 };
 
-#endif
 /***************************************************************************/
 
 struct USB2_EPResource			// EndPoint Resource
@@ -769,7 +779,23 @@ enum USB2HCDType
 #define USB2Tag_EPRes_AddZeroPacket		( USB2Tag_Dummy + 209 )	 // v1.1  - U32 (BOOL)
 
 // -- + --
+// -- Attribute
+
+#define USB2Tag_Attr_DeviceSize			( USB2Tag_Dummy + 251 )	 // v1.1  - [G.] U32
+#define USB2Tag_Attr_DeviceDesc			( USB2Tag_Dummy + 252 )	 // v1.1  - [G.] struct USB2_Device_Desc
+
+#define USB2Tag_Attr_HUBSize			( USB2Tag_Dummy + 253 )	 // v1.1  - [G.] U32
+#define USB2Tag_Attr_HUBDesc			( USB2Tag_Dummy + 254 )	 // v1.1  - [G.] struct USB2_HUB_Desc
+
+#define USB2Tag_Attr_ConfigSize			( USB2Tag_Dummy + 255 )	 // v1.1  - [G.] U32
+#define USB2Tag_Attr_ConfigDesc			( USB2Tag_Dummy + 256 )	 // v1.1  - [G.] struct USB2_Config_Desc
+
+
+
+
+// -- + --
 // --
+
 
 
 #if 0

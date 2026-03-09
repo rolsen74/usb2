@@ -17,13 +17,16 @@
 
 /****************************************************************************/
 
-#define USB2_Fkt_FindTags(...)			IUSB2->USB2_Fkt_FindTags(__VA_ARGS__)
-#define USB2_Fkt_FindList(x)			IUSB2->USB2_Fkt_FindList((x))
+#define USB2_Attr_Get(x,y,z,q)				IUSB2->USB2_Attr_Get((x),(y),(z),(q))
+#define USB2_Attr_Set(x,y,z,q)				IUSB2->USB2_Attr_Set((x),(y),(z),(q))
 
-#define USB2_Ifc_FindTags(...)		IUSB2->USB2_Ifc_FindTags(__VA_ARGS__)
-#define USB2_Ifc_FindList(x)			IUSB2->USB2_Ifc_FindList((x))
-#define USB2_Ifc_Claim(x,y)			IUSB2->USB2_Ifc_Claim((x),(y))
-#define USB2_Ifc_Declaim(x,y)			IUSB2->USB2_Ifc_Declaim((x),(y))
+#define USB2_Fkt_FindTags(...)				IUSB2->USB2_Fkt_FindTags(__VA_ARGS__)
+#define USB2_Fkt_FindList(x)				IUSB2->USB2_Fkt_FindList((x))
+
+#define USB2_Ifc_FindTags(...)				IUSB2->USB2_Ifc_FindTags(__VA_ARGS__)
+#define USB2_Ifc_FindList(x)				IUSB2->USB2_Ifc_FindList((x))
+#define USB2_Ifc_Claim(x,y)					IUSB2->USB2_Ifc_Claim((x),(y))
+#define USB2_Ifc_Declaim(x,y)				IUSB2->USB2_Ifc_Declaim((x),(y))
 
 #define USB2_Reg_RegisterTags(...)			IUSB2->USB2_Reg_RegisterTags(__VA_ARGS__)
 #define USB2_Reg_RegisterList(x)			IUSB2->USB2_Reg_RegisterList((x))
@@ -33,7 +36,8 @@
 #define USB2_EPRes_ObtainList(x,y)			IUSB2->USB2_EPRes_ObtainList((x),(y))
 #define USB2_EPRes_Release(x)				IUSB2->USB2_EPRes_Release((x))
 
-
+#define USB2_Notify_Add(x,y)				IUSB2->USB2_Notify_Add((x),(y))
+#define USB2_Notify_Remove(x)				IUSB2->USB2_Notify_Remove((x))
 
 	#if 0
 #ifndef EXEC_TYPES_H

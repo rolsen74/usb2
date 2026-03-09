@@ -189,7 +189,7 @@ struct RealRegister *reg;
 
 	if ( fn->fkt_Class == USBCLASS_HUB )
 	{
-		fn->fkt_HUBDescriptor = MEM_ALLOCIOBUFFER( 256, FALSE );
+		fn->fkt_HUBDescriptor = MEM_ALLOCIOBUFFER( 256, TRUE );
 
 		if ( ! fn->fkt_HUBDescriptor )
 		{

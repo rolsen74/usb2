@@ -55,7 +55,10 @@ struct EHCI_QH *start;
 struct EHCI_QH *last;
 struct EHCI_QH *qh;
 
-//	struct USBBase *usbbase = hn->hn_USBBase;
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "EHCI : EHCI_Control_Add" );
 //	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Add : IOReq %p\n", ioreq );
 

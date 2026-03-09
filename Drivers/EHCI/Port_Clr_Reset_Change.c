@@ -53,7 +53,10 @@ SEC_CODE S32 EHCI_Port_Clr_Reset_Chg( struct USB2_HCDNode *hn, U32 port )
 {
 S32 err;
 
-//	struct USBBase *usbbase = hn->hn_USBBase;
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	USBDEBUG( "EHCI_Port_Clr_Reset_Chg( Port #%lu )", port );
 
 	if (( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ))

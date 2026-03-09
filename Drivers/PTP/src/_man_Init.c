@@ -21,7 +21,7 @@
 
 PTR _manager_Init( PTR Dummy UNUSED, PTR SegList, struct ExecBase *mySysBase )
 {
-struct LibBase *libBase;
+struct PTPBase *libBase;
 
 	SysBase = (PTR) mySysBase;
 	IExec = (PTR) mySysBase->MainInterface;
@@ -40,7 +40,7 @@ struct LibBase *libBase;
 	// Create library, but still not public
 	extern const PTR libInterfaces[];
 	libBase = (PTR) CreateLibraryTags(
-		CLT_DataSize, sizeof( struct LibBase ),
+		CLT_DataSize, sizeof( struct PTPBase ),
 		CLT_Interfaces,	libInterfaces,
 		CLT_NoLegacyIFace, TRUE,
 		TAG_END
@@ -52,13 +52,13 @@ struct LibBase *libBase;
 		goto bailout;
 	}
 
-	libBase->lib_Base.cl_Lib.lib_Node.ln_Type	= NT_LIBRARY;
-	libBase->lib_Base.cl_Lib.lib_Node.ln_Pri	= LIBPRI;
-	libBase->lib_Base.cl_Lib.lib_Node.ln_Name	= LIBNAME;
-	libBase->lib_Base.cl_Lib.lib_Flags			= LIBF_SUMUSED|LIBF_CHANGED;
-	libBase->lib_Base.cl_Lib.lib_Version		= VERSION;
-	libBase->lib_Base.cl_Lib.lib_Revision		= REVISION;
-	libBase->lib_Base.cl_Lib.lib_IdString		= VSTRING;
+	libBase->lib_Base.lib_Node.ln_Type	= NT_LIBRARY;
+	libBase->lib_Base.lib_Node.ln_Pri	= LIBPRI;
+	libBase->lib_Base.lib_Node.ln_Name	= LIBNAME;
+	libBase->lib_Base.lib_Flags			= LIBF_SUMUSED|LIBF_CHANGED;
+	libBase->lib_Base.lib_Version		= VERSION;
+	libBase->lib_Base.lib_Revision		= REVISION;
+	libBase->lib_Base.lib_IdString		= VSTRING;
 	libBase->lib_SegList = SegList;
 
 	/*

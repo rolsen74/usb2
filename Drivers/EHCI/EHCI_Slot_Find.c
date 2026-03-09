@@ -61,7 +61,10 @@ U32 pos;
 U32 bw;
 U32 l;
 
-//	struct USBBase *usbbase = hn->hn_USBBase;
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "EHCI : EHCI_Slot_Find" );
 
 	// -- Find Level

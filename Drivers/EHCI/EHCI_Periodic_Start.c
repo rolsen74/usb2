@@ -53,7 +53,10 @@ SEC_CODE void EHCI_Periodic_Start( struct USB2_HCDNode *hn )
 {
 U32 val;
 
-//	struct USBBase *usbbase = hn->hn_USBBase;
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "EHCI : EHCI_Periodic_Start" );
 
 	val = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );

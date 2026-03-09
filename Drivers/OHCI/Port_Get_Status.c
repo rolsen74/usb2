@@ -58,7 +58,10 @@ SEC_CODE U32 OHCI_Port_Get_Status( struct USB2_HCDNode *hn, U32 port )
 U32 status;
 U32 retval;
 
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	USBDEBUG( "OHCI : PORT_Get_Status( Port %ld )", port );
 
 	if (( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ))

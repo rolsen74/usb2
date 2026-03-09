@@ -48,21 +48,22 @@ enum MEMID
 	MEMID_OHCI_TD,
 	MEMID_OHCI_HCCA,
 
+	// Notify
+	MEMID_NotifyNode,
+	MEMID_NotifyMessage,
+
 	#if 0
 
 	MEMID_UHCI_QH,
 	MEMID_UHCI_QTD,
 
 	MEMID_OHCI_ITD,
-	MEMID_OHCI_HCCA,
 
 	MEMID_EHCI_ITD,
 
 
 	MEMID_CommandMessage,
 	MEMID_Log,
-	MEMID_NotifyNode,
-	MEMID_NotifyMessage,
 
 //	MEMID_MSDCommand,
 	#endif

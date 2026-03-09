@@ -25,6 +25,8 @@ struct intern
 
 	// -- Command MsgPort for Extern Commands
 	struct USB2_MsgPort		Cmd_MsgPort;
+	// -- Notify Replys
+	struct USB2_MsgPort		Notify_ReplyMsgPort;
 
 	// -- (Sub) Tasks Shutdown -- TaskMsg's
 	struct USB2_Header		Shutdown_TM_List;

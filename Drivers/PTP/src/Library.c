@@ -87,7 +87,7 @@ static USED const struct Resident lib_res =
 /* rt_Pri		*/			LIBPRI,
 /* rt_Name		*/ (STR)	LIBNAME,
 /* rt_IdString	*/ (STR)	VSTRING,
-/* rt_Init		*/ (PTR)	NULL //_manager_Init
+/* rt_Init		*/ (PTR)	_manager_Init
 };
 
 // --

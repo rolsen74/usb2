@@ -55,7 +55,10 @@ U32 val;
 U32 adr;
 S32 err;
 
-//	struct USBBase *usbbase = hn->hn_USBBase;
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	USBDEBUG( "EHCI_Port_Clr_Connect_Chg( Port #%lu )", port );
 
 	if (( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ))

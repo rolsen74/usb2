@@ -61,6 +61,7 @@
 #include "inc_Private/HID.h"
 #include "inc_Private/HUB.h"
 #include "inc_Private/Memory.h"
+#include "inc_Private/Notify.h"
 #include "inc_Private/IORequest.h"
 #include "inc_Private/Register.h"
 #include "inc_Private/Device.h"

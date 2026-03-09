@@ -40,6 +40,7 @@ CFLAGS		+= -W
 CFLAGS		+= -Wall
 CFLAGS		+= -MMD
 CFLAGS		+= -MP
+CFLAGS		+= -mcrt=newlib
 
 # Print Error Messages on serial
 #CFLAGS		+= -DDO_ERROR
@@ -51,7 +52,7 @@ CFLAGS		+= -MP
 #CFLAGS		+= -DDO_DEBUG
 
 # Linker Flags
-LDFLAGS		:= 
+LDFLAGS		:= -mcrt=newlib
 
 # Link Libraries
 LIBS		:=

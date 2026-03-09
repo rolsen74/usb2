@@ -78,7 +78,7 @@ U32 val;
 			break;
 		}
 
-		MISC_MICRODELAY(10);
+		MISC_MICRODELAY( 10 * 1000 );
 		timeout--;
 	}
 

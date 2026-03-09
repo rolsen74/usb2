@@ -31,6 +31,9 @@
 #include "_main_Obtain.c"
 #include "_main_Release.c"
 
+#include "_main_Attr_Get.c"
+#include "_main_Attr_Set.c"
+
 #include "_main_Fkt_Find.c"
 
 #include "_main_Ifc_Find.c"
@@ -43,6 +46,9 @@
 #include "_main_EPRes_Obtain.c"
 #include "_main_EPRes_Release.c"
 #include "_main_EPRes_Destall.c"
+
+#include "_main_Notify_Add.c"
+#include "_main_Notify_Remove.c"
 
 // --
 
@@ -78,8 +84,8 @@ SEC_RODATA static const PTR main_v1_vectors[] =
 	(PTR) NULL,
 	(PTR) NULL,
 
-	(PTR) NULL,		// Get_Attr
-	(PTR) NULL,		// Set_Attr
+	(PTR) _main_Attr_Get,
+	(PTR) _main_Attr_Set,
 
 	(PTR) _main_Fkt_FindTags,
 	(PTR) _main_Fkt_FindList,
@@ -97,6 +103,9 @@ SEC_RODATA static const PTR main_v1_vectors[] =
 	(PTR) _main_EPRes_ObtainList,
 	(PTR) _main_EPRes_Release,
 	(PTR) _main_EPRes_Destall,
+
+	(PTR) _main_Notify_Add,
+	(PTR) _main_Notify_Remove,
 
 	(PTR) -1
 };

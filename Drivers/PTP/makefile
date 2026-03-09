@@ -23,6 +23,7 @@ CFLAGS		+= -I.
 CFLAGS		+= -W
 CFLAGS		+= -Wall
 CFLAGS		+= -D__USE_INLINE__
+CFLAGS		+= -mcrt=newlib
 
 # Save .map file with compile informations (optional)
 CFLAGS		+= -Wl,--cref,-M,-Map=$(TARGET).map
@@ -45,6 +46,7 @@ CFLAGS		+= -DDO_DEBUG
 
 # Linker Flags
 LDFLAGS		:= -nostartfiles
+LDFLAGS		+= -mcrt=newlib
 
 # Link Libraries
 LIBS		:=
@@ -118,7 +120,7 @@ endif
 # SRCS		+= src/_man_Open.c
 # SRCS		+= src/_man_Close.c
 # SRCS		+= src/_man_Expunge.c
-# SRCS		+= src/_man_Init.c
+SRCS		+= src/_man_Init.c
 
 # SRCS		+= src/_blanker_Obtain.c
 # SRCS		+= src/_blanker_Release.c
@@ -128,9 +130,9 @@ endif
 # SRCS		+= src/_blanker_Set.c
 # SRCS		+= src/_blanker_Blank.c
 
-# SRCS		+= src/Resources.c
-# SRCS		+= src/Resources_Init.c
-# SRCS		+= src/Resources_Free.c
+SRCS		+= src/Resources.c
+SRCS		+= src/Resources_Init.c
+SRCS		+= src/Resources_Free.c
 
 SRCS		+= src/Debug.c
 SRCS		+= src/Library.c

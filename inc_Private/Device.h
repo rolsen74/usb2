@@ -69,8 +69,10 @@ struct USBBase
 //	struct USB2_Semaphore			usb_MSDSemaphore;
 //	struct USB2_Header				usb_MSDDiskChangeList;
 
-	USB2_ID							usb_NotifyID;
-	struct USB2_Semaphore			usb_NotifySemaphore;
+	USB2_ID							usb_Notify_ID;
+	struct USB2_Header				usb_Notify_Header;
+	struct USB2_Semaphore			usb_Notify_Semaphore;
+	struct USB2_MsgPort * 			usb_Notify_ReplyMsgPort;
 
 	struct TimerIFace *				usb_ITimer;
 	struct Library *				usb_TimerBase;

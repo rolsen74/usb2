@@ -52,7 +52,7 @@
 SEC_CODE S32 OHCI_Bulk_Build( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
 struct USB2_EndPointNode *ep;
-struct RealFunctionNode *fn;
+//struct RealFunctionNode *fn;
 struct OHCI_TD *dummy;
 struct OHCI_TD *data;
 struct OHCI_TD *last;
@@ -67,10 +67,13 @@ PTR buf;
 U32 dt;
 U32 l;
 	
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "OHCI : OHCI_Bulk_Build" );
 
-	fn			= ioreq->req_Function;
+//	fn			= ioreq->req_Function;
 	ep			= ioreq->req_EndPoint;
 
 	handled		= TRUE;

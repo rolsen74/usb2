@@ -21,7 +21,7 @@
 #include <proto/dos.h>
 #include <proto/exec.h>
 // #include <proto/graphics.h>
-// #include <proto/intuition.h>
+#include <proto/intuition.h>
 // #include <proto/label.h>
 // #include <proto/layout.h>
 // #include <proto/Picasso96API.h>
@@ -51,7 +51,8 @@
 
 #include <stdarg.h>
 #include <stdint.h>
-// #include <string.h>
+#include <string.h>
+#include <limits.h>
 // #include <stdio.h>
 
 // --

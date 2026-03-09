@@ -65,7 +65,10 @@ U32 val;
 U32 len;
 PTR buf;
 
-//	struct USBBase *usbbase = hn->hn_USBBase;
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "EHCI : EHCI_Control_Build" );
 //	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Build : IOReq %p\n", ioreq );
 

@@ -57,7 +57,10 @@ U32 status;
 U32 len;
 U32 l;
 
-//	struct USBBase *usbbase = hn->hn_USBBase;
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "EHCI : __is_QH_Finished" );
 
 	retval = TRUE;
@@ -194,7 +197,10 @@ SEC_CODE S32 EHCI_Transfer_Check( struct USB2_HCDNode *hn, struct RealRequest *i
 struct EHCI_QH *qh;
 S32 retval;
 
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "EHCI : EHCI_Transfer_Check" );
 
 	qh = ioreq->req_HCD.EHCI.QH_Header;

@@ -26,8 +26,8 @@ struct USB2_IFace
 	void							APICALL (*Expunge)(struct USB2_IFace *Self);
 	struct Interface *				APICALL (*Clone)(struct USB2_IFace *Self);
 
-	U32								APICALL (*USB2_Attr_Get)(struct USB2_IFace *Self, U64 id, U32 tag, PTR buffer, U32 buffsersize );
-	U32								APICALL (*USB2_Attr_Set)(struct USB2_IFace *Self, U64 id, PTR storage );
+	U32								APICALL (*USB2_Attr_Get)(struct USB2_IFace *Self, USB2_ID id, U32 tag, PTR buffer, U32 buffsersize );
+	U32								APICALL (*USB2_Attr_Set)(struct USB2_IFace *Self, USB2_ID id, U32 tag, PTR buffer, U32 buffsersize );
 
 	struct USB2_Function *			APICALL (*USB2_Fkt_FindTags)(struct USB2_IFace *Self, ... );
 	struct USB2_Function *			APICALL (*USB2_Fkt_FindList)(struct USB2_IFace *Self, struct TagItem *taglist );
@@ -45,6 +45,9 @@ struct USB2_IFace
 	struct USB2_EPResource *		APICALL (*USB2_EPRes_ObtainList)(struct USB2_IFace *Self, struct USB2_Register *reg, struct TagItem taglist );
 	void							APICALL (*USB2_EPRes_Release)(struct USB2_IFace *Self, struct USB2_EPResource *epr );
 	U32								APICALL (*USB2_EPRes_Destall)(struct USB2_IFace *Self, struct USB2_EPResource *epr );
+
+	PTR								APICALL (*USB2_Notify_Add)(struct USB2_IFace *Self, U32 type, struct MsgPort *mp );
+	void							APICALL (*USB2_Notify_Remove)(struct USB2_IFace *Self, PTR notify );
 };
 
 /***************************************************************************/
@@ -98,8 +101,6 @@ struct USB2_IFace
 	U32								APICALL (*DestallEndPoint)(struct USB2_IFace *Self, struct USB2_EPResource * epr);
 	U32								APICALL (*GetEndPointNr)(struct USB2_IFace *Self, struct USB2_EPResource * epr);
 	struct USB2_Descriptor *			APICALL (*GetNextDescriptor)(struct USB2_IFace *Self, struct USB2_Descriptor * desc);
-	PTR							APICALL (*AddNotify)(struct USB2_IFace *Self, U32 type, struct MsgPort * mp);
-	void APICALL (*RemNotify)(struct USB2_IFace *Self, PTR notify);
 	U32 APICALL (*GetMemoryInfoList)(struct USB2_IFace *Self, U32 nr, struct TagItem * tags);
 	U32 APICALL (*GetMemoryInfoTags)(struct USB2_IFace *Self, U32 nr, ...);
 	U32 APICALL (*Stack_GetAttribute)(struct USB2_IFace *Self, uint64 id, U32 tag, PTR buffer, U32 buffsersize);

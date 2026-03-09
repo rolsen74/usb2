@@ -56,7 +56,10 @@ struct EHCI_QH *sqh;
 struct EHCI_QH *new;
 U32 slot;
 
-//	struct USBBase *usbbase = hn->hn_USBBase;
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 //	USBDEBUG( "EHCI_Interrupt_Add : IOReq %p", ioreq );
 
 //	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Interrupt_Add\n" );

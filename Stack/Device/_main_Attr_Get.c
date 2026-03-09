@@ -12,9 +12,158 @@
 
 // --
 
-SEC_CODE static U32 _main_Attr_Get( struct USB2_IFace *Self, U64 id, U32 tag, PTR buffer, U32 buffsersize )
+static struct RealFunctionNode *Find_Function( struct USBBase *usbbase, USB2_ID id );
+
+// --
+
+SEC_CODE static U32 _main_Attr_Get( struct USB2_IFace *Self, USB2_ID id, U32 tag, PTR buffer, U32 buffersize )
 {
-	return( 0 );
+struct RealFunctionNode *fn;
+struct USBBase *usbbase;
+U32 value;
+U32 len;
+PTR mem;
+
+	len = 0;
+	mem = NULL;
+
+	usbbase = (PTR) Self->Data.LibBase;
+
+	switch( tag )
+	{
+		case USB2Tag_Attr_DeviceSize:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( fn )	// Just Validating ID
+			{
+				value = sizeof( struct USB2_Device_Desc );
+				len	= sizeof( U32 );
+				mem = & value ;
+			}
+			break;
+		}
+
+		case USB2Tag_Attr_DeviceDesc:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( fn )
+			{
+				len	= sizeof( struct USB2_Device_Desc );
+				mem = fn->fkt_DeviceDescriptor;
+			}
+			break;
+		}
+
+		case USB2Tag_Attr_HUBSize:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( fn )	// Just Validating ID
+			{
+				value = sizeof( struct USB2_HUB_Desc );
+				len	= sizeof( U32 );
+				mem = & value ;
+			}
+			break;
+		}
+
+		case USB2Tag_Attr_HUBDesc:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( fn )
+			{
+				len	= sizeof( struct USB2_HUB_Desc );
+				mem = fn->fkt_HUBDescriptor;
+			}
+			break;
+		}
+
+		case USB2Tag_Attr_ConfigSize:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( fn )
+			{
+				value = fn->fkt_Config_Desc_Size;
+				len	= sizeof( U32 );
+				mem = & value ;
+			}
+			break;
+		}
+
+		case USB2Tag_Attr_ConfigDesc:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( fn )
+			{
+				len	= fn->fkt_Config_Desc_Size;
+				mem = fn->fkt_Config_Desc_Buf;
+			}
+			break;
+		}
+
+		default:
+		{
+			break;
+		}
+	}
+
+	usbbase->usb_IExec->DebugPrintF( "Attr_Get: mem %p, buf %p, size %ld, len %ld\n", mem, buffer, buffersize, len );
+
+	if (( mem ) && ( buffer ))
+	{
+		len = MIN( buffersize, len );
+
+		if ( len )
+		{
+			MEM_COPY( mem, buffer, len );
+		}
+	}
+	else
+	{
+		len = 0;
+	}
+
+	return( len );
+}
+
+// --
+
+static struct RealFunctionNode *Find_Function( struct USBBase *usbbase, USB2_ID id )
+{
+struct RealFunctionNode *fn;
+struct USB2_Node *n;
+
+	SEMAPHORE_OBTAIN( & usbbase->usb_Fkt_Semaphore );
+
+	fn = NULL;
+
+	n = usbbase->usb_Fkt_Header.uh_Tail;
+
+	while( n )
+	{
+		fn = n->un_Data;
+
+		if (( fn ) && ( fn->fkt_NotifyID == id ))
+		{
+			break;
+		}
+		else
+		{
+			n = n->un_Prev;
+		}
+	}
+
+	if ( ! fn )
+	{
+		SEMAPHORE_RELEASE( & usbbase->usb_Fkt_Semaphore );
+	}
+
+	return(	fn );
 }
 
 // --
@@ -350,33 +499,6 @@ struct USB2_HCDNode *hcd;
 	return(	hcd );
 }
 
-static struct USB2_FunctionNode *Find_Function( struct USBBase *usbbase, uint64 id )
-{
-struct USB2_FunctionNode *fkt;
-
-	SEMAPHORE_OBTAIN( &usbbase->usb_USBFunctionSemaphore );
-
-	fkt = usbbase->usb_USBFunctionHeader.uh_Head;
-
-	while( fkt )
-	{
-		if ( fkt->fkt_NotifyID == id )
-		{
-			break;
-		}
-		else
-		{
-			fkt = fkt->fkt_Node.un_Next;
-		}
-	}
-
-	if ( ! fkt )
-	{
-		SEMAPHORE_RELEASE( &usbbase->usb_USBFunctionSemaphore );
-	}
-
-	return(	fkt );
-}
 
 static struct USB2_InterfaceNode *Find_Interface( struct USBBase *usbbase, uint64 id )
 {

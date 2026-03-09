@@ -40,7 +40,9 @@ S32 retval;
 		MSGPORT_REINIT( & in->Cmd_MsgPort );
 	
 		MSGPORT_REINIT( & in->Tick_MsgPort );
-		
+
+		MSGPORT_REINIT( & in->Notify_ReplyMsgPort );
+
 		IExec->Enable();
 	}
 	else
@@ -57,6 +59,8 @@ S32 retval;
 			goto bailout;
 		}
 
+		// --
+
 		if ( ! MSGPORT_INIT( & in->Cmd_MsgPort ))
 		{
 			USBERROR( "__myTask_Def_Init (Master) : 3 : Error" );
@@ -64,6 +68,16 @@ S32 retval;
 		}
 
 		usbbase->usb_Master_MsgPort = & in->Cmd_MsgPort;
+
+		// --
+
+		if ( ! MSGPORT_INIT( & in->Notify_ReplyMsgPort ))
+		{
+			USBERROR( "__myTask_Def_Init (Master) : 3.2 : Error" );
+			goto bailout;
+		}
+
+		usbbase->usb_Notify_ReplyMsgPort = & in->Notify_ReplyMsgPort;
 
 		// -- Timer Tick
 

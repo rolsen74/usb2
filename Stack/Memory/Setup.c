@@ -47,6 +47,8 @@ static const struct myMemList TheMemList[MEMID_Last] =
 	[MEMID_HCD_4k]				= { .Max = 25, .Pre = 0, .Align = 1024 * 4, .Size = 1024 * 4 },
 	// There are not really an alignment requirement, but we need to enable alignment with a x>1 value
 	[MEMID_USBSetupData]		= { .Max = 25, .Pre = 0, .Align = 2, .Size = sizeof( struct RealSetupData ) },
+	[MEMID_NotifyNode]			= { .Max = 25, .Pre = 0, .Align = 1, .Size = sizeof( struct USB2_NotifyNode ) },
+	[MEMID_NotifyMessage]		= { .Max = 25, .Pre = 0, .Align = 1, .Size = sizeof( struct USB2_NotifyMessage ) },
 };
 
 // --
@@ -82,6 +84,11 @@ SEC_RWDATA char *idnames[MEMID_Last] =
 	[MEMID_OHCI_ED]					= "MEMID_OHCI_ED",
 	[MEMID_OHCI_TD]					= "MEMID_OHCI_TD",
 	[MEMID_OHCI_HCCA]				= "MEMID_OHCI_HCCA",
+
+	// Notify
+	[MEMID_NotifyNode]				= "MEMID_NotifyNode",
+	[MEMID_NotifyMessage]			= "MEMID_NotifyMessage",
+
 };
 
 SEC_CODE S32 __Memory_Setup( struct USBBase *usbbase )

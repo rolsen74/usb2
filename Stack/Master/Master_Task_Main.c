@@ -109,7 +109,11 @@ U32 wait;
 		// Tick Timer
 		wait |= in->Tick_MsgPort.ump_Signal.sig_Signal_Mask;
 
+		// Notify Reply
+		wait |= in->Notify_ReplyMsgPort.ump_Signal.sig_Signal_Mask;
+
 		mask  = TASK_WAIT( wait );
+
 
 		/*
 		** Check Flags
@@ -185,6 +189,24 @@ U32 wait;
 		{
 			USBDEBUG( "__myTask_Main (Master)   : Got : Cmd_MsgPort" );
 			myHandle_Cmds( usbbase, in );
+		}
+
+		// Notify Reply
+		if ( mask & in->Notify_ReplyMsgPort.ump_Signal.sig_Signal_Mask )
+		{
+			USBDEBUG( "__myTask_Main (Master)   : Got : Notify_Reply" );
+
+			while( TRUE )
+			{
+				PTR msg = MSGPORT_GETMSG( & in->Notify_ReplyMsgPort );
+
+				if ( ! msg )
+				{
+					break;
+				}
+
+				MEMORY_FREE( MEMID_NotifyMessage, msg, 0 );
+			}
 		}
 	}
 

@@ -66,7 +66,10 @@ U32 dt;
 U32 l;
 U8 *buf;
 
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "EHCI : EHCI_Interrupt_Build" );
 
 //	fn			= ioreq->req_Function;

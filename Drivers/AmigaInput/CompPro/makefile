@@ -37,9 +37,10 @@ CFLAGS		+= -W
 CFLAGS		+= -Wall
 CFLAGS		+= -MMD
 CFLAGS		+= -MP
+CFLAGS		+= -mcrt=newlib
 
 # Linker Flags
-LDFLAGS		:= 
+LDFLAGS		:= -mcrt=newlib
 
 # Link Libraries
 LIBS		:=

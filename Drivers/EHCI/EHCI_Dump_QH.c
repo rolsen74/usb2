@@ -57,7 +57,10 @@ U32 endp, endphub;
 U32 stat;
 STR txt;
 
-//	struct USBBase *usbbase = hn->hn_USBBase;
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "EHCI : EHCI_Dump_QH" );
 
 	IExec = hn->hn_USBBase->usb_IExec;

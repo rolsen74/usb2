@@ -55,7 +55,10 @@ S32 retval;
 U32 desca;
 U32 ports;
 
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
+
 	TASK_NAME_ENTER( "OHCI : OHCI_Chip_Preinit" );
 
 	retval = FALSE;
