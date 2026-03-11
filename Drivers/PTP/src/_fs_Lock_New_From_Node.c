@@ -19,8 +19,8 @@
 **  Note: Directories must only be shared locks no matter what is requested.  cjw.
 */
 
-struct FS_ObjLock *_fs_Node_NewLock(
-	struct PTP_FSStruct *fs,
+struct FS_ObjLock *_fs_Lock_New_From_Node(
+	struct FS_Struct *fs,
 	struct FS_ObjNode *objnode,
 	int32 *res2,
 	int32 access )
@@ -29,6 +29,8 @@ struct FS_ObjLock *retval;
 struct FS_ObjLock *lock;
 struct FS_ObjLock *ic1;
 U32 dostype;
+
+	MYINFO( "PTP-FS : _fs_Lock_New_From_Node" );
 
 	retval = NULL;
 
@@ -42,7 +44,7 @@ U32 dostype;
 	**  Directories are always SHARED, regardless of request.
 	*/
 
-	if ( objnode->Type == FSO_TYPE_DIRECTORY )
+	if ( objnode->on_Type == FSO_TYPE_DIRECTORY )
 	{
 		access = SHARED_LOCK;
 	}
@@ -127,7 +129,7 @@ U32 dostype;
 	** May also be nodelist.
 	*/
 	
-	lock->Current_Block = (PTR) GetHead( & objnode->Content_List );
+	lock->Current_Block = (PTR) GetHead( & objnode->on_Content_List );
 
 	/*
 	** For application compatibility and for obvious speed reasons,

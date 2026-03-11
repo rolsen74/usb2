@@ -14,7 +14,7 @@
 
 SEC_CODE static void __myIFC_Entry( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
 {
-struct USB2_DriverIFace *ifc;
+struct USB2DriverIFace *ifc;
 struct USB2_DriverNode *dn;
 PTR base;
 S32 proc;
@@ -50,11 +50,11 @@ S32 old;
 
 			base = MISC_OPENLIBRARY( dn->dn_Filename, 0 );
 
-//			USBERROR( "base : %p", base );
+			USBERROR( "base : %p", base );
 
 			ifc	 = MISC_OBTAININTERFACE( base, "main", 1 );
 
-//			USBERROR( "ifc  : %p", ifc );
+			USBERROR( "ifc  : %p", ifc );
 
 			MISC_SETPROCWINDOW( proc );
 
@@ -128,6 +128,7 @@ U32 retval;
 //		goto bailout;
 //	}
 
+	dn->dn_Message.rdm_Public.IUSB2 = usbbase->usb_IUSB2;
 	dn->dn_Message.rdm_Public.Function = (PTR) fn;
 	dn->dn_Message.rdm_Public.ConfigDescriptors = (PTR) fn->fkt_Config_Desc_Buf;
 	

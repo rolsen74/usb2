@@ -17,10 +17,22 @@
 
 // --
 
+struct CameraInfoNode
+{
+	struct Node			cin_Node;				// Node used by FileSystem
+	STR					cin_Name;				// Camera Node
+	struct MsgPort *	cin_MsgPort;			// USB Cmd MsgPort
+	struct FS_ObjNode *	cin_DirNode;
+};
+
+// --
+
 struct CommandMessage
 {
 	struct Message				cm_Message;
 	U32							cm_Command;
+	struct CameraInfoNode *		cm_InfoNode;
+
 	// uint16						cm_Sender;
 	// U32			            cm_Result;
 	// struct CameraNode *         cm_Camera;
@@ -75,12 +87,12 @@ struct CommandMessage
 
 // Commands
 
-// enum
-// {
-// 	// Common Commands
+enum
+{
+	// Common Commands
 
-// 	CMD_Camera_Added,
-// 	CMD_Camera_Removed,
+	CMD_Camera_Added,
+	CMD_Camera_Removed,
 // 	CMD_Camera_Storage_Added,
 // 	CMD_Camera_Storage_Removed,
 // 	CMD_Camera_File_Added,
@@ -117,7 +129,7 @@ struct CommandMessage
 // 	// Master Commands
 
 // 	MSTCMD_Log_Message,
-// };
+};
 
 // --
 

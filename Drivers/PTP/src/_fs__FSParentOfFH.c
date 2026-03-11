@@ -14,7 +14,7 @@
 
 struct Lock *_fs__FSParentOfFH( struct FSVP *vp, int32 *res2, struct FileHandle *file )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 struct FS_ObjLock *lock;
 struct FS_ObjNode *node;
 struct Lock *retval;
@@ -37,11 +37,11 @@ struct Lock *retval;
 
 			if ( node )
 			{
-				node = node->Parent_dir;
+				node = node->on_Parent_dir;
 
 				if ( node )
 				{
-					retval = (PTR) _fs_Node_NewLock( fs, node, res2, SHARED_LOCK );
+					retval = (PTR) _fs_Lock_New_From_Node( fs, node, res2, SHARED_LOCK );
 				}
 			}
 		}

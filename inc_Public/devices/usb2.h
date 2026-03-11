@@ -497,6 +497,7 @@ struct USB2_DriverMessage
 	U16								VendorID;
 	U16								DeviceID;
 	U32								DriverQuirks;
+	struct USB2IFace *				IUSB2;
 	struct USB2_Function *			Function;
 	struct USB2_Interface *			Interface;
 	struct USB2_Descriptor *		ConfigDescriptors;
@@ -596,6 +597,7 @@ struct USB2_EPResource			// EndPoint Resource
 	PTR *						Buffers;
 	U32							BufferSize;
 	struct USB2_SetupData *		SetupData;
+	U32							EndPointMax;		// EndPoint Max Packet size
 };
 
 /***************************************************************************/
@@ -604,8 +606,7 @@ struct USB2_Register
 {
 	// Stack Version 1.1
 
-	struct MsgPort				Stack_MsgPort;
-	U16							Stack_MsgPortPad;
+	struct MsgPort *			Stack_MsgPort;
 	U32							Stack_MsgPortBit;
 
 	struct USB2_EPResource *	Res_Control;

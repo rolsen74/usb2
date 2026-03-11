@@ -56,6 +56,7 @@ struct LayersIFace *			ILayers				= NULL;
 struct UtilityIFace *			IUtility			= NULL;
 // struct P96IFace *			IP96				= NULL;
 // struct PrefsObjectsIFace *	IPrefsObjects 		= NULL;
+struct USB2IFace *				IUSB2				= NULL;			// Set else where
 
 // -- 
 

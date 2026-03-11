@@ -15,7 +15,7 @@ struct MsgPort *			USB2MsgPort				= NULL;
 U32							USB2MsgPortBit			= 0;
 struct IORequest *			USB2IOReq				= NULL;
 struct Device *				USB2Base				= NULL;
-struct USB2_IFace *			IUSB2					= NULL;
+struct USB2IFace *			IUSB2					= NULL;
 // --
 static struct MsgPort *		USBNotifyMsgPort		= NULL;
 static PTR					USBHCDNotify			= NULL;

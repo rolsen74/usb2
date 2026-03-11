@@ -12,7 +12,7 @@
 
 // --
 
-void _fs_Handler__FSVector( struct PTP_FSStruct *fs )
+void _fs_Handler__FSVector( struct FS_Struct *fs )
 {
 struct DosPacket *dp;
 struct Message *msg;

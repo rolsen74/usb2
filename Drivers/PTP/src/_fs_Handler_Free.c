@@ -12,7 +12,7 @@
 
 // --
 
-void _fs_Handler_Free( struct PTP_FSStruct *fs )
+void _fs_Handler_Free( struct FS_Struct *fs )
 {
 	if ( fs->fs_DeviceNode )
 	{
@@ -38,10 +38,10 @@ void _fs_Handler_Free( struct PTP_FSStruct *fs )
 		fs->fs_RootNode = NULL;
 	}
 
-	if ( fs->fs_CmdMsgPort )
+	if ( FS_CmdMsgPort )
 	{
-		FreeSysObject( ASOT_PORT, fs->fs_CmdMsgPort );
-		fs->fs_CmdMsgPort = NULL;
+		FreeSysObject( ASOT_PORT, FS_CmdMsgPort );
+		FS_CmdMsgPort = NULL;
 	}
 
 }

@@ -14,7 +14,7 @@
 
 struct ExamineData *_fs__FSExamineFile( struct FSVP *vp, int32 *res2, struct FileHandle *fh )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 struct ExamineData *retval;
 
 	MYINFO( "PTP-FS : _fs__FSExamineDir" );

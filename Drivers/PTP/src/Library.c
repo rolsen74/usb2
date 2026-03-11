@@ -37,11 +37,11 @@ static const struct TagItem _manager_Tags[] =
 
 static const PTR _main_Vectors[] =
 {
-	(PTR) _main_Obtain,
-	(PTR) _main_Release,
+	(PTR) _usb_Obtain,
+	(PTR) _usb_Release,
 	(PTR) NULL,	// _main_Expunge,
 	(PTR) NULL,	// _main_Clone,
-	(PTR) _main_Driver_Entry,
+	(PTR) _usb_Entry,
 	(PTR) -1
 };
 
@@ -49,8 +49,8 @@ static const struct TagItem _main_Tags[] =
 {
 	{ MIT_Name,			(Tag) "main"			},
 	{ MIT_VectorTable,	(Tag) _main_Vectors		},
-	{ MIT_DataSize,		(Tag) sizeof( struct PTPData )},
-	{ MIT_Flags,		(Tag) IFLF_PRIVATE		},
+//	{ MIT_DataSize,		(Tag) sizeof( struct PTPData )},
+//	{ MIT_Flags,		(Tag) IFLF_PRIVATE		},
 	{ MIT_Version,		(Tag) 1					},
 	{ TAG_END,			(Tag) 0					}
 };

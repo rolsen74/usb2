@@ -26,10 +26,10 @@
 
 struct FS_ObjNode
 {
-	struct Node				Node;
-	STR						Name;
-	U32						NameLen;
-	struct FS_ObjNode *		Parent_dir;				/* parent node */
+	struct Node				on_Node;
+	STR						on_Name;
+	U32						on_NameLen;
+	struct FS_ObjNode *		on_Parent_dir;				/* parent node */
 	// struct CameraNode *		Camera;
 
 	// /*
@@ -37,33 +37,33 @@ struct FS_ObjNode
 	// **  For a file; this is the list of data blocks.
 	// */
 
-	struct List				Content_List;
+	struct List				on_Content_List;
 
 	/*
 	**  If this node represents a hardlink, this points
 	**  to the target object node the hardlink refers to.  Otherwise 0.
 	*/
 
-	struct FS_ObjNode *		HardLink_Target;		/* the object the hardlink points to. */
+	struct FS_ObjNode *		on_HardLink_Target;		/* the object the hardlink points to. */
 
 	// /*
 	// **  If this is non-zero, this object has hard links to it.
 	// **  This points to the first or next one in a chain.
 	// **  Zero terminates the list.
 	// */
-	struct FS_ObjNode *		Next_HardLink;			/* the first or next hardlinked item  */
+	struct FS_ObjNode *		on_Next_HardLink;			/* the first or next hardlinked item  */
 
-	S32						Type;					/* file, directory, link */
+	S32						on_Type;					/* file, directory, link */
 
-	int64					File_Size;
+	int64					on_File_Size;
 
-	U32						Protection;
-	U32						Owner;
-	U32						Group;
-//	S32						Dying;
+	U32						on_Protection;
+	U32						on_Owner;
+	U32						on_Group;
+//	S32						on_Dying;
 
-	struct DateStamp		Date;
-	STR						Comment;
+	struct DateStamp		on_Date;
+	STR						on_Comment;
 	// struct CommandMessage *	DeadMessage;
 };
 
@@ -86,7 +86,7 @@ struct FS_ObjLock
 
 // --
 
-struct PTP_FSStruct
+struct FS_Struct
 {
 	struct FileSystemVectorPort *	fs_FSVector_Port;
 	U32						fs_FSVector_PortBit;
@@ -94,7 +94,7 @@ struct PTP_FSStruct
 	struct DeviceNode *		fs_DeviceNode;
 	struct FS_ObjNode *		fs_RootNode;
 
-	struct MsgPort *		fs_CmdMsgPort;
+//	struct MsgPort *		fs_CmdMsgPort;
 	U32						fs_CmdMsgPortBit;
 
 	S32						fs_VolumeAdded;
@@ -106,6 +106,7 @@ struct PTP_FSStruct
 	S32						fs_WriteProtected;
 	U64						fs_NumBytesUsed;
 
+	struct List				fs_CameraList;
 	struct SignalSemaphore	fs_Semaphore;
 };
 
@@ -121,7 +122,7 @@ struct PTP_FSStruct
 
 /*[ PTP FSStruct ]**********************************************************/
 
-struct PTP_FSStruct
+struct FS_Struct
 {
 	uint8					    fs_Running;
 	uint8					    fs_WriteProtected;
@@ -196,10 +197,10 @@ U32				PTP_FSHandler(						void );
 
 S32 			    FS_Compare_Names( 			    	STR a, STR b );
 
-S32 			    FS_Free_Lock( 						struct PTP_FSStruct *fs, struct FS_ObjLock *lock );
-struct FS_ObjNode * FS_Locate_Node_by_Rellockstr(		struct PTP_FSStruct *fs, S32 *res2, struct FS_ObjNode **parent, struct FS_ObjLock *lock, STR name, S32 follow_links );
-struct FS_ObjLock * FS_New_Lock_by_Node(				struct PTP_FSStruct *fs, S32 *res2, struct FS_ObjNode *objnode, S32 access );
-void			    FS_Recursive_Change_Update(			struct PTP_FSStruct *fs, struct FS_ObjNode *node );
+S32 			    FS_Free_Lock( 						struct FS_Struct *fs, struct FS_ObjLock *lock );
+struct FS_ObjNode * FS_Locate_Node_by_Rellockstr(		struct FS_Struct *fs, S32 *res2, struct FS_ObjNode **parent, struct FS_ObjLock *lock, STR name, S32 follow_links );
+struct FS_ObjLock * FS_New_Lock_by_Node(				struct FS_Struct *fs, S32 *res2, struct FS_ObjNode *objnode, S32 access );
+void			    FS_Recursive_Change_Update(			struct FS_Struct *fs, struct FS_ObjNode *node );
 
 S32			    FS__FSDeviceInfoData(				struct FSVP *vp, S32 *res2, struct InfoData *id );
 struct Lock *	    FS__FSDupLock( 						struct FSVP *vp, S32 *res2, struct Lock *lockin );

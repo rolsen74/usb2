@@ -319,6 +319,7 @@ U32 to;
 	}
 
 	epr->epr_Public.EndPoint = (PTR) epn;
+	epr->epr_Public.EndPointMax = epn->ep_MaxPacketSize;
 
 	// ---
 

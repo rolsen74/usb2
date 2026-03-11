@@ -14,7 +14,7 @@
 
 struct ExamineData *_fs__FSExamineLock( struct FSVP *vp, int32 *res2, struct Lock *objLock )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 struct ExamineData *exd;
 struct FS_ObjNode *objnode;
 struct FS_ObjLock *lock;
@@ -54,13 +54,13 @@ struct FS_ObjLock *lock;
 	**  show info for the target instead.
 	*/
 
-	/**/ if (( FSOF_LINK|FSO_TYPE_FILE ) == objnode->Type )
+	/**/ if (( FSOF_LINK|FSO_TYPE_FILE ) == objnode->on_Type )
 	{
-		objnode = objnode->HardLink_Target;
+		objnode = objnode->on_HardLink_Target;
 	}
-	else if (( FSOF_LINK|FSO_TYPE_DIRECTORY ) == objnode->Type )
+	else if (( FSOF_LINK|FSO_TYPE_DIRECTORY ) == objnode->on_Type )
 	{
-		objnode = objnode->HardLink_Target;
+		objnode = objnode->on_HardLink_Target;
 	}
 
 	if ( ! objnode )
@@ -71,8 +71,8 @@ struct FS_ObjLock *lock;
 
 	#define safe_strlen(str)  ((str) ? strlen(str) : 0 )
 	exd = AllocDosObjectTags( DOS_EXAMINEDATA,
-		ADO_ExamineData_NameSize,	1 + safe_strlen( objnode->Name ),
-		ADO_ExamineData_CommentSize,1 + safe_strlen( objnode->Comment ),  /* can be NULL */
+		ADO_ExamineData_NameSize,	1 + safe_strlen( objnode->on_Name ),
+		ADO_ExamineData_CommentSize,1 + safe_strlen( objnode->on_Comment ),  /* can be NULL */
 		TAG_END
 	);
 
@@ -85,19 +85,19 @@ struct FS_ObjLock *lock;
 		goto bailout;
 	}
 
-	exd->Type = objnode->Type;
+	exd->Type = objnode->on_Type;
 
 	switch( exd->Type )
 	{
 		case FSO_TYPE_FILE:
 		{
-			exd->FileSize = (int64) objnode->File_Size;
+			exd->FileSize = (int64) objnode->on_File_Size;
 			break;
 		}
 
 		case (FSO_TYPE_FILE|FSOF_LINK):
 		{
-			exd->FileSize = (int64) objnode->HardLink_Target->File_Size;
+			exd->FileSize = (int64) objnode->on_HardLink_Target->on_File_Size;
 			break;
 		}
 
@@ -108,22 +108,22 @@ struct FS_ObjLock *lock;
 		}
 	}
 
-	strncpy( exd->Name, objnode->Name, exd->NameSize );
+	strncpy( exd->Name, objnode->on_Name, exd->NameSize );
 
-	if ( objnode->Comment )
+	if ( objnode->on_Comment )
 	{
-		strncpy( exd->Comment, objnode->Comment, exd->CommentSize );
+		strncpy( exd->Comment, objnode->on_Comment, exd->CommentSize );
 	}
 
-	exd->Date.ds_Days	= objnode->Date.ds_Days;
-	exd->Date.ds_Minute	= objnode->Date.ds_Minute;
-	exd->Date.ds_Tick	= objnode->Date.ds_Tick;
+	exd->Date.ds_Days	= objnode->on_Date.ds_Days;
+	exd->Date.ds_Minute	= objnode->on_Date.ds_Minute;
+	exd->Date.ds_Tick	= objnode->on_Date.ds_Tick;
 
 	exd->RefCount		= 0;					/* FIX: do something with this. */
 	exd->ObjectID		= (U32) objnode;		/* use inode address */
-	exd->Protection		= objnode->Protection;
-	exd->OwnerUID		= objnode->Owner;
-	exd->OwnerGID		= objnode->Group;
+	exd->Protection		= objnode->on_Protection;
+	exd->OwnerUID		= objnode->on_Owner;
+	exd->OwnerGID		= objnode->on_Group;
 
 bailout:
 

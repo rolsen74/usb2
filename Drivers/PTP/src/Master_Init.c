@@ -12,27 +12,40 @@
 
 // --
 
-S32 Master_Init( struct intern *in )
+S32 Master_Init( struct M_Struct *ms )
 {
 S32 retval;
+
+	MYERROR( "PTP : Master_Init : Enter" );
 
 	retval = FALSE;
 
 	// --
-	
-	in->FSStatus = MountDeviceTags( "PTP:", MDT_Handler,
-		MD_Activate, TRUE,
-		MD_Entry, _fs_Handler,
-		TAG_END
-	);
 
-	if ( ! in->FSStatus )
+	Master_MsgPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
+
+	if ( ! Master_MsgPort )
 	{
-		MYERROR( "PTP-FS : Error mounting FileSystem" );
+		MYERROR( "PTP-Master : Error creating MsgPort" );
 		goto bailout;
 	}
 
-	in->FSMsgPort = FindPort( "PTP_FileSystem" );
+	// --
+
+	ms->FSStatus = MountDeviceTags( "PTP:", MDT_Handler,
+		MD_Handler, MDT_FileSystem,
+		MD_Entry, _fs_Handler,
+		MD_Activate, TRUE,
+		TAG_END
+	);
+
+	if ( ! ms->FSStatus )
+	{
+		MYERROR( "PTP-Master : Error mounting FileSystem" );
+		goto bailout;
+	}
+
+	ms->FSMsgPort = FindPort( "PTP_FileSystem" );
 
 	// --
 

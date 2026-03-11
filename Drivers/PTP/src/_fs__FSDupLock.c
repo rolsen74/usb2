@@ -14,7 +14,7 @@
 
 struct Lock *_fs__FSDupLock( struct FSVP *vp, int32 *res2, struct Lock *lockin )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 struct FS_ObjLock *lock;
 PTR retval;
 
@@ -28,7 +28,7 @@ PTR retval;
 	{
 		lock = (PTR) lockin;
 
-		retval = _fs_Node_NewLock( fs, lock->Node, res2, SHARED_LOCK );
+		retval = _fs_Lock_New_From_Node( fs, lock->Node, res2, SHARED_LOCK );
 	}
 	else
 	{

@@ -294,8 +294,10 @@ struct USB2_ConfigNode *cn;
 		goto bailout;
 	}
 
-	reg->reg_Public.HCD_ID	= reg->reg_Function->fkt_HCD->hn_NotifyID;
-	reg->reg_Public.FKT_ID	= reg->reg_Function->fkt_NotifyID;
+	reg->reg_Public.Stack_MsgPort		=&reg->reg_MsgPort.ump_MsgPort;
+	reg->reg_Public.Stack_MsgPortBit	= reg->reg_MsgPort.ump_Signal.sig_Signal_Mask;
+	reg->reg_Public.HCD_ID				= reg->reg_Function->fkt_HCD->hn_NotifyID;
+	reg->reg_Public.FKT_ID				= reg->reg_Function->fkt_NotifyID;
 
 	// --
 

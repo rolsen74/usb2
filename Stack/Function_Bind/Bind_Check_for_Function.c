@@ -107,7 +107,8 @@ U32 retval;
 //		goto bailout;
 //	}
 
-	dn->dn_Message.rdm_Public.Function	= (PTR) fn;
+	dn->dn_Message.rdm_Public.IUSB2 = usbbase->usb_IUSB2;
+	dn->dn_Message.rdm_Public.Function = (PTR) fn;
 	dn->dn_Message.rdm_Public.ConfigDescriptors = (PTR) fn->fkt_Config_Desc_Buf;
 
 	// --

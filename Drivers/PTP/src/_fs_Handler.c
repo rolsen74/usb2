@@ -14,7 +14,7 @@
 
 U32 _fs_Handler( void )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 struct DosPacket *startup_dp;
 struct Message *startup_msg;
 struct Process *self;
@@ -25,6 +25,8 @@ U32 retval;
 	fs = NULL;
 
 	retval = RETURN_FAIL;
+
+	MYERROR( "PTP-FS : _fs_Handler : Enter" );
 
 	/*
 	** ABSOLUTELY must fetch the handler startup dospacket FIRST.
@@ -61,7 +63,7 @@ U32 retval;
 		goto bailout;
 	}
 
-	fs = AllocVecTags( sizeof( struct PTP_FSStruct ),
+	fs = AllocVecTags( sizeof( struct FS_Struct ),
 		AVT_Clear,	0x00,
 		AVT_Type,	MEMF_SHARED,
 		AVT_Lock,	TRUE,
@@ -75,6 +77,7 @@ U32 retval;
 	}
 
 	InitSemaphore( & fs->fs_Semaphore );
+	NewList( & fs->fs_CameraList );
 
 	fs->fs_DeviceNode = BADDR( startup_dp->dp_Arg3 );
 
@@ -82,6 +85,8 @@ U32 retval;
 
 	if ( _fs_Handler_Init( fs ))
 	{
+		DebugPrintF( "_fs_Handler 22\n" );
+
 		startup_dp->dp_Res1 = TRUE;
 		startup_dp->dp_Res2 = 0;
 		ReplyMsg( startup_msg );
@@ -96,6 +101,8 @@ U32 retval;
 
 bailout:
 
+	DebugPrintF( "_fs_Handler 33\n" );
+
 	if ( startup_dp )
 	{
 		startup_dp->dp_Res1 = DOSFALSE;
@@ -106,7 +113,7 @@ bailout:
 
 	if ( fs )
 	{
-		UnlockMem( fs, sizeof( struct PTP_FSStruct ));
+		UnlockMem( fs, sizeof( struct FS_Struct ));
 		FreeVec( fs );
 	}
 

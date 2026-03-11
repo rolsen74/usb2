@@ -12,13 +12,15 @@
 
 // --
 
-U32 _main_Release( struct USB2_DriverIFace *Self )
+void _usb_Free( struct USB_Struct *us )
 {
-	MYDEBUG( "PTP : _main_Release" );
+	MYINFO( "PTP-USB : _usb_Free" );
 
-	Self->Data.RefCount--;
-
-	return( Self->Data.RefCount );
+	if ( us->us_Register )
+	{
+		USB2_Reg_Unregister( us->us_Register );
+		us->us_Register = NULL;
+	}
 }
 
 // --

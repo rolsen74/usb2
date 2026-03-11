@@ -18,7 +18,7 @@ static void Send_Interfaces( struct USBBase *usbbase, struct USB2_NotifyNode *no
 
 // --
 
-SEC_CODE static PTR _main_Notify_Add( struct USB2_IFace *Self, U32 type, struct MsgPort *mp )
+SEC_CODE static PTR _main_Notify_Add( struct USB2IFace *Self, U32 type, struct MsgPort *mp )
 {
 struct USB2_NotifyNode *node;
 struct USBBase *usbbase;

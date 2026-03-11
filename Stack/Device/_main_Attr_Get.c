@@ -16,7 +16,7 @@ static struct RealFunctionNode *Find_Function( struct USBBase *usbbase, USB2_ID 
 
 // --
 
-SEC_CODE static U32 _main_Attr_Get( struct USB2_IFace *Self, USB2_ID id, U32 tag, PTR buffer, U32 buffersize )
+SEC_CODE static U32 _main_Attr_Get( struct USB2IFace *Self, USB2_ID id, U32 tag, PTR buffer, U32 buffersize )
 {
 struct RealFunctionNode *fn;
 struct USBBase *usbbase;
@@ -180,7 +180,7 @@ static struct USB2_InterfaceNode *	Find_Interface( struct USBBase *usbbase, uint
 
 /// Stack Get Attribute
 
-U32 _main_Stack_GetAttribute( struct USB2_IFace *Self, uint64 id, U32 tag, APTR buffer, U32 buffersize )
+U32 _main_Stack_GetAttribute( struct USB2IFace *Self, uint64 id, U32 tag, APTR buffer, U32 buffersize )
 {
 struct USB2_ConfigNode *cfgnode;
 struct USB2_InterfaceNode *ifcnode;
@@ -421,7 +421,7 @@ bailout:
 ///
 /// Stack Set Attribute
 
-U32 _main_Stack_SetAttribute( struct USB2_IFace *Self, uint64 id UNUSED, U32 tag, APTR buffer, U32 buffersize )
+U32 _main_Stack_SetAttribute( struct USB2IFace *Self, uint64 id UNUSED, U32 tag, APTR buffer, U32 buffersize )
 {
 //struct ExecIFace *IExec;
 struct USBBase *usbbase;

@@ -13,7 +13,7 @@
 // --
 /* -- Main Interface -- */
 
-static struct USB2_EPResource *_main_EPRes_ObtainList( struct USB2_IFace *Self, struct RealRegister *reg, struct TagItem *taglist )
+static struct USB2_EPResource *_main_EPRes_ObtainList( struct USB2IFace *Self, struct RealRegister *reg, struct TagItem *taglist )
 {
 struct USBBase *usbbase;
 PTR epres;
@@ -32,7 +32,7 @@ PTR epres;
 
 // --
 
-static struct USB2_EPResource * VARARGS68K _main_EPRes_ObtainTags( struct USB2_IFace *Self, struct RealRegister *reg, ... )
+static struct USB2_EPResource * VARARGS68K _main_EPRes_ObtainTags( struct USB2IFace *Self, struct RealRegister *reg, ... )
 {
 struct USBBase *usbbase;
 va_list ap;

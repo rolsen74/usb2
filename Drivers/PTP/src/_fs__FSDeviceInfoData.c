@@ -14,7 +14,7 @@
 
 int32 _fs__FSDeviceInfoData( struct FSVP *vp, int32 *res2, struct InfoData *id )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 U32 num_blocks;
 
 //	MYINFO( "PTP-FS : _fs__FSDeviceInfoData" );

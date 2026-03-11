@@ -12,7 +12,7 @@
 
 // --
 
-void _fs_Handler_Loop( struct PTP_FSStruct *fs )
+void _fs_Handler_Loop( struct FS_Struct *fs )
 {
 U32 mask;
 U32 wait;

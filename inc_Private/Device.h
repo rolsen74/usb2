@@ -43,6 +43,7 @@ struct USBBase
 	struct PCIIFace *				usb_IPCI;
 	struct MMUIFace *				usb_IMMU;
 	struct DOSIFace *				usb_IDOS;
+	struct USB2IFace *				usb_IUSB2;
 	struct UtilityIFace *			usb_IUtility;
 	struct ExpansionIFace *			usb_IExpansion;
 	struct IntuitionIFace *			usb_IIntuition;

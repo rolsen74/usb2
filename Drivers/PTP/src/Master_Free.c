@@ -12,9 +12,9 @@
 
 // --
 
-void Master_Free( struct intern *in )
+void Master_Free( struct M_Struct *ms )
 {
-
+	MYERROR( "PTP : Master_Free : Enter" );
 }
 
 // --

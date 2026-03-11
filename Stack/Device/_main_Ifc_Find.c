@@ -178,7 +178,7 @@ PTR h;
 
 /* -- Main Interface -- */
 
-static struct USB2_Interface * VARARGS68K _main_Ifc_FindTags( struct USB2_IFace *Self, ... )
+static struct USB2_Interface * VARARGS68K _main_Ifc_FindTags( struct USB2IFace *Self, ... )
 {
 va_list ap;
 PTR ifc;
@@ -196,7 +196,7 @@ PTR ifc;
 
 // --
 
-static struct USB2_Interface *_main_Ifc_FindList( struct USB2_IFace *Self, struct TagItem *taglist )
+static struct USB2_Interface *_main_Ifc_FindList( struct USB2IFace *Self, struct TagItem *taglist )
 {
 struct USB2_InterfaceHeader *ih;
 struct USB2_InterfaceGroup *ig;

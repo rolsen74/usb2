@@ -12,12 +12,13 @@
 
 // --
 
-U32 _main_Driver_Entry( struct USB2_DriverIFace *Self, struct USB2_DriverMessage *msg )
+U32 _usb_Release( struct USB2DriverIFace *Self )
 {
-	MYDEBUG( "PTP : _main_Driver_Entry" );
+	MYINFO( "PTP-USB : _usb_Release" );
 
+	Self->Data.RefCount--;
 
-	return( TRUE );
+	return( Self->Data.RefCount );
 }
 
 // --

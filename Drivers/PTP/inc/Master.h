@@ -12,8 +12,8 @@
 #error Include "inc/All.h" first
 #endif
 
-#ifndef INC_INTERN_H
-#define INC_INTERN_H
+#ifndef INC_MASTER_H
+#define INC_MASTER_H
 
 // --
 
@@ -25,7 +25,7 @@ enum
 	TASK_State_Stopped,
 };
 
-struct intern
+struct M_Struct
 {
 	struct Task *		Exit_Parent;
 	U32					Exit_Mask;
@@ -35,6 +35,8 @@ struct intern
 
 	S32					FSStatus;
 	struct MsgPort *	FSMsgPort;
+
+	struct MsgPort *	CmdMsgPort;
 
 	S32					Running;
 };

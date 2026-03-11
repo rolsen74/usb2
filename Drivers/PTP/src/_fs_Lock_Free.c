@@ -12,11 +12,13 @@
 
 // --
 
-int32 _fs_Lock_Free( struct PTP_FSStruct *fs, struct FS_ObjLock *lock )
+int32 _fs_Lock_Free( struct FS_Struct *fs, struct FS_ObjLock *lock )
 {
 struct FS_ObjLock *parent;
 struct FS_ObjLock *next;
 S32 retval;
+
+	MYINFO( "PTP-FS : _fs_Lock_Free : %p", lock );
 
 	retval	= FALSE;
 

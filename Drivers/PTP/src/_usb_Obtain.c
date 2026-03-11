@@ -12,9 +12,9 @@
 
 // --
 
-U32 _main_Obtain( struct USB2_DriverIFace *Self )
+U32 _usb_Obtain( struct USB2DriverIFace *Self )
 {
-	MYDEBUG( "PTP : _main_Obtain" );
+	MYINFO( "PTP-USB : _usb_Obtain" );
 
 	Self->Data.RefCount++;
 

@@ -34,7 +34,7 @@
   #endif
 
   #ifndef __NOGLOBALIFACE__
-  extern struct USB2_IFace *IUSB2;
+  extern struct USB2IFace *IUSB2;
   #endif
 
 #else // Other platforms

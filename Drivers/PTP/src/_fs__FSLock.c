@@ -12,32 +12,26 @@
 
 // --
 
-struct Lock *_fs__FSLock( struct FSVP *vp, int32 *res2, struct Lock *rel_lock, CONST_STRPTR name, int32 mode )
+struct Lock *_fs__FSLock( struct FSVP *vp, int32 *res2, struct Lock *rel_ptr, CONST_STRPTR name, int32 mode )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 struct FS_ObjNode *obj;
+struct FS_ObjLock *rel;
 PTR retval;
 
 	MYINFO( "PTP-FS : _fs__FSLock '%s'", name );
+
+	rel = (PTR) rel_ptr;
 
 	fs = vp->FSV.FSPrivate;
 
 	ObtainSemaphore( & fs->fs_Semaphore );
 
-	/*
-	** Find the object node by 'name' at the level of 'rel_lock' (following links)
-	*/
+	obj = _fs_Handle_Rel_Args( fs, rel, name );
 
-	obj = _fs_Node_Locate_Rel( fs, NULL, (PTR) rel_lock, FOLLOW_LINKS, res2, (PTR) name );
+	retval = _fs_Lock_New_From_Node( fs, obj, res2, mode );
 
-	if ( obj )
-	{
-		retval = _fs_Node_NewLock( fs, obj, res2, mode );
-	}
-	else
-	{
-		retval = NULL;
-	}
+	DebugPrintF( "New Lock : %p\n", retval );
 
 	ReleaseSemaphore( & fs->fs_Semaphore );
 

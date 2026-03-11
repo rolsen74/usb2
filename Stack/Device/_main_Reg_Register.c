@@ -13,7 +13,7 @@
 // --
 /* -- Main Interface -- */
 
-static struct RealRegister *_main_Reg_RegisterList( struct USB2_IFace *Self, struct TagItem *taglist )
+static struct RealRegister *_main_Reg_RegisterList( struct USB2IFace *Self, struct TagItem *taglist )
 {
 struct RealRegister *reg;
 struct USBBase *usbbase;
@@ -32,7 +32,7 @@ struct USBBase *usbbase;
 
 // --
 
-static struct RealRegister * VARARGS68K _main_Reg_RegisterTags( struct USB2_IFace *Self, ... )
+static struct RealRegister * VARARGS68K _main_Reg_RegisterTags( struct USB2IFace *Self, ... )
 {
 struct RealRegister *reg;
 struct USBBase *usbbase;

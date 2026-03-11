@@ -175,12 +175,14 @@ PTR node;
 	usbbase->usb_IPCI			= (PTR) IExec->GetInterface( (PTR) usbbase->usb_ExpansionBase, "pci", 1, NULL );
 	usbbase->usb_ITimer			= (PTR) IExec->GetInterface( (PTR) usbbase->usb_TimerBase, "main", 1, NULL );
 	usbbase->usb_IMMU			= (PTR) IExec->GetInterface( (PTR) mySysBase, "mmu", 1, NULL );
+	usbbase->usb_IUSB2			= (PTR) IExec->GetInterface( (PTR) usbbase, "main", 1, NULL );
 
 	if (( ! usbbase->usb_IUtility )
 	||	( ! usbbase->usb_IExpansion )
 	||	( ! usbbase->usb_IPCI )
 	||	( ! usbbase->usb_IMMU )
-	||	( ! usbbase->usb_ITimer ))
+	||	( ! usbbase->usb_ITimer )
+	||	( ! usbbase->usb_IUSB2 ))
 	{
 		goto bailout;
 	}

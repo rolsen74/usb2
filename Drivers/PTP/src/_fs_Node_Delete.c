@@ -12,18 +12,20 @@
 
 // --
 
-void _fs_Node_Delete( struct PTP_FSStruct *fs UNUSED, struct FS_ObjNode *node )
+void _fs_Node_Delete( struct FS_Struct *fs UNUSED, struct FS_ObjNode *node )
 {
+	MYINFO( "PTP-FS : _fs_Node_Delete" );
+
 	if ( ! node )
 	{
 		goto bailout;
 	}
 
-	if ( node->Name )
+	if ( node->on_Name )
 	{
-		FreeVec( node->Name );
-		node->NameLen = 0;
-		node->Name = NULL;
+		FreeVec( node->on_Name );
+		node->on_NameLen = 0;
+		node->on_Name = NULL;
 	}
 
 	// if ( node->DeadMessage )

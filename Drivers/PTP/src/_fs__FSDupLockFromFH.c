@@ -14,7 +14,7 @@
 
 struct Lock *_fs__FSDupLockFromFH( struct FSVP *vp, int32 *res2, struct FileHandle *file )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 struct Lock *retval;
 
 	MYINFO( "PTP-FS : _fs__FSDupLockFromFH" );

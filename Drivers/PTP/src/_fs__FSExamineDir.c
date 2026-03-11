@@ -14,7 +14,7 @@
 
 int32 _fs__FSExamineDir( struct FSVP *vp, int32 *res2, struct PRIVATE_ExamineDirContext *ctx )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 struct ExamineData *exd;
 struct FS_ObjNode *dirnode;
 struct FS_ObjNode *entry;
@@ -79,7 +79,7 @@ U32 mask;
 	}
 
 	/* we can't scan with anything but a dir */
-	if ( dirnode->Type != FSO_TYPE_DIRECTORY )
+	if ( dirnode->on_Type != FSO_TYPE_DIRECTORY )
 	{
 		if ( res2 )
 		{
@@ -88,9 +88,9 @@ U32 mask;
 		goto bailout;
 	}
 
-	for( entry = (PTR) GetHead( & dirnode->Content_List ) ; entry ; entry = next )
+	for( entry = (PTR) GetHead( & dirnode->on_Content_List ) ; entry ; entry = next )
 	{
-		next = (PTR) GetSucc( & entry->Node );
+		next = (PTR) GetSucc( & entry->on_Node );
 
 		linktargetname = NULL;
 
@@ -100,15 +100,15 @@ U32 mask;
 
 		if ( mask & EXF_LINK )
 		{
-			/**/ if (( FSOF_LINK|FSO_TYPE_FILE ) == entry->Type )
+			/**/ if (( FSOF_LINK|FSO_TYPE_FILE ) == entry->on_Type )
 			{
-				linktargetname = entry->HardLink_Target->Name;
+				linktargetname = entry->on_HardLink_Target->on_Name;
 			}
-			else if (( FSOF_LINK|FSO_TYPE_DIRECTORY ) == entry->Type )
+			else if (( FSOF_LINK|FSO_TYPE_DIRECTORY ) == entry->on_Type )
 			{
-				linktargetname = entry->HardLink_Target->Name;
+				linktargetname = entry->on_HardLink_Target->on_Name;
 			}
-			else if (( FSOF_LINK|FSO_TYPE_SOFTLINK ) == entry->Type )
+			else if (( FSOF_LINK|FSO_TYPE_SOFTLINK ) == entry->on_Type )
 			{
 				#warning fix me
 //				  if ( read_softlink_target( fs, res2, entry, slbuf, sizeof(slbuf)) >= 0 )
@@ -126,8 +126,8 @@ U32 mask;
 		#define safe_strlen(str)  ((str) ? strlen(str) : 0 )
 		exd = AllocDosObjectTags( DOS_EXAMINEDATA,
 			ADO_ExamineData_LinkSize,	1 + safe_strlen( linktargetname),
-			ADO_ExamineData_NameSize,	1 + safe_strlen( entry->Name ),
-			ADO_ExamineData_CommentSize,1 + safe_strlen( entry->Comment ),
+			ADO_ExamineData_NameSize,	1 + safe_strlen( entry->on_Name ),
+			ADO_ExamineData_CommentSize,1 + safe_strlen( entry->on_Comment ),
 			ADO_ExamineDir_Context,		ctx,
 			TAG_END
 		);
@@ -143,22 +143,22 @@ U32 mask;
 
 		if ( mask & EXF_TYPE )
 		{
-			exd->Type = entry->Type;
+			exd->Type = entry->on_Type;
 		}
 
 		if ( mask & EXF_SIZE )
 		{
-			switch( entry->Type )
+			switch( entry->on_Type )
 			{
 				case FSO_TYPE_FILE:
 				{
-					exd->FileSize = (int64) entry->File_Size;
+					exd->FileSize = (int64) entry->on_File_Size;
 					break;
 				}
 
 				case (FSO_TYPE_FILE|FSOF_LINK):
 				{
-					exd->FileSize = (int64) entry->HardLink_Target->File_Size;
+					exd->FileSize = (int64) entry->on_HardLink_Target->on_File_Size;
 					break;
 				}
 
@@ -172,9 +172,9 @@ U32 mask;
 
 		if ( mask & EXF_DATE )
 		{
-			exd->Date.ds_Days   = entry->Date.ds_Days;
-			exd->Date.ds_Minute = entry->Date.ds_Minute;
-			exd->Date.ds_Tick   = entry->Date.ds_Tick;
+			exd->Date.ds_Days   = entry->on_Date.ds_Days;
+			exd->Date.ds_Minute = entry->on_Date.ds_Minute;
+			exd->Date.ds_Tick   = entry->on_Date.ds_Tick;
 		}
 
 		if ( mask & EXF_REFCOUNT )
@@ -189,9 +189,9 @@ U32 mask;
 
 		if ( mask & EXF_NAME )
 		{
-			if ( entry->Name )
+			if ( entry->on_Name )
 			{
-				strncpy( exd->Name, entry->Name, exd->NameSize );
+				strncpy( exd->Name, entry->on_Name, exd->NameSize );
 			}
 			else
 			{
@@ -201,9 +201,9 @@ U32 mask;
 
 		if ( mask & EXF_COMMENT )
 		{
-			if ( entry->Comment )
+			if ( entry->on_Comment )
 			{
-				strncpy( exd->Comment, entry->Comment, exd->CommentSize );
+				strncpy( exd->Comment, entry->on_Comment, exd->CommentSize );
 			}
 			else
 			{
@@ -225,13 +225,13 @@ U32 mask;
 
 		if ( mask & EXF_PROTECTION )
 		{
-			exd->Protection = entry->Protection;
+			exd->Protection = entry->on_Protection;
 		}
 
 		if ( mask & EXF_OWNER )
 		{
-			exd->OwnerUID = entry->Owner;
-			exd->OwnerGID = entry->Group;
+			exd->OwnerUID = entry->on_Owner;
+			exd->OwnerGID = entry->on_Group;
 		}
 
 		AddTail( (PTR) & ctx->FreshNodeList, (PTR) & exd->EXDnode );

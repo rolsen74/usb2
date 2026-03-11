@@ -50,8 +50,8 @@ S32 error;
 		goto bailout;
 	}
 
-//	reg->rr_Register.Stack_MsgPort2	= reg->rr_MsgPort.ump_MsgPort;
-//	reg->rr_Register.Stack_MsgPort2Bit	= reg->rr_MsgPort.ump_SignalBit;
+//	reg->reg_Public.Stack_MsgPort		= & reg->reg_MsgPort.ump_MsgPort;
+//	reg->reg_Public.Stack_MsgPortBit	= reg->reg_MsgPort.ump_Signal.sig_Signal_Mask;
 
 	// --
 

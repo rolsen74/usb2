@@ -12,13 +12,24 @@
 
 // --
 
-struct FS_ObjNode *_fs_Node_CreateDir( struct PTP_FSStruct *fs, S32 *res2, STR oname )
+struct FS_ObjNode *_fs_Node_CreateDir( struct FS_Struct *fs, int32 *res2, STR name )
 {
 struct FS_ObjNode *node;
-S32 errcode;
 S32 retval;
+S32 err;
+
+	MYINFO( "PTP-FS : _fs_Node_CreateDir" );
+
+	node = NULL;
 
 	retval = FALSE;
+
+	if (( ! name ) || ( ! name[0] ))
+	{
+		MYERROR( "PTP-FS : Error name missing" );
+		err = ERROR_REQUIRED_ARG_MISSING;
+		goto bailout;
+	}
 
 	node = AllocVecTags( sizeof( struct FS_ObjNode ),
 		AVT_Clear, 0,
@@ -27,32 +38,31 @@ S32 retval;
 
 	if ( ! node )
 	{
-		errcode = 0;
 		MYERROR( "PTP-FS : Error allocating memory" );
+		err = ERROR_NO_FREE_STORE;
 		goto bailout;
 	}
 
-	NewList( & node->Content_List );
+	NewList( & node->on_Content_List );
 
-	// Do we really need to copy the string?
-	node->Name = ASPrintf( "%s", oname );
+	node->on_Name = ASPrintf( "%s", name );
 
-	if ( ! node->Name )
+	if ( ! node->on_Name )
 	{
-		errcode = 0;
 		MYERROR( "PTP-FS : Error allocating memory" );
+		err = ERROR_NO_FREE_STORE;
 		goto bailout;
 	}
 
-	node->NameLen = strlen( oname );
+	node->on_NameLen = strlen( name );
 
-	// node->Type = FSO_TYPE_DIRECTORY;
+	node->on_Type = FSO_TYPE_DIRECTORY;
 
-	// /* set creation date */
-	// DateStamp( & node->Date );
+	/* set creation date */
+	DateStamp( & node->on_Date );
 
 	// Set no error
-	errcode = 0;
+	err = 0;
 
 	retval = TRUE;
 
@@ -66,8 +76,10 @@ bailout:
 
 	if ( res2 )
 	{
-		*res2 = errcode;
+		*res2 = err;
 	}
 
 	return( node );
 }
+
+// --

@@ -12,12 +12,17 @@
 
 // --
 
+struct MsgPort *	Master_MsgPort		= NULL;
+struct MsgPort *	FS_CmdMsgPort			= NULL;
+
+// --
+
 void Master_Entry( void )
 {
 struct TaskStartMsg *msg;
 struct Task *parent;
 struct Task *self;
-struct intern in;
+struct M_Struct in;
 U32 mask;
 S32 stat;
 

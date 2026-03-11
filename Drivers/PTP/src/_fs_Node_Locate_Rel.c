@@ -13,7 +13,7 @@
 // --
 
 struct FS_ObjNode *_fs_Node_Locate_Rel(
-	struct PTP_FSStruct *fs,
+	struct FS_Struct *fs,
 	struct FS_ObjNode **parent,
 	struct FS_ObjLock *lock,
 	int32 follow_links,
@@ -23,6 +23,8 @@ struct FS_ObjNode *_fs_Node_Locate_Rel(
 struct FS_ObjNode *retval;
 struct FS_ObjNode *dptr;
 U32 len;
+
+	MYINFO( "PTP-FS : _fs_Node_Locate_Rel" );
 
 	retval = NULL;
 
@@ -90,7 +92,7 @@ U32 len;
 	**  we must make sure we are using a directory as the relative reference.
 	*/
 
-	if ( dptr->Type != FSO_TYPE_DIRECTORY )
+	if ( dptr->on_Type != FSO_TYPE_DIRECTORY )
 	{
 		MYERROR( "PTP-FS : Not a Directory Type" );
 
@@ -101,12 +103,12 @@ U32 len;
 		goto bailout;
 	}
 
-	retval = (PTR) GetHead( & dptr->Content_List );
+	retval = (PTR) GetHead( & dptr->on_Content_List );
 	len = strlen( name );
 
 	while( retval )
 	{
-		if (( len == retval->NameLen ) && ( ! memcmp( name, retval->Name, len )))
+		if (( len == retval->on_NameLen ) && ( ! memcmp( name, retval->on_Name, len )))
 		{
 			break;
 		}
@@ -133,9 +135,9 @@ U32 len;
 
 	if ( follow_links )
 	{
-		if ( retval->Type & FSOF_LINK )
+		if ( retval->on_Type & FSOF_LINK )
 		{
-			switch( retval->Type & FSO_TYPE_MASK )
+			switch( retval->on_Type & FSO_TYPE_MASK )
 			{
 				case FSO_TYPE_SOFTLINK:
 				{
@@ -154,7 +156,7 @@ U32 len;
 				case FSO_TYPE_FILE:
 				case FSO_TYPE_DIRECTORY:
 				{
-					retval = retval->HardLink_Target;
+					retval = retval->on_HardLink_Target;
 					break;
 				}
 

@@ -29,7 +29,7 @@ static struct FileSystemVectors FSVectors =
 /* FSDupLock			*/ _fs__FSDupLock,				// 19 : ACTION_COPY_LOCK
 /* FSCreateDir			*/ NULL,
 /* FSParentDir			*/ _fs__FSParentDir,			// 29 : ACTION_PARENT
-/* FSDupLockFromFH		*/ _fs__FSDupLockFromFH,		// 19 : ACTION_COPY_LOCK
+/* FSDupLockFromFH		*/ _fs__FSDupLockFromFH,		// 19 : ACTION_COPY_LOCK_FH
 /* FSOpenFromLock		*/ NULL,
 /* FSParentOfFH			*/ _fs__FSParentOfFH,			// 1031 : ACTION_PARENT_FH
 /* FSOpen				*/ NULL,						// 1004 ACTION_FINDUPDATE : 1005 ACTION_FINDINPUT : 1006 ACTION_FINDOUTPUT
@@ -63,7 +63,7 @@ static struct FileSystemVectors FSVectors =
 /* FSSameFile			*/ NULL,
 /* FSFileSystemAttr		*/ NULL,
 /* FSVolumeInfoData		*/ _fs__FSVolumeInfoData,		// 26 : ACTION_INFO
-/* FSDeviceInfoData		*/ _fs__FSDeviceInfoData,		// ?? : ACTION_HANDLER_INFO
+/* FSDeviceInfoData		*/ _fs__FSDeviceInfoData,		// 25 : ACTION_HANDLER_INFO
 
 /* FSGetFSSMData		*/ NULL,
 /* FSFreeFSSMData		*/ NULL,
@@ -90,28 +90,26 @@ static struct FileSystemVectors FSVectors =
 
 // --
 
-S32 _fs_Handler_Init( struct PTP_FSStruct *fs )
+S32 _fs_Handler_Init( struct FS_Struct *fs )
 {
 S32 retval;
-char name[16];
+char name[32];
 
 	retval = FALSE;
 
 	// --
 
-	fs->fs_CmdMsgPort = AllocSysObjectTags( ASOT_PORT,
-		ASOPORT_Name,	"PTP_FileSystem",
-		ASOPORT_Public,	TRUE,
+	FS_CmdMsgPort = AllocSysObjectTags( ASOT_PORT,
 		TAG_END
 	);
 
-	if ( ! fs->fs_CmdMsgPort )
+	if ( ! FS_CmdMsgPort )
 	{
 		MYERROR( "PTP-FS : Error Allocating MsgPort" );
 		goto bailout;
 	}
 
-	fs->fs_CmdMsgPortBit = 1UL << fs->fs_CmdMsgPort->mp_SigBit;
+	fs->fs_CmdMsgPortBit = 1UL << FS_CmdMsgPort->mp_SigBit;
 
 	// --
 

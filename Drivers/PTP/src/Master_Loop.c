@@ -12,14 +12,16 @@
 
 // --
 
-void Master_Loop( struct intern *in )
+void Master_Loop( struct M_Struct *ms )
 {
 U32 wait;
 U32 mask;
 
-	in->Running = TRUE;
+	MYERROR( "PTP : Master_Loop : Enter" );
 
-	while( in->Running )
+	ms->Running = TRUE;
+
+	while( ms->Running )
 	{
 		wait = SIGBREAKF_CTRL_C;
 

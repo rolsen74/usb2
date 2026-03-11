@@ -12,18 +12,21 @@
 
 // --
 
-int32 _fs__FSUnLock( struct FSVP *vp, int32 *res2, struct Lock *lock )
+int32 _fs__FSUnLock( struct FSVP *vp, int32 *res2, struct Lock *lock_ptr )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
+struct FS_ObjLock *lock;
 int32 retval;
 
-	MYINFO( "PTP-FS : _fs__FSUnLock" );
+	lock = (PTR) lock_ptr;
+
+	MYINFO( "PTP-FS : _fs__FSUnLock : %p", lock );
 
 	fs = vp->FSV.FSPrivate;
 
 	ObtainSemaphore( & fs->fs_Semaphore );
 
-	retval = _fs_Lock_Free( fs, (PTR) lock );
+	retval = _fs_Lock_Free( fs, lock );
 
 	if ( res2 )
 	{

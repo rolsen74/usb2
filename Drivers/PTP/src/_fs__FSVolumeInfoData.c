@@ -14,7 +14,7 @@
 
 int32 _fs__FSVolumeInfoData( struct FSVP *vp, int32 *res2, struct InfoData *info )
 {
-struct PTP_FSStruct *fs;
+struct FS_Struct *fs;
 int32 retval;
 
 	MYINFO( "PTP-FS : _fs__FSVolumeInfoData" );

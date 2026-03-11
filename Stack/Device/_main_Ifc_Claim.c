@@ -14,7 +14,7 @@
 
 /* -- Main Interface -- */
 
-static S32 _main_Ifc_Claim( struct USB2_IFace *Self, struct RealRegister *reg, struct USB2_Interface *ifc )
+static S32 _main_Ifc_Claim( struct USB2IFace *Self, struct RealRegister *reg, struct USB2_Interface *ifc )
 {
 struct USB2_InterfaceHeader *ih;
 struct USBBase *usbbase;

@@ -12,7 +12,7 @@
 
 // --
 
-SEC_CODE static void _main_Notify_Remove( struct USB2_IFace *Self, struct USB2_NotifyNode *node )
+SEC_CODE static void _main_Notify_Remove( struct USB2IFace *Self, struct USB2_NotifyNode *node )
 {
 struct USB2_NotifyNode *n;
 struct USBBase *usbbase;

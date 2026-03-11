@@ -78,7 +78,7 @@ PTR f;
 
 /* -- Main Interface -- */
 
-static struct USB2_Function * VARARGS68K _main_Fkt_FindTags( struct USB2_IFace *Self, ... )
+static struct USB2_Function * VARARGS68K _main_Fkt_FindTags( struct USB2IFace *Self, ... )
 {
 va_list ap;
 PTR fn;
@@ -96,7 +96,7 @@ PTR fn;
 
 // --
 
-static struct USB2_Function *_main_Fkt_FindList( struct USB2_IFace *Self, struct TagItem *taglist )
+static struct USB2_Function *_main_Fkt_FindList( struct USB2IFace *Self, struct TagItem *taglist )
 {
 struct RealFunctionNode *fn;
 struct USBBase *usbbase;

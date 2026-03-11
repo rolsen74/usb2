@@ -12,10 +12,12 @@
 
 // --
 
-void _fs_Recursive_Change_Update( struct PTP_FSStruct *fs, struct FS_ObjNode *node )
+void _fs_Recursive_Change_Update( struct FS_Struct *fs UNUSED, struct FS_ObjNode *node )
 {
 struct DateStamp DS;		/* Get a copy of the current datestamp */
 int32 res2;
+
+	MYINFO( "PTP-FS : _fs_Recursive_Change_Update" );
 
 	if ( node )
 	{
@@ -30,13 +32,13 @@ int32 res2;
 
 		while( node )
 		{
-			node->Protection &= ~EXDF_ARCHIVE;		/* clear -A- bit */
+			node->on_Protection &= ~EXDF_ARCHIVE;		/* clear -A- bit */
 
-			node->Date.ds_Tick   = DS.ds_Tick;
-			node->Date.ds_Minute = DS.ds_Minute;	/* update date */
-			node->Date.ds_Days   = DS.ds_Days;
+			node->on_Date.ds_Tick	= DS.ds_Tick;
+			node->on_Date.ds_Minute	= DS.ds_Minute;	/* update date */
+			node->on_Date.ds_Days	= DS.ds_Days;
 
-			node = node->Parent_dir;
+			node = node->on_Parent_dir;
 		}
 	}
 

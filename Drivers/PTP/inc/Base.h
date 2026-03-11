@@ -21,14 +21,16 @@ struct PTPBase
 {
 	struct Library		lib_Base;
 	PTR					lib_SegList;
+	struct MsgPort *	lib_FSMsgPort;
+	struct MsgPort *	lib_MasterMsgPort;
 };
 
 // --
 
-struct PTPData
-{
-	int	dummy;
-};
+//struct PTPData
+//{
+//	int	dummy;
+//};
 
 // --
 
