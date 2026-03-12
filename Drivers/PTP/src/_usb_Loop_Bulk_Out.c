@@ -52,7 +52,8 @@ struct USB_Command *cmd;
 			{
 				cmd->ucmd_Next( us, cmd );
 			}
-			else
+
+			if ( ! cmd->ucmd_Next )
 			{
 				us->us_TransactionID++;
 				us->us_USBActive = NULL;

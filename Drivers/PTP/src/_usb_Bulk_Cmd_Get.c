@@ -18,7 +18,7 @@ struct USB_Command *cmd;
 
 	MYINFO( "PTP-USB : _usb_Bulk_Cmd_Get" );
 
-	cmd = (PTR) RemHead( & us->us_USBList );
+	cmd = (PTR) RemHead( & us->us_CmdList );
 
 	if ( ! cmd )
 	{

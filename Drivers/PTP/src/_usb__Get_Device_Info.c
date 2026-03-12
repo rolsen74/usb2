@@ -49,7 +49,7 @@ U32 retval;
 	}
 
 	cmd->ucmd_Function = ucmd_Handle_Device_Info;
-	cmd->ucmd_Type = CMDTYPE_Cmd_Read_Stat;
+	cmd->ucmd_Type = CMDTYPE_Cmd_ReadMem_Stat;
 
 	con = & cmd->ucmd_Container;
 	con->Length		= LE_SWAP32( 12 + 0*4 );

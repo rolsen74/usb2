@@ -19,24 +19,41 @@
 
 enum CmdType
 {
-	CMDTYPE_Cmd_None_Stat,
-	CMDTYPE_Cmd_Read_Stat,
-	CMDTYPE_Cmd_Send_Stat,
+	CMDTYPE_Cmd_None_Stat,			// Header Status
+
+	CMDTYPE_Cmd_ReadMem_Stat,		// Header Memory Status
+	CMDTYPE_Cmd_ReadFile_Stat,		// Header File Status
+
+	CMDTYPE_Cmd_SendMem_Stat,		// Header Memory Status
+	CMDTYPE_Cmd_SendFile_Stat,		// Header File Status
 };
 
 enum CmdStage
 {
-	CMDSTAGE_Send_Header1,
+	// Send cmd
+	CMDSTAGE_Send_Header1,		// working
 	CMDSTAGE_Send_Header2,
 
-	CMDSTAGE_Read_Data1,
-	CMDSTAGE_Read_Data2,
-	CMDSTAGE_Read_Data3,
+	// Read into a memory buffer
+	CMDSTAGE_Read_Memory1,		// working, but need more work
+	CMDSTAGE_Read_Memory2,
+	CMDSTAGE_Read_Memory3,
 
-	CMDSTAGE_Send_Data1,
-	CMDSTAGE_Send_Data2,
+	// Read into a disk file
+	CMDSTAGE_Read_File1,		// not implemented yet
+	CMDSTAGE_Read_File2,
+	CMDSTAGE_Read_File3,
 
-	CMDSTAGE_Read_Responce1,
+	// Write from a memory buffer
+	CMDSTAGE_Send_Memory1,		// not implemented yet
+	CMDSTAGE_Send_Memory2,
+
+	// Write into a disk file
+	CMDSTAGE_Send_File1,		// not implemented yet
+	CMDSTAGE_Send_File2,
+
+	// Read cmd Status
+	CMDSTAGE_Read_Responce1,	// working
 	CMDSTAGE_Read_Responce2,
 };
 

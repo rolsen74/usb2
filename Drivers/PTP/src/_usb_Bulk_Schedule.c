@@ -21,7 +21,8 @@ struct USB_Command *cmd;
 	if ( us->us_USBActive )
 	{
 		// We already have an active cmd
-		goto bailout;
+		MYINFO( "PTP-USB : _usb_Bulk_Schedule : Active" );
+			goto bailout;
 	}
 
 	cmd = (PTR) RemHead( & us->us_USBList );
@@ -29,6 +30,7 @@ struct USB_Command *cmd;
 	if ( ! cmd )
 	{
 		// Nothing to be done
+		MYINFO( "PTP-USB : _usb_Bulk_Schedule : Queue Empty" );
 		goto bailout;
 	}
 

@@ -98,7 +98,7 @@ U32 retval;
 	// --
 	// Reset Start IDs
 	us->us_SessionID = 1;
-	us->us_TransactionID = 0;
+	us->us_TransactionID = 1;
 
 	if ( ! _usb__Open_Session( us ))
 	{
