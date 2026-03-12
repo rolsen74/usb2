@@ -747,6 +747,7 @@ enum USB2HCDType
 
 #define USB2Tag_IOReq_AddZeroPacket		( USB2Tag_Dummy + 154 )	 // v1.1  - U32 (BOOL)
 
+#define USB2Tag_IOReq_AllowShortPackets	( USB2Tag_Dummy + 155 )	 // v1.1  - U32 (BOOL)
 
 
 // -- + --
@@ -778,6 +779,9 @@ enum USB2HCDType
 #define USB2Tag_EPRes_NrOfIORequest		( USB2Tag_Dummy + 208 )	 // v1.1  - U32
 
 #define USB2Tag_EPRes_AddZeroPacket		( USB2Tag_Dummy + 209 )	 // v1.1  - U32 (BOOL)
+
+#define USB2Tag_EPRes_AllowShortPackets	( USB2Tag_Dummy + 210 )	 // v1.1  - U32 (BOOL)
+
 
 // -- + --
 // -- Attribute

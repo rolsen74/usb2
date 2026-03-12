@@ -32,6 +32,7 @@ struct RealFunctionNode *fn;
 struct USB2_ConfigNode *cn;
 struct TagItem *tag;
 struct MsgPort *mp;
+U32 shortp;
 U32 eptype;
 U32 addzp;
 U32 epdir;
@@ -63,7 +64,8 @@ U32 to;
 	bs		= 0;		// Buffer Size
 	to		= 0;		// TimeOut in Seconds
 	mp		= NULL;		// (user) MsgPort
-	addzp	= FALSE;	// Add Zero Packet (if needed on write)
+	addzp	= -1U;		// Add Zero Packet (if needed on write)
+	shortp	= -1U;		// Allow short Packets (read)
 
 	// --
 	
@@ -194,11 +196,19 @@ U32 to;
 			{
 				addzp = ( tag->ti_Data ) ? TRUE : FALSE ;
 
-				USBERROR( "USB2Tag_EPRes_AddZeroPacket %ld", addzp );
+//				USBERROR( "USB2Tag_EPRes_AddZeroPacket %ld", addzp );
 				break;
 			}
 
 			// --
+
+			case USB2Tag_EPRes_AllowShortPackets:
+			{
+				shortp = ( tag->ti_Data ) ? TRUE : FALSE ;
+
+//				USBERROR( "USB2Tag_EPRes_ShortPackets %ld", shortp );
+				break;
+			}
 
 			default:
 			{
@@ -372,7 +382,8 @@ U32 to;
 			// if mp == NULL then alloc ioreq will create the msgport
 			epr->epr_Public.IORequests[cnt] = (PTR) IOREQUEST_ALLOCTAGS(
 //				USB2Tag_ShortPackets, sp,
-				USB2Tag_IOReq_AddZeroPacket, addzp,
+				( shortp == -1U ) ? TAG_IGNORE : USB2Tag_IOReq_AllowShortPackets, shortp,
+				( addzp == -1U ) ? TAG_IGNORE : USB2Tag_IOReq_AddZeroPacket, addzp,
 				USB2Tag_IOReq_EndPoint, epn,
 				USB2Tag_IOReq_MsgPort, mp,
 				USB2Tag_IOReq_TimeOut, to,

@@ -27,6 +27,7 @@ struct RealFunctionNode *fn;
 struct USB2_EndPointNode *ep;
 struct RealRequest *ioreq;
 struct MsgPort *mp;
+U32 shortp;
 U32 addzp;
 U32 to;
 //U32 sp;
@@ -37,13 +38,11 @@ int error;
 	ioreq	= NULL;
 	error	= TRUE;
 
-
-	
+	shortp	= MISC_GETTAGVALUE(	USB2Tag_IOReq_AllowShortPackets, TRUE, taglist );
 	addzp	= MISC_GETTAGVALUE(	USB2Tag_IOReq_AddZeroPacket,	0, taglist );
 	ep		= MISC_GETTAGDATA(	USB2Tag_IOReq_EndPoint,			0, taglist );
 	mp		= MISC_GETTAGDATA(	USB2Tag_IOReq_MsgPort,			0, taglist );
 	to		= MISC_GETTAGVALUE(	USB2Tag_IOReq_TimeOut,			0, taglist );
-//	sp		= MISC_GETTAGVALUE(	USB2Tag_ShortPackets, TRUE, taglist );
 
 	if ( ! ep )
 	{
@@ -109,10 +108,11 @@ int error;
 //	ioreq->req_Public.io_UserValue		= 0;
 //	ioreq->req_Public.io_UserData		= NULL;
 //	ioreq->req_Public.io_TimeOut		= 0;
+	ioreq->req_Public.io_AllowShortPackets = ( shortp ) ? TRUE : FALSE ;
 	ioreq->req_Public.io_AddZeroPackets	= addzp;
+	ioreq->req_Public.io_TimeOut		= to;
 //	ioreq->req_Public.io_Pad[2];
-//	ioreq->req_Public.io_AllowShortPackets;
-	ioreq->req_PublicStat	= IORS_User;
+	ioreq->req_PublicStat				= IORS_User;
 
 	/* Internal */
 
@@ -151,7 +151,7 @@ int error;
 	// --
 
 	//	ioreq->rr_IOReq.io_AllowShortPackets = sp;
-	ioreq->req_Public.io_TimeOut = to;
+	//	ioreq->req_Public.io_TimeOut = to;
 
 //	#ifdef DO_DEBUG
 //	ioreq->rr_TaskName = ((struct Task *)TASK_FIND())->tc_Node.ln_Name;

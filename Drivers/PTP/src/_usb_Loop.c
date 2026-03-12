@@ -12,45 +12,9 @@
 
 // --
 
-// --
-
-static void doStack( struct USB_Struct *us )
-{
-struct USB2_NotifyMessage *msg;
-
-	while( TRUE )
-	{
-		msg = (PTR) GetMsg( us->us_Register->Stack_MsgPort );
-
-		if ( ! msg )
-		{
-			break;
-		}
-
-		switch( msg->nm_Type )
-		{
-			case USBNC_Detached:
-			{
-				MYINFO( "PTP-USB : Detach msg" );
-				us->us_Detached = FALSE;
-				break;
-			}
-
-			default:
-			{
-				MYINFO( "PTP-USB : Unknown Stack Message Type (%lu)", msg->nm_Command );
-				break;
-			}
-		}
-
-		ReplyMsg( (PTR) msg );
-	}
-}
-
-// --
-
 void _usb_Loop( struct USB_Struct *us )
 {
+struct USB2_IORequest *ioreq;
 struct CommandMessage *cm;
 U32 wait;
 U32 mask;
@@ -75,6 +39,18 @@ U32 mask;
 	}
 
 	// --
+	// Start Reading from Events
+
+	ioreq = us->us_Res_Interrupt->IORequests[0];
+	ioreq->io_AllowShortPackets = TRUE;
+	SendIO( (PTR) ioreq );
+
+	// --
+	// Start Bulk transfers
+
+	_usb_Bulk_Schedule( us );
+
+	// --
 
 	wait = SIGBREAKF_CTRL_C;
 	wait |=	us->us_Res_BulkIn->MsgPortBit;
@@ -92,27 +68,36 @@ U32 mask;
 
 	while(( us->us_Running ) && ( ! us->us_Detached ))
 	{
+		MYINFO( "PTP-USB : Waiting for $%08lx", wait );
+
 		mask = Wait( wait );
+
+		MYINFO( "PTP-USB : Got $%08lx", mask );
 
 		if ( mask &	us->us_Res_BulkIn->MsgPortBit )
 		{
 			MYINFO( "PTP-USB : Got BulkIn Bit" );
+			_usb_Loop_Bulk_In( us );
+			_usb_Bulk_Schedule( us );
 		}
 
 		if ( mask &	us->us_Res_BulkOut->MsgPortBit )
 		{
 			MYINFO( "PTP-USB : Got BulkOut Bit" );
+			_usb_Loop_Bulk_Out( us );
+			_usb_Bulk_Schedule( us );
 		}
 
 		if ( mask &	us->us_Res_Interrupt->MsgPortBit )
 		{
 			MYINFO( "PTP-USB : Got Interrupt Bit" );
+			_usb_Loop_Event( us );
 		}
 
 		if ( mask &	us->us_Register->Stack_MsgPortBit )
 		{
 			MYINFO( "PTP-USB : Got Stack Bit" );
-			doStack( us );
+			_usb_Loop_Stack( us );
 		}
 
 		if ( mask & SIGBREAKF_CTRL_C )

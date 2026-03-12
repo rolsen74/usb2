@@ -6,15 +6,14 @@ The stack is **functional** and supports several common USB device classes, but 
 
 ## Status
 
-⚠️ **Working but incomplete**
-
 The following functionality is known to work:
 
-- USB Mass Storage Devices (MSD)
+- USB Hubs
 - USB Mouse (HID)
 - USB Keyboard (HID)
-- USB Hubs
+- USB Mass Storage Devices (MSD)
 - USB Printer Class (Printer Protocol)
+- OHCI (USB 1.1 Host Controller)
 - EHCI (USB 2.0 Host Controller)
 
 Limitations:

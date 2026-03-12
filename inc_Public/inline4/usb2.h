@@ -35,6 +35,7 @@
 #define USB2_EPRes_ObtainTags(...)			IUSB2->USB2_EPRes_ObtainTags(__VA_ARGS__)
 #define USB2_EPRes_ObtainList(x,y)			IUSB2->USB2_EPRes_ObtainList((x),(y))
 #define USB2_EPRes_Release(x)				IUSB2->USB2_EPRes_Release((x))
+#define USB2_EPRes_Destall(x)				IUSB2->USB2_EPRes_Destall((x))
 
 #define USB2_Notify_Add(x,y)				IUSB2->USB2_Notify_Add((x),(y))
 #define USB2_Notify_Remove(x)				IUSB2->USB2_Notify_Remove((x))

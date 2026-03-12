@@ -84,4 +84,27 @@ U32		_usb_Init(			struct USB_Struct *us );
 void	_usb_Free(			struct USB_Struct *us );
 void	_usb_Loop(			struct USB_Struct *us );
 
+
+U32		_usb__Open_Session(				struct USB_Struct *us );
+U32		_usb__Get_Device_Info(			struct USB_Struct *us );
+void	_usb_Loop_Event(				struct USB_Struct *us );
+void	_usb_Loop_Stack(				struct USB_Struct *us );
+void	_usb_Loop_Bulk_In(				struct USB_Struct *us );
+void	_usb_Loop_Bulk_Out(				struct USB_Struct *us );
+
+// --
+
+struct USB_Command *_usb_Bulk_Cmd_Get(	struct USB_Struct *us );
+void	_usb_Bulk_Cmd_Free(				struct USB_Struct *us, struct USB_Command *cmd );
+
+void	_usb_Bulk_Stage_Send_Header1(	struct USB_Struct *us, struct USB_Command *cmd );
+void	_usb_Bulk_Stage_Send_Header2(	struct USB_Struct *us, struct USB_Command *cmd );
+
+void	_usb_Bulk_Stage_Read_Data1(		struct USB_Struct *us, struct USB_Command *cmd );
+
+void	_usb_Bulk_Stage_Send_Data1(		struct USB_Struct *us, struct USB_Command *cmd );
+
+void	_usb_Bulk_Stage_Read_Stat1(		struct USB_Struct *us, struct USB_Command *cmd );
+void	_usb_Bulk_Stage_Read_Stat2(		struct USB_Struct *us, struct USB_Command *cmd );
+
 #endif

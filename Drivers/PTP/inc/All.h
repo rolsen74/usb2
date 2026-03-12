@@ -65,8 +65,8 @@
 #include "inc/Debug.h"
 #include "inc/FileSystem.h"
 #include "inc/Master.h"
-#include "inc/USB.h"
 #include "inc/PTP.h"
+#include "inc/USB.h"
 // --
 #include "inc/Protos.h"
 // --
