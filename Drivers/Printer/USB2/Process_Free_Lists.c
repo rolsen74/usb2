@@ -31,16 +31,16 @@ static void __myProcess_Free_Lists( struct PrinterUnit *unit )
 
 	// --
 
-	if ( unit->unit_Bulk_Tx_Active )
-	{
-		USBINFO( "Printer : Freeing Tx Active Array" );
+//	if ( unit->unit_Bulk_Tx_Active )
+//	{
+//		USBINFO( "Printer : Freeing Tx Active Array" );
 
 //		Abort_IOList( unit, unit->unit_QueueList );
 //		  Abort_BulkOut( unit, unit->unit_TxCurrentIO );
 
 //		FreeSysObject( ASOT_LIST, unit->unit_Bulk_Tx_Active );
 //		unit->unit_Bulk_Tx_Active = NULL;
-	}
+//	}
 
 	// --
 

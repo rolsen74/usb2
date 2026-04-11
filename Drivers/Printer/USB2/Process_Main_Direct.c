@@ -100,12 +100,9 @@ U32 ionr;
 			{
 				USBERROR( "__myProcess_Main_Direct : Destalling" );
 
-				if ( ! ENDPOINTRES_DESTALL( unit->unit_Bulk_Tx_Resource ))
+				if ( ! USB2_EPRes_Destall( unit->unit_Bulk_Tx_Resource ))
 				{
-usbbase->usb_IExec->DebugPrintF( "__myProcess_Main_Buffer : Destalling failed\n" );
-
-					in->Running = FALSE;
-					reply = FALSE;
+					unit->unit_Detached = TRUE;
 				}
 
 				break;

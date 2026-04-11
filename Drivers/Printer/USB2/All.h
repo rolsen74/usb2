@@ -124,21 +124,22 @@ extern struct Library *NewlibBase;
 
 struct PrinterUnit *Unit_Alloc( U32 unitnr );
 
-void	Cmd_Write_Buffer(		struct PrinterUnit *unit, struct IOExtPar *pario );
-void	Cmd_Write_Direct(		struct PrinterUnit *unit, struct IOExtPar *pario );
-S32		Resources_Init(			struct PrinterBase *devBase );
-void	Resources_Free(			struct PrinterBase *devBase );
-void	Buffer_Flush(			struct PrinterUnit *unit );
-S32		Buffer_Write(			struct PrinterUnit *unit, U8 *data, U32 size );
-void	Buffer_Schedule(		struct PrinterUnit *unit );
-void	Direct_Schedule(		struct PrinterUnit *unit );
-S32		Process_Find_Device(	struct PrinterUnit *unit );
-S32		Process_Setup_Device(	struct PrinterUnit *unit );
-S32		Unit_Startup(			struct PrinterUnit *unit );
-S32		Unit_Startup_USB(		struct PrinterUnit *unit );
-void	Unit_Free(				struct PrinterUnit *unit );
-void	NSCmd_DeviceQuery(		struct IOStdReq *ioreq );
-void	Printer_Process_Entry(	void );
+void	Cmd_Write_Buffer(				struct PrinterUnit *unit, struct IOExtPar *pario );
+void	Cmd_Write_Direct(				struct PrinterUnit *unit, struct IOExtPar *pario );
+void	_cmd_4000_NSCmd_DeviceQuery(	struct IOStdReq *ioreq );
+S32		Resources_Init(					struct PrinterBase *devBase );
+void	Resources_Free(					struct PrinterBase *devBase );
+void	Buffer_Flush(					struct PrinterUnit *unit );
+S32		Buffer_Write(					struct PrinterUnit *unit, U8 *data, U32 size );
+void	Buffer_Schedule(				struct PrinterUnit *unit );
+void	Direct_Schedule(				struct PrinterUnit *unit );
+S32		Process_Find_Device(			struct PrinterUnit *unit );
+S32		Process_Setup_Device(			struct PrinterUnit *unit );
+S32		Unit_Startup(					struct PrinterUnit *unit );
+S32		Unit_Startup_USB(				struct PrinterUnit *unit );
+void	Unit_Free(						struct PrinterUnit *unit );
+void	NSCmd_DeviceQuery(				struct IOStdReq *ioreq );
+void	Printer_Process_Entry(			void );
 
 // --
 

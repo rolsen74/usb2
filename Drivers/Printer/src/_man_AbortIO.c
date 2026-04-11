@@ -12,7 +12,7 @@
 
 // --
 
-static void _manager_AbortIO( struct DeviceManagerInterface *Self UNUSED, struct IORequest *ioreq )
+static void _manager_AbortIO( struct DeviceManagerInterface *Self UNUSED, struct IORequest *ioreq UNUSED )
 {
 // struct AbortIOMessage *msg;
 // struct devUnit *unit;

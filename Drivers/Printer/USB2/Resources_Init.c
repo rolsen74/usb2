@@ -15,7 +15,7 @@
 extern struct Interface *INewlib;
 extern struct Library *NewlibBase;
 
-S32 Resources_Init( struct PrinterBase *devBase )
+S32 Resources_Init( struct PrinterBase *devBase UNUSED )
 {
 S32 retval;
 

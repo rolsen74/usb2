@@ -50,7 +50,7 @@ build_printer:
 
 build_archive:
 	@echo "Building Archive"
-	@rm usb2.lha
+	@rm -f usb2.lha
 	lha a usb2.lha $(BINDIR)/usb2
 	@echo "Building done"
 
