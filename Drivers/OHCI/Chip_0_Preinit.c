@@ -74,7 +74,7 @@ U32 ports;
 
 	if (( OHCI_REV_HI( rev ) != 1 ) || ( OHCI_REV_LO( rev ) != 0 ))
 	{
-		SHOWMSG( "Version check fail (rev %08lx)", rev );
+		USBDEBUG( "Version check fail (rev %08lx)", rev );
 		goto bailout;
 	}
 	#endif

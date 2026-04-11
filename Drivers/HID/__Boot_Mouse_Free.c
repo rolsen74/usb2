@@ -1,0 +1,36 @@
+
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+// --
+
+#include "usb2_all.h"
+#include "HID.h"
+
+// --
+
+SEC_CODE void __Boot_Mouse_Free( struct USBBase *usbbase UNUSED, PTR userdata UNUSED, PTR in UNUSED )
+{
+struct HID_ReportNode *rn;
+// struct HIDData *hd;
+
+	TASK_NAME_ENTER( "__Boot_Mouse_Free" );
+
+	rn = userdata;
+//	hd = rn->HIDData;
+
+	// --
+
+	MSGPORT_FREE( & rn->Input_MsgPort );
+	MSGPORT_FREE( & rn->IOReq_MsgPort );
+
+	// --
+
+	TASK_NAME_LEAVE();
+}
+
+// --

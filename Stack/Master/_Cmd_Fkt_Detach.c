@@ -40,7 +40,7 @@ S32 reply;
 
 			if ( dn->dn_Function == fn )
 			{
-				USBERROR( "__Cmd_Fkt_Detach : Sending msg to %p", dn );
+				USBERROR( "__Cmd_Fkt_Detach : todo -> Sending msg to %p", dn );
 
 				// todo send a message too Driver/Register about Detach
 			}

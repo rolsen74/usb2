@@ -175,7 +175,7 @@ PTR buf;
 		val |= OHCI_TD_NOINTR;
 		val |= OHCI_TD_TOGGLE_1;
 		val |= OHCI_TD_NOCC;
-		val |= (( ioreq->req_Public.io_Command == CMD_READ ) && ( ioreq->req_Public.io_AllowShortPackets == TRUE )) ? OHCI_TD_R : 0;
+		val |= (( ioreq->req_Public.io_Command == CMD_READ ) && ( ioreq->req_Public.io_AllowShortPackets )) ? OHCI_TD_R : 0;
 
 		data->td_flags		= LE_SWAP32( val );
 

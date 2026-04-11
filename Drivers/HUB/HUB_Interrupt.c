@@ -109,6 +109,19 @@ U8 *data;
 				break;
 			}
 
+			case USB2Err_Host_Stall:
+			{
+usbbase->usb_IExec->DebugPrintF( "HUB_Handle_Interrupt : Destalling\n" );
+
+				if ( ! ENDPOINTRES_DESTALL( in->Res_Interrupt ))
+				{
+usbbase->usb_IExec->DebugPrintF( "HUB_Handle_Interrupt : Destalling failed\n" );
+
+					in->Running = FALSE;
+				}
+				break;
+			}
+
 			default:
 			{
 				if ( in->ErrorCnt++ >= 20 )

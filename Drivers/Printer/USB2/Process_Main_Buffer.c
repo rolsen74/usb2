@@ -90,6 +90,21 @@ U32 ionr;
 				break;
 			}
 
+			case USB2Err_Host_Stall:
+			{
+				USBERROR( "__myProcess_Main_Buffer : Destalling" );
+
+				if ( ! ENDPOINTRES_DESTALL( unit->unit_Bulk_Tx_Resource ))
+				{
+usbbase->usb_IExec->DebugPrintF( "__myProcess_Main_Buffer : Destalling failed\n" );
+
+					in->Running = FALSE;
+					reply = FALSE;
+				}
+
+				break;
+			}
+
 			default:
 			{
 				USBERROR( "__myProcess_Main_Buffer : Unknown error %lu", (U32) usbio->io_Error );

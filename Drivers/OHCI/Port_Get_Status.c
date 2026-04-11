@@ -100,6 +100,7 @@ U32 retval;
 	|	(( status & 0x00000200 ) ? HUBF_Status_Low_Speed : 0 )
 	);
 
+	#if 0
 	#ifdef DO_DEBUG
 	{
 		TEXT buf[256];
@@ -114,7 +115,7 @@ U32 retval;
 			( retval & HUBF_Status_Low_Speed ) ? "Low Speed, " : ""
 		);
 
-		SHOWMSG( "%s", buf );
+		USBDEBUG( "%s", buf );
 
 		snprintf( buf, 255, "%s%s%s%s%s",
 			( retval & HUBF_Change_Connection ) ? "Connect Change, " : "",
@@ -124,8 +125,9 @@ U32 retval;
 			( retval & HUBF_Change_Reset ) ? "Port Reset Change" : ""
 		);
 
-		SHOWMSG( "%s", buf );
+		USBDEBUG( "%s", buf );
 	}
+	#endif
 	#endif
 
 	return( retval );
@@ -139,12 +141,12 @@ U32 retval;
 U32 retval;
 U32 status;
 
-	SHOWMSG( "OHCI_Get_Status( Port %ld )", port );
+	USBDEBUG( "OHCI_Get_Status( Port %ld )", port );
 
 	#ifdef DO_DEBUG
 	if (( port == 0 ) || ( hn->HCD_NumPorts < port ))
 	{
-		SHOWMSG( "Invalid Port Number" );
+		USBDEBUG( "Invalid Port Number" );
 	}
 	#endif
 
@@ -193,7 +195,7 @@ U32 status;
 		    ( retval & HUBF_Status_Low_Speed ) ? "Low Speed, " : ""
         );
 
-        SHOWMSG( "%s", buf );
+        USBDEBUG( "%s", buf );
 
 	    snprintf( buf, 255, "%s%s%s%s%s",
 		    ( retval & HUBF_Change_Connection ) ? "Connect Change, " : "",
@@ -203,7 +205,7 @@ U32 status;
 		    ( retval & HUBF_Change_Reset ) ? "Port Reset Change" : ""
         );
 
-        SHOWMSG( "%s", buf );
+        USBDEBUG( "%s", buf );
     }
 	#endif
 

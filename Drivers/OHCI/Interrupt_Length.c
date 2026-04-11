@@ -191,6 +191,8 @@ U8 err;
 		actual	+= len;
 		mem		+= len;
 
+usbbase->usb_IExec->DebugPrintF( "ochi : len %ld\n", len );
+
 		// Check for short Packet
 		if ( len < size )
 		{

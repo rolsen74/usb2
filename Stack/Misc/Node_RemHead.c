@@ -32,7 +32,7 @@ struct USB2_Node *next;
 		// Head = Tail, so there is one Node
 
 		#if 0
-//		#ifdef DO_PANIC
+		//		#ifdef DO_PANIC
 		node->un_Next = (PTR) 0xAC111111;
 		node->un_Prev = (PTR) 0xAC222222;
 		#else

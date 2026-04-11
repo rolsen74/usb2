@@ -21,28 +21,14 @@
 
 /***************************************************************************/
 
-#ifndef LE_SWAP16
-#define LE_SWAP16(x)	( (( (x) & 0x00ffU ) << 8 ) \
-						| (( (x) & 0xff00U ) >> 8 ) )
-#endif
+#undef  LE_SWAP16
+#define LE_SWAP16(x)	__builtin_bswap16(x)
 
-#ifndef LE_SWAP32
-#define LE_SWAP32(x)	( (( (x) & 0x000000ffUL ) << 24 ) \
-						| (( (x) & 0x0000ff00UL ) << 8  ) \
-						| (( (x) & 0x00ff0000UL ) >> 8  ) \
-						| (( (x) & 0xff000000UL ) >> 24 ) )
-#endif
+#undef  LE_SWAP32
+#define LE_SWAP32(x)	__builtin_bswap32(x)
 
-#ifndef LE_SWAP64
-#define LE_SWAP64(x)	( (( (x) & 0x00000000000000ffULL ) << 56 ) \
-						| (( (x) & 0x000000000000ff00ULL ) << 40 ) \
-						| (( (x) & 0x0000000000ff0000ULL ) << 24 ) \
-						| (( (x) & 0x00000000ff000000ULL ) <<  8 ) \
-						| (( (x) & 0x000000ff00000000ULL ) >>  8 ) \
-						| (( (x) & 0x0000ff0000000000ULL ) >> 24 ) \
-						| (( (x) & 0x00ff000000000000ULL ) >> 40 ) \
-						| (( (x) & 0xff00000000000000ULL ) >> 56 ) )
-#endif
+#undef  LE_SWAP64
+#define LE_SWAP64(x)	__builtin_bswap64(x)
 
 #ifndef BE_SWAP16
 #define BE_SWAP16(x)	(x)
@@ -745,9 +731,9 @@ enum USB2HCDType
 
 #define USB2Tag_IOReq_EndPoint			( USB2Tag_Dummy + 153 )	 // v1.1  - struct USB2_EndPoint *
 
-#define USB2Tag_IOReq_AddZeroPacket		( USB2Tag_Dummy + 154 )	 // v1.1  - U32 (BOOL)
+#define USB2Tag_IOReq_AddZeroPacket		( USB2Tag_Dummy + 154 )	 // v1.1  - U32 (TRUE/FALSE)
 
-#define USB2Tag_IOReq_AllowShortPackets	( USB2Tag_Dummy + 155 )	 // v1.1  - U32 (BOOL)
+#define USB2Tag_IOReq_AllowShortPackets	( USB2Tag_Dummy + 155 )	 // v1.1  - U32 (TRUE/FALSE)
 
 
 // -- + --
@@ -778,9 +764,9 @@ enum USB2HCDType
 
 #define USB2Tag_EPRes_NrOfIORequest		( USB2Tag_Dummy + 208 )	 // v1.1  - U32
 
-#define USB2Tag_EPRes_AddZeroPacket		( USB2Tag_Dummy + 209 )	 // v1.1  - U32 (BOOL)
+#define USB2Tag_EPRes_AddZeroPacket		( USB2Tag_Dummy + 209 )	 // v1.1  - U32 (TRUE/FALSE)
 
-#define USB2Tag_EPRes_AllowShortPackets	( USB2Tag_Dummy + 210 )	 // v1.1  - U32 (BOOL)
+#define USB2Tag_EPRes_AllowShortPackets	( USB2Tag_Dummy + 210 )	 // v1.1  - U32 (TRUE/FALSE)
 
 
 // -- + --

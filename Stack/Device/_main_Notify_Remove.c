@@ -48,15 +48,13 @@ struct USBBase *usbbase;
 
 	if ( n )
 	{
-		#ifdef DEBUG
 		n->nn_StructID = 0;
-		#endif
 
 		NODE_REMNODE( & usbbase->usb_Notify_Header, n );
 
 		MEMORY_FREE( MEMID_NotifyNode, n, 0 );
 	}
-	#ifdef DEBUG
+	#ifdef USBDEBUG
 	else
 	{
 		USBERROR( "Node not found" );

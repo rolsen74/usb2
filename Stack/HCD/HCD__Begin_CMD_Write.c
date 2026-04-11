@@ -76,7 +76,7 @@ S32 reply;
 	}
 	else
 	{
-		USBDEBUG( "Trying to Read from an outbound EndPoint" );
+		USBERROR( "Trying to Read from an outbound EndPoint" );
 		ioreq->req_Public.io_Error = USB2Err_Stack_DirectionError;
 	}
 

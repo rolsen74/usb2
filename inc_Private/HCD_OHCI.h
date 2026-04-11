@@ -52,12 +52,12 @@
 
 // #define PCI_INTERFACE_OHCI		0x10
 
-// /*** OHCI registers */
+/*** OHCI registers */
 
-// #define OHCI_REVISION			0x00	/* OHCI revision # */
-// #define  OHCI_REV_LO(rev)		((rev)&0xf)
-// #define  OHCI_REV_HI(rev)		(((rev)>>4)&0xf)
-// #define  OHCI_REV_LEGACY(rev)	((rev) & 0x100)
+#define OHCI_REVISION			0x00	/* OHCI revision # */
+#define  OHCI_REV_LO(rev)		((rev)&0xf)
+#define  OHCI_REV_HI(rev)		(((rev)>>4)&0xf)
+#define  OHCI_REV_LEGACY(rev)	((rev) & 0x100)
 
 #define OHCI_CONTROL			0x04
 // #define  OHCI_CBSR_MASK			0x00000003 /* Control/Bulk Service Ratio */

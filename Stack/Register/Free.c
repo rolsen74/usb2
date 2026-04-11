@@ -149,7 +149,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__Register_Free" );
 
-//	USBERROR( "__Register_Free          : REG   %p : (%s)", reg, (file)?file:"<NULL>" );
+	USBERROR( "__Register_Free          : REG   %p : (%s)", reg, (file)?file:"<NULL>" );
 
 	// --
 
@@ -208,15 +208,16 @@ enum FSTAT fstat;
 
 	// --
 
-	#ifdef DO_PANIC
-
-	if ((( Node_Next( reg )) && ( Node_Next( reg ) != (PTR) 0xAC111111 ))
-	||	(( Node_Prev( reg )) && ( Node_Prev( reg ) != (PTR) 0xAC222222 )))
-	{
-		USBPANIC( "__Register_Free          : REGister Node have not been removed : Self %p : Next %p : Prev %p : (%s)", reg, Node_Next( reg ), Node_Prev( reg ), file );
-	}
-
-	#endif
+//	#ifdef DO_PANIC
+//
+//  We do not have a Node in front
+//	if ((( Node_Next( reg )) && ( Node_Next( reg ) != (PTR) 0xAC111111 ))
+//	||	(( Node_Prev( reg )) && ( Node_Prev( reg ) != (PTR) 0xAC222222 )))
+//	{
+//		USBPANIC( "__Register_Free          : REGister Node have not been removed : Self %p : Next %p : Prev %p : (%s)", reg, Node_Next( reg ), Node_Prev( reg ), file );
+//	}
+//
+//	#endif
 
 	// --
 

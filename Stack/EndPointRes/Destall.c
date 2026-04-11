@@ -34,7 +34,7 @@ U32 idx;
 
 	TASK_NAME_ENTER( "__EndPointRes_Destall" );
 
-	USBERROR( "__EndPointRes_Destall       : EPR   %p : (%s)", epr, (file)?file:"<NULL>" );
+//	USBERROR( "__EndPointRes_Destall       : EPR   %p : (%s)", epr, (file)?file:"<NULL>" );
 
 	retval = FALSE;
 	locked = FALSE;
@@ -56,6 +56,12 @@ U32 idx;
 
 	locked = TRUE;
 
+	if ( real->epr_Detach )
+	{
+		USBERROR( "__EndPointRes_Destall : EndPoint detached" );
+		goto bailout;
+	}
+
 	ep = (PTR) real->epr_Public.EndPoint;
 
 	if ( ENDPOINT_VALID( ep ) != VSTAT_Okay )
@@ -69,6 +75,12 @@ U32 idx;
 	if ( FUNCTION_VALID( fn ) != VSTAT_Okay )
 	{
 		USBERROR( "__EndPointRes_Destall : Error validing Function Node" );
+		goto bailout;
+	}
+
+	if ( fn->fkt_Detach )
+	{
+		USBERROR( "__EndPointRes_Destall : Function detached" );
 		goto bailout;
 	}
 

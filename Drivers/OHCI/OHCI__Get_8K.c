@@ -93,7 +93,7 @@ U8 *mem;
 	#endif
 
 	#if 0
-	if (( hn->hn_Is_ISP1561 == TRUE ) && ( len < 32 ))
+	if (( hn->hn_Is_ISP1561 ) && ( len < 32 ))
 	{
 		phy += 32;
 		mem += 32;

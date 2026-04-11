@@ -87,6 +87,7 @@ USB2_CREATEFUNC( void,							Node_AddTail,				struct USBBase *usbbase, struct US
 USB2_CREATEFUNC( void,							Node_AddInfrontOf,			struct USBBase *usbbase, struct USB2_Header *header, PTR c, PTR n );
 USB2_CREATEFUNC( PTR,							Node_RemHead,				struct USBBase *usbbase, struct USB2_Header *header );
 USB2_CREATEFUNC( void,							Node_RemNode,				struct USBBase *usbbase, struct USB2_Header *header, PTR n );
+USB2_CREATEFUNC( PTR,							Node_RemTail,				struct USBBase *usbbase, struct USB2_Header *header );
 
 // -- Register
 

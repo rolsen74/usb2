@@ -57,6 +57,10 @@ struct USBBase
 	U32								usb_CPU_Type;
 	U32								usb_MachineType;
 
+	U32								usb_HID_Qualifiers;
+	S16								usb_HID_Prev_Code[2];
+	U16								usb_HID_Prev_Qual[2];
+
 	struct USB2_DeviceUnit			usb_OpenUnit;
 	struct USB2_Semaphore			usb_OpenCloseSemaphore;
 
@@ -288,6 +292,7 @@ struct USBBase
 #define NODE_ADDINFRONTOF(x,y,z)			usbbase->_Node_AddInfrontOf(usbbase,x,y,z)
 #define NODE_REMHEAD(x)						usbbase->_Node_RemHead(usbbase,x)
 #define NODE_REMNODE(x,y)					usbbase->_Node_RemNode(usbbase,x,y)
+#define NODE_REMTAIL(x)						usbbase->_Node_RemTail(usbbase,x)
 
 #define SEMAPHORE_INIT(x)					usbbase->_Semaphore_Init(usbbase,x)
 #define SEMAPHORE_FREE(x)					usbbase->_Semaphore_Free(usbbase,x)

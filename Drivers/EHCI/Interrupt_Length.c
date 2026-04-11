@@ -134,7 +134,7 @@ U8 err;
 			break;
 		}
 
-		if (( copy == TRUE ) && ( len ))
+		if (( copy ) && ( len ))
 		{
 			// copy src, dest, len
 			MEM_COPY( td->ptd_buffer_virt, mem, len );

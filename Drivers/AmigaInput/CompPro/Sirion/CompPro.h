@@ -74,7 +74,12 @@ typedef char* STR;
 #endif
 
 #ifndef LE_SWAP16
-#define LE_SWAP16(x)	( (( (x) & 0x00ff ) << 8 ) | (( (x) & 0xff00 ) >> 8 ) )
+// #define LE_SWAP16(x)	( (( (x) & 0x00ff ) << 8 ) | (( (x) & 0xff00 ) >> 8 ) )
+
+#define LE_SWAP16(x) \
+  ((uint16_t)((((uint16_t)(x) & 0x00ffU) << 8) | \
+              (((uint16_t)(x) & 0xff00U) >> 8)))
+
 #endif
 
 #ifndef BE_SWAP16

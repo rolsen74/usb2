@@ -329,11 +329,11 @@ U32 cnt;
 
 		if ( range->Flags & PCI_RANGE_IO )
 		{
-			node->HCD_ReadByte  	= PCI_ReadByte;
-			node->HCD_ReadWord  	= PCI_ReadWord;
-			node->HCD_ReadLong  	= PCI_ReadLong;
-			node->HCD_WriteByte 	= PCI_WriteByte;
-			node->HCD_WriteWord 	= PCI_WriteWord;
+			node->HCD_ReadByte		= PCI_ReadByte;
+			node->HCD_ReadWord		= PCI_ReadWord;
+			node->HCD_ReadLong		= PCI_ReadLong;
+			node->HCD_WriteByte		= PCI_WriteByte;
+			node->HCD_WriteWord		= PCI_WriteWord;
 			node->HCD_WriteLong		= PCI_WriteLong;
 		}
 		else
@@ -341,7 +341,7 @@ U32 cnt;
 			node->HCD_ReadByte		= LE_ReadByte;
 			node->HCD_ReadWord		= LE_ReadWord;
 			node->HCD_ReadLong		= LE_ReadLong;
-			node->HCD_WriteByte 	= LE_WriteByte;
+			node->HCD_WriteByte		= LE_WriteByte;
 			node->HCD_WriteWord		= LE_WriteWord;
 			node->HCD_WriteLong		= LE_WriteLong;
 		}
@@ -372,7 +372,7 @@ U32 cnt;
 	
 			node->hn_HCDIndex		= in->idx++;
 			node->hn_MaxSpeed		= USBSPEED_Full;
-	
+
 			MEM_COPY( (PTR) & OHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
 		}
 		#endif
@@ -381,7 +381,7 @@ U32 cnt;
 		else if ( fs->fs_Type2 == FT2_UHCI )
 		{
 			in->uhci++;
-	
+
 			node->hn_HCDIndex		= in->idx++;
 			node->hn_MaxSpeed		= USBSPEED_Full;
 	
@@ -393,7 +393,7 @@ U32 cnt;
 		else if ( fs->fs_Type2 == FT2_XHCI )
 		{
 			in->xhci++;
-	
+
 			node->hn_HCDIndex		= in->idx++;
 			node->hn_MaxSpeed		= USBSPEED_Super;
 	
@@ -431,7 +431,7 @@ U32 pos;
 	while( TRUE )
 	{
 		USBDEBUG( "Find pos %ld", pos );
-	
+
 		/**/ if ( _FindList[pos].fs_Type1 == FT1_Onboard )
 		{
 			_do_Onboard( usbbase, & in, & _FindList[pos] );
@@ -449,10 +449,12 @@ U32 pos;
 	}
 
 	IExec->Disable();
-	IExec->DebugPrintF( "Found %ld UHCI Controller%s\n", in.uhci, ( in.uhci == 1 ) ? "" : "s" );
-	IExec->DebugPrintF( "Found %ld OHCI Controller%s\n", in.ohci, ( in.ohci == 1 ) ? "" : "s" );
-	IExec->DebugPrintF( "Found %ld EHCI Controller%s\n", in.ehci, ( in.ehci == 1 ) ? "" : "s" );
-	IExec->DebugPrintF( "Found %ld xHCI Controller%s\n", in.xhci, ( in.xhci == 1 ) ? "" : "s" );
+	IExec->DebugPrintF( "\n" );
+	IExec->DebugPrintF( "Found %lu UHCI Controller%s\n", in.uhci, ( in.uhci == 1 ) ? "" : "s" );
+	IExec->DebugPrintF( "Found %lu OHCI Controller%s\n", in.ohci, ( in.ohci == 1 ) ? "" : "s" );
+	IExec->DebugPrintF( "Found %lu EHCI Controller%s\n", in.ehci, ( in.ehci == 1 ) ? "" : "s" );
+	IExec->DebugPrintF( "Found %lu xHCI Controller%s\n", in.xhci, ( in.xhci == 1 ) ? "" : "s" );
+	IExec->DebugPrintF( "\n" );
 	IExec->Enable();
 
 	// There is no point in starting if no controller is found

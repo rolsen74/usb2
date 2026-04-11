@@ -68,39 +68,19 @@ SEC_RODATA const S16 USBKeyMap2[256] = // with NumPad on
 	 -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  // f
 };
 
-SEC_RODATA const S16 USBNumPadMap[256] =
-{
-//  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 1
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 2
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 3
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 4
-	0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // 5
-	1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 6
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 7
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 8
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 9
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // a
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // b
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // c
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // d
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // e
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // f
-};
-
 // --
 
 SEC_CODE U32 HID_Entry( struct USBBase *usbbase, struct USB2_DriverMessage *msg )
 {
-struct intern *in;
+struct USB2_IORequest *ioreq;
+struct HIDData *hd;
 U32 retval;
 
 	// --
 
 	TASK_NAME_ENTER( "HID_Entry" );
 
-//	struct RealFunctionNode *fn = (PTR) msg->Function;
+	struct RealFunctionNode *fn = (PTR) msg->Function;
 
 	#ifdef DO_DEBUG
 	U32 startadr = fn->fkt_Address;
@@ -124,28 +104,42 @@ U32 retval;
 
 	// --
 
-	in = MEM_ALLOCVEC( sizeof( struct intern ), TRUE );
+	hd = MEM_ALLOCVEC( sizeof( struct HIDData ), TRUE );
 
-	if ( in )
+	if ( hd )
 	{
 		#ifdef DO_DEBUG
-		in->StructID = ID_IN_HID;
+		hd->StructID = ID_IN_HID;
 		#endif
-		in->StartMsg = msg;
+		hd->StartMsg = msg;
 
-		if ( HID_Init( usbbase, in ))
+		if ( HID_Init( usbbase, hd ))
 		{
-			/**/ if ( in->Driver_Mode == HID_DMode_Boot )
+			// --
+			// Just start to Read from Interrupts
+
+			for( int cnt=0 ; cnt<HID_IOReqCount ; cnt++ )
 			{
-				HID_Boot( usbbase, in );
+				ioreq = hd->Res_Interrupt->IORequests[cnt];
+//				ioreq->io_Data		= hd->Res_Interrupt->Buffers[cnt];
+//				ioreq->io_Length	= hd->Res_Interrupt->BufferSize;
+//				ioreq->io_Command	= CMD_READ;
+				IO_SEND( ioreq );
 			}
-//			else if ( in->Driver_Mode == HID_DMode_Report )
-//			{
-//				myHID_Report( usbbase, in );
-//			}
+
+			// --
+
+			/**/ if ( hd->Driver_Mode == HID_DMode_Boot )
+			{
+				HID_Main_Boot( usbbase, hd );
+			}
+			else if ( hd->Driver_Mode == HID_DMode_Report )
+			{
+				HID_Main_Report( usbbase, hd );
+			}
 			else
 			{
-				USBDEBUG( "HID_Entry : Invalid Mode %ld", in->Driver_Mode );
+				USBDEBUG( "HID_Entry : Invalid Mode %ld", hd->Driver_Mode );
 			}
 		}
 		else
@@ -153,8 +147,8 @@ U32 retval;
 			USBDEBUG( "HID_Entry : Error init failed" );
 		}
 
-		HID_Free( usbbase, in );
-		MEM_FREEVEC( in );
+		HID_Free( usbbase, hd );
+		MEM_FREEVEC( hd );
 	}
 	else
 	{

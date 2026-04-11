@@ -13,36 +13,24 @@
 
 // --
 
-SEC_CODE void HID_Free( struct USBBase *usbbase, struct intern *in )
+SEC_CODE void HID_Free( struct USBBase *usbbase, struct HIDData *hd )
 {
 	USBDEBUG( "HID : HID_Free" );
 	TASK_NAME_ENTER( "HID_Free" );
 
 	// --
 
-	if ( in->Register )
+	if ( hd->Register )
 	{
 		USBDEBUG( "HID_Free              : Unregister" );
-		REGISTER_UNREGISTER( in->Register );
-		in->Register = NULL;
-	}
-
-	// -- Misc Free
-
-	if (( in->Driver_Mode == HID_DMode_Boot ) && ( in->Driver_Type == HID_DType_Keyboard ))
-	{
-		if ( in->Type.Boot_Keyboard.Timer_Added )
-		{
-			IO_STOP( & in->Type.Boot_Keyboard.Timer_IOReq );
-			in->Type.Boot_Keyboard.Timer_Added = FALSE;
-		}
-
-		MSGPORT_FREE( & in->Type.Boot_Keyboard.Timer_MsgPort );
+		REGISTER_UNREGISTER( hd->Register );
+		hd->Register = NULL;
 	}
 
 	// --
 
-	MSGPORT_FREE( & in->Input_MsgPort );
+	MSGPORT_FREE( & hd->Timer_MsgPort );
+	ASYNC_FREE( & hd->ASync_Drivers );
 
 	// --
 

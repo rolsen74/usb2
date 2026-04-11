@@ -19,7 +19,7 @@ U32 wait;
 
 	fs->fs_Running = TRUE;
 
-	while( fs->fs_Running == TRUE )
+	while( fs->fs_Running )
 	{
 		wait = 0;
 

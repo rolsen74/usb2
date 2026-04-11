@@ -61,6 +61,7 @@ enum TaskType
 //	TASK_Type_DEV,			// Bind Device
 	TASK_Type_FKT,			// Bind Function
 //	TASK_Type_IFC,			// Bind Interface
+	TASK_Type_HID,			// HID Subprocess
 	TASK_Type_Last
 };
 

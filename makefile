@@ -31,6 +31,7 @@ CFLAGS		+= -W
 CFLAGS		+= -Wall
 CFLAGS		+= -MMD
 CFLAGS		+= -MP
+CFLAGS		+= -DAMY_SHORT_NAMES
 # CFLAGS		+= -fanalyzer
 
 # Dont optimize code into memcpy functions
@@ -316,6 +317,7 @@ SRCS		+= Stack/Misc/Node_AddTail.c
 SRCS		+= Stack/Misc/Node_AddInfronOf.c
 SRCS		+= Stack/Misc/Node_RemHead.c
 SRCS		+= Stack/Misc/Node_RemNode.c
+SRCS		+= Stack/Misc/Node_RemTail.c
 SRCS		+= Stack/Misc/Node_Next.c
 SRCS		+= Stack/Misc/Node_Prev.c
 SRCS		+= Stack/Misc/SetupData_Alloc.c

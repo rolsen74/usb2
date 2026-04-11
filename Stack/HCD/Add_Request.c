@@ -277,14 +277,30 @@ SEC_CODE S32 __HCD_Add_Request( struct USBBase *usbbase, struct USB2_HCDNode *hn
 {
 struct USB2_EndPointNode *ep;
 S32 handled;
+U32 val;
 
 	TASK_NAME_ENTER( "HCD : __HCD_Add_Request" );
 
-	// --
-	// Can we start Request or do we queue it
-
 	ep = ioreq->req_EndPoint;
 
+	// --
+	// Control check : Need a timeout and max 5 sec
+
+	if ( ep->ep_Type == EPATT_Type_Control )
+	{
+		/**/ if ( ! ioreq->req_Public.io_TimeOut )
+		{
+			USBINFO( "Control IOReq needs a timeout, setting 5sec" );
+			ioreq->req_Public.io_TimeOut = 5 * 1000000;
+		}
+		else if ( ioreq->req_Public.io_TimeOut > 5*1000000 )
+		{
+			USBINFO( "Control IOReq : Clamping to 5sec timeout" );
+			ioreq->req_Public.io_TimeOut = 5 * 1000000;
+		}
+	}
+
+	// Can we start Request or do we queue it
 	if ( ep->ep_Request_Active )
 	{
 		USBDEBUG( "Queuing Node for Addr $%02ld : EP    $%02lx", ioreq->req_Function->fkt_Address, ep->ep_Number );
