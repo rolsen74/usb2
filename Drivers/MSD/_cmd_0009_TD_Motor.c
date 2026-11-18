@@ -12,26 +12,56 @@
 #include "MSD.h"
 
 // --
-#if 1
-
-SEC_CODE S32 MSD_Cmd_0009_TD_Motor( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE S32 MSD_Cmd_0009_TD_Motor( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq )
 {
-S32 reply;
+struct DoBulkStruct dbs;
+struct MSDDisk *msddisk;
+U32 previous;
 
 	TASK_NAME_ENTER( "MSD : TD_Motor" );
-	USBERROR( "MSD : _cmd_0009_TD_Motor" );
 
-	// io_Length hold User request to Turn Motor On/off
-	// we could store val, and pass Prev state in io_Actual
-	// but we are always on, so lets just return 1 in io_Actual
+	msddisk = (PTR) ioreq->io_Unit;
+	ioreq->io_Actual = 0;
 
-	ioreq->io_Actual = 1;	// Prev Motor State (we are always on)
+	if ( ( msddev->msddev_Detached ) || ( ! msddisk ) )
+	{
+		ioreq->io_Error = TDERR_DiskChanged;
+		goto bailout;
+	}
+
+	if ( ioreq->io_Length > 1 )
+	{
+		ioreq->io_Error = IOERR_BADLENGTH;
+		goto bailout;
+	}
+
+	if ( ( msddev->msddev_SubClass != MSD_SubClass_UFI ) && ( msddev->msddev_SubClass != MSD_SubClass_SFF ) )
+	{
+		ioreq->io_Actual = 1;
+		ioreq->io_Error = 0;
+		goto bailout;
+	}
+
+	previous = msddisk->msddisk_MotorOn;
+	MEM_SET( & dbs, 0, sizeof( dbs ) );
+	dbs.dbs_Command_Length = 6;
+	dbs.cmd[0] = 0x1b;
+	dbs.cmd[4] = ( ioreq->io_Length ) ? 1 : 0;
+
+	if ( ! MSD_Disk_DoBulk( usbbase, msddisk, & dbs ) )
+	{
+		ioreq->io_Error = ( msddev->msddev_Detached ) ? TDERR_DiskChanged : TDERR_NotSpecified;
+		goto bailout;
+	}
+
+	msddisk->msddisk_MotorOn = ioreq->io_Length;
+	ioreq->io_Actual = previous;
 	ioreq->io_Error = 0;
-	reply = TRUE;
 
+bailout:
 	TASK_NAME_LEAVE();
-	return( reply );
+
+	return ( TRUE );
 }
 
-#endif
 // --
