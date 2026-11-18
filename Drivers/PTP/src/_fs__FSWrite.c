@@ -12,15 +12,15 @@
 
 // --
 
-int32
-_fs__FSWrite( struct FSVP *vp, int32 *res2, struct FileHandle *file, STR buffer, int32 count )
+LONG
+_fs__FSWrite( struct FSVP *vp, LONG *res2, struct FileHandle *file, STR buffer, LONG count )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjLock *lock;
 	struct FS_ObjNode *node;
 
-	int32 error;
-	int32 written;
+	S32 error;
+	S32 written;
 
 	fs = vp->FSV.FSPrivate;
 	error = 0;
