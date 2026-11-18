@@ -64,7 +64,6 @@ U32 pid;
 U32 val;
 U32 len;
 PTR buf;
-U32 dt;
 U32 l;
 	
 	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
@@ -111,12 +110,11 @@ U32 l;
 	len		= ( ioreq->req_Public.io_Length );
 	buf		= ( ioreq->req_Public.io_Command == CMD_READ ) ? NULL : ioreq->req_Public.io_Data ;
 	pid		= ( ioreq->req_Public.io_Command == CMD_READ ) ? OHCI_TD_IN : OHCI_TD_OUT;
-	pid	   |=(( ioreq->req_Public.io_Command == CMD_READ ) && ( ioreq->req_Public.io_AllowShortPackets )) ? OHCI_TD_R : 0;
-	dt		= ep->ep_DataToggle;
 
 	Zero	=	(( ioreq->req_Public.io_Command == CMD_WRITE )
 			&&	 ( ioreq->req_Public.io_AddZeroPackets )
 			&&	 ( ioreq->req_Public.io_Length != 0 )
+			&&	 ( ep->ep_MaxPacketSize )
 			&&	(( ioreq->req_Public.io_Length % ep->ep_MaxPacketSize ) == 0 )) ? TRUE : FALSE ;
 
 	/* -- Header -- */
@@ -151,13 +149,14 @@ U32 l;
 		}
 		else
 		{
-			ed->ed_headp		= LE_SWAP32( data->ptd_self_phy );
+			val = data->ptd_self_phy | ( ep->ep_DataToggle ? OHCI_TOGGLECARRY : 0 );
+			ed->ed_headp		= LE_SWAP32( val );
 			ed->ped_first_td	= data;
 		}
 
 		l = MIN( 2 * 4096, len );
 
-		if ( ! OHCI_Get_8kBuffer( hn, data, buf, l ))
+		if ( ( l ) && ( ! OHCI_Get_8kBuffer( hn, data, buf, l ) ) )
 		{
 			USBERROR( "Error allocating buffer" );
 			goto bailout;
@@ -165,10 +164,13 @@ U32 l;
 
 		// -=-
 
-		val  = pid;
-		val |= OHCI_TD_NOCC;
-		val |= OHCI_TD_NOINTR;
-		val |= ( dt ) ? OHCI_TD_TOGGLE_1 : OHCI_TD_TOGGLE_0 ;
+		val = pid | OHCI_TD_NOCC | OHCI_TD_TOGGLE_CARRY | OHCI_TD_SET_DI( 1 );
+
+		// Round short reads on the final descriptor. Earlier shorts halt the queue.
+		if ( ( pid == OHCI_TD_IN ) && ( ioreq->req_Public.io_AllowShortPackets ) && ( l == len ) )
+		{
+			val |= OHCI_TD_R;
+		}
 
 		data->td_flags = LE_SWAP32( val );
 
@@ -182,8 +184,6 @@ U32 l;
 		}
 
 		len -= l;
-
-		dt = ( dt ) ? 0 : 1 ;
 	}
 	while( len );
 
@@ -199,19 +199,13 @@ U32 l;
 			goto bailout;
 		}
 
+		val = OHCI_TD_OUT | OHCI_TD_NOCC | OHCI_TD_TOGGLE_CARRY | OHCI_TD_SET_DI( 1 );
+		data->td_flags = LE_SWAP32( val );
+
 		last->td_nexttd		= LE_SWAP32( data->ptd_self_phy );
 		last->ptd_virt_next	= data;
 		last = data;
 	}
-
-	// ---
-
-	val = LE_SWAP32( last->td_flags );
-
-	val &= ~OHCI_TD_INTR_MASK;
-	val |=  OHCI_TD_SET_DI( 1 );
-
-	last->td_flags = LE_SWAP32( val );
 
 	/* -- Dummy -- */
 
