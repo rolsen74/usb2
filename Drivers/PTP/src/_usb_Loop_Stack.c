@@ -25,12 +25,12 @@ struct USB2_NotifyMessage *msg;
 			break;
 		}
 
-		switch( msg->nm_Type )
+		switch( msg->nm_Command )
 		{
 			case USBNC_Detached:
 			{
 				MYINFO( "PTP-USB : Detach msg" );
-				us->us_Detached = FALSE;
+				us->us_Detached = TRUE;
 				break;
 			}
 
