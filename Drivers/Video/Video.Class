@@ -1,0 +1,5 @@
+TYPE Interface
+TITLE "USB Video Streaming"
+DRIVER "Video.Driver"
+CLASS 0x0E
+SUBCLASS 0x02

@@ -1,0 +1,84 @@
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+// --
+
+#include "inc/All.h"
+
+// --
+
+SEC_CODE void Video_Free( struct VideoUnit *unit )
+{
+struct IOStdReq *ioreq;
+struct VideoBase *base;
+
+	if ( ! unit )
+	{
+		return;
+	}
+
+	base = unit->Base;
+
+	ObtainSemaphore( & base->Semaphore );
+	unit->Detached = TRUE;
+	ReleaseSemaphore( & base->Semaphore );
+
+	if ( unit->ReadPending )
+	{
+		Video_IO_Stop( unit->Stream->IORequests[0] );
+		unit->ReadPending = FALSE;
+	}
+
+	Video_Read_Reply( unit, IOERR_ABORTED );
+
+	if ( unit->BeginPort )
+	{
+		while(( ioreq = (PTR) GetMsg( unit->BeginPort ) ))
+		{
+			ioreq->io_Error = IOERR_ABORTED;
+			ReplyMsg( (PTR) ioreq );
+		}
+	}
+
+	if ( unit->Register )
+	{
+		if ( unit->StreamAltActive )
+		{
+			if ( unit->Stream )
+			{
+				USB2_EPRes_Release( unit->Stream );
+			}
+
+			USB2_Ifc_SetAlt( unit->Register, unit->StartMsg->Interface, 0 );
+		}
+
+		USB2_Reg_Unregister( unit->Register );
+		unit->Register = NULL;
+	}
+
+	if ( unit->BeginPort )
+	{
+		FreeSysObject( ASOT_PORT, unit->BeginPort );
+	}
+
+	ObtainSemaphore( & base->Semaphore );
+	unit->Released = TRUE;
+
+	if ( unit->UnitNr < VIDEO_MAX_UNITS )
+	{
+		base->Units[unit->UnitNr] = NULL;
+	}
+
+	if ( ! unit->OpenCount )
+	{
+		FreeVec( unit );
+	}
+
+	ReleaseSemaphore( & base->Semaphore );
+}
+
+// --

@@ -1,0 +1,85 @@
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+// --
+
+#include "inc/All.h"
+
+// --
+
+SEC_RODATA static const PTR Video_Manager_Vectors[] =
+{
+	(PTR) Video_Manager_Obtain,
+	(PTR) Video_Manager_Release,
+	(PTR) NULL,
+	(PTR) NULL,
+	(PTR) Video_Manager_Open,
+	(PTR) Video_Manager_Close,
+	(PTR) Video_Manager_Expunge,
+	(PTR) NULL,
+	(PTR) Video_Manager_BeginIO,
+	(PTR) Video_Manager_AbortIO,
+	(PTR) -1
+};
+
+SEC_RODATA static const struct TagItem Video_Manager_Tags[] =
+{
+	{ MIT_Name, (Tag) "__device" },
+	{ MIT_VectorTable, (Tag) Video_Manager_Vectors },
+	{ MIT_Version, (Tag) 1 },
+	{ TAG_END, (Tag) 0 }
+};
+
+SEC_RODATA static const PTR Video_Interfaces[] =
+{
+	(PTR) Video_Manager_Tags,
+	(PTR) NULL
+};
+
+SEC_RODATA static const struct TagItem Video_CreateTags[] =
+{
+	{ CLT_DataSize, (Tag) sizeof( struct VideoBase ) },
+	{ CLT_InitFunc, (Tag) Video_Manager_Init },
+	{ CLT_Interfaces, (Tag) Video_Interfaces },
+	{ TAG_END, (Tag) 0 }
+};
+
+// --
+
+SEC_CODE S32 Video_CreateDevice( struct VideoContext *ctx )
+{
+struct VideoBase *base;
+
+	ObtainSemaphore( & ctx->Lock );
+
+	if ( ctx->Device )
+	{
+		ReleaseSemaphore( & ctx->Lock );
+
+		return ( TRUE );
+	}
+
+	base = (PTR) CreateLibrary( (PTR) Video_CreateTags );
+
+	if ( ! base )
+	{
+		ReleaseSemaphore( & ctx->Lock );
+
+		return ( FALSE );
+	}
+
+	base->Context = ctx;
+	InitSemaphore( & base->Semaphore );
+	ctx->Device = base;
+
+	AddDevice( (PTR) base );
+	ReleaseSemaphore( & ctx->Lock );
+
+	return ( TRUE );
+}
+
+// --

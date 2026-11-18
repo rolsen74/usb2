@@ -1,0 +1,122 @@
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+#ifndef DRIVERS_VIDEO_VIDEO_H
+#define DRIVERS_VIDEO_VIDEO_H
+
+#include "VideoDevice.h"
+
+#define VIDEO_MAX_UNITS 16
+#define VIDEO_MAX_FRAME_SIZE ( 64U * 1024U * 1024U )
+#define VIDEO_READ_SIZE 65536
+#define VIDEO_ISO_PACKETS 16
+#define VIDEO_IO_ABORT 0x80
+#define VIDEO_PAYLOAD_FID 0x01
+#define VIDEO_PAYLOAD_EOF 0x02
+#define VIDEO_PAYLOAD_ERR 0x40
+
+struct VideoUnit;
+struct VideoBase;
+
+static inline U32
+Video_LE32( const U8 *data )
+{
+	return ( (U32) data[0] | ( (U32) data[1] << 8 ) |
+		( (U32) data[2] << 16 ) | ( (U32) data[3] << 24 ) );
+}
+
+struct VideoContext
+{
+	struct USB2IFace *IUSB2;
+	struct SignalSemaphore Lock;
+	struct VideoBase *Device;
+};
+
+struct VideoDriverBase
+{
+	struct Library Library;
+	PTR SegList;
+	struct VideoContext Context;
+};
+
+struct VideoBase
+{
+	struct Library Library;
+	U16 Pad;
+	PTR SegList;
+	struct VideoContext *Context;
+	struct SignalSemaphore Semaphore;
+	struct VideoUnit *Units[VIDEO_MAX_UNITS];
+};
+
+struct VideoUnit
+{
+	struct VideoContext *Context;
+	struct VideoBase *Base;
+	struct USB2_DriverMessage *StartMsg;
+	struct USB2_Register *Register;
+	struct USB2_EPResource *Control;
+	struct USB2_EPResource *Stream;
+	struct MsgPort *BeginPort;
+	struct IOStdReq *ReadActive;
+	struct VideoFormat Format;
+	U32 UnitNr;
+	U32 OpenCount;
+	U32 FrameUsed;
+	U32 PayloadSize;
+	U32 StreamPacketSize;
+	U16 IsoPacketLengths[VIDEO_ISO_PACKETS];
+	U8 InterfaceNr;
+	U8 EndPoint;
+	U8 StreamAlt;
+	U8 StreamAltActive;
+	U8 FormatIndex;
+	U8 FrameIndex;
+	U8 FrameID;
+	U8 FrameStarted;
+	U8 FrameDiscard;
+	U8 ReadPending;
+	U8 Detached;
+	U8 Released;
+};
+
+SEC_CODE U32 Video_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg );
+SEC_CODE S32 Video_CreateDevice( struct VideoContext *ctx );
+SEC_CODE struct VideoUnit *Video_Alloc( struct VideoContext *ctx, struct USB2_DriverMessage *msg );
+SEC_CODE void Video_Free( struct VideoUnit *unit );
+SEC_CODE void Video_Main( struct VideoUnit *unit );
+SEC_CODE S32 Video_Parse( struct VideoUnit *unit );
+SEC_CODE S32 Video_Select_Stream( struct VideoUnit *unit, U32 payloadsize );
+SEC_CODE S32 Video_Probe( struct VideoUnit *unit );
+SEC_CODE S32 Video_Control( struct VideoUnit *unit, U8 type, U8 code, U16 value, PTR data, U16 length );
+SEC_CODE void Video_Read_Start( struct VideoUnit *unit );
+SEC_CODE void Video_Read_Done( struct VideoUnit *unit );
+SEC_CODE void Video_Read_Payload( struct VideoUnit *unit, U8 *data, U32 length );
+SEC_CODE void Video_Read_Reply( struct VideoUnit *unit, S8 error );
+SEC_CODE void Video_Begin( struct VideoUnit *unit );
+SEC_CODE void Video_Abort( struct VideoUnit *unit );
+SEC_CODE void Video_IO_Stop( struct USB2_IORequest *ioreq );
+
+SEC_CODE struct VideoBase *Video_Manager_Init( struct VideoBase *base, PTR seglist, struct ExecIFace *IExec );
+SEC_CODE U32 Video_Manager_Obtain( struct DeviceManagerInterface *Self );
+SEC_CODE U32 Video_Manager_Release( struct DeviceManagerInterface *Self );
+SEC_CODE S32 Video_Manager_Open( struct DeviceManagerInterface *Self, struct IORequest *ioreq, U32 unitnr, U32 flags );
+SEC_CODE PTR Video_Manager_Close( struct DeviceManagerInterface *Self, struct IORequest *ioreq );
+SEC_CODE PTR Video_Manager_Expunge( struct DeviceManagerInterface *Self );
+SEC_CODE void Video_Manager_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq );
+SEC_CODE void Video_Manager_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq );
+
+SEC_CODE struct VideoDriverBase *Driver_Init( PTR dummy, PTR seglist, struct ExecBase *sysbase );
+SEC_CODE U32 Driver_Obtain( struct LibraryManagerInterface *Self );
+SEC_CODE U32 Driver_Release( struct LibraryManagerInterface *Self );
+SEC_CODE PTR Driver_Open( struct LibraryManagerInterface *Self, U32 version );
+SEC_CODE PTR Driver_Close( struct LibraryManagerInterface *Self );
+SEC_CODE PTR Driver_Expunge( struct LibraryManagerInterface *Self );
+SEC_CODE U32 Driver_USB_Obtain( struct USB2DriverIFace *Self );
+SEC_CODE U32 Driver_USB_Release( struct USB2DriverIFace *Self );
+
+#endif
