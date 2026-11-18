@@ -56,7 +56,7 @@ bailout:
 
 // --
 
-static void ucmd_Handle_Open_Session( struct USB_Struct *us, struct USB_Command *cmd )
+static void ucmd_Handle_Open_Session( struct USB_Struct *us, struct USB_Command *cmd UNUSED )
 {
 struct USB2_IORequest *ioreq;
 struct PTP_Container *con;
