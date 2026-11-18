@@ -157,6 +157,24 @@ int error;
 				break;
 			}
 
+			case USB2Tag_FDriver_VendorID:
+			{
+				if ( tag->ti_Data <= 0xffff )
+				{
+					fdn->fdn_VendorID = tag->ti_Data;
+				}
+				break;
+			}
+
+			case USB2Tag_FDriver_DeviceID:
+			{
+				if ( tag->ti_Data <= 0xffff )
+				{
+					fdn->fdn_DeviceID = tag->ti_Data;
+				}
+				break;
+			}
+
 			case USB2Tag_FDriver_Entry:
 			{
 //				USBDEBUG( "FDriver_DriverEntry .... : %p", tag->ti_Data );
