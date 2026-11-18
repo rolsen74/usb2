@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -55,7 +56,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__TaskMsg_Free" );
 
-	USBDEBUG( "__TaskMsg_Free            : TM %p : (%s)", tm, (file)?file:"<NULL>" );
+	USBDEBUG( "__TaskMsg_Free           : TM    %p : (%s)", tm, (file)?file:"<NULL>" );
 
 	// --
 
@@ -86,7 +87,7 @@ enum FSTAT fstat;
 	{
 		if (( tm->tm_Locks > 0 ) || ( tm->tm_Task ))
 		{
-			USBDEBUG( "__TaskMsg_Free            : TaskMsg Node still have %ld locks", tm->tm_Locks );
+			USBDEBUG( "__TaskMsg_Free           : TaskMsg Node still have %ld locks", tm->tm_Locks );
 			fstat = FSTAT_Locked;
 		}
 		else
@@ -97,7 +98,7 @@ enum FSTAT fstat;
 	}
 	else // ( vstat == VSTAT_Error )
 	{
-		USBPANIC( "__TaskMsg_Free            : Invalid Pointer (%p) : (%s)", tm, file );
+		USBPANIC( "__TaskMsg_Free           : Invalid Pointer (%p) : (%s)", tm, file );
 		fstat = FSTAT_Error;
 	}
 
@@ -107,11 +108,11 @@ enum FSTAT fstat;
 
 	if ( fstat != FSTAT_Okay )
 	{
-		USBDEBUG( "__TaskMsg_Free            : 123 : Can't Freeing %p", tm );
+		USBDEBUG( "__TaskMsg_Free           : 123 : Can't Freeing %p", tm );
 		goto bailout;
 	}
 
-	USBINFO( "__TaskMsg_Free            : Freeing %p : (%s)", tm, (file)?file:"<NULL>" );
+	USBINFO( "__TaskMsg_Free           : Freeing %p : (%s)", tm, (file)?file:"<NULL>" );
 
 	// --
 
@@ -121,7 +122,7 @@ enum FSTAT fstat;
 //	if ((( Node_Next(tm)) && ( Node_Next(tm) != (PTR) 0xAC111111 ))
 //	||	(( Node_Prev(tm)) && ( Node_Prev(tm) != (PTR) 0xAC222222 )))
 //	{
-//		USBPANIC( "__TaskMsg_Free            : TaskMsg Node have not been removed : Self %p : Next %p : Prev %p : (%s)", tm, Node_Next(tm), Node_Prev(tm), file );
+//		USBPANIC( "__TaskMsg_Free           : TaskMsg Node have not been removed : Self %p : Next %p : Prev %p : (%s)", tm, Node_Next(tm), Node_Prev(tm), file );
 //	}
 //
 //	#endif
@@ -144,19 +145,19 @@ enum FSTAT fstat;
 
 	// --
 
-//	USBDEBUG( "__TaskMsg_Free            : 22 : DN %p : Cmd %ld", tm->tm_Driver, tm->tm_Cmd.cm_Command );
+//	USBDEBUG( "__TaskMsg_Free           : 22 : DN    %p : Cmd %ld", tm->tm_Driver, tm->tm_Cmd.cm_Command );
 
 //	if ( tm->tm_Driver )
 //	{
 //		// Signal HCD if Stop Process and a Driver
 //		if ( tm->tm_Cmd.cm_Command == CMD_STOP_PROCESS )
 //		{
-//			USBDEBUG( "__TaskMsg_Free            : 33 : Signal HCD" );
+//			USBDEBUG( "__TaskMsg_Free           : 33 : Signal HCD" );
 //
 //			HCD_SIGNAL_DRIVERNODE( tm->tm_Driver );
 //		}
 //
-//		USBDEBUG( "__TaskMsg_Free            : 44 : Unlock DN" );
+//		USBDEBUG( "__TaskMsg_Free           : 44 : Unlock DN" );
 //
 //		DRIVER_UNLOCK( tm->tm_Driver );
 //		tm->tm_Driver = NULL;		
@@ -164,7 +165,7 @@ enum FSTAT fstat;
 
 	// --
 
-//	USBDEBUG( "__TaskMsg_Free            : 55 : Free Mem" );
+//	USBDEBUG( "__TaskMsg_Free           : 55 : Free Mem" );
 
 	MEMORY_FREE( MEMID_USBTaskMsg, tm, 0 );
 
