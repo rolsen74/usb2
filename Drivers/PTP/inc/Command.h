@@ -23,9 +23,13 @@ struct CameraInfoNode
 	struct SignalSemaphore	cin_Gate;
 	struct FS_ObjNode *		cin_DirNode;
 	USB2_ID					cin_ID;
+	U32						cin_StorageGeneration;
+	S32						cin_Apple;
 	S32						cin_Online;
 	S32						cin_NoPartial;
 	S32						cin_CanUpload;
+	S32						cin_CanReadStorageInfo;
+	char					cin_Name[127];	// File-system-safe model name
 };
 
 enum

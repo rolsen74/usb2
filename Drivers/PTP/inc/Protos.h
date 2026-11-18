@@ -56,7 +56,7 @@ struct FS_ObjLock *_fs_Lock_New_From_Node( struct FS_Struct *fs, struct FS_ObjNo
 S32 _fs_Lock_Free( struct FS_Struct *fs, struct FS_ObjLock *lock );
 S32 _fs_FileCache_Create( struct FS_ObjLock *lock, S32 mode );
 struct FS_ObjLock *_fs_File_Create( struct FS_Struct *fs, S32 *res2, struct FS_ObjLock *rel, STR name );
-S32 _fs_File_Upload( struct FS_ObjLock *lock );
+S32 _fs_File_Upload( struct FS_Struct *fs, struct FS_ObjLock *lock );
 S32 _fs_FileCache( struct FS_ObjLock *lock );
 void _fs_FileCache_Close( struct FS_ObjLock *lock );
 LONG _fs__FSOpen( struct FSVP *vp, LONG *res2, struct FileHandle *file, struct Lock *rel, const char *filename, LONG mode );
@@ -101,10 +101,17 @@ void	_usb_Loop(			struct USB_Struct *us );
 
 
 void _usb_Loop_Stack( struct USB_Struct *us );
-void _usb_QueryUpload( struct USB_Struct *us );
+S32 _usb_Read_Events( struct USB_Struct *us, struct USB2_IORequest *io );
+void _usb_Query_Device_Info( struct USB_Struct *us );
 S32 _usb_SendData( struct USB_Struct *us, struct CommandMessage *request, U32 transaction );
 S32 _usb_WriteBulk( struct USB_Struct *us, U32 length, S32 final );
 void _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request );
 S32 _fs_Camera_Request( struct CameraInfoNode *camera, struct CommandMessage *request );
+S32 _fs_Storage_Load( struct FS_Struct *fs, struct FS_ObjNode *node );
+S32 _fs_Node_Online( struct FS_ObjNode *node );
+STR _fs_Camera_Name( struct FS_Struct *fs, struct CameraInfoNode *camera );
+STR _fs_Storage_Name( struct FS_ObjNode *parent, U32 id );
+STR _fs_Unique_Name( struct FS_ObjNode *parent, STR base );
+U32 _ptp_Read_Name( const U8 *data, U32 remaining, STR name, U32 size );
 
 #endif

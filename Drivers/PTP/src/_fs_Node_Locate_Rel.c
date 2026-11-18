@@ -34,9 +34,15 @@ _fs_Node_Locate_Rel( struct FS_Struct *fs, S32 *res2, struct FS_ObjLock *lock, S
 		node = fs->fs_RootNode;
 	}
 
-	while( node )
+	if ( ( node ) && ( node->on_StorageRoot ) && ( _fs_Node_Online( node ) ) )
 	{
-		if ( ( node->on_CameraRoot ) && ( ! node->on_CameraRoot->on_Camera ) )
+		// The relative lock keeps this storage alive during the refresh.
+		error = _fs_Storage_Load( fs, node->on_CameraRoot );
+	}
+
+	while( ( node ) && ( ! error ) )
+	{
+		if ( ! _fs_Node_Online( node ) )
 		{
 			error = ERROR_DEVICE_NOT_MOUNTED;
 			break;

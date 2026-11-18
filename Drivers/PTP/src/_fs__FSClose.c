@@ -31,7 +31,7 @@ _fs__FSClose( struct FSVP *vp, LONG *res2, struct FileHandle *file )
 	{
 		lock = file->fh_Arg2;
 
-		error = lock->Node->on_Pending ? _fs_File_Upload( lock ) : 0;
+		error = lock->Node->on_Pending ? _fs_File_Upload( fs, lock ) : 0;
 
 		result = _fs_Lock_Free( fs, lock );
 

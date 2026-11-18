@@ -18,14 +18,18 @@ camera in PTP mode, and open `PTP:` in Workbench or list it from the Shell.
 
 ## Browse and copy
 
-Each camera appears as `Camera-<USB ID>`. Its storage areas appear as
-`Storage-<PTP storage ID>` directories. For example, with the IDs shown by
-your camera and computer, you can list and copy a photo with:
+Each camera appears under the model name reported by PTP DeviceInfo.
+`Apple iPhone` appears as `iPhone`. If a name is already in use, the driver
+appends a suffix such as `-2`. Cameras without a model name appear as
+`Camera-<USB ID>`. Storage directories use the volume label or storage
+description reported by the camera, with suffixes for duplicates within each
+camera. Unnamed storage appears as `Storage-<PTP storage ID>`. Use the names
+shown by `List PTP:` and `List PTP:iPhone/` in your paths.
 
 ```text
 List PTP:
-List PTP:Camera-0000000000000001/Storage-00010001
-Copy PTP:Camera-0000000000000001/Storage-00010001/DCIM/IMG_0001.JPG RAM:
+List PTP:iPhone/Storage-00010001
+Copy PTP:iPhone/Storage-00010001/DCIM/IMG_0001.JPG RAM:
 ```
 
 Directory listings are cached while the camera is attached. Reconnect it to
@@ -43,7 +47,7 @@ cannot be represented in the standard PTP object record cannot be copied.
 Copy to an existing directory on a writable camera storage area. For example:
 
 ```text
-Copy RAM:IMG_0002.JPG PTP:Camera-0000000000000001/Storage-00010001/DCIM/
+Copy RAM:IMG_0002.JPG "PTP:Digital Camera/Storage-00010001/DCIM/"
 ```
 
 The file is staged under `T:` and uploaded when the destination file handle

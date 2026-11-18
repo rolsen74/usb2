@@ -154,6 +154,7 @@ AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, U32 id )
 
 	node->on_Parent_dir = parent;
 	node->on_CameraRoot = parent->on_CameraRoot;
+	node->on_StorageRoot = parent->on_StorageRoot;
 	node->on_Storage = parent->on_Storage;
 	node->on_Handle = id;
 	node->on_Depth = parent->on_Depth + 1;
@@ -181,16 +182,20 @@ _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 	U32 index;
 	U32 id;
 	S32 error;
-	STR name;
 
 	if ( ! node->on_CameraRoot )
 	{
 		return ( 0 );
 	}
 
-	if ( ! node->on_CameraRoot->on_Camera )
+	if ( ! _fs_Node_Online( node ) )
 	{
 		return ( ERROR_DEVICE_NOT_MOUNTED );
+	}
+
+	if ( node == node->on_CameraRoot )
+	{
+		return ( _fs_Storage_Load( fs, node ) );
 	}
 
 	if ( node->on_Loaded )
@@ -209,17 +214,10 @@ _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 	request.cm_WantData = TRUE;
 	request.cm_Limit = PTP_METADATA_LIMIT;
 
-	if ( node->on_Storage )
-	{
-		request.cm_Operation = PTP_Get_Object_Handles;
-		request.cm_ParameterCount = 3;
-		request.cm_Parameters[0] = node->on_Storage;
-		request.cm_Parameters[2] = node->on_Handle ? node->on_Handle : 0xffffffffU;
-	}
-	else
-	{
-		request.cm_Operation = PTP_Get_Storage_IDs;
-	}
+	request.cm_Operation = PTP_Get_Object_Handles;
+	request.cm_ParameterCount = 3;
+	request.cm_Parameters[0] = node->on_Storage;
+	request.cm_Parameters[2] = node->on_Handle ? node->on_Handle : 0xffffffffU;
 
 	error = _fs_Camera_Request( node->on_CameraRoot->on_Camera, & request );
 
@@ -251,38 +249,7 @@ _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 			continue;
 		}
 
-		if ( node->on_Storage )
-		{
-			error = AddObject( fs, node, id );
-		}
-		else
-		{
-			name = ASPrintf( "Storage-%08lx", id );
-
-			if ( ! name )
-			{
-				error = ERROR_NO_FREE_STORE;
-				break;
-			}
-
-			child = _fs_Node_Find( node, name, strlen( name ) );
-
-			if ( ! child )
-			{
-				child = _fs_Node_CreateDir( fs, & error, name );
-
-				if ( child )
-				{
-					child->on_Parent_dir = node;
-					child->on_CameraRoot = node;
-					child->on_Storage = id;
-
-					AddTail( & node->on_Content_List, & child->on_Node );
-				}
-			}
-
-			FreeVec( name );
-		}
+		error = AddObject( fs, node, id );
 
 		if ( error )
 		{

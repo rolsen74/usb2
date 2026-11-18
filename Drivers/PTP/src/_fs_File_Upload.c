@@ -56,7 +56,7 @@ ObjectFormat( STR name )
 // --
 
 S32
-_fs_File_Upload( struct FS_ObjLock *lock )
+_fs_File_Upload( struct FS_Struct *fs, struct FS_ObjLock *lock )
 {
 	struct FS_ObjNode *node;
 	struct CameraInfoNode *camera;
@@ -79,7 +79,19 @@ _fs_File_Upload( struct FS_ObjLock *lock )
 	node = lock->Node;
 	camera = node->on_CameraRoot->on_Camera;
 
-	if ( ! camera )
+	if ( ! _fs_Node_Online( node ) )
+	{
+		return ( ERROR_DEVICE_NOT_MOUNTED );
+	}
+
+	error = _fs_Storage_Load( fs, node->on_CameraRoot );
+
+	if ( error )
+	{
+		return ( error );
+	}
+
+	if ( ! _fs_Node_Online( node ) )
 	{
 		return ( ERROR_DEVICE_NOT_MOUNTED );
 	}

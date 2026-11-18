@@ -34,7 +34,7 @@ _fs__FSOpenFromLock( struct FSVP *vp, LONG *res2, struct FileHandle *file, struc
 	{
 		error = ERROR_OBJECT_WRONG_TYPE;
 	}
-	else if ( ! lock->Node->on_CameraRoot->on_Camera )
+	else if ( ! _fs_Node_Online( lock->Node ) )
 	{
 		error = ERROR_DEVICE_NOT_MOUNTED;
 	}

@@ -67,6 +67,14 @@ _usb_Init( struct USB_Struct *us )
 		return ( FALSE );
 	}
 
+	us->us_Res_Events = usb->USB2_EPRes_ObtainTags( us->us_Register,
+		USB2Tag_EPRes_InterfaceNr, interface,
+		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize,
+		USB2Tag_EPRes_AllowShortPackets, TRUE,
+		USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
+		USB2Tag_EPRes_EPType, EPATT_Type_Interrupt,
+		TAG_END );
+
 	memset( & request, 0, sizeof( request ) );
 
 	request.cm_Operation = PTP_Open_Session;
@@ -83,7 +91,8 @@ _usb_Init( struct USB_Struct *us )
 
 	us->us_Session = TRUE;
 	us->us_TransactionID = 1;
-	_usb_QueryUpload( us );
+
+	_usb_Query_Device_Info( us );
 
 	if ( ! us->us_Running )
 	{
@@ -92,6 +101,7 @@ _usb_Init( struct USB_Struct *us )
 
 	us->us_CameraNode.cin_ID = us->us_Register->FKT_ID;
 	us->us_CameraNode.cin_MsgPort = us->us_CmdMsgPort;
+	us->us_CameraNode.cin_Apple = ( us->us_StartMsg->VendorID == 0x05ac );
 
 	return ( TRUE );
 }

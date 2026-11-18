@@ -23,9 +23,12 @@ struct USB_Struct
 	struct USB2_Register *			us_Register;
 	struct USB2_EPResource *		us_Res_BulkIn;
 	struct USB2_EPResource *		us_Res_BulkOut;
+	struct USB2_EPResource *		us_Res_Events;
 	struct MsgPort *				us_CmdMsgPort;
 	struct CameraInfoNode			us_CameraNode;
 	U32								us_TransactionID;
+	U32								us_EventUsed;
+	U8								us_EventData[PTP_USB_Event_MaxSize];
 	S32								us_Session;
 	S32								us_Running;
 	S32								us_Detached;

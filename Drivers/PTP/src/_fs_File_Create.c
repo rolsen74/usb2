@@ -112,7 +112,7 @@ _fs_File_Create( struct FS_Struct *fs, S32 *res2, struct FS_ObjLock *rel, STR na
 
 	if ( ! *res2 )
 	{
-		if ( request.cm_Actual < 26 )
+		if ( request.cm_Actual < PTP_StorageInfo_Strings )
 		{
 			*res2 = ERROR_OBJECT_WRONG_TYPE;
 		}
@@ -138,6 +138,7 @@ _fs_File_Create( struct FS_Struct *fs, S32 *res2, struct FS_ObjLock *rel, STR na
 
 	node->on_Parent_dir = parent;
 	node->on_CameraRoot = parent->on_CameraRoot;
+	node->on_StorageRoot = parent->on_StorageRoot;
 	node->on_Storage = parent->on_Storage;
 	node->on_Depth = parent->on_Depth + 1;
 	node->on_Type = FSO_TYPE_FILE;

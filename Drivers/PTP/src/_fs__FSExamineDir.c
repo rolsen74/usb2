@@ -57,7 +57,17 @@ _fs__FSExamineDir( struct FSVP *vp, LONG *res2, struct PRIVATE_ExamineDirContext
 	}
 	else
 	{
-		error = _fs_Node_Load( fs, directory );
+		error = 0;
+
+		if ( ( directory->on_StorageRoot ) && ( _fs_Node_Online( directory ) ) )
+		{
+			error = _fs_Storage_Load( fs, directory->on_CameraRoot );
+		}
+
+		if ( ! error )
+		{
+			error = _fs_Node_Load( fs, directory );
+		}
 	}
 
 	if ( ! error )

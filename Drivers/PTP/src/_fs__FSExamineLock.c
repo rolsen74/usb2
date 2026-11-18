@@ -31,7 +31,7 @@ _fs__FSExamineLock( struct FSVP *vp, LONG *res2, struct Lock *objlock )
 
 	node = lock ? lock->Node : fs->fs_RootNode;
 
-	if ( ( node->on_CameraRoot ) && ( ! node->on_CameraRoot->on_Camera ) )
+	if ( ! _fs_Node_Online( node ) )
 	{
 		error = ERROR_DEVICE_NOT_MOUNTED;
 	}

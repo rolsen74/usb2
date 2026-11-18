@@ -31,7 +31,7 @@ _fs_Handler__Commands( struct FS_Struct *fs )
 		switch( msg->cm_Command )
 		{
 			case CMD_Camera_Added:
-				name = ASPrintf( "Camera-%08lx%08lx", (U32) ( camera->cin_ID >> 32 ), (U32) camera->cin_ID );
+				name = _fs_Camera_Name( fs, camera );
 
 				if ( ! name )
 				{

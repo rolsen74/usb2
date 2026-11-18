@@ -40,7 +40,7 @@ U32 dostype;
 		goto bailout;
 	}
 
-	if ( ( objnode->on_CameraRoot ) && ( ! objnode->on_CameraRoot->on_Camera ) )
+	if ( ! _fs_Node_Online( objnode ) )
 	{
 		if ( res2 )
 		{
@@ -141,6 +141,11 @@ U32 dostype;
 	if ( objnode->on_CameraRoot )
 	{
 		objnode->on_CameraRoot->on_References++;
+	}
+
+	if ( objnode->on_StorageRoot )
+	{
+		objnode->on_StorageRoot->on_References++;
 	}
 
 	/*

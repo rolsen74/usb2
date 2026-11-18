@@ -18,9 +18,11 @@ _usb_Loop( struct USB_Struct *us )
 	struct CommandMessage notice;
 	struct CommandMessage *request;
 	struct CameraInfoNode *camera;
+	struct USB2_IORequest *event;
 
 	U32 signals;
 	U32 wait;
+	U32 eventbit;
 
 	if ( ! FS_CmdMsgPort )
 	{
@@ -40,6 +42,18 @@ _usb_Loop( struct USB_Struct *us )
 
 	// The filesystem can queue reads as soon as the camera is published.
 	wait = us->us_Register->Stack_MsgPortBit | ( 1UL << us->us_CmdMsgPort->mp_SigBit ) | SIGBREAKF_CTRL_C;
+	event = NULL;
+	eventbit = 0;
+
+	if ( us->us_Res_Events )
+	{
+		eventbit = us->us_Res_Events->MsgPortBit;
+		wait |= eventbit;
+		event = us->us_Res_Events->IORequests[0];
+		event->io_Command = CMD_READ;
+
+		SendIO( (PTR) event );
+	}
 
 	while( ( us->us_Running ) && ( ! us->us_Detached ) )
 	{
@@ -53,6 +67,20 @@ _usb_Loop( struct USB_Struct *us )
 		if ( ( us->us_Detached ) || ( signals & SIGBREAKF_CTRL_C ) )
 		{
 			break;
+		}
+
+		if ( ( signals & eventbit ) && ( GetMsg( us->us_Res_Events->MsgPort ) ) )
+		{
+			if ( _usb_Read_Events( us, event ) )
+			{
+				SendIO( (PTR) event );
+			}
+			else
+			{
+				wait &= ~eventbit;
+				eventbit = 0;
+				event = NULL;
+			}
 		}
 
 		while(( request = (PTR) GetMsg( us->us_CmdMsgPort ) ))
@@ -78,6 +106,16 @@ _usb_Loop( struct USB_Struct *us )
 
 			ReplyMsg( (PTR) request );
 		}
+	}
+
+	if ( event )
+	{
+		if ( ! CheckIO( (PTR) event ) )
+		{
+			AbortIO( (PTR) event );
+		}
+
+		WaitIO( (PTR) event );
 	}
 
 	// Stop new requests before replying to any caller waiting under the filesystem lock.

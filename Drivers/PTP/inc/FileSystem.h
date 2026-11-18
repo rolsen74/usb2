@@ -27,6 +27,7 @@ struct FS_ObjNode
 	struct List				on_Content_List;
 	struct FS_ObjNode *		on_Parent_dir;
 	struct FS_ObjNode *		on_CameraRoot;
+	struct FS_ObjNode *		on_StorageRoot;
 	struct CameraInfoNode *	on_Camera;
 	STR						on_Name;
 	U32						on_NameLen;
@@ -34,6 +35,9 @@ struct FS_ObjNode
 	U32						on_Handle;
 	U32						on_Depth;
 	U32						on_References;
+	U32						on_StorageGeneration;
+	S32						on_StorageSeen;
+	S32						on_StorageRemoved;
 	S32						on_Loaded;
 	S32						on_Pending;
 	S32						on_Type;

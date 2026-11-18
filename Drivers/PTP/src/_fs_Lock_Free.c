@@ -17,6 +17,7 @@ S32 _fs_Lock_Free( struct FS_Struct *fs, struct FS_ObjLock *lock )
 struct FS_ObjLock *parent;
 struct FS_ObjLock *next;
 struct FS_ObjNode *camera;
+struct FS_ObjNode *storage;
 S32 retval;
 
 	MYINFO( "PTP-FS : _fs_Lock_Free : %p", lock );
@@ -89,12 +90,18 @@ S32 retval;
 	_fs_FileCache_Close( lock );
 
 	camera = lock->Node->on_CameraRoot;
+	storage = lock->Node->on_StorageRoot;
 
 	if ( lock->Node->on_Pending )
 	{
 		Remove( & lock->Node->on_Node );
 
 		_fs_Node_Delete( fs, lock->Node );
+	}
+
+	if ( ( storage ) && ( ! --storage->on_References ) && ( storage->on_StorageRemoved ) )
+	{
+		_fs_Node_Delete( fs, storage );
 	}
 
 	if ( ( camera ) && ( ! --camera->on_References ) && ( ! camera->on_Camera ) )

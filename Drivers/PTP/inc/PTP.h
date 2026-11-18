@@ -51,6 +51,11 @@ enum ContainerType
 #define PTP_Response_InvalidParent	0x201a
 #define PTP_Response_OK			0x2001
 
+#define PTP_Event_StoreAdded		0x4004
+#define PTP_Event_StoreRemoved		0x4005
+#define PTP_USB_Event_MaxSize		24
+#define PTP_StorageInfo_Strings		26
+
 #pragma pack(1)
 
 struct PTP_Container

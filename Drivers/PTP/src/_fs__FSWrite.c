@@ -43,7 +43,7 @@ _fs__FSWrite( struct FSVP *vp, LONG *res2, struct FileHandle *file, STR buffer, 
 		goto done;
 	}
 
-	if ( ! node->on_CameraRoot->on_Camera )
+	if ( ! _fs_Node_Online( node ) )
 	{
 		error = ERROR_DEVICE_NOT_MOUNTED;
 		goto failed;

@@ -40,7 +40,20 @@ _fs__FSRead( struct FSVP *vp, LONG *res2, struct FileHandle *file, STR buffer, L
 	node = lock->Node;
 	camera = node->on_CameraRoot->on_Camera;
 
-	if ( ! camera )
+	if ( ! _fs_Node_Online( node ) )
+	{
+		error = ERROR_DEVICE_NOT_MOUNTED;
+		goto done;
+	}
+
+	error = _fs_Storage_Load( fs, node->on_CameraRoot );
+
+	if ( error )
+	{
+		goto done;
+	}
+
+	if ( ! _fs_Node_Online( node ) )
 	{
 		error = ERROR_DEVICE_NOT_MOUNTED;
 		goto done;
