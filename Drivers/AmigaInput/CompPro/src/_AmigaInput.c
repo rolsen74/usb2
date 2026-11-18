@@ -8,7 +8,7 @@
 
 // --
 
-#include "CompPro.h"
+#include "_AmigaInput.h"
 
 // --
 // -- AmigaInput Interface
