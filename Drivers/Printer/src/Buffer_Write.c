@@ -38,6 +38,8 @@ U32 len;
 			if ( pb )
 			{
 				unit->unit_Buffer_FreeCount--;
+				pb->pb_Pos = 0;
+				pb->pb_Free = unit->unit_Buffer_Size;
 				break;
 			}
 
@@ -53,9 +55,10 @@ U32 len;
 
 			pb->pb_Pos	= 0;
 			pb->pb_Free	= unit->unit_Buffer_Size;
-			unit->unit_Buffer_Active = pb;
 			break;
 		}
+
+		unit->unit_Buffer_Active = pb;
 
 		len	= MIN( size, pb->pb_Free );
 		memcpy( & pb->pb_Data[pb->pb_Pos], data, len );
