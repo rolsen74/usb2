@@ -51,7 +51,7 @@ U32 len;
 
 	if (( scsi->scsi_Data ) && ( len ))
 	{
-		MEM_COPY( scsi->scsi_Data, data, len );
+		MEM_COPY( data, scsi->scsi_Data, len );
 	}
 	else
 	{
@@ -203,7 +203,9 @@ S32 reply;
 	if (( scsi == NULL )
 	||	( ioreq->io_Length < sizeof( struct SCSICmd ))
 	||	( scsi->scsi_CmdLength == 0 )
-	||	( scsi->scsi_CmdLength > 16 ))
+	||	( scsi->scsi_CmdLength > 16 )
+	||	( ! scsi->scsi_Command )
+	||	( ( scsi->scsi_Length ) && ( ! scsi->scsi_Data ) ))
 	{
 		USBERROR( "MSD : HD_ScsiCmd : bad SCSICmd" );
 		ioreq->io_Error = IOERR_BADLENGTH;
