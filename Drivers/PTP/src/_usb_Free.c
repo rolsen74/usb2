@@ -12,52 +12,29 @@
 
 // --
 
-void _usb_Free( struct USB_Struct *us )
+void
+_usb_Free( struct USB_Struct *us )
 {
-struct USB_Command *cmd;
+	struct CommandMessage request;
 
-	MYINFO( "PTP-USB : _usb_Free" );
+	if ( ( us->us_Session ) && ( us->us_Running ) && ( ! us->us_Detached ) )
+	{
+		memset( & request, 0, sizeof( request ) );
 
+		request.cm_Operation = PTP_Close_Session;
+
+		_usb_Transaction( us, & request );
+	}
+
+	// Unregister releases the endpoint resources owned by this registration.
 	if ( us->us_Register )
 	{
-		USB2_Reg_Unregister( us->us_Register );
-		us->us_Register = NULL;
-	}
-
-	if ( us->us_USBActive )
-	{
-		_usb_Bulk_Cmd_Free( us, us->us_USBActive );
-		us->us_USBActive = NULL;
-	}
-
-	while( TRUE )
-	{
-		cmd = (PTR) RemHead( & us->us_USBList );
-
-		if ( ! cmd )
-		{
-			break;
-		}
-
-		_usb_Bulk_Cmd_Free( us, cmd );
-	}
-
-	while( TRUE )
-	{
-		cmd = (PTR) RemHead( & us->us_CmdList );
-
-		if ( ! cmd )
-		{
-			break;
-		}
-
-		FreeVec( cmd );
+		us->us_StartMsg->IUSB2->USB2_Reg_Unregister( us->us_Register );
 	}
 
 	if ( us->us_CmdMsgPort )
 	{
 		FreeSysObject( ASOT_PORT, us->us_CmdMsgPort );
-		us->us_CmdMsgPort = NULL;
 	}
 }
 
