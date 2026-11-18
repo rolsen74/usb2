@@ -211,6 +211,7 @@ struct RealRegister *reg;
 	}
 
 	fn->fkt_Initialized = TRUE;
+	USB2_Notify_Function( usbbase, fn, USBNC_Adding );
 
 	USBDEBUG( "__myMain (Init)          : Done" );
 
