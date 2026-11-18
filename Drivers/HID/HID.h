@@ -263,7 +263,7 @@ SEC_CODE void	HID_Free(				struct USBBase *usbbase, struct HIDData *hd );
 SEC_CODE void	HID_Main_Boot(			struct USBBase *usbbase, struct HIDData *hd );
 SEC_CODE void	HID_Main_Report(		struct USBBase *usbbase, struct HIDData *hd );
 
-SEC_CODE void	USB_Send_LED(			struct USBBase *usbbase, struct HIDData *hd, U32 ReportID, U32 LEDStat );
+SEC_CODE void	USB_Send_LED(			struct USBBase *usbbase, struct HID_ReportNode *rn, U32 ReportID, U32 LEDStat );
 
 SEC_CODE S32	Report_Add_Usage(		struct USBBase *usbbase, struct HIDData *hd, struct USB2_Header *list, U32 minusage, U32 maxusage );
 SEC_CODE S32	Report_Read_Item(		struct USBBase *usbbase, struct HIDData *hd, struct pintern *pi );

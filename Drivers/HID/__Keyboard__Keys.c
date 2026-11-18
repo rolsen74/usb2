@@ -157,14 +157,11 @@ SEC_CODE static void __KeyPress(
 	U8 *oldreport,
 	U8 *newreport )
 {
-struct HIDData *hd;
 S16 amikey;
 S16 usbkey;
 U32 newpos;
 
 	TASK_NAME_ENTER( "HID_Keyboard : myHID_Kbd_KeyPress" );
-
-	hd = rn->HIDData;
 
 	for( newpos=0 ; newpos<6 ; newpos++ )
 	{
@@ -196,14 +193,16 @@ U32 newpos;
 			// Handle CapsLock... 
 			usbbase->usb_HID_Qualifiers ^= IEQUALIFIER_CAPSLOCK;
 			rn->Keyboard_LEDs ^= HID_LED_CapsLock;
-			USB_Send_LED( usbbase, hd, rn->ReportID, rn->Keyboard_LEDs );
+
+			USB_Send_LED( usbbase, rn, rn->ReportID, rn->Keyboard_LEDs );
 		}
 
 		if ( usbkey == 71 )
 		{
 			// Handle ScrollLock
 			rn->Keyboard_LEDs ^= HID_LED_ScrollLock;
-			USB_Send_LED( usbbase, hd, rn->ReportID, rn->Keyboard_LEDs );
+
+			USB_Send_LED( usbbase, rn, rn->ReportID, rn->Keyboard_LEDs );
 		}
 
 		if ( usbkey == 83 )
@@ -211,7 +210,8 @@ U32 newpos;
 			// Handle NumLock
 			usbbase->usb_HID_Qualifiers ^= IEQUALIFIER_NUMERICPAD;
 			rn->Keyboard_LEDs ^= HID_LED_NumLock;
-			USB_Send_LED( usbbase, hd, rn->ReportID, rn->Keyboard_LEDs );
+
+			USB_Send_LED( usbbase, rn, rn->ReportID, rn->Keyboard_LEDs );
 		}
 
 		// Conver USB Keycode to Amiga Keycode
