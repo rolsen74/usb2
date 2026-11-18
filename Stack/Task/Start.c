@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -23,7 +24,7 @@ U32 tag;
 
 	retval = TASK_Return_Stack_Error;
 
-//	USBDEBUG( "__Task_Start : 1 : " );
+//	USBDEBUG( "__Task_Start             : 1 : " );
 
 	va_start( ap, usbbase );
 
@@ -32,7 +33,7 @@ U32 tag;
 
 	if ( ! tm )
 	{
-		USBERROR( "__Task_Start : 2 : Error allocating TaskMsg" );
+		USBERROR( "__Task_Start             : 2 : Error allocating TaskMsg" );
 		goto bailout;
 	}
 
@@ -157,13 +158,13 @@ U32 tag;
 
 	if (( ! tm->tm_Func_Init ) && ( ! tm->tm_Func_Entry ) && ( ! tm->tm_Func_Free ))
 	{
-		USBDEBUG( "__Task_Start : 4 : Missing Process Entry Point" );
+		USBDEBUG( "__Task_Start             : 4 : Missing Process Entry Point" );
 		goto bailout;
 	}
 
 	if (( tm->tm_Type <= TASK_Type_Unset ) || ( tm->tm_Type >= TASK_Type_Last ))
 	{
-		USBDEBUG( "__Task_Start : 5 : Invalid Process Type (%ld)", tm->tm_Type );
+		USBDEBUG( "__Task_Start             : 5 : Invalid Process Type (%ld)", tm->tm_Type );
 		goto bailout;
 	}
 
@@ -173,7 +174,7 @@ U32 tag;
 	{
 		if ( HCD_LOCK( hn ) != LSTAT_Okay )
 		{
-			USBDEBUG( "__Task_Start : Invalid HCD Node (%p)", hn );
+			USBDEBUG( "__Task_Start             : Invalid HCD Node (%p)", hn );
 			goto bailout;
 		}
 
@@ -199,7 +200,7 @@ bailout:
 
 	if (tm)
 	{
-		USBDEBUG( "__Task_Start : 99 : Free TM %p", tm );
+		USBDEBUG( "__Task_Start             : 99 : Free TM %p", tm );
 		TASKMSG_FREE(tm);
 	}
 
