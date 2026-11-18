@@ -12,7 +12,7 @@
 
 // --
 
-U32 _usb_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
+U32 _usb_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg )
 {
 struct USB_Struct us;
 S32 stat;
