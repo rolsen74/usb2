@@ -289,8 +289,7 @@ S32 pos;
 
 	// -- Walk back
 	// Test pos and then Subtact 1
-	// but Don't close Newlib
-	while( pos > 2 )
+		while( pos > 0 )
 	{
 		pos--;
 //		MYERROR( "USB2Analyzer : Processing : %s", OpenList[pos].os_STR );
