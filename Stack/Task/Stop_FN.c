@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -25,7 +26,7 @@ SEC_CODE void __Task_Stop_FN( struct USBBase *usbbase, struct RealFunctionNode *
 {
 struct USB2_DriverNode *dn;
 
-	USBINFO( "__Task_Stop_FN           :  1 : FN %p : (%s)", fn, (file)?file:"<NULL>" );
+	USBINFO( "__Task_Stop_FN           :  1 : FN    %p : (%s)", fn, (file)?file:"<NULL>" );
 
 	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
 	{
@@ -35,11 +36,11 @@ struct USB2_DriverNode *dn;
 
 		while( dn )
 		{
-			USBINFO( "__Task_Stop_FN           :  2 : DN %p", dn );
+			USBINFO( "__Task_Stop_FN           :  2 : DN    %p", dn );
 
 			if ( dn->dn_Function == fn )
 			{
-				USBINFO( "__Task_Stop_FN           :  3 : DN %p : Calling TASK_STOP_DN()", dn );
+				USBINFO( "__Task_Stop_FN           :  3 : DN    %p : Calling TASK_STOP_DN()", dn );
 
 				TASK_STOP_DN( dn );
 			}
@@ -56,7 +57,7 @@ struct USB2_DriverNode *dn;
 		USBINFO( "__Task_Stop_FN           :  4 : Invalid FN %p", fn );
 	}
 
-	USBINFO( "__Task_Stop_FN           : 99 : FN %p", fn );
+	USBINFO( "__Task_Stop_FN           : 99 : FN    %p", fn );
 	return;
 }
 
