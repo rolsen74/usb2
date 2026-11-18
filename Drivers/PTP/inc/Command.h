@@ -19,116 +19,42 @@
 
 struct CameraInfoNode
 {
-	struct Node			cin_Node;				// Node used by FileSystem
-	STR					cin_Name;				// Camera Node
-	struct MsgPort *	cin_MsgPort;			// USB Cmd MsgPort
-	struct FS_ObjNode *	cin_DirNode;
+	struct MsgPort *		cin_MsgPort;
+	struct SignalSemaphore	cin_Gate;
+	struct FS_ObjNode *		cin_DirNode;
+	USB2_ID					cin_ID;
+	S32						cin_Online;
+	S32						cin_NoPartial;
+	S32						cin_CanUpload;
 };
-
-// --
-
-struct CommandMessage
-{
-	struct Message				cm_Message;
-	U32							cm_Command;
-	struct CameraInfoNode *		cm_InfoNode;
-
-	// uint16						cm_Sender;
-	// U32			            cm_Result;
-	// struct CameraNode *         cm_Camera;
-
-	// union
-	// {
-//--	    struct MsgPort *        CommandPort;
-		// struct StorageNode *    StorageNode;
-		// struct FileNode *		FileNode;
-		// struct LogNode *		LogNode;
-//--		STR					String;
-		// U32					Value;
-//--		APTR					Data;
-    // }
-	// cm_Parameter1;
-
-	// union
-	// {
-	// 	struct FileNode *		FileNode;
-	// 	STR					String;
-	// 	U32					Value;
-	// 	APTR					Data;
-	// }
-	// cm_Parameter2;
-
-	// union
-	// {
-//--		BPTR					FileHandle;
-//--		struct FileNode *		FileNode;
-		// STR					String;
-		// U32					Value;
-//--		APTR					Data;
-	// }
-	// cm_Parameter3;
-
-//--    union
-//--	{
-//--		STR					String;
-//--		U32					Value;
-//--		APTR					Data;
-//--	}							
-//--	cm_Parameter4;
-//--
-//--    union
-//--    {
-//--		STR					String;
-//--		U32					Value;
-//--		APTR					Data;
-//--	}
-//--	cm_Parameter5;
-};
-
-// Commands
 
 enum
 {
-	// Common Commands
-
 	CMD_Camera_Added,
 	CMD_Camera_Removed,
-// 	CMD_Camera_Storage_Added,
-// 	CMD_Camera_Storage_Removed,
-// 	CMD_Camera_File_Added,
-// 	CMD_Camera_File_Removed,
-// 	CMD_Camera_File_Transfer_Init,
-// 	CMD_Camera_File_Transfer_Update,
-// 	CMD_Camera_File_Transfer_Done,
+	CMD_Camera_Transaction,
+};
 
-// 	// File System Commands
-
-// 	// Graphics Commands
-
-// 	GFXCMD_Show_Graphics,
-// 	GFXCMD_Hide_Graphics,
-// 	GFXCMD_Transfer_Start,
-// 	GFXCMD_Transfer_Abort,
-// 	GFXCMD_Camera_Selector_Start,
-// 	GFXCMD_Camera_Storage_Scan_Start,
-// 	GFXCMD_Camera_Storage_Scan_Files,
-// 	GFXCMD_Camera_Storage_Scan_End,
-// 	GFXCMD_Camera_Thumb_Draw,
-//--	GFXCMD_Close_Windows,
-	// GFXCMD_Log_Add,
-	// GFXCMD_Log_Update,
-
-	// // USB Commands
-
-//--	USBCMD_Transfer_End,
-// 	USBCMD_Transfer_Abort,
-// 	USBCMD_Camera_Object_Get,
-// 	USBCMD_Camera_Thumb_Get,
-// 	USBCMD_Camera_Thumb_CancelGet,
-
-// 	// Master Commands
-
-// 	MSTCMD_Log_Message,
+struct CommandMessage
+{
+	struct Message			cm_Message;
+	struct CameraInfoNode *	cm_InfoNode;
+	U32						cm_Command;
+	U16						cm_Operation;
+	U16						cm_Response;
+	U32						cm_ParameterCount;
+	U32						cm_Parameters[3];
+	U8 *					cm_Data;
+	U32						cm_Limit;
+	U32						cm_Actual;
+	U32						cm_Reply[3];
+	U32						cm_ReplyCount;
+	BPTR					cm_Output;
+	BPTR					cm_Input;
+	S32						cm_SendData;
+	S32						cm_Allocate;
+	S32						cm_WantData;
+	int32					cm_Error;
 };
 
 // --
