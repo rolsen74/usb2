@@ -12,7 +12,7 @@
 
 // --
 
-struct ExamineData *_fs__FSExamineFile( struct FSVP *vp, int32 *res2, struct FileHandle *fh )
+struct ExamineData *_fs__FSExamineFile( struct FSVP *vp, LONG *res2, struct FileHandle *fh )
 {
 struct FS_Struct *fs;
 struct ExamineData *retval;
