@@ -30,6 +30,9 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 	U32 length;
 	U32 physical;
 	U32 in;
+	U32 index;
+	U32 size;
+	U16 *lengths;
 
 	usbbase = hn->hn_USBBase;
 	ep = req->req_EndPoint;
@@ -37,6 +40,7 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 	packet = ep->ep_MaxPacketSize & 0x7ff;
 	mult = ( ( ep->ep_MaxPacketSize >> 11 ) & 3 ) + 1;
 	in = req->req_Public.io_Command == CMD_READ;
+	lengths = in ? NULL : req->req_Public.io_IsoPacketLengths;
 
 	if ( req->req_Function->fkt_Speed != USBSPEED_High )
 	{
@@ -76,8 +80,22 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 
 	link = &req->req_HCD.EHCI.IsoHead;
 
-	for ( offset = 0; offset < length; offset += itd->Length )
+	for ( index = 0, offset = 0; index < count; index++, offset += capacity )
 	{
+		size = MIN( capacity, length - offset );
+
+		if ( lengths )
+		{
+			if ( ( ! lengths[index] ) || ( lengths[index] > size ) )
+			{
+				req->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
+
+				return ( TRUE );
+			}
+
+			size = lengths[index];
+		}
+
 		itd = MEMORY_ALLOC( MEMID_HCD_4k, FALSE );
 
 		if ( ! itd )
@@ -92,7 +110,7 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 		MEM_SET( itd, 0, sizeof( *itd ) );
 
 		itd->Physical = physical;
-		itd->Length = MIN( capacity, length - offset );
+		itd->Length = size;
 		itd->Page[0] = LE_SWAP32( physical | ( ep->ep_Number << 8 ) | req->req_Function->fkt_Address );
 		itd->Page[1] = LE_SWAP32( packet | ( in << 11 ) );
 		itd->Page[2] = LE_SWAP32( mult );
