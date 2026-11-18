@@ -46,42 +46,42 @@ void				_fs_Handler__FSVector(			struct FS_Struct *fs );
 void				_fs_Handler__Commands(			struct FS_Struct *fs );
 
 // Helper Functions
-struct FS_ObjNode *_fs_Node_CreateDir( struct FS_Struct *fs, int32 *res2, STR name );
+struct FS_ObjNode *_fs_Node_CreateDir( struct FS_Struct *fs, S32 *res2, STR name );
 void _fs_Node_Delete( struct FS_Struct *fs, struct FS_ObjNode *node );
-struct FS_ObjNode *_fs_Node_Locate_Rel( struct FS_Struct *fs, int32 *res2, struct FS_ObjLock *lock, CONST_STRPTR name );
-struct FS_ObjNode *_fs_Node_Find( struct FS_ObjNode *node, CONST_STRPTR name, U32 length );
-int32 _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node );
+struct FS_ObjNode *_fs_Node_Locate_Rel( struct FS_Struct *fs, S32 *res2, struct FS_ObjLock *lock, STR name );
+struct FS_ObjNode *_fs_Node_Find( struct FS_ObjNode *node, STR name, U32 length );
+S32 _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node );
 struct ExamineData *_fs_ExamineNode( struct FS_ObjNode *node, struct PRIVATE_ExamineDirContext *context );
-struct FS_ObjLock *_fs_Lock_New_From_Node( struct FS_Struct *fs, struct FS_ObjNode *node, int32 *res2, int32 access );
-int32 _fs_Lock_Free( struct FS_Struct *fs, struct FS_ObjLock *lock );
-int32 _fs_FileCache_Create( struct FS_ObjLock *lock, int32 mode );
-struct FS_ObjLock *_fs_File_Create( struct FS_Struct *fs, int32 *res2, struct FS_ObjLock *rel, CONST_STRPTR name );
-int32 _fs_File_Upload( struct FS_ObjLock *lock );
-int32 _fs_FileCache( struct FS_ObjLock *lock );
+struct FS_ObjLock *_fs_Lock_New_From_Node( struct FS_Struct *fs, struct FS_ObjNode *node, S32 *res2, S32 access );
+S32 _fs_Lock_Free( struct FS_Struct *fs, struct FS_ObjLock *lock );
+S32 _fs_FileCache_Create( struct FS_ObjLock *lock, S32 mode );
+struct FS_ObjLock *_fs_File_Create( struct FS_Struct *fs, S32 *res2, struct FS_ObjLock *rel, STR name );
+S32 _fs_File_Upload( struct FS_ObjLock *lock );
+S32 _fs_FileCache( struct FS_ObjLock *lock );
 void _fs_FileCache_Close( struct FS_ObjLock *lock );
-int32 _fs__FSOpen( struct FSVP *vp, int32 *res2, struct FileHandle *file, struct Lock *rel, CONST_STRPTR name, int32 mode );
-int32 _fs__FSOpenFromLock( struct FSVP *vp, int32 *res2, struct FileHandle *file, struct Lock *lock );
-int32 _fs__FSClose( struct FSVP *vp, int32 *res2, struct FileHandle *file );
-int32 _fs__FSWrite( struct FSVP *vp, int32 *res2, struct FileHandle *file, STR buffer, int32 count );
-int32 _fs__FSRead( struct FSVP *vp, int32 *res2, struct FileHandle *file, STR buffer, int32 count );
-int32 _fs__FSChangeFilePosition( struct FSVP *vp, int32 *res2, struct FileHandle *file, int32 mode, S64 position );
-S64 _fs__FSGetFilePosition( struct FSVP *vp, int32 *res2, struct FileHandle *file );
-S64 _fs__FSGetFileSize( struct FSVP *vp, int32 *res2, struct FileHandle *file );
+LONG _fs__FSOpen( struct FSVP *vp, LONG *res2, struct FileHandle *file, struct Lock *rel, const char *filename, LONG mode );
+LONG _fs__FSOpenFromLock( struct FSVP *vp, LONG *res2, struct FileHandle *file, struct Lock *lock );
+LONG _fs__FSClose( struct FSVP *vp, LONG *res2, struct FileHandle *file );
+LONG _fs__FSWrite( struct FSVP *vp, LONG *res2, struct FileHandle *file, STR buffer, LONG count );
+LONG _fs__FSRead( struct FSVP *vp, LONG *res2, struct FileHandle *file, STR buffer, LONG count );
+LONG _fs__FSChangeFilePosition( struct FSVP *vp, LONG *res2, struct FileHandle *file, LONG mode, S64 position );
+S64 _fs__FSGetFilePosition( struct FSVP *vp, LONG *res2, struct FileHandle *file );
+S64 _fs__FSGetFileSize( struct FSVP *vp, LONG *res2, struct FileHandle *file );
 
 // --
 
 // Vector Entries .. Use Semaphore Locks
-int32				_fs__FSDeviceInfoData(			struct FSVP *vp, int32 *res2, struct InfoData *id );
-struct Lock *		_fs__FSDupLock(					struct FSVP *vp, int32 *res2, struct Lock *lockin );
-struct Lock *		_fs__FSDupLockFromFH(			struct FSVP *vp, int32 *res2, struct FileHandle *file );
-int32				_fs__FSExamineDir(				struct FSVP *vp, int32 *res2, struct PRIVATE_ExamineDirContext *ctx );
-struct ExamineData *_fs__FSExamineFile(				struct FSVP *vp, int32 *res2, struct FileHandle *fh );
-struct ExamineData *_fs__FSExamineLock(				struct FSVP *vp, int32 *res2, struct Lock *objLock );
-struct Lock *		_fs__FSLock(					struct FSVP *vp, int32 *res2, struct Lock *rel_lock, CONST_STRPTR name, int32 mode );
-struct Lock *		_fs__FSParentDir(				struct FSVP *vp, int32 *res2, struct Lock *dirlock );
-struct Lock *		_fs__FSParentOfFH(				struct FSVP *vp, int32 *res2, struct FileHandle *file );
-int32				_fs__FSUnLock(					struct FSVP *vp, int32 *res2, struct Lock *lock );
-int32				_fs__FSVolumeInfoData(			struct FSVP *vp, int32 *res2, struct InfoData *info );
+LONG				_fs__FSDeviceInfoData(			struct FSVP *vp, LONG *res2, struct InfoData *id );
+struct Lock *		_fs__FSDupLock(					struct FSVP *vp, LONG *res2, struct Lock *lockin );
+struct Lock *		_fs__FSDupLockFromFH(			struct FSVP *vp, LONG *res2, struct FileHandle *file );
+LONG				_fs__FSExamineDir(				struct FSVP *vp, LONG *res2, struct PRIVATE_ExamineDirContext *ctx );
+struct ExamineData *_fs__FSExamineFile(				struct FSVP *vp, LONG *res2, struct FileHandle *fh );
+struct ExamineData *_fs__FSExamineLock(				struct FSVP *vp, LONG *res2, struct Lock *objLock );
+struct Lock *		_fs__FSLock(					struct FSVP *vp, LONG *res2, struct Lock *rel_lock, const char *name, LONG mode );
+struct Lock *		_fs__FSParentDir(				struct FSVP *vp, LONG *res2, struct Lock *dirlock );
+struct Lock *		_fs__FSParentOfFH(				struct FSVP *vp, LONG *res2, struct FileHandle *file );
+LONG				_fs__FSUnLock(					struct FSVP *vp, LONG *res2, struct Lock *lock );
+LONG				_fs__FSVolumeInfoData(			struct FSVP *vp, LONG *res2, struct InfoData *info );
 
 // --
 // Master
@@ -105,6 +105,6 @@ void _usb_QueryUpload( struct USB_Struct *us );
 S32 _usb_SendData( struct USB_Struct *us, struct CommandMessage *request, U32 transaction );
 S32 _usb_WriteBulk( struct USB_Struct *us, U32 length, S32 final );
 void _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request );
-int32 _fs_Camera_Request( struct CameraInfoNode *camera, struct CommandMessage *request );
+S32 _fs_Camera_Request( struct CameraInfoNode *camera, struct CommandMessage *request );
 
 #endif
