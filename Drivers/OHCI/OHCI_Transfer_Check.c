@@ -220,7 +220,20 @@ S32 retval;
 
 	ed = ioreq->req_HCD.OHCI.ED_Header;
 
-	if ( ed )
+	if ( ( ed ) && ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous ) )
+	{
+		U32 head;
+
+		head = LE_SWAP32( *(volatile U32 *) &ed->ed_headp );
+
+		if ( head & OHCI_HALTED )
+		{
+			ioreq->req_Public.io_Error = USB2Err_Host_HostError;
+		}
+
+		retval = ( ( head & OHCI_HALTED ) || ( ( head & OHCI_HEADMASK ) == LE_SWAP32( ed->ed_tailp ) ) );
+	}
+	else if ( ed )
 	{
 		retval = __is_ED_Finished( hn, ed );
 	}

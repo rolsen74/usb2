@@ -416,8 +416,18 @@ struct USB2_IORequest
 	U8						io_AllowShortPackets;
 	U8						io_Pad[2];
 
+	// Optional isochronous read results. One entry per service interval.
+	// Buffers are spaced by the endpoint's maximum bytes per interval.
+	// Count must match the number of intervals requested. Results are
+	// valid on request success. An individual failed interval is reported
+	// as USB2_ISO_PACKET_ERROR. Keep the array valid until the request returns.
+	U16 *					io_IsoPacketLengths;
+	U32						io_IsoPacketCount;
+
 	/* Private Data Follows */
 };
+
+#define USB2_ISO_PACKET_ERROR 0xffffU
 
 enum USB2Error
 {

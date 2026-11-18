@@ -18,6 +18,7 @@
 struct __ohci
 {
 	struct OHCI_ED * ED_Header;
+	struct OHCI_ITD * IsoHead;
 	struct OHCI_ED * Start_Header;
 	U32				 Start_Slot;
 };
@@ -30,6 +31,7 @@ struct __uhci
 struct __ehci
 {
 	struct EHCI_QH * QH_Header;
+	struct EHCI_ITD * IsoHead;
 	struct EHCI_QH * Start_Header;
 	U32				 Start_Slot;
 };

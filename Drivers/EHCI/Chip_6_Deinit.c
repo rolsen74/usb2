@@ -57,6 +57,14 @@ U32 cnt;
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Deinit" );
 
+	if ( ( hn->hn_HCD.EHCI.IsoOrphan ) &&
+		( ! ( PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) & EHCI_STS_HCH ) ) )
+	{
+		TASK_NAME_LEAVE();
+
+		return;
+	}
+
 	// --
 
 	USBDEBUG( "EHCI_Chip_Deinit : 1 : Free ASync_Head" );

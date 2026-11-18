@@ -80,7 +80,10 @@ err = USB2Err_Stack_NoMemory;
 		( ep->ep_MaxPacketSize > 1023 ) ||
 		( ! left ) ||
 		( ! data ) ||
-		( left > ep->ep_MaxPacketSize * ( UHCI_FRAMELIST_COUNT - 2 ) ) )
+		( left > ep->ep_MaxPacketSize * ( UHCI_FRAMELIST_COUNT - 2 ) ) ||
+		( ( ioreq->req_Public.io_IsoPacketLengths ) &&
+		  ( ( ep->ep_Interval != 1 ) ||
+		    ( ioreq->req_Public.io_IsoPacketCount != ( left + ep->ep_MaxPacketSize - 1 ) / ep->ep_MaxPacketSize ) ) ) )
 	{
 		err = USB2Err_Stack_InvalidStructure;
 		goto failed;

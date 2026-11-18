@@ -27,16 +27,28 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	U32 packet;
 	U32 dci;
 	U32 length;
+	U32 extra;
 
 	state = hn->hn_HCD.XHCI.State;
 	ep = req->req_EndPoint;
 	length = req->req_Public.io_Length;
 	direction = req->req_Public.io_Command == CMD_READ;
 	packet = ep->ep_MaxPacketSize & 0x7ff;
+	extra = ( ep->ep_MaxPacketSize >> 11 ) & 3;
 
-	if ( ( ! length ) || ( ! req->req_Public.io_Data ) || ( ! packet ) ||
-		( ep->ep_MaxPacketSize & 0x1800 ) ||
-		( packet > 1024 ) || ( ( length + packet - 1 ) / packet > 254 ) )
+	if ( ( ! length ) || ( ! req->req_Public.io_Data ) || ( ! packet ) || ( packet > 1024 ) ||
+		( extra && ( ( extra > 2 ) || ( req->req_Function->fkt_Speed != USBSPEED_High ) ) ) )
+	{
+		req->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
+
+		return ( TRUE );
+	}
+
+	packet *= extra + 1;
+	count = 1 + ( length - 1 ) / packet;
+
+	if ( ( count > 254 ) ||
+		( req->req_Public.io_IsoPacketLengths && ( req->req_Public.io_IsoPacketCount != count ) ) )
 	{
 		req->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
 

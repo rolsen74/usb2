@@ -284,16 +284,25 @@ struct EHCI_TD
 #define EHCI_TD_SET_TOGGLE(x)	( (x) << 31)
 
 /***************************************************************************/
-// todo
-
 struct EHCI_ITD
 {
-	int dummy;
+	volatile U32 Link;
+	volatile U32 Transaction[8];
+	U32 Page[7];
+	U32 PageHigh[7];
+
+	struct EHCI_ITD *Next;
+	struct EHCI_ITD *LinkedNext;
+	U32 Physical;
+	U32 Frame;
+	U32 Microframe;
+	U32 Length;
 };
 
-#define EHCI_ITD_ALIGN			32					// Struct min alignment
-#define EHCI_ITD_SIZE			(( sizeof( struct EHCI_ITD ) + EHCI_ITD_ALIGN - 1 ) / EHCI_ITD_ALIGN** EHCI_ITD_ALIGN )
-#define EHCI_ITD_CHUNK			( EHCI_PAGE_SIZE / EHCI_ITD_SIZE )
+#define EHCI_ITD_ACTIVE		0x80000000U
+#define EHCI_ITD_ERRORS		0x70000000U
+#define EHCI_ITD_IOC		0x00008000U
+#define EHCI_ITD_DATA		128
 
 /***************************************************************************/
 
@@ -318,6 +327,8 @@ struct _EHCI
 	U32								FrameList_Size;
 	U32								FrameList_Phyaddr;
 	struct EHCI_QH **				FrameList_ISlots;
+	struct EHCI_ITD *				IsoLinked;
+	struct EHCI_ITD *				IsoOrphan;
 	S32								BandWidth[ 256 ];		// hmm alloc mem instead? like ISlots
 
 	#if 0

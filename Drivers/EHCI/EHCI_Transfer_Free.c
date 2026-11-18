@@ -54,9 +54,17 @@ SEC_CODE void EHCI_Transfer_Free( struct USB2_HCDNode *hn, struct RealRequest *i
 struct EHCI_TD *next;
 struct EHCI_TD *td;
 struct EHCI_QH *qh;
+struct EHCI_ITD *itd;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Transfer_Free" );
+
+	while ( ( itd = ioreq->req_HCD.EHCI.IsoHead ) )
+	{
+		ioreq->req_HCD.EHCI.IsoHead = itd->Next;
+
+		MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
+	}
 
 	qh = ioreq->req_HCD.EHCI.QH_Header;
 

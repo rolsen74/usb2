@@ -101,6 +101,11 @@ SEC_RODATA const struct HCDFunctions EHCIFunctions =
 	.Bulk_Length			= EHCI_Bulk_Length,
 	.Bulk_Remove			= EHCI_Bulk_Remove,
 
+	.Isochronous_Build		= EHCI_Isochronous_Build,
+	.Isochronous_Add		= EHCI_Isochronous_Add,
+	.Isochronous_Remove		= EHCI_Isochronous_Remove,
+	.Isochronous_Length		= EHCI_Isochronous_Length,
+
 	// --
 
 	#if 0

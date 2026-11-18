@@ -19,7 +19,10 @@ XHCI_Transfer_Free ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	struct XHCI_Buffer * buffer;
 	struct XHCI_Buffer * next;
 
+	U32 index;
+
 	usbbase = hn->hn_USBBase;
+	index = 0;
 
 	for ( buffer = req->req_HCD.XHCI.Buffers; buffer; buffer = next )
 	{
@@ -29,6 +32,11 @@ XHCI_Transfer_Free ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		{
 			if ( req->req_EndPoint->ep_Type == EPATT_Type_Isochronous )
 			{
+				if ( req->req_Public.io_IsoPacketLengths )
+				{
+					req->req_Public.io_IsoPacketLengths[index] = buffer->Actual;
+				}
+
 				if ( buffer->Actual )
 				{
 					MEM_COPY ( buffer->Memory, (U8 *)req->req_Public.io_Data + buffer->Offset, buffer->Actual );
@@ -43,6 +51,7 @@ XHCI_Transfer_Free ( struct USB2_HCDNode * hn, struct RealRequest * req )
 
 		MEMORY_FREE ( MEMID_HCD_4k, buffer->Memory, buffer->Physical );
 		MEM_FREEVEC ( buffer );
+		index++;
 	}
 
 	MEM_SET ( &req->req_HCD.XHCI, 0, sizeof ( req->req_HCD.XHCI ) );

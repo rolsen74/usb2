@@ -73,11 +73,18 @@ XHCI_Event_Poll ( struct USB2_HCDNode * hn )
 						{
 							if ( buffer->TRB_Physical == physical )
 							{
-								buffer->Actual = buffer->Length - MIN ( buffer->Length, residual );
-								req->req_HCD.XHCI.Actual += buffer->Actual;
 								break;
 							}
 						}
+
+						// Ring underrun/overrun events need not name a queued TRB.
+						if ( ( ! buffer ) || ( req->req_HCD.XHCI.Finished ) )
+						{
+							break;
+						}
+
+						buffer->Actual = buffer->Length - MIN ( buffer->Length, residual );
+						req->req_HCD.XHCI.Actual += buffer->Actual;
 
 						if ( ( completion != XHCI_CC_SUCCESS ) && ( completion != XHCI_CC_SHORT_PACKET ) )
 						{

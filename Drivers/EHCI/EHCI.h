@@ -35,6 +35,12 @@ void EHCI_Dump_TD(		struct USB2_HCDNode *hn, struct EHCI_TD *td );
 
 #endif
 
+SEC_CODE S32 EHCI_Isochronous_Build( struct USB2_HCDNode *hn, struct RealRequest *req );
+SEC_CODE void EHCI_Isochronous_Add( struct USB2_HCDNode *hn, struct RealRequest *req );
+SEC_CODE void EHCI_Isochronous_Remove( struct USB2_HCDNode *hn, struct RealRequest *req );
+SEC_CODE U32 EHCI_Isochronous_Length( struct USB2_HCDNode *hn, struct RealRequest *req );
+SEC_CODE S32 EHCI_Get_TT( struct RealFunctionNode *fn, U32 *hub, U32 *port );
+
 #if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 
 SEC_CODE void	EHCI_Door_Bell_Init( struct USB2_HCDNode *hn, STR file );

@@ -195,6 +195,7 @@ U32 l;
 SEC_CODE S32 EHCI_Transfer_Check( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
 struct EHCI_QH *qh;
+struct EHCI_ITD *itd;
 S32 retval;
 
 	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
@@ -202,6 +203,22 @@ S32 retval;
 	#endif
 
 	TASK_NAME_ENTER( "EHCI : EHCI_Transfer_Check" );
+
+	if ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous )
+	{
+		itd = ioreq->req_HCD.EHCI.IsoHead;
+
+		while ( ( itd ) && ( itd->Next ) )
+		{
+			itd = itd->Next;
+		}
+
+		retval = ( ! itd ) || ( ! ( LE_SWAP32( itd->Transaction[itd->Microframe] ) & EHCI_ITD_ACTIVE ) );
+
+		TASK_NAME_LEAVE();
+
+		return ( retval );
+	}
 
 	qh = ioreq->req_HCD.EHCI.QH_Header;
 

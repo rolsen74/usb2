@@ -194,8 +194,8 @@ struct OHCI_ED
 #define OHCI_ED_SET_EN(s)	((s) << 7)
 #define OHCI_ED_DIR_MASK	0x00001800
 #define  OHCI_ED_DIR_TD		0x00000000
-// #define  OHCI_ED_DIR_OUT	0x00000800
-// #define  OHCI_ED_DIR_IN		0x00001000
+#define OHCI_ED_DIR_OUT		0x00000800
+#define OHCI_ED_DIR_IN		0x00001000
 #define OHCI_ED_SPEED		0x00002000
 #define OHCI_ED_SKIP		0x00004000
 #define OHCI_ED_FORMAT_GEN	0x00000000
@@ -262,6 +262,7 @@ struct OHCI_TD
 // Queue Header (QH) Structure
 
 #define OHCI_ITD_NOFFSET	8
+#define OHCI_ITD_DATA	64
 
 struct OHCI_ITD
 {
@@ -270,8 +271,11 @@ struct OHCI_ITD
 /* 04 */ U32				itd_bp0;
 /* 08 */ U32				itd_nextitd;
 /* 0C */ U32				itd_be;
-/* 10 */ U16				itd_offset[OHCI_ITD_NOFFSET];
+/* 10 */ volatile U16		itd_offset[OHCI_ITD_NOFFSET];
 /* 20    Private - Software */
+	struct OHCI_ITD *Next;
+	U32 Physical;
+	U32 Length;
 };
 
 // typedef struct {

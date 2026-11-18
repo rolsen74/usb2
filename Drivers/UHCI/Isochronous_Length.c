@@ -54,11 +54,15 @@ UHCI_Isochronous_Length ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	U32 offset;
 	U32 got;
 	U32 status;
+	U32 index;
+	U16 *lengths;
 
 	usbbase = hn->hn_USBBase;
 	qh		= ioreq->req_HCD.UHCI.QH_Header;
 	actual	= 0;
 	offset	= 0;
+	index = 0;
+	lengths = ioreq->req_Public.io_IsoPacketLengths;
 
 	if ( ! qh )
 	{
@@ -83,7 +87,16 @@ UHCI_Isochronous_Length ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 		}
 
 		actual += got;
-		offset += got;
+
+		if ( lengths )
+		{
+			lengths[index++] = got;
+			offset += td->ptd_buffer_size;
+		}
+		else
+		{
+			offset += got;
+		}
 	}
 
 	return ( actual );

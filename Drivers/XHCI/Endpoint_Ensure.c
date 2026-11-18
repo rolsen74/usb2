@@ -86,6 +86,10 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 		{
 			interval = MAX ( 1, MIN ( ep->ep_Interval, 16 ) ) - 1;
 		}
+		else if ( ep->ep_Type == EPATT_Type_Isochronous )
+		{
+			interval = MAX ( 1, MIN ( ep->ep_Interval, 16 ) ) + 2;
+		}
 		else
 		{
 			value = MAX ( 1, ep->ep_Interval ) * 8;
@@ -98,7 +102,8 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 	}
 
 	endpoint[0] = LE_SWAP32 ( interval << 16 );
-	endpoint[1] = LE_SWAP32 ( ( packet << 16 ) | ( burst << 8 ) | ( type << 3 ) | ( 3 << 1 ) );
+	endpoint[1] = LE_SWAP32 ( ( packet << 16 ) | ( burst << 8 ) | ( type << 3 ) |
+		( ep->ep_Type == EPATT_Type_Isochronous ? 0 : ( 3 << 1 ) ) );
 	endpoint[2] = LE_SWAP32 ( ring->Physical | 1 );
 	value = packet * ( burst + 1 );
 	endpoint[4] = LE_SWAP32 ( ( ep->ep_Type == EPATT_Type_Bulk ) ? value : ( value << 16 ) | value );

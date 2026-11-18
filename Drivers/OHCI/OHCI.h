@@ -17,6 +17,11 @@
 
 /***************************************************************************/
 
+SEC_CODE S32 OHCI_Isochronous_Build( struct USB2_HCDNode *hn, struct RealRequest *req );
+SEC_CODE void OHCI_Isochronous_Add( struct USB2_HCDNode *hn, struct RealRequest *req );
+SEC_CODE void OHCI_Isochronous_Remove( struct USB2_HCDNode *hn, struct RealRequest *req );
+SEC_CODE U32 OHCI_Isochronous_Length( struct USB2_HCDNode *hn, struct RealRequest *req );
+
 #if defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 
 SEC_CODE void OHCI_Dump_Setup(	struct USB2_HCDNode *hn, struct USB2_SetupData *sd );

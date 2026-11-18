@@ -59,6 +59,8 @@ U32 val1;
 U32 val2;
 U32 val3;
 U32 phy;
+U32 hub;
+U32 port;
 U8 *mem;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
@@ -178,13 +180,15 @@ U8 *mem;
 		// High-Bandwidth Pipe Multiplier
 		val2 = EHCI_QH_SET_MULT( 1 );
 		
-		// HUB Port Number
-		// Only used by Host Controller if Low/Full Speed
-		val2 |= EHCI_QH_SET_PORT( fn->fkt_Parent->fkt_PortNr );
+		if ( fn->fkt_Speed != USBSPEED_High )
+		{
+			if ( ! EHCI_Get_TT( fn, &hub, &port ) )
+			{
+				goto bailout;
+			}
 
-		// HUB Address
-		// Only used by Host Controller if Low/Full Speed
-		val2 |= EHCI_QH_SET_HUBA( fn->fkt_Parent->fkt_Address );
+			val2 |= EHCI_QH_SET_PORT( port ) | EHCI_QH_SET_HUBA( hub );
+		}
 
 		// Split Completion Mask
 		// Referes to FrIndex number
