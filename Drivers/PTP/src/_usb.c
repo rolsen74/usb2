@@ -12,18 +12,28 @@
 
 // --
 
-U32 _usb_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg )
+U32
+_usb_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg )
 {
-struct USB_Struct us;
-S32 stat;
+	struct USB_Struct us;
 
-	MYINFO( "PTP-USB : _manager_Init" );
+	S32 stat;
 
-	memset( & us, 0, sizeof( struct USB_Struct ));
+	if ( ( ! msg ) || ( ! msg->IUSB2 ) || ( ! msg->Interface ) || ( ! msg->InterfaceDescriptor ) )
+	{
+		return ( FALSE );
+	}
+
+	// PTP and MTP cameras use the Still Image Capture interface.
+	if ( ( msg->InterfaceDescriptor->InterfaceSubClass != 1 ) ||
+		( msg->InterfaceDescriptor->InterfaceProtocol != 1 ) )
+	{
+		return ( FALSE );
+	}
+
+	memset( & us, 0, sizeof( us ) );
 
 	us.us_StartMsg = msg;
-
-	IUSB2 = msg->IUSB2;
 
 	stat = _usb_Init( & us );
 
@@ -34,7 +44,7 @@ S32 stat;
 
 	_usb_Free( & us );
 
-	return( stat );
+	return ( stat );
 }
 
 // --
