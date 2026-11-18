@@ -49,47 +49,47 @@
 
 // --
 
-SEC_CODE S32 OHCI_Chip_Reset( struct USB2_HCDNode *hn )
+SEC_CODE S32
+OHCI_Chip_Reset ( struct USB2_HCDNode * hn )
 {
-//volatile U32 *adr;
-S32 retval;
-U32 ctrl;
-U32 cnt;
-U32 val;
+	// volatile U32 *adr;
+	S32 retval;
+	U32 ctrl;
+	U32 cnt;
+	U32 val;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "OHCI : OHCI_Chip_Reset" );
+	struct USBBase * usbbase = hn->hn_USBBase;
+	TASK_NAME_ENTER ( "OHCI : OHCI_Chip_Reset" );
 
 	retval = FALSE;
 
-	
 	//-------------
 	// --
 
-	ctrl = PCI_READLONG( OHCI_CONTROL );
+	ctrl								  = PCI_READLONG ( OHCI_CONTROL );
 	hn->hn_HCD.OHCI.Remote_Wakeup_Connect = ctrl & OHCI_RWC;
-	hn->hn_HCD.OHCI.Frame_Interval = PCI_READLONG( OHCI_FM_INTERVAL );
+	hn->hn_HCD.OHCI.Frame_Interval		  = PCI_READLONG ( OHCI_FM_INTERVAL );
 
 	//-------------
 	// Ownership Change Request
 
 	if ( ctrl & OHCI_IR )
 	{
-		val  = PCI_READLONG( OHCI_COMMAND_STATUS );
+		val = PCI_READLONG ( OHCI_COMMAND_STATUS );
 		val |= OHCI_OCR;
-		PCI_WRITELONG( OHCI_COMMAND_STATUS, val );
+		PCI_WRITELONG ( OHCI_COMMAND_STATUS, val );
 
-		for( cnt=0 ; cnt<100 ; cnt++ )
+		for ( cnt = 0; cnt < 100; cnt++ )
 		{
-			ctrl = PCI_READLONG( OHCI_CONTROL );
+			ctrl = PCI_READLONG ( OHCI_CONTROL );
 
-			if ( ! ( ctrl & OHCI_IR ))
+			if ( ! ( ctrl & OHCI_IR ) )
 			{
 				break;
 			}
 			else
 			{
-				HCD_WAIT_MS( hn, 250 );	// Wait 250ms
+				HCD_WAIT_MS ( hn, 250 ); // Wait 250ms
 			}
 		}
 
@@ -97,7 +97,7 @@ U32 val;
 		{
 			ctrl &= OHCI_IR;
 
-			USBINFO( "Ownership Change Timeouted" );
+			USBINFO ( "Ownership Change Timeouted" );
 		}
 	}
 
@@ -105,24 +105,24 @@ U32 val;
 	// Reset
 
 	ctrl &= ~OHCI_HCFS_MASK;
-	ctrl |=  OHCI_HCFS_RESET;
+	ctrl |= OHCI_HCFS_RESET;
 
-	PCI_WRITELONG( OHCI_CONTROL, ctrl );
-	PCI_WRITELONG( OHCI_CONTROL, ctrl );
-	PCI_READLONG(  OHCI_CONTROL );
+	PCI_WRITELONG ( OHCI_CONTROL, ctrl );
+	PCI_WRITELONG ( OHCI_CONTROL, ctrl );
+	PCI_READLONG ( OHCI_CONTROL );
 
-	HCD_WAIT_MS( hn, 75 );		// Wait 75ms
+	HCD_WAIT_MS ( hn, 75 ); // Wait 75ms
 
 	//-------------
 	// --
 
 	retval = TRUE;
 
-//bailout:
+	// bailout:
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( retval );
+	return ( retval );
 }
 
 // --
