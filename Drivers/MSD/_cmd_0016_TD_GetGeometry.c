@@ -18,11 +18,8 @@ SEC_CODE S32 MSD_Cmd_0016_TD_GetGeometry( struct USBBase *usbbase, struct MSDDev
 {
 struct DriveGeometry tmp_dg;
 struct MSDDisk *msddisk;
-U32 capdata10[2];
-U64 capdata16[2];
 U32 blk_size;	// Block size 512/2048
 U32 tmp_size;
-U64 blk_last;	// Last Block nr
 U64 blk_secs;	// Total Sectors
 U32 actual;
 S32 reply;
@@ -30,10 +27,21 @@ S32 reply;
 	TASK_NAME_ENTER( "MSD : TD_GetGeometry" );
 	USBERROR( "MSD : _cmd_0016_TD_GetGeometry" );
 
+	reply = TRUE;
 	msddisk = (PTR) ioreq->io_Unit;
 
+	if ( msddisk->msddisk_Removable )
+	{
+		MSD_Disk_MediaCheck( usbbase, msddisk );
+	}
 
-	reply = TRUE;
+	if ( ! msddisk->msddisk_MediaPresent )
+	{
+		ioreq->io_Error = TDERR_DiskChanged;
+		ioreq->io_Actual = 0;
+		goto bailout;
+	}
+
 
 	if (( ! ioreq->io_Data ) || ( ! ioreq->io_Length ))
 	{
@@ -58,51 +66,18 @@ S32 reply;
 
 	MEM_SET( & tmp_dg, 0, sizeof( struct DriveGeometry ));
 
-	if ( ! MSD_SCSI_ReadCapacity10( usbbase, msddisk, NULL, capdata10, sizeof( capdata10 )))
+	if ( ! MSD_SCSI_GetCapacity( usbbase, msddisk, & blk_secs, & blk_size ) )
 	{
-		USBERROR( "MSD : MSD_SCSI_ReadCapacity10() failed" );
-		ioreq->io_Error = IOERR_BADLENGTH;
+		USBERROR( "MSD : MSD_SCSI_GetCapacity() failed" );
+		ioreq->io_Error = TDERR_NotSpecified;
 		goto bailout;
-	}
-
-	// If RC10 says 0xFFFFFFFF, do RC16 (0x9E/0x10) for 32 bytes 
-	if ( capdata10[0] == 0xFFFFFFFFUL )
-	{
-		// todo make ReadCap16
-//		if ( ! MSD_SCSI_ReadCapacity16( usbbase, msddisk, NULL, capdata16, sizeof( capdata16 )))
-		{
-			USBERROR( "MSD : MSD_SCSI_ReadCapacity16() failed" );
-			ioreq->io_Error = IOERR_BADLENGTH;
-			goto bailout;
-		}
-
-		blk_last	= BE_SWAP64( capdata16[0] );
-		blk_size	= BE_SWAP64( capdata16[1] );	// fix me
-		blk_secs	= blk_last + 1;
-	}
-	else
-	{
-		blk_last	= BE_SWAP32( capdata10[0] );
-		blk_size 	= BE_SWAP32( capdata10[1] );
-		blk_secs	= blk_last + 1;
-	}
-
-	// todo : 
-	// Make sure blksz is non-zero and reasonable (often 512/1024/2048/4096 and power-of-two). If it’s weird, default to 512 or fail gracefully.
-
-	// Sanity on block size
-	if (( ! blk_size ) || (( blk_size & ( blk_size - 1 )))) 
-	{
-		// Not a power of two → fail (or fallback to 512 if you prefer)
-		USBERROR( "MSD : TD_GetGeometry : bad Block Size %llu (Defaults to 512)", blk_size );
-		blk_size = 512;
 	}
 
 	// tmp setting, as I do no calc.. 
 	// proberly only good for small storages devices 
 	tmp_dg.dg_SectorSize	= (U32) blk_size;
-	tmp_dg.dg_TotalSectors	= (U32) blk_secs;
-	tmp_dg.dg_Cylinders		= (U32) blk_secs;
+	tmp_dg.dg_TotalSectors	= ( blk_secs > 0xffffffffULL ) ? 0xffffffffUL : (U32) blk_secs;
+	tmp_dg.dg_Cylinders		= tmp_dg.dg_TotalSectors;
 	tmp_dg.dg_CylSectors	= 1;
 	tmp_dg.dg_Heads			= 1;
 	tmp_dg.dg_TrackSectors	= 1;
@@ -139,7 +114,7 @@ S32 reply;
 
 	#if 1
 	struct ExecIFace *IExec = usbbase->usb_IExec;
-	IExec->DebugPrintF( "64 blk_last ........ : %llu\n", blk_last );
+	IExec->DebugPrintF( "64 blk_last ........ : %llu\n", blk_secs - 1 );
 	IExec->DebugPrintF( "32 blk_size ........ : %lu\n",  blk_size );
 	IExec->DebugPrintF( "32 blk_mask ........ : %lu\n",  msddisk->msddisk_Block_Mask );
 	IExec->DebugPrintF( "32 blk_shift ....... : %lu\n",  msddisk->msddisk_Block_Shift );
