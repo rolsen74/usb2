@@ -90,7 +90,7 @@ UHCI_Isochronous_Length ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 
 		if ( lengths )
 		{
-			lengths[index++] = got;
+			lengths[index++] = ( status & UHCI_TD_ERRORS ) ? USB2_ISO_PACKET_ERROR : got;
 			offset += td->ptd_buffer_size;
 		}
 		else
