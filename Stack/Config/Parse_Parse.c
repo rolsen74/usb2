@@ -48,7 +48,7 @@ U32 nr;
 	if ( INTERFACE_VALIDGROUP(ig) != VSTAT_Okay )
 	{
 		ig = INTERFACE_ALLOCGROUP(cn);
-		ih = INTERFACE_ALLOCHEADER( ig, nr );
+		ih = ( ig ) ? INTERFACE_ALLOCHEADER( ig, nr ) : NULL;
 
 		if ((ig) && (ih))
 		{
@@ -98,11 +98,23 @@ S32 len;
 
 	while(( dsc ) && ( len > 1 ))
 	{
+		if ( ( dsc->Length < sizeof( struct USB2_Descriptor ) ) || ( dsc->Length > len ) )
+		{
+			USBERROR( "__Parse: Invalid descriptor length %lu with %ld bytes remaining", (U32) dsc->Length, len );
+			goto bailout;
+		}
+
 		switch( dsc->DescriptorType )
 		{
 			case DSCTYPE_Configuration:
 			{
 				USBDEBUG( "Config Descriptor" );
+
+				if ( dsc->Length < sizeof( struct USB2_Config_Desc ) )
+				{
+					USBERROR( "__Parse: Short configuration descriptor" );
+					goto bailout;
+				}
 
 				in = NULL;
 				cn = CONFIG_ALLOC(fn);
@@ -137,6 +149,12 @@ S32 len;
 			case DSCTYPE_Interface:
 			{
 				USBDEBUG( "Interface Descriptor" );
+
+				if ( dsc->Length < sizeof( struct USB2_Interface_Desc ) )
+				{
+					USBERROR( "__Parse: Short interface descriptor" );
+					goto bailout;
+				}
 
 				if ( CONFIG_VALID(cn) != VSTAT_Okay )
 				{
@@ -179,6 +197,12 @@ S32 len;
 			{
 				USBDEBUG( "EndPoint Descriptor" );
 
+				if ( dsc->Length < sizeof( struct USB2_EndPoint_Desc ) )
+				{
+					USBERROR( "__Parse: Short endpoint descriptor" );
+					goto bailout;
+				}
+
 				if ( INTERFACE_VALIDNODE(in) != VSTAT_Okay )
 				{
 					USBERROR( "__Parse: Error Unexpected EndPoint" );
@@ -206,7 +230,13 @@ S32 len;
 		}
 
 		len -= dsc->Length;
-		dsc  = DESC_NEXT_DESC( dsc );
+		dsc = ( len > 1 ) ? (PTR) ( (U8 *) dsc + dsc->Length ) : NULL;
+	}
+
+	if ( len )
+	{
+		USBERROR( "__Parse: Trailing descriptor byte" );
+		goto bailout;
 	}
 
 	retval = TRUE;
