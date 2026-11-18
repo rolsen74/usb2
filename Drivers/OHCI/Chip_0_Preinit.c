@@ -49,17 +49,18 @@
 
 // --
 
-SEC_CODE S32 OHCI_Chip_Preinit( struct USB2_HCDNode *hn )
+SEC_CODE S32
+OHCI_Chip_Preinit ( struct USB2_HCDNode * hn )
 {
-S32 retval;
-U32 desca;
-U32 ports;
+	S32 retval;
+	U32 desca;
+	U32 ports;
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
+#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase * usbbase = hn->hn_USBBase;
+#endif
 
-	TASK_NAME_ENTER( "OHCI : OHCI_Chip_Preinit" );
+	TASK_NAME_ENTER ( "OHCI : OHCI_Chip_Preinit" );
 
 	retval = FALSE;
 
@@ -67,30 +68,30 @@ U32 ports;
 	//-------------
 	// Version Check
 
-	#ifdef DO_DEBUG
+#ifdef DO_DEBUG
 	U32 rev;
 
-	rev = PCI_READLONG( OHCI_REVISION );
+	rev = PCI_READLONG ( OHCI_REVISION );
 
-	if (( OHCI_REV_HI( rev ) != 1 ) || ( OHCI_REV_LO( rev ) != 0 ))
+	if ( ( OHCI_REV_HI ( rev ) != 1 ) || ( OHCI_REV_LO ( rev ) != 0 ) )
 	{
-		USBDEBUG( "Version check fail (rev %08lx)", rev );
+		USBDEBUG ( "Version check fail (rev %08lx)", rev );
 		goto bailout;
 	}
-	#endif
+#endif
 
 	//-------------
 	// Get Number of Downward Ports
 
-	desca = PCI_READLONG( OHCI_RH_DESCRIPTOR_A );
+	desca = PCI_READLONG ( OHCI_RH_DESCRIPTOR_A );
 
-	ports = OHCI_GET_NDP( desca );
+	ports = OHCI_GET_NDP ( desca );
 
-//	hn->hn_USBBase->usb_IExec->DebugPrintF( "OHCI : Ports %ld\n", ports );
+	//	hn->hn_USBBase->usb_IExec->DebugPrintF( "OHCI : Ports %ld\n", ports );
 
 	if ( ports == 0 )
 	{
-		USBINFO( "OHCI Has no Ports" );
+		USBINFO ( "OHCI Has no Ports" );
 		goto bailout;
 	}
 
@@ -102,9 +103,9 @@ U32 ports;
 
 bailout:
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( retval );
+	return ( retval );
 }
 
 // --
