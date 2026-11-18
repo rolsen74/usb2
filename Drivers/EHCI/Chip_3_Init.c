@@ -55,74 +55,76 @@
 ** Suitable for use with EHCI_IPOLLRATES <= 9.
 */
 
-SEC_CODE U32 EHCI_Reverse_Bits( U32 c, U32 nbits )
+SEC_CODE U32
+EHCI_Reverse_Bits ( U32 c, U32 nbits )
 {
-//	#ifdef DO_DEBUG
-//	if ( nbits > 8 )
-//	{
-//		struct USBBase *usbbase = hn->hn_USBBase;
-//		USBPANIC( "EHCI_Reverse_Bits : nbits out of range (%lu)", nbits );
-//	}
-//	#endif
+	//	#ifdef DO_DEBUG
+	//	if ( nbits > 8 )
+	//	{
+	//		struct USBBase *usbbase = hn->hn_USBBase;
+	//		USBPANIC( "EHCI_Reverse_Bits : nbits out of range (%lu)", nbits );
+	//	}
+	//	#endif
 
-	c = (( c >> 1 ) & 0x55 ) | (( c << 1 ) & 0xaa );
-	c = (( c >> 2 ) & 0x33 ) | (( c << 2 ) & 0xcc );
-	c = (( c >> 4 ) & 0x0f ) | (( c << 4 ) & 0xf0 );
+	c = ( ( c >> 1 ) & 0x55 ) | ( ( c << 1 ) & 0xaa );
+	c = ( ( c >> 2 ) & 0x33 ) | ( ( c << 2 ) & 0xcc );
+	c = ( ( c >> 4 ) & 0x0f ) | ( ( c << 4 ) & 0xf0 );
 
-	return( c >> ( 8 - nbits ));
+	return ( c >> ( 8 - nbits ) );
 }
 
 // --
 
-SEC_CODE S32 EHCI_Chip_Init( struct USB2_HCDNode *hn )
+SEC_CODE S32
+EHCI_Chip_Init ( struct USB2_HCDNode * hn )
 {
-//struct USBBase *usbbase;
-struct EHCI_QH *qh;
-S32 retval;
-U32 slot;
-U32 cnt;
-U32 i;
-U32 j;
-U32 r;
+	// struct USBBase *usbbase;
+	struct EHCI_QH * qh;
+	S32				 retval;
+	U32				 slot;
+	U32				 cnt;
+	U32				 i;
+	U32				 j;
+	U32				 r;
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
+#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase * usbbase = hn->hn_USBBase;
+#endif
 
-	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Init" );
+	TASK_NAME_ENTER ( "EHCI : EHCI_Chip_Init" );
 
-//	usbbase = hn->hn_USBBase;
+	//	usbbase = hn->hn_USBBase;
 
 	retval = FALSE;
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Init           : 1 :" );
-	USBDEBUG( "EHCI_Chip_Init           : 1 : ISlots %p", hn->hn_HCD.EHCI.FrameList_ISlots );
+	USBDEBUG ( "EHCI_Chip_Init           : 1 :" );
+	USBDEBUG ( "EHCI_Chip_Init           : 1 : ISlots %p", hn->hn_HCD.EHCI.FrameList_ISlots );
 
 	/*
 	 * Allocate the interrupt dummy QHs. These are arranged to give poll
 	 * intervals that are powers of 2 times 1ms.
 	 */
 
-	for( cnt=0 ; cnt<255 ; cnt++ )
+	for ( cnt = 0; cnt < 255; cnt++ )
 	{
-		qh = EHCI_Get_QHBuffer( hn, NULL );
+		qh = EHCI_Get_QHBuffer ( hn, NULL );
 
-//		USBDEBUG( "EHCI_Chip_Init           : 1 : QH %p", qh );
+		//		USBDEBUG( "EHCI_Chip_Init           : 1 : QH %p", qh );
 
 		if ( ! qh )
 		{
-			USBDEBUG( "EHCI_Chip_Init           : Error allocating memory" );
+			USBDEBUG ( "EHCI_Chip_Init           : Error allocating memory" );
 			goto bailout;
 		}
 
-		hn->hn_HCD.EHCI.FrameList_ISlots[ cnt ] = qh;
+		hn->hn_HCD.EHCI.FrameList_ISlots[cnt] = qh;
 	}
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Init           : 2 : Link Pyramide QH's" );
+	USBDEBUG ( "EHCI_Chip_Init           : 2 : Link Pyramide QH's" );
 
 	/*
 	** Link ms Pyramide
@@ -144,21 +146,21 @@ U32 r;
 	**  128ms      127 ..                                   ..  254
 	*/
 
-	for( cnt=0 ; cnt<255 ; cnt++ )
+	for ( cnt = 0; cnt < 255; cnt++ )
 	{
-		qh = hn->hn_HCD.EHCI.FrameList_ISlots[ cnt ];
+		qh = hn->hn_HCD.EHCI.FrameList_ISlots[cnt];
 
 		if ( ! cnt )
 		{
 			// The last (1ms) QH terminates.
-			qh->pqh_virt_next	= NULL;
-			qh->qh_link			= EHCI_NULL;
+			qh->pqh_virt_next = NULL;
+			qh->qh_link		  = EHCI_NULL;
 		}
 		else
 		{
 			// Otherwise the next QH has half the poll interval.
-			qh->pqh_virt_next	= hn->hn_HCD.EHCI.FrameList_ISlots[ ((( cnt + 1 ) / 2 ) - 1 ) ];
-			qh->qh_link			= LE_SWAP32( qh->pqh_virt_next->pqh_self_phy | EHCI_LINK_QH );
+			qh->pqh_virt_next = hn->hn_HCD.EHCI.FrameList_ISlots[( ( ( cnt + 1 ) / 2 ) - 1 )];
+			qh->qh_link		  = LE_SWAP32 ( qh->pqh_virt_next->pqh_self_phy | EHCI_LINK_QH );
 		}
 	}
 
@@ -166,44 +168,44 @@ U32 r;
 	// -- Periodic Frame List
 	// Point the frame list at the last level (128ms).
 
-	USBDEBUG( "EHCI_Chip_Init           : 3 : Build Periodic Frame List" );
+	USBDEBUG ( "EHCI_Chip_Init           : 3 : Build Periodic Frame List" );
 
-	for( i=0 ; i<128 ; i++ )
+	for ( i = 0; i < 128; i++ )
 	{
-		r = EHCI_Reverse_Bits( i, EHCI_IPOLLRATES - 1 );
+		r = EHCI_Reverse_Bits ( i, EHCI_IPOLLRATES - 1 );
 
-		slot = EHCI_IQHIDX( EHCI_IPOLLRATES, r );
+		slot = EHCI_IQHIDX ( EHCI_IPOLLRATES, r );
 
-		qh = hn->hn_HCD.EHCI.FrameList_ISlots[ slot ];
+		qh = hn->hn_HCD.EHCI.FrameList_ISlots[slot];
 
-		for( j=i ; j<1024 ; j += 128 )
+		for ( j = i; j < 1024; j += 128 )
 		{
-			hn->hn_HCD.EHCI.FrameList[j] = LE_SWAP32( qh->pqh_self_phy | EHCI_LINK_QH );
+			hn->hn_HCD.EHCI.FrameList[j] = LE_SWAP32 ( qh->pqh_self_phy | EHCI_LINK_QH );
 		}
 	}
 
 	// --
 	// Allocate dummy QH that starts the async list.
 
-	USBDEBUG( "EHCI_Chip_Init           : 4 : Alloc QH Dummy Header" );
+	USBDEBUG ( "EHCI_Chip_Init           : 4 : Alloc QH Dummy Header" );
 
-	qh = EHCI_Get_QHBuffer( hn, NULL );
+	qh = EHCI_Get_QHBuffer ( hn, NULL );
 
 	if ( ! qh )
 	{
-		USBDEBUG( "Error allocating memory" );
+		USBDEBUG ( "Error allocating memory" );
 		goto bailout;
 	}
 
 	// Fill the QH
-	qh->qh_link			= LE_SWAP32( qh->pqh_self_phy | EHCI_LINK_QH );
-	qh->qh_ep1			= LE_SWAP32( EHCI_QH_SET_EPS( EHCI_QH_SPEED_HIGH ) | ( EHCI_QH_HRECL ));
-	qh->qh_ep2			= 0;
-	qh->qh_td_cur		= 0;
-	qh->qh_td_next		= EHCI_NULL;
-	qh->qh_td_alt		= EHCI_NULL;
-	qh->qh_status		= 0;	//LE_SWAP32( EHCI_TD_HALTED );
-	qh->pqh_virt_next	= qh;
+	qh->qh_link		  = LE_SWAP32 ( qh->pqh_self_phy | EHCI_LINK_QH );
+	qh->qh_ep1		  = LE_SWAP32 ( EHCI_QH_SET_EPS ( EHCI_QH_SPEED_HIGH ) | ( EHCI_QH_HRECL ) );
+	qh->qh_ep2		  = 0;
+	qh->qh_td_cur	  = 0;
+	qh->qh_td_next	  = EHCI_NULL;
+	qh->qh_td_alt	  = EHCI_NULL;
+	qh->qh_status	  = 0; // LE_SWAP32( EHCI_TD_HALTED );
+	qh->pqh_virt_next = qh;
 
 	hn->hn_HCD.EHCI.ASync_Head = qh;
 
@@ -213,11 +215,11 @@ U32 r;
 
 bailout:
 
-	USBDEBUG( "EHCI_Chip_Init           : 9 : retval %ld", retval );
+	USBDEBUG ( "EHCI_Chip_Init           : 9 : retval %ld", retval );
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( retval );
+	return ( retval );
 }
 
 // --
