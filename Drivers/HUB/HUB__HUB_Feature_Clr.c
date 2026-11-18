@@ -44,69 +44,34 @@
 
 // --
 
-SEC_CODE S32 HUB__HUB_Feature_Clr( struct USBBase *usbbase UNUSED, struct intern *in UNUSED, U32 sel UNUSED )
+SEC_CODE S32 HUB__HUB_Feature_Clr( struct USBBase *usbbase, struct intern *in, U32 sel )
 {
-	// --
+	struct USB2_IORequest *ioreq;
+	struct USB2_SetupData *sd;
 
-//	usbbase->usb_IExec->Disable();
-//	usbbase->usb_IExec->DebugPrintF( "\nHUB : Clr HUB Feature\n" );
-//	usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
-//	usbbase->usb_IExec->DebugPrintF( "Sel      : %lu\n", sel );
-//	usbbase->usb_IExec->Enable();
+	ioreq = in->Res_Control->IORequests[0];
+	sd = in->Res_Control->SetupData;
 
-	// --
+	sd->RequestType = REQTYPE_Write | REQTYPE_Class | REQTYPE_Device;
+	sd->RequestCode = REQCODE_Clear_Feature;
+	sd->Value = LE_SWAP16( sel );
+	sd->Index = 0;
+	sd->Length = 0;
 
-	#if 0
-struct USB2_IORequest *ioreq;
-struct USB2_SetupData *sd;
-S32 errcode;
-
-//	  usbbase->usb_IExec->Disable();
-//	  usbbase->usb_IExec->DebugPrintF( "\nClr HUB Feature\n" );
-//	  usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %ld\n", in->Function->fkt_Tier );
-//	  usbbase->usb_IExec->Enable();
-
-	ioreq	= in->Res_Control->IORequests[0];
-	sd		= in->Res_Control->SetupData;
-
-	sd->RequestType	= REQTYPE_Write | REQTYPE_Class | REQTYPE_Device;
-	sd->RequestCode	= REQCODE_Clear_Feature;
-	sd->Value		= LE_SWAP16( sel );
-	sd->Index		= LE_SWAP16( 0 );
-	sd->Length		= LE_SWAP16( 0 );
-
-	ioreq->io_Command		= CMD_WRITE;
-	ioreq->io_Data			= NULL;
-	ioreq->io_Length		= 0;
-	ioreq->io_SetupData		= sd;
-	ioreq->io_SetupLength	= sizeof( struct USB2_SetupData );
+	ioreq->io_Command = CMD_WRITE;
+	ioreq->io_Data = NULL;
+	ioreq->io_Length = 0;
+	ioreq->io_SetupData = sd;
+	ioreq->io_SetupLength = sizeof( *sd );
 
 	IO_DO( ioreq );
 
-	if (( ioreq->io_Error  == USB2Err_NoError )
-	&&	( ioreq->io_Actual == 0 ))
+	if ( ioreq->io_Error != USB2Err_NoError )
 	{
-//		  usbbase->usb_IExec->Disable();
-//		  usbbase->usb_IExec->DebugPrintF( "\nClr HUB Feature Success\n" );
-//		  usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
-//		  usbbase->usb_IExec->Enable();
-
-		errcode = USB2Err_NoError;
-	}
-	else
-	{
-//		  usbbase->usb_IExec->Disable();
-//		  usbbase->usb_IExec->DebugPrintF( "\nClr HUB Feature Failure\n" );
-//		  usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
-//		  usbbase->usb_IExec->Enable();
-
-		errcode = -1;
+		return ( ioreq->io_Error );
 	}
 
-	return( errcode );
-	#endif
-
-	return( 0 );
+	return ( ioreq->io_Actual == 0 ? USB2Err_NoError : USB2Err_Host_HostError );
 }
 
 // --
