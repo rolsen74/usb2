@@ -74,17 +74,28 @@
 
 // --
 
+/* ExecBase lives at absolute address 4 in the AmigaOS ABI. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+static inline struct ExecIFace *USB2_GetExecIFace( void )
+{
+	return ( (struct ExecIFace *)( *(struct ExecBase **)4 )->MainInterface );
+}
+#pragma GCC diagnostic pop
+
+// --
+
 #ifdef DO_PANIC
 
 #define TASK_NAME_ENTER(x)	\
-	PTR UNUSED ____OLD = ((struct ExecIFace *)(*(struct ExecBase **)4)->MainInterface)->FindTask(NULL)->tc_Node.ln_Name; \
-	((struct ExecIFace *)(*(struct ExecBase **)4)->MainInterface)->FindTask(NULL)->tc_Node.ln_Name=(PTR)(x);
+	PTR UNUSED ____OLD = USB2_GetExecIFace()->FindTask(NULL)->tc_Node.ln_Name; \
+	USB2_GetExecIFace()->FindTask(NULL)->tc_Node.ln_Name=(PTR)(x);
 
 #define TASK_NAME_SET(x)	\
-	((struct ExecIFace *)(*(struct ExecBase **)4)->MainInterface)->FindTask(NULL)->tc_Node.ln_Name=(PTR)(x);
+	USB2_GetExecIFace()->FindTask(NULL)->tc_Node.ln_Name=(PTR)(x);
 
 #define TASK_NAME_LEAVE()		\
-	((struct ExecIFace *)(*(struct ExecBase **)4)->MainInterface)->FindTask(NULL)->tc_Node.ln_Name=____OLD;
+	USB2_GetExecIFace()->FindTask(NULL)->tc_Node.ln_Name=____OLD;
 
 #else
 
