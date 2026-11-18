@@ -50,7 +50,7 @@ U32 cnt;
 
 		IO_DO(ioreq);
  
-		if ( ioreq->io_Error == USB2Err_NoError )
+		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == fn->fkt_Config_Desc_Size ) )
 		{
 			break;
 		}
