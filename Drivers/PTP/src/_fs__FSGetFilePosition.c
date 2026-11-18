@@ -13,13 +13,13 @@
 // --
 
 S64
-_fs__FSGetFilePosition( struct FSVP *vp, int32 *res2, struct FileHandle *file )
+_fs__FSGetFilePosition( struct FSVP *vp, LONG *res2, struct FileHandle *file )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjLock *lock;
 
 	S64 value;
-	int32 error;
+	S32 error;
 
 	fs = vp->FSV.FSPrivate;
 	value = -1;
