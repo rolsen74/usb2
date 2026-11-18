@@ -9,5 +9,14 @@
 // --
 
 #include "All.h"
+#include "Commands.h"
+
+// --
+
+S32
+Cmd_ReadOrphan( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
+{
+	return ( Cmd_Read( unit, ioreq ) );
+}
 
 // --
