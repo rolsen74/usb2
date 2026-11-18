@@ -57,10 +57,16 @@ U32 cnt;
 
 		IO_DO(ioreq);
 
-		if ( ioreq->io_Error == USB2Err_NoError )
+		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == 8 ) )
 		{
 			break;
 		}
+	}
+
+	if ( ( fn->fkt_DeviceDescriptor->DescriptorType != DSCTYPE_Device ) || ( ! fn->fkt_DeviceDescriptor->MaxPacketSize0 ) )
+	{
+		USBERROR( "__Get_EndPoint_Size : Invalid device descriptor" );
+		goto bailout;
 	}
 
 	// Update Control EndPoint PacketSize
