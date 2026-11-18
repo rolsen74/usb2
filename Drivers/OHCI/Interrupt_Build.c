@@ -52,7 +52,7 @@
 SEC_CODE S32 OHCI_Interrupt_Build( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
 struct USB2_EndPointNode *ep;
-struct RealFunctionNode *fn;
+struct RealFunctionNode *fn UNUSED;
 struct OHCI_TD *dummy;
 struct OHCI_TD *data;
 struct OHCI_TD *last;
@@ -67,7 +67,7 @@ PTR buf;
 U32 dt;
 U32 l;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+	struct USBBase *usbbase UNUSED = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Interrupt_Build" );
 
 	fn			= ioreq->req_Function;
@@ -78,7 +78,7 @@ U32 l;
 	#if 1
 //	#ifdef DO_DEBUG
 
-	STR Speeds[] = { "Low","Full","High","Super" };
+	STR Speeds[] UNUSED = { "Low","Full","High","Super" };
 
 	USBINFO( "IORequest....... : %p",  ioreq );
 	USBINFO( "CommandDir...... : %s",  ioreq->req_Public.io_Command == CMD_READ ? "Read" : "Write" );
