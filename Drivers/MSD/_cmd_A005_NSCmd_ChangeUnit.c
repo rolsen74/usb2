@@ -70,6 +70,14 @@ S32 reply;
 		goto bailout;
 	}
 
+	if ( msdbase->msdbase_MSDDisk_Units[ new_unit_nr ] )
+	{
+		USBERROR( "MSD : NSCmd_ChangeUnit : Unit %lu is already in use", new_unit_nr );
+		ioreq->io_Actual = -1;
+		ioreq->io_Error = IOERR_UNITBUSY;
+		goto bailout;
+	}
+
 	// -- Swap Unit Nr
 
 	USBERROR( "MSD : NSCmd_ChangeUnit : Swapping Unit Nr %lu -> %lu", old_unit_nr, new_unit_nr );
