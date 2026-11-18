@@ -40,6 +40,16 @@ U32 dostype;
 		goto bailout;
 	}
 
+	if ( ( objnode->on_CameraRoot ) && ( ! objnode->on_CameraRoot->on_Camera ) )
+	{
+		if ( res2 )
+		{
+			*res2 = ERROR_DEVICE_NOT_MOUNTED;
+		}
+
+		goto bailout;
+	}
+
 	/*
 	**  Directories are always SHARED, regardless of request.
 	*/
@@ -123,13 +133,15 @@ U32 dostype;
 	lock->Lock.fl_Port		= & fs->fs_FSVector_Port->MP;
 	lock->Lock.fl_Volume	= MKBADDR( fs->fs_VolumeNode );
 
-	/*
-	** So others don't have to do this all over the place.
-	** NOTE: for a file, current_block CANNOT be null any more.
-	** May also be nodelist.
-	*/
-	
-	lock->Current_Block = (PTR) GetHead( & objnode->on_Content_List );
+	lock->Position = 0;
+	lock->Cache = 0;
+	lock->CacheName = NULL;
+	lock->WriteError = 0;
+
+	if ( objnode->on_CameraRoot )
+	{
+		objnode->on_CameraRoot->on_References++;
+	}
 
 	/*
 	** For application compatibility and for obvious speed reasons,
