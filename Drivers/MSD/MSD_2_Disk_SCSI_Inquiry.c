@@ -15,6 +15,7 @@
 
 SEC_CODE S32 MSD_SCSI_Inquiry( struct USBBase *usbbase, struct MSDDisk *msddisk, PTR mem, U32 len )
 {
+struct DoBulkResult result;
 struct DoBulkStruct dbs;
 S32 retval;
 
@@ -26,6 +27,7 @@ S32 retval;
 	// --
 	MEM_SET( & dbs, 0, sizeof( dbs ));
 	dbs.dbs_Flags			= DOBULKF_DIR_IN | DOBULKF_SHORT_OK;
+	dbs.dbs_Result			= & result;
 	dbs.dbs_Command_Length	= 6;
 	dbs.dbs_Data			= mem;
 	dbs.dbs_Data_Length		= len;
@@ -50,6 +52,12 @@ S32 retval;
 	if ( ! MSD_Disk_DoBulk( usbbase, msddisk, & dbs ))
 	{
 		USBERROR( "MSD_SCSI_Inquiry() failed" );
+		goto bailout;
+	}
+
+	if ( result.csw_DataActual < 2 )
+	{
+		USBERROR( "MSD_SCSI_Inquiry() returned only %lu bytes", result.csw_DataActual );
 		goto bailout;
 	}
 
