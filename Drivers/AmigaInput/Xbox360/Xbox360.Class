@@ -1,0 +1,6 @@
+TYPE Interface
+TITLE "Xbox 360 compatible wired controller"
+DRIVER "Xbox360.Driver"
+CLASS 0xff
+SUBCLASS 0x5d
+PROTOCOL 0x01

@@ -28,7 +28,7 @@ Compiling a driver does not establish that it works with hardware.
 | Built-in device drivers | [HUB](Doc/HUB.md), [HID](Doc/HID.md), [MSD](Doc/MSD.md) |
 | External device drivers | [PTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md), [PL2303](Doc/PL2303.md) |
 | Networking | [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md) |
-| AHI and AmigaInput | [AHI playback](Doc/AHI.md), [Competition Pro](Doc/CompPro.md) |
+| AHI and AmigaInput | [AHI playback](Doc/AHI.md), [Competition Pro](Doc/CompPro.md), [Xbox 360](Doc/Xbox360.md) |
 
 ## Human Interface Devices
 
