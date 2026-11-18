@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -25,7 +26,7 @@ SEC_CODE void __TaskMsg_Unlock( struct USBBase *usbbase, struct USB2_TaskMsg *tm
 {
 	TASK_NAME_ENTER( "__TaskMsg_Unlock" );
 
-	USBDEBUG( "__TaskMsg_Unlock         : TM %p : Locks %ld (old) : (%s)", tm, (tm)?tm->tm_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__TaskMsg_Unlock         : TM    %p : Locks %2ld (old) : (%s)", tm, (tm)?tm->tm_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +36,16 @@ SEC_CODE void __TaskMsg_Unlock( struct USBBase *usbbase, struct USB2_TaskMsg *tm
 		{
 			tm->tm_Locks--;
 
-//			USBDEBUG( "__TaskMsg_Unlock         : TM %p : New Lock Count : %ld (-1)", tm, tm->tm_Locks );
+//			USBDEBUG( "__TaskMsg_Unlock         : TM    %p : New Lock Count : %ld (-1)", tm, tm->tm_Locks );
 		}
 		else
 		{
-			USBPANIC( "__TaskMsg_Unlock         : TM %p : TaskMsg NOT Locked (%ld)", tm, tm->tm_Locks );
+			USBPANIC( "__TaskMsg_Unlock         : TM    %p : TaskMsg NOT Locked (%ld)", tm, tm->tm_Locks );
 		}
 	}
 	else
 	{
-		USBERROR( "__TaskMsg_Unlock         : TM %p : Invalid TaskMsg", tm );
+		USBERROR( "__TaskMsg_Unlock         : TM    %p : Invalid TaskMsg", tm );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
