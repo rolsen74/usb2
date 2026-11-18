@@ -12,10 +12,12 @@
 
 // --
 
-struct PrinterUnit *Unit_Alloc( U32 unitnr )
+struct PrinterUnit *
+Unit_Alloc( U32 unitnr )
 {
-struct PrinterUnit *unit;
-S32 error;
+	struct PrinterUnit *unit;
+
+	S32 error;
 
 	USBDEBUG( "Printer : Unit_Alloc" );
 
@@ -29,6 +31,7 @@ S32 error;
 	if ( ! unit )
 	{
 		USBERROR( "Printer : Error allocating memory" );
+
 		goto bailout;
 	}
 
@@ -40,6 +43,7 @@ S32 error;
 	if ( ! unit->unit_TaskName )
 	{
 		USBERROR( "Printer : Error allocating memory" );
+
 		goto bailout;
 	}
 
@@ -58,10 +62,11 @@ bailout:
 	if (( unit ) && ( error ))
 	{
 		Unit_Free( unit );
+
 		unit = NULL;
 	}
 
-	return( unit );
+	return ( unit );
 }
 
 // --

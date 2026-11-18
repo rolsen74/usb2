@@ -35,9 +35,10 @@ static const U16 _DevNSDCmds[] =
 	0
 };
 
-void _cmd_4000_NSCmd_DeviceQuery( struct IOStdReq *ioreq )
+void
+_cmd_4000_NSCmd_DeviceQuery( struct IOStdReq *ioreq )
 {
-struct NSDeviceQueryResult *nsd;
+	struct NSDeviceQueryResult *nsd;
 
 	USBDEBUG( "Printer : NSCmd_DeviceQuery" );
 
@@ -57,6 +58,7 @@ struct NSDeviceQueryResult *nsd;
 	else
 	{
 		USBDEBUG( "Printer : Supplied Query buffer is to small" );
+
 		ioreq->io_Error			= IOERR_BADLENGTH;
 	}
 

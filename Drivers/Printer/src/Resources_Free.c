@@ -12,7 +12,8 @@
 
 // --
 
-void Resources_Free( struct PrinterBase *devBase UNUSED )
+void
+Resources_Free( struct PrinterBase *devBase UNUSED )
 {
 	USBDEBUG( "Printer : Resources_Free" );
 
@@ -23,7 +24,7 @@ void Resources_Free( struct PrinterBase *devBase UNUSED )
 	// --
 
 	if ( IUtility )
-	{	
+	{
 		DropInterface( (PTR) IUtility );
 	}
 
@@ -35,7 +36,7 @@ void Resources_Free( struct PrinterBase *devBase UNUSED )
 	// --
 
 	if ( IDOS )
-	{	
+	{
 		DropInterface( (PTR) IDOS );
 	}
 
@@ -47,7 +48,7 @@ void Resources_Free( struct PrinterBase *devBase UNUSED )
 	// --
 
 	if ( INewlib )
-	{	
+	{
 		DropInterface( INewlib );
 	}
 

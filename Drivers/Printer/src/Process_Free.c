@@ -16,7 +16,8 @@
 #include "Process_Free_Cleanup_Device.c"
 #include "Process_Free_Lists.c"
 
-static void __myProcess_Free( struct PrinterUnit *unit )
+static void
+__myProcess_Free( struct PrinterUnit *unit )
 {
 	USBERROR( "Printer : __myProcess_Free" );
 

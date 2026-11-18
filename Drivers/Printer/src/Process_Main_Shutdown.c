@@ -12,15 +12,17 @@
 
 // --
 
-static void __myProcess_Main_Shutdown( struct PrinterUnit *unit )
+static void
+__myProcess_Main_Shutdown( struct PrinterUnit *unit )
 {
-U8 data[1];
+	U8 data[1];
 
 	USBERROR( "Printer : Got shutdown signal" );
 
 	if ( unit->unit_Shutdown )
 	{
 		USBERROR( "Printer : Shutdown allready inprocess" );
+
 		goto bailout;
 	}
 
@@ -31,13 +33,16 @@ U8 data[1];
 	if ( unit->unit_Buffer_Size )
 	{
 		USBERROR( "Last byte : $%02lx (%lu)", (U32) unit->unit_LastByteSend, (U32) unit->unit_LastByteSend );
+
 		if (( unit->unit_LastByteSend != '\f' ) && ( ! unit->unit_Detached ))
 		{
 			data[0] = '\f';
+
 			Buffer_Write( unit, data, 1 );
 		}
 
 		Buffer_Flush( unit );
+
 		Buffer_Schedule( unit );
 	}
 	else

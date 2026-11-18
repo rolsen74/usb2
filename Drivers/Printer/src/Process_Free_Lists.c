@@ -12,10 +12,11 @@
 
 // --
 
-static void __myProcess_Free_Lists( struct PrinterUnit *unit )
+static void
+__myProcess_Free_Lists( struct PrinterUnit *unit )
 {
-struct PrtBuffer *pb;
-struct IOExtPar *pario;
+	struct PrtBuffer *pb;
+	struct IOExtPar *pario;
 
 	USBERROR( "Printer : __myProcess_Free_Lists" );
 
@@ -29,6 +30,7 @@ struct IOExtPar *pario;
 //		  Abort_BulkOut( unit, unit->unit_TxCurrentIO );
 
 		FreeSysObject( ASOT_LIST, unit->unit_USB_IOReq_FreeList );
+
 		unit->unit_USB_IOReq_FreeList = NULL;
 	}
 
@@ -56,10 +58,12 @@ struct IOExtPar *pario;
 			pario->IOPar.io_Actual = 0;
 			pario->IOPar.io_Error = ParErr_NotOpen;
 			pario->io_Status = 0;
+
 			ReplyMsg( (PTR) pario );
 		}
 
 		FreeSysObject( ASOT_LIST, unit->unit_PAR_IOReq_WaitingList );
+
 		unit->unit_PAR_IOReq_WaitingList = NULL;
 	}
 
@@ -68,6 +72,7 @@ struct IOExtPar *pario;
 	if ( unit->unit_Buffer_Active )
 	{
 		FreeVec( unit->unit_Buffer_Active );
+
 		unit->unit_Buffer_Active = NULL;
 	}
 
@@ -79,6 +84,7 @@ struct IOExtPar *pario;
 		}
 
 		FreeSysObject( ASOT_LIST, unit->unit_Buffer_FreeList );
+
 		unit->unit_Buffer_FreeList = NULL;
 	}
 
@@ -90,6 +96,7 @@ struct IOExtPar *pario;
 		}
 
 		FreeSysObject( ASOT_LIST, unit->unit_Buffer_WaitingList );
+
 		unit->unit_Buffer_WaitingList = NULL;
 	}
 

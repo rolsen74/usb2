@@ -67,6 +67,14 @@ struct PrinterUnit
 
 	struct USB2_IORequest *			unit_Bulk_Tx_Active[NR_of_TXs];	// Active USB2_IORequest's
 	struct USB2_EPResource *		unit_Bulk_Tx_Resource;
+	struct USB2_EPResource *		unit_Bulk_Rx_Resource;
+	U32								unit_Dot4_PacketSize;
+	U32								unit_Dot4_Credits;
+	U8								unit_Dot4_Socket;
+	U8								unit_Dot4_Active;
+	U8								unit_Dot4_Ready;
+	U32								unit_Dot4_RxUsed;
+	U8								unit_Dot4_RxBuffer[DOT4_MAX_PACKET];
 
 
 
@@ -81,16 +89,16 @@ struct PrinterUnit
 	S32								unit_PAR_IOReq_WaitingCount;	//
 
 	// struct PrtBuffer * - we are filling now
-	struct PrtBuffer *				unit_Buffer_Active;				// 
+	struct PrtBuffer *				unit_Buffer_Active;				//
 
 	// struct PrtBuffer * - Unused buffers after we have send to usb
-	struct List *					unit_Buffer_FreeList;			// 
-	S32								unit_Buffer_FreeCount;			// 
+	struct List *					unit_Buffer_FreeList;			//
+	S32								unit_Buffer_FreeCount;			//
 
 	// struct PrtBuffer *
 	U32								unit_Buffer_Size;				// User set, default 16kb
 	struct List *					unit_Buffer_WaitingList;		// Waiting too be send to usb printer
-	S32								unit_Buffer_WaitingCount;		// 
+	S32								unit_Buffer_WaitingCount;		//
 
 
 	// -- Config
@@ -106,7 +114,7 @@ struct PrinterUnit
 	U8								unit_PrinterStatus;
 	U8								unit_LastByteSend;
 	U8								unit_Shutdown;				// Yes time to stop, clear buffers and exit
-	U8								unit_Running;				// 
+	U8								unit_Running;				//
 };
 
 // --
@@ -135,6 +143,9 @@ void	Buffer_Schedule(				struct PrinterUnit *unit );
 void	Direct_Schedule(				struct PrinterUnit *unit );
 S32		Process_Find_Device(			struct PrinterUnit *unit );
 S32		Process_Setup_Device(			struct PrinterUnit *unit );
+S32		Dot4_Setup(					struct PrinterUnit *unit );
+S32		Dot4_Write(					struct PrinterUnit *unit, const U8 *data, U32 size, U32 *written );
+void	Dot4_Shutdown(				struct PrinterUnit *unit );
 S32		Unit_Startup(					struct PrinterUnit *unit );
 S32		Unit_Startup_USB(				struct PrinterUnit *unit );
 void	Unit_Free(						struct PrinterUnit *unit );

@@ -12,11 +12,13 @@
 
 // --
 
-void Buffer_Schedule( struct PrinterUnit *unit )
+void
+Buffer_Schedule( struct PrinterUnit *unit )
 {
-struct USB2_IORequest *usbio;
-struct PrtBuffer *pb;
-U32 ionr;
+	struct USB2_IORequest *usbio;
+	struct PrtBuffer *pb;
+
+	U32 ionr;
 
 	if ( unit->unit_Detached )
 	{
@@ -45,6 +47,7 @@ U32 ionr;
 		{
 			// No free USB IORequests
 			USBINFO( "Buffer_Schedule : No free USB IORequests" );
+
 			break;
 		}
 
@@ -56,18 +59,20 @@ U32 ionr;
 		{
 			// Okay nothing too print
 
-			if (( unit->unit_Shutdown ) 
+			if (( unit->unit_Shutdown )
 			&&	( ! unit->unit_USB_IOReq_ActiveCount )
 			&&	( ! unit->unit_PAR_IOReq_WaitingCount )
 			&&	( ! unit->unit_Buffer_WaitingCount ))
 			{
 				USBINFO( "Buffer_Schedule : We are done, time to exit" );
+
 				unit->unit_Running = FALSE;
 			}
 			else
 			{
 				USBINFO( "Buffer_Schedule : Okay nothing too print" );
 			}
+
 			break;
 		}
 
@@ -79,6 +84,7 @@ U32 ionr;
 		if ( unit->unit_Bulk_Tx_Active[ionr] )
 		{
 			USBERROR( "unit_Bulk_Tx_Active[%ld] is not Free", ionr );
+
 			break;
 		}
 
@@ -86,6 +92,7 @@ U32 ionr;
 
 		// Move from Waiting/Free list into Active
 		Remove( (PTR) pb );
+
 		Remove( (PTR) usbio );
 
 		unit->unit_Bulk_Tx_Active[ionr] = usbio;

@@ -12,9 +12,10 @@
 
 // --
 
-static void _manager_BeginIO( struct DeviceManagerInterface *Self UNUSED, struct IORequest *ioreq )
+static void
+_manager_BeginIO( struct DeviceManagerInterface *Self UNUSED, struct IORequest *ioreq )
 {
-struct PrinterUnit *unit;
+	struct PrinterUnit *unit;
 
 	USBDEBUG( "Printer : _manager_BeginIO : IOReq %p", ioreq );
 
@@ -32,6 +33,7 @@ struct PrinterUnit *unit;
 		case /* 4000 */ NSCMD_DEVICEQUERY:
 		{
 			_cmd_4000_NSCmd_DeviceQuery( (PTR) ioreq );
+
 			break;
 		}
 
@@ -51,8 +53,10 @@ struct PrinterUnit *unit;
 			else
 			{
 				ioreq->io_Error = IOERR_UNITBUSY;
+
 				ReplyMsg( (PTR) ioreq );
 			}
+
 			break;
 		}
 
@@ -64,6 +68,7 @@ struct PrinterUnit *unit;
 			ioreq->io_Error = IOERR_NOCMD;
 
 			ReplyMsg( (PTR) ioreq );
+
 			break;
 		}
 	}

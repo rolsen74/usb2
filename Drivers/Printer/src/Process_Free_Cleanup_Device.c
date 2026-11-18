@@ -12,15 +12,29 @@
 
 // --
 
-static void __myProcess_CleanupDevice( struct PrinterUnit *unit )
+static void
+__myProcess_CleanupDevice( struct PrinterUnit *unit )
 {
 	USBERROR( "Printer : __myProcess_CleanupDevice" );
+
+	if ( unit->unit_Dot4_Ready && ! unit->unit_Detached )
+	{
+		Dot4_Shutdown( unit );
+	}
+
+	if ( unit->unit_Bulk_Rx_Resource )
+	{
+		USB2_EPRes_Release( unit->unit_Bulk_Rx_Resource );
+
+		unit->unit_Bulk_Rx_Resource = NULL;
+	}
 
 	#if 1
 	// Unregister will free EPRes, so this is just for testing
 	if ( unit->unit_Bulk_Tx_Resource )
 	{
 		USB2_EPRes_Release( unit->unit_Bulk_Tx_Resource );
+
 		unit->unit_Bulk_Tx_Resource = NULL;
 	}
 	#endif
@@ -28,6 +42,7 @@ static void __myProcess_CleanupDevice( struct PrinterUnit *unit )
 	if ( unit->unit_USB_Register )
 	{
 		USB2_Reg_Unregister( unit->unit_USB_Register );
+
 		unit->unit_USB_Register = NULL;
 	}
 }

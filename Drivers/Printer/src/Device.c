@@ -79,9 +79,10 @@ static USED const struct Resident dev_res =
 
 // --
 
-S32 _start( STR argstring UNUSED, S32 arglen UNUSED, struct ExecBase *sysbase UNUSED )
+S32
+_start( STR argstring UNUSED, S32 arglen UNUSED, struct ExecBase *sysbase UNUSED )
 {
-	return( 0 );
+	return ( 0 );
 }
 
 // --

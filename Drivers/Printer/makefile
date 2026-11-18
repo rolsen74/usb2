@@ -7,19 +7,15 @@
 #
 # Compile info:
 #
-# Compile : make USBTYPE=SIRION
+# Compile : make
 #
-# Options:
-#
-#  USBTYPE = Sirion (AOS4), USB2
-#  USBTYPE - 'SIRION' 'USB2'		-- Target System
-#
+
+ifneq ($(filter-out USB2,$(USBTYPE)),)
+$(error Unsupported USBTYPE: $(USBTYPE). Only USB2 is available)
+endif
 
 VERSION		:= 1
 REVISION	:= 1
-
-# Default
-USBTYPE		?= USB2
 
 # Object Dir
 OBJDIR		:= obj
@@ -92,66 +88,22 @@ $(error Unknown Host SYS type: $(HOSTOS).)
 endif
 
 ###########################################################################
-# Set Target USB System
-# -- Sirion
+# USB2 printer device
 
-ifeq ($(USBTYPE),SIRION)
+SRCS		+= src/Printer.c
+SRCS		+= src/Resources_Init.c
+SRCS		+= src/Resources_Free.c
+SRCS		+= src/Process_Init_2_Find_Device.c
+SRCS		+= src/Process_Init_3_Setup_Device.c
+SRCS		+= src/Process_Main.c
+SRCS		+= src/Buffer_Schedule.c
+SRCS		+= src/Direct_Schedule.c
+SRCS		+= src/Unit_Startup_USB.c
+SRCS		+= src/Dot4.c
 
-  $(info Compiling for Sirion)
-
-  SRCS		+= Sirion/Printer.c
-  SRCS		+= Sirion/Resources_Init.c
-  SRCS		+= Sirion/Resources_Free.c
-  SRCS		+= Sirion/Process_Init_2_Find_Device.c
-  SRCS		+= Sirion/Process_Init_3_Setup_Device.c
-  SRCS		+= Sirion/Process_Main.c
-
-  CFLAGS	+= -ISirion
-  CFLAGS	+= -D_SIRION_
-
-  LDFLAGS	:= -nostartfiles
-  LDFLAGS	+= -mcrt=newlib
-
-  OBJDIR	:= $(OBJDIR)/Sirion
-  TARGET	:= rusb_printer.device
-
-###########################################################################
-# Set Target USB System
-# -- USB2
-
-else ifeq ($(USBTYPE),USB2)
-
-  $(info Compiling for USB2)
-
-  SRCS		+= USB2/Printer.c
-  SRCS		+= USB2/Resources_Init.c
-  SRCS		+= USB2/Resources_Free.c
-  SRCS		+= USB2/Process_Init_2_Find_Device.c
-  SRCS		+= USB2/Process_Init_3_Setup_Device.c
-  SRCS		+= USB2/Process_Main.c
-  SRCS		+= USB2/Buffer_Schedule.c
-  SRCS		+= USB2/Direct_Schedule.c
-  SRCS		+= USB2/Unit_Startup_USB.c
-
-  CFLAGS	+= -IUSB2
-  CFLAGS	+= -D_USB2_
-  CFLAGS	+= -D__USE_INLINE__
-  
-  LDFLAGS	:= -nostartfiles
-  LDFLAGS	+= -mcrt=newlib
-
-  OBJDIR	:= $(OBJDIR)/USB2
-  TARGET	:= usb2_printer.device
-
-###########################################################################
-# Set Target USB System
-# -- unknown
-
-else
-
-  $(error Unknown Target USB System: $(USBTYPE). Please set USBTYPE to 'SIRION' or 'USB2')
-
-endif
+CFLAGS		+= -Isrc -D__USE_INLINE__
+LDFLAGS	:= -nostartfiles -mcrt=newlib
+TARGET		:= usb2_printer.device
 
 ###########################################################################
 # Set Compiler

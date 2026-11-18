@@ -12,11 +12,12 @@
 
 // --
 
-void Cmd_Write_Buffer( struct PrinterUnit *unit, struct IOExtPar *pario )
+void
+Cmd_Write_Buffer( struct PrinterUnit *unit, struct IOExtPar *pario )
 {
-S32 stat;
-S32 len;
-STR str;
+	S32 stat;
+	S32 len;
+	STR str;
 
 	USBERROR( "Printer : Cmd_Write_Buffer : pario %p : length %ld", pario, pario->IOPar.io_Length );
 
@@ -28,7 +29,9 @@ STR str;
 	else if ( pario->IOPar.io_Length == -1U )
 	{
 		str = pario->IOPar.io_Data;
+
 		len = strlen( str );
+
 		stat = Buffer_Write( unit, (PTR) str, len );
 
 		USBERROR( "Printer : Cmd_Write_Buffer : String : Stat %ld", stat );
@@ -36,6 +39,7 @@ STR str;
 	else if ( pario->IOPar.io_Length > 0 )
 	{
 		len = pario->IOPar.io_Length;
+
 		stat = Buffer_Write( unit, pario->IOPar.io_Data, len );
 
 		USBERROR( "Printer : Cmd_Write_Buffer : Data : Stat %ld", stat );

@@ -13,11 +13,12 @@
 // --
 // Real cmd name : PDCMD_QUERY
 
-static void Cmd_PDQuery( struct PrinterUnit *unit, struct IOExtPar *pario )
+static void
+Cmd_PDQuery( struct PrinterUnit *unit, struct IOExtPar *pario )
 {
-struct USB2_EPResource *epr;
-struct USB2_IORequest *usbio;
-struct USB2_SetupData *sd;
+	struct USB2_EPResource *epr;
+	struct USB2_IORequest *usbio;
+	struct USB2_SetupData *sd;
 
 	// --
 
@@ -26,7 +27,7 @@ struct USB2_SetupData *sd;
 	**
 	** Serial Status is 2 bytes
 	** Parallel Status is only 1 byte
-	** 
+	**
 	*/
 
 	epr = unit->unit_USB_Register->Res_Control;
@@ -34,8 +35,11 @@ struct USB2_SetupData *sd;
 
 	sd->RequestType		= REQTYPE_Read | REQTYPE_Class | REQTYPE_Interface;
 	sd->RequestCode		= USBPRT_REQC_GET_PORT_STATUS;
+
 	sd->Value			= LE_SWAP16( 0 );
+
 	sd->Index			= LE_SWAP16( unit->unit_USB_Interface->IFC_Num );
+
 	sd->Length			= LE_SWAP16( 1 );
 
 	// --
@@ -56,6 +60,7 @@ struct USB2_SetupData *sd;
 		case USB2Err_NoError:
 		{
 			USBERROR( "Cmd_PDQuery : USB2Err_NoError" );
+
 			pario->IOPar.io_Actual = 1;		// Parallel stat size
 			pario->IOPar.io_Error = 0;
 			pario->io_Status = 0;
@@ -77,12 +82,14 @@ struct USB2_SetupData *sd;
 			{
 				pario->io_Status &= ~IOPTF_PARBUSY;
 			}
+
 			break;
 		}
 
 		case USB2Err_Device_Detached:
 		{
 			USBERROR( "Cmd_PDQuery : USB2Err_Device_Detached" );
+
 			pario->IOPar.io_Actual = 0;
 			pario->IOPar.io_Error = ParErr_NotOpen;
 			pario->io_Status = 0;
@@ -93,6 +100,7 @@ struct USB2_SetupData *sd;
 		default:
 		{
 			USBERROR( "Cmd_PDQuery : Unknown error %lu", (U32) usbio->io_Error );
+
 			pario->IOPar.io_Actual = 0;
 			pario->IOPar.io_Error = ParErr_LineErr;
 			pario->io_Status = 0;

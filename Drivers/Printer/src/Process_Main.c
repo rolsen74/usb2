@@ -12,7 +12,7 @@
 
 // --
 
-#include "src/Process_Main_BeginIO.c"
+#include "Process_Main_BeginIO.c"
 
 #include "Process_Main_Shutdown.c"
 #include "Process_Main_Buffer.c"
@@ -20,10 +20,11 @@
 
 // --
 
-void Process_Main( struct PrinterUnit *unit )
+void
+Process_Main( struct PrinterUnit *unit )
 {
-U32 wait;
-U32 mask;
+	U32 wait;
+	U32 mask;
 
 	USBERROR( "Printer : __myProcess_Main : Enter" );
 
@@ -73,6 +74,7 @@ U32 mask;
 
 	#if 0
 	USBERROR( "Lasy byte : $%02lx (%ld)", (S32) unit->unit_LastByteSend, (S32) unit->unit_LastByteSend );
+
 	if (( unit->unit_LastByteSend != '\f' )
 	&&	( unit->unit_Detached == 0 ))
 	{

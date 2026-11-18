@@ -12,9 +12,10 @@
 
 // --
 
-void Buffer_Flush( struct PrinterUnit *unit )
+void
+Buffer_Flush( struct PrinterUnit *unit )
 {
-struct PrtBuffer *pb;
+	struct PrtBuffer *pb;
 
 	pb = unit->unit_Buffer_Active;
 
@@ -25,6 +26,7 @@ struct PrtBuffer *pb;
 		unit->unit_Buffer_Active = NULL;
 
 		AddTail( unit->unit_Buffer_WaitingList, & pb->pb_Node );
+
 		unit->unit_Buffer_WaitingCount++;
 
 		Buffer_Schedule( unit );

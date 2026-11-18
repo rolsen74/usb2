@@ -12,11 +12,13 @@
 
 // --
 
-static PTR _manager_Close( struct DeviceManagerInterface *Self, struct IORequest *ioreq )
+static PTR
+_manager_Close( struct DeviceManagerInterface *Self, struct IORequest *ioreq )
 {
-struct PrinterBase *devBase;
-struct PrinterUnit *unit;
-PTR seglist;
+	struct PrinterBase *devBase;
+	struct PrinterUnit *unit;
+
+	PTR seglist;
 
 	USBDEBUG( "Printer : _manager_Close : IOReq %p", ioreq );
 
@@ -32,6 +34,7 @@ PTR seglist;
 	if ( ! unit )
 	{
 		USBERROR( "Printer : Unit NULL Pointer" );
+
 		goto bailout;
 	}
 
@@ -45,6 +48,7 @@ PTR seglist;
 	{
 		// Hmm since we only have one Opener pr unit.. this is an error
 		USBERROR( "Printer : Unit open count not Zero : OpenCnt %ld", unit->unit_Unit.unit_OpenCnt );
+
 		goto bailout;
 	}
 
@@ -53,6 +57,7 @@ PTR seglist;
 
 	// Free Unit
 	Unit_Free( unit );
+
 	unit = NULL;
 
 	// Make sure unit can't be closed again
@@ -78,7 +83,7 @@ bailout:
 
 	ReleaseSemaphore( & devBase->dev_PRT_Semaphore );
 
-	return( seglist );
+	return ( seglist );
 }
 
 // --

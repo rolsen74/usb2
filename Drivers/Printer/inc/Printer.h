@@ -50,5 +50,16 @@
 
 // --
 
+#define DOT4_CMD_INIT					0x00
+#define DOT4_CMD_OPEN_CHANNEL			0x01
+#define DOT4_CMD_CLOSE_CHANNEL			0x02
+#define DOT4_CMD_CREDIT_CHANNEL		0x03
+#define DOT4_CMD_EXIT					0x08
+#define DOT4_CMD_GET_SOCKET_ID			0x09
+#define DOT4_HEADER_SIZE				6
+#define DOT4_MAX_PACKET				4096
+
+// --
+
 #endif
 

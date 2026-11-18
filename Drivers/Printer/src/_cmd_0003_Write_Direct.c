@@ -12,7 +12,8 @@
 
 // --
 
-void Cmd_Write_Direct( struct PrinterUnit *unit, struct IOExtPar *pario )
+void
+Cmd_Write_Direct( struct PrinterUnit *unit, struct IOExtPar *pario )
 {
 	USBERROR( "Printer : Cmd_Write_Direct : pario %p : length %ld", pario, pario->IOPar.io_Length );
 
@@ -21,6 +22,7 @@ void Cmd_Write_Direct( struct PrinterUnit *unit, struct IOExtPar *pario )
 		pario->IOPar.io_Actual = 0;
 		pario->IOPar.io_Error = ParErr_LineErr;
 		pario->io_Status = 0;
+
 		ReplyMsg( (PTR) pario );
 
 		return;
@@ -31,6 +33,7 @@ void Cmd_Write_Direct( struct PrinterUnit *unit, struct IOExtPar *pario )
 		pario->IOPar.io_Actual = 0;
 		pario->IOPar.io_Error = 0;
 		pario->io_Status = 0;
+
 		ReplyMsg( (PTR) pario );
 
 		return;
@@ -38,6 +41,7 @@ void Cmd_Write_Direct( struct PrinterUnit *unit, struct IOExtPar *pario )
 
 	// Add to unit IO list
 	AddTail( unit->unit_PAR_IOReq_WaitingList, (PTR) pario );
+
 	unit->unit_PAR_IOReq_WaitingCount++;
 
 	// Start Sending if not running

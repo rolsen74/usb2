@@ -15,9 +15,10 @@
 extern struct Interface *INewlib;
 extern struct Library *NewlibBase;
 
-S32 Resources_Init( struct PrinterBase *devBase )
+S32
+Resources_Init( struct PrinterBase *devBase UNUSED )
 {
-S32 retval;
+	S32 retval;
 
 	USBDEBUG( "Printer : Resources_Init" );
 
@@ -26,39 +27,45 @@ S32 retval;
 	// --
 
 	NewlibBase = OpenLibrary( "newlib.library", 50 );
+
 	INewlib = GetInterface( NewlibBase, "main", 1, NULL );
 
 	if ( ! INewlib )
 	{
 		USBERROR( "Error opening Newlib library (v50)" );
+
 		goto bailout;
 	}
 
 	// --
 
 	DOSBase = OpenLibrary( "dos.library", 50 );
+
 	IDOS = (PTR) GetInterface( (PTR) DOSBase, "main", 1, NULL );
 
 	if ( ! IDOS )
 	{
 		USBERROR( "Error opening DOS library (v50)" );
+
 		goto bailout;
 	}
 
 	// --
 
 	UtilityBase = OpenLibrary( "utility.library", 50 );
+
 	IUtility = (PTR) GetInterface( (PTR) UtilityBase, "main", 1, NULL );
 
 	if ( ! IUtility )
 	{
 		USBERROR( "Error opening Utility library (v50)" );
+
 		goto bailout;
 	}
 
 	// --
 
-	InitSemaphore( & devBase->dev_PRT_Semaphore );
+//	InitSemaphore( & devBase->dev_PRT_Semaphore );
 
 	// --
 
@@ -71,7 +78,7 @@ S32 retval;
 
 bailout:
 
-	return( retval );
+	return ( retval );
 }
 
 // --

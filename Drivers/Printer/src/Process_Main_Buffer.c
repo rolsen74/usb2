@@ -12,11 +12,13 @@
 
 // --
 
-static void __myProcess_Main_Buffer( struct PrinterUnit *unit )
+static void
+__myProcess_Main_Buffer( struct PrinterUnit *unit )
 {
-struct USB2_IORequest *usbio;
-struct PrtBuffer *pb;
-U32 ionr;
+	struct USB2_IORequest *usbio;
+	struct PrtBuffer *pb;
+
+	U32 ionr;
 
 	while( TRUE )
 	{
@@ -75,10 +77,15 @@ U32 ionr;
 
 				if ( ( usbio->io_Data ) && ( usbio->io_Actual > 0 ) && ( usbio->io_Actual <= usbio->io_Length ) )
 				{
-					U8 *buf = usbio->io_Data;
-					U32 off = usbio->io_Actual-1;
+					U8 *buf;
+					U32 off;
+
+					buf = usbio->io_Data;
+					off = usbio->io_Actual-1;
+
 					unit->unit_LastByteSend = buf[ off ];
 				}
+
 				break;
 			}
 
@@ -86,6 +93,7 @@ U32 ionr;
 			{
 				// Todo : Flush all queued requests
 				USBERROR( "__myProcess_Main_Buffer : USB2Err_Device_Detached" );
+
 				unit->unit_Detached = TRUE;
 				break;
 			}
@@ -105,6 +113,7 @@ U32 ionr;
 			default:
 			{
 				USBERROR( "__myProcess_Main_Buffer : Unknown error %lu", (U32) usbio->io_Error );
+
 				break;
 			}
 		}
@@ -117,17 +126,21 @@ U32 ionr;
 //		USBERROR( "usbio->io_Error   : %ld", usbio->io_Error );
 
 		USBERROR( "__myProcess_Main_Buffer : Queueing USB IOReq %p", usbio );
+
 		AddTail( unit->unit_USB_IOReq_FreeList, (PTR) usbio );
 
 		if ( unit->unit_Buffer_FreeCount < 3 )
 		{
 			USBERROR( "__myProcess_Main_Buffer : Queueing PB %p", pb );
+
 			AddTail( unit->unit_Buffer_FreeList, & pb->pb_Node );
+
 			unit->unit_Buffer_FreeCount++;
 		}
 		else
 		{
 			USBERROR( "__myProcess_Main_Buffer : Freeing PB %p", pb );
+
 			FreeVec( pb );
 		}
 	}

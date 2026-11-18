@@ -12,13 +12,15 @@
 
 // --
 
-static void __myProcess_Free_MsgPorts( struct PrinterUnit *unit )
+static void
+__myProcess_Free_MsgPorts( struct PrinterUnit *unit )
 {
 	USBERROR( "Printer : __myProcess_Free_MsgPorts" );
 
 	if ( unit->unit_PRT_Abort_MsgPort )
 	{
 		FreeSysObject( ASOT_PORT, unit->unit_PRT_Abort_MsgPort );
+
 		unit->unit_PRT_Abort_MsgPortBit = 0;
 		unit->unit_PRT_Abort_MsgPort = NULL;
 	}
@@ -26,6 +28,7 @@ static void __myProcess_Free_MsgPorts( struct PrinterUnit *unit )
 	if ( unit->unit_PRT_Begin_MsgPort )
 	{
 		FreeSysObject( ASOT_PORT, unit->unit_PRT_Begin_MsgPort );
+
 		unit->unit_PRT_Begin_MsgPortBit = 0;
 		unit->unit_PRT_Begin_MsgPort = NULL;
 	}

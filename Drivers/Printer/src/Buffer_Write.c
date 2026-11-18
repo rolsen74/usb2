@@ -12,11 +12,13 @@
 
 // --
 
-S32 Buffer_Write( struct PrinterUnit *unit, U8 *data, U32 size )
+S32
+Buffer_Write( struct PrinterUnit *unit, U8 *data, U32 size )
 {
-struct PrtBuffer *pb;
-S32 retval;
-U32 len;
+	struct PrtBuffer *pb;
+
+	S32 retval;
+	U32 len;
 
 	retval = FALSE;
 
@@ -50,6 +52,7 @@ U32 len;
 			if ( ! pb )
 			{
 				USBERROR( "Printer : Error allocing memory" );
+
 				goto bailout;
 			}
 
@@ -61,13 +64,16 @@ U32 len;
 		unit->unit_Buffer_Active = pb;
 
 		len	= MIN( size, pb->pb_Free );
+
 		memcpy( & pb->pb_Data[pb->pb_Pos], data, len );
 
 	#if 0
 	{
-	U32 cnt;
-	U32 line;
-	U8 *buf = data;
+		U32 cnt;
+		U32 line;
+		U8 *buf;
+
+		buf = data;
 
 		cnt = 0;
 		line = 1;
@@ -87,6 +93,7 @@ U32 len;
 			if ( line > 32 )
 			{
 				DebugPrintF( "\n" );
+
 				line = 0;
 			}
 
@@ -115,7 +122,7 @@ U32 len;
 
 bailout:
 
-	return( retval );
+	return ( retval );
 }
 
 // --

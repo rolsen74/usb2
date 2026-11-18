@@ -12,13 +12,14 @@
 
 // --
 
-static U32 _manager_Release( struct DeviceManagerInterface *Self )
+static U32
+_manager_Release( struct DeviceManagerInterface *Self )
 {
 	USBDEBUG( "Printer : _manager_Release" );
 
 	Self->Data.RefCount--;
 
-	return( Self->Data.RefCount );
+	return ( Self->Data.RefCount );
 }
 
 // --

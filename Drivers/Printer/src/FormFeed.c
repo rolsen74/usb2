@@ -12,10 +12,12 @@
 
 // --
 
-static void Send_FormFeed( struct PrinterUnit *unit )
+static void
+Send_FormFeed( struct PrinterUnit *unit )
 {
-struct USB2_IORequest *usbio;
-U8 data[1];
+	struct USB2_IORequest *usbio;
+
+	U8 data[1];
 
 	USBERROR( "Send_FormFeed" );
 
@@ -34,6 +36,7 @@ U8 data[1];
 //	usbio->io_Offset	= 0;
 	usbio->io_Length	= 1;
 	usbio->io_Data		= data;
+
 	DoIO( (PTR) usbio );
 
 }

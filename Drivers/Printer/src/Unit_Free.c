@@ -12,7 +12,8 @@
 
 // --
 
-void Unit_Free( struct PrinterUnit *unit )
+void
+Unit_Free( struct PrinterUnit *unit )
 {
 	USBDEBUG( "Printer : Unit_Free :" );
 
@@ -29,21 +30,23 @@ void Unit_Free( struct PrinterUnit *unit )
 	{
 		while( unit->unit_TaskState == TASK_State_Starting )
 		{
-			Delay( 1 );	
+			Delay( 1 );
 		}
 
 		unit->unit_ExitMask = 0;	// unused at the moment
+
 		unit->unit_ExitParent = FindTask( NULL );
+
 		Signal( unit->unit_TaskAdr, SIGBREAKF_CTRL_C );
 
 		while( unit->unit_TaskState != TASK_State_Stopped )
 		{
-			Delay( 1 );	
+			Delay( 1 );
 		}
 	}
 
 	// --
-	
+
 	if ( unit->unit_TaskName )
 	{
 		FreeVec( unit->unit_TaskName );

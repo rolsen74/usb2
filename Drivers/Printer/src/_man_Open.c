@@ -12,15 +12,17 @@
 
 // --
 
-static S32 _manager_Open(
+static S32
+_manager_Open(
 	struct DeviceManagerInterface *Self,
 	struct IORequest *ioreq,
 	U32 unitnum,
 	U32 flags UNUSED )
 {
-struct PrinterBase *devBase;
-struct PrinterUnit *unit;
-S32 error;
+	struct PrinterBase *devBase;
+	struct PrinterUnit *unit;
+
+	S32 error;
 
 	USBDEBUG( "Printer : _manager_Open" );
 
@@ -37,6 +39,7 @@ S32 error;
 	if ( ioreq->io_Message.mn_Length < sizeof( struct IORequest ))
 	{
 		USBERROR( "Printer : Invalid request size : Size %ld", (S32) ioreq->io_Message.mn_Length );
+
 		error = IOERR_OPENFAIL;
 		goto bailout;
 	}
@@ -45,6 +48,7 @@ S32 error;
 	if ( unitnum >= MAX_PRT_UNITS )
 	{
 		USBERROR( "Printer : Invalid unit number : Unit nr #%lu", unitnum );
+
 		error = IOERR_OPENFAIL;
 		goto bailout;
 	}
@@ -53,6 +57,7 @@ S32 error;
 	if ( devBase->dev_PRT_Units[ unitnum ] )
 	{
 		USBERROR( "Printer : Unit alreay in use : Unit nr #%lu", unitnum );
+
 		error = IOERR_OPENFAIL;
 		goto bailout;
 	}
@@ -63,16 +68,17 @@ S32 error;
 	if ( ! unit )
 	{
 		USBERROR( "Printer : Error creating Unit" );
+
 		error = IOERR_OPENFAIL;
 		goto bailout;
 	}
 
 	ioreq->io_Unit = (PTR) unit;
 	unit->unit_Unit.unit_OpenCnt++;
- 
+
 	/* Prevent delayed expunges */
 	devBase->dev_Base.dd_Library.lib_Flags &= ~LIBF_DELEXP;
- 
+
 	/* Success */
 	error = 0;
 
@@ -94,7 +100,7 @@ bailout:
 
 	ReleaseSemaphore( & devBase->dev_PRT_Semaphore );
 
-	return( error );
+	return ( error );
 }
 
 // --

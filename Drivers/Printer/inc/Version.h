@@ -13,13 +13,7 @@
 
 // --
 
-#if defined(_USB2_)
 #define DEVNAME		"usb2_printer.device"
-#elif defined(_SIRION_)
-#define DEVNAME		"rUSB_Printer.device"
-#else
-#error Unsupported USB Target
-#endif
 
 #define VERSION		1
 #define REVISION	1

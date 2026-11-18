@@ -8,11 +8,14 @@ printing text via
 - print from golded (works)
 
 
-the AOS4 Sirion is not working at all.. no usb functions
-but I have tryed too prep for support
-
 I have implemented Buffered sending of data to usb
 or send direct if you set BufferSize = 0 in env
+
+USB printer protocol 3 (IEEE 1284.4 / DOT4) is detected from the
+selected interface descriptor. The driver opens the PRINT channel and
+frames writes as DOT4 packets. DOT4 uses direct mode so it can handle
+packet credits and replies. This path compiles but still needs testing
+with a DOT4 printer; protocols 1 and 2 retain the existing raw path.
 
 AbortIO() is not implemented.. proberly only valid
 for direct mode

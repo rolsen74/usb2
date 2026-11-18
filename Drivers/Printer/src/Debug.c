@@ -17,13 +17,15 @@
 static struct Task *__TASK = NULL;
 static struct UtilityIFace *__IU = NULL;
 
-void VARARGS68K _USBDEBUG( U32 lvl UNUSED, STR fmt, ... )
+void VARARGS68K
+_USBDEBUG( U32 lvl UNUSED, STR fmt, ... )
 {
-struct UtilityIFace *IUtility;
-struct ExecIFace *IExec;
-struct Task *self;
-va_list ap;
-STR buf;
+	struct UtilityIFace *IUtility;
+	struct ExecIFace *IExec;
+	struct Task *self;
+
+	va_list ap;
+	STR buf;
 
 	// lvl : 0 = Debug, 1 = Info, 2 = Error
 
@@ -31,7 +33,10 @@ STR buf;
 
 	if ( ! __IU )
 	{
-		PTR base = OpenLibrary( "utility.library" );
+		PTR base;
+
+		base = OpenLibrary( "utility.library", 0 );
+
 		__IU = (PTR) GetInterface( base, "main", 1, NULL );
 	}
 
@@ -59,7 +64,7 @@ STR buf;
 	self = FindTask(NULL);
 
 	DebugPrintF( "%s%p: %s\n",
-		( self != __TASK ) ? "--\n" : "", 
+		( self != __TASK ) ? "--\n" : "",
 		self,
 		( buf ) ? buf : (STR) fmt
 	);

@@ -12,9 +12,10 @@
 
 // --
 
-static S32 __myProcess_Init( struct PrinterUnit *unit )
+static S32
+__myProcess_Init( struct PrinterUnit *unit )
 {
-S32 retval;
+	S32 retval;
 
 	retval = FALSE;
 
@@ -25,6 +26,7 @@ S32 retval;
 	if ( ! __myProcess_1_Get_Config( unit ))
 	{
 		USBERROR( "Printer : __myProcess_Init : Error parsing config" );
+
 		goto bailout;
 	}
 
@@ -33,16 +35,22 @@ S32 retval;
 	if ( ! Process_Find_Device( unit ))
 	{
 		USBERROR( "Printer : __myProcess_Init : Error did not find usb device" );
+
 		goto bailout;
 	}
 
 	// --
 
 	unit->unit_USB_IOReq_FreeList		= AllocSysObjectTags( ASOT_LIST, TAG_END );
+
 	unit->unit_PAR_IOReq_WaitingList	= AllocSysObjectTags( ASOT_LIST, TAG_END );
+
 	unit->unit_Buffer_FreeList			= AllocSysObjectTags( ASOT_LIST, TAG_END );
+
 	unit->unit_Buffer_WaitingList		= AllocSysObjectTags( ASOT_LIST, TAG_END );
+
 	unit->unit_PRT_Begin_MsgPort			= AllocSysObjectTags( ASOT_PORT, TAG_END );
+
 	unit->unit_PRT_Abort_MsgPort			= AllocSysObjectTags( ASOT_PORT, TAG_END );
 
 	if (( ! unit->unit_USB_IOReq_FreeList )
@@ -53,6 +61,7 @@ S32 retval;
 	||	( ! unit->unit_PRT_Abort_MsgPort ))
 	{
 		USBERROR( "Printer : __myProcess_Init : Error creating objects" );
+
 		goto bailout;
 	}
 
@@ -64,6 +73,7 @@ S32 retval;
 	if ( ! Process_Setup_Device( unit ))
 	{
 		USBERROR( "Printer : __myProcess_Init : Error setting up usb device" );
+
 		goto bailout;
 	}
 
@@ -73,7 +83,7 @@ S32 retval;
 
 bailout:
 
-	return( retval );
+	return ( retval );
 }
 
 // --

@@ -12,11 +12,13 @@
 
 // --
 
-static void __myProcess_Main_Direct( struct PrinterUnit *unit )
+static void
+__myProcess_Main_Direct( struct PrinterUnit *unit )
 {
-struct USB2_IORequest *usbio;
-struct IOExtPar *pario;
-U32 ionr;
+	struct USB2_IORequest *usbio;
+	struct IOExtPar *pario;
+
+	U32 ionr;
 
 	while( TRUE )
 	{
@@ -72,16 +74,22 @@ U32 ionr;
 			case USB2Err_NoError:
 			{
 				USBERROR( "__myProcess_Main_Direct : USB2Err_NoError" );
+
 				pario->IOPar.io_Actual = usbio->io_Actual;
 				pario->IOPar.io_Error = ( usbio->io_Actual == usbio->io_Length ) ? 0 : ParErr_LineErr;
 				pario->io_Status = 0;
 
 				if ( ( usbio->io_Data ) && ( usbio->io_Actual > 0 ) && ( usbio->io_Actual <= usbio->io_Length ) )
 				{
-					U8 *buf = usbio->io_Data;
-					U32 off = usbio->io_Actual-1;
+					U8 *buf;
+					U32 off;
+
+					buf = usbio->io_Data;
+					off = usbio->io_Actual-1;
+
 					unit->unit_LastByteSend = buf[ off ];
 				}
+
 				break;
 			}
 
@@ -89,6 +97,7 @@ U32 ionr;
 			{
 				// Todo : Flush all queued requests
 				USBERROR( "__myProcess_Main_Direct : USB2Err_Device_Detached" );
+
 				pario->IOPar.io_Actual = 0;
 				pario->IOPar.io_Error = ParErr_NotOpen;
 				pario->io_Status = 0;
@@ -116,6 +125,7 @@ U32 ionr;
 			default:
 			{
 				USBERROR( "__myProcess_Main_Direct : Unknown error %lu", (U32) usbio->io_Error );
+
 				pario->IOPar.io_Actual = 0;
 				pario->IOPar.io_Error = ParErr_LineErr;
 				pario->io_Status = 0;

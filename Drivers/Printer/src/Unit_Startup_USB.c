@@ -12,10 +12,11 @@
 
 // --
 
-S32 Unit_Startup_USB( struct PrinterUnit *unit )
+S32
+Unit_Startup_USB( struct PrinterUnit *unit )
 {
-S32 retval;
-S32 stat;
+	S32 retval;
+	S32 stat;
 
 	USBDEBUG( "Printer : Unit_Startup_USB : Enter" );
 
@@ -36,9 +37,9 @@ S32 stat;
 			if ( ! unit->unit_NotRunning )
 			{
 				// Only print one pr Opener
-				unit->unit_NotRunning = TRUE;	
+				unit->unit_NotRunning = TRUE;
 
-				TimedDosRequesterTags( 
+				TimedDosRequesterTags(
 					TDR_TitleString, DEVNAME,
 					TDR_GadgetString, "_Okay",
 					TDR_ImageType, TDRIMAGE_ERROR,
@@ -46,6 +47,7 @@ S32 stat;
 					TAG_END
 				);
 			}
+
 			goto bailout;
 		}
 
@@ -61,6 +63,7 @@ S32 stat;
 			if ( ! USB2MsgPort )
 			{
 				USBERROR( "Printer : Error creating USB2 MsgPort" );
+
 				goto bailout;
 			}
 
@@ -80,6 +83,7 @@ S32 stat;
 			if ( ! USB2IOReq )
 			{
 				USBERROR( "Printer : Error creating USB2 IORequest" );
+
 				goto bailout;
 			}
 		}
@@ -94,6 +98,7 @@ S32 stat;
 			if ( stat )
 			{
 				USBERROR( "Printer : Error opening USB2 Device" );
+
 				goto bailout;
 			}
 
@@ -110,6 +115,7 @@ S32 stat;
 			if ( ! IUSB2 )
 			{
 				USBERROR( "Printer : Error getting USB2 Interface" );
+
 				goto bailout;
 			}
 		}
@@ -123,5 +129,5 @@ bailout:
 
 	USBDEBUG( "Printer : Unit_Startup_USB : Leave : Retval %ld", retval );
 
-	return( retval );
+	return ( retval );
 }

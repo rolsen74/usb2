@@ -20,18 +20,21 @@
 
 void Process_Main( struct PrinterUnit *unit );
 
-void Printer_Process_Entry( void )
+void
+Printer_Process_Entry( void )
 {
-struct TaskStartMsg *msg;
-struct PrinterUnit *unit;
-struct Task *parent;
-struct Task *self;
-U32 mask;
-S32 stat;
+	struct TaskStartMsg *msg;
+	struct PrinterUnit *unit;
+	struct Task *parent;
+	struct Task *self;
+
+	U32 mask;
+	S32 stat;
 
 	USBERROR( "Printer : Printer_Process_Entry : Enter" );
 
 	self	= FindTask( NULL );
+
 	msg		= (PTR) self->tc_UserData;
 	parent	= msg->Parent;
 	mask	= msg->Mask;
@@ -48,6 +51,7 @@ S32 stat;
 		unit->unit_TaskAdr = self;
 
 		msg->Result = TRUE;
+
 		Signal( parent, mask );
 
 		// --

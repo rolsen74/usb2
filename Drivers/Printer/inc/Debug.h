@@ -22,19 +22,19 @@
 void VARARGS68K _USBDEBUG( U32 lvl, STR fmt, ... );
 
 #ifdef DO_ERROR
-#define USBERROR( fmt, ... )	_USBDEBUG( 2, fmt, __VA_ARGS__ )
+#define USBERROR( fmt, ... )	_USBDEBUG( 2, fmt, ##__VA_ARGS__ )
 #else
 #define USBERROR( fmt, ... )	((void)0)
 #endif
 
 #ifdef DO_INFO
-#define USBINFO( fmt, ... )		_USBDEBUG( 1, fmt, __VA_ARGS__ )
+#define USBINFO( fmt, ... )		_USBDEBUG( 1, fmt, ##__VA_ARGS__ )
 #else
 #define USBINFO( fmt, ... )		((void)0)
 #endif
 
 #ifdef DO_DEBUG
-#define USBDEBUG( fmt, ... )	_USBDEBUG( 0, fmt, __VA_ARGS__ )
+#define USBDEBUG( fmt, ... )	_USBDEBUG( 0, fmt, ##__VA_ARGS__ )
 #else
 #define USBDEBUG( fmt, ... )	((void)0)
 #endif

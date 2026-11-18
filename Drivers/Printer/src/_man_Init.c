@@ -12,9 +12,10 @@
 
 // --
 
-static PTR _manager_Init( PTR Dummy UNUSED, PTR SegList, struct ExecBase *mySysBase )
+static PTR
+_manager_Init( PTR Dummy UNUSED, PTR SegList, struct ExecBase *mySysBase )
 {
-struct PrinterBase *devBase;
+	struct PrinterBase *devBase;
 
 	devBase	= NULL;
 
@@ -27,10 +28,12 @@ struct PrinterBase *devBase;
 	if ( FindName( & mySysBase->DeviceList, DEVNAME ))
 	{
 		USBDEBUG( "_manager_Init : Device allready loaded" );
+
 		goto bailout;
 	}
 
 	extern const PTR devInterfaces[];
+
 	devBase = (PTR) CreateLibraryTags(
 		CLT_DataSize, sizeof( struct PrinterBase ),
 		CLT_Interfaces,	devInterfaces,
@@ -41,6 +44,7 @@ struct PrinterBase *devBase;
 	if ( ! devBase )
 	{
 		USBDEBUG( "_manager_Init : Failed to create device" );
+
 		goto bailout;
 	}
 
@@ -72,7 +76,7 @@ struct PrinterBase *devBase;
 
 bailout:
 
-	return( devBase );
+	return ( devBase );
 }
 
 // --

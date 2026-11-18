@@ -12,18 +12,21 @@
 
 // --
 
-S32 Unit_Startup( struct PrinterUnit *unit )
+S32
+Unit_Startup( struct PrinterUnit *unit )
 {
-struct TaskStartMsg msg;
-S32 retval;
-U32 mask;
-S32 sig;
+	struct TaskStartMsg msg;
+
+	S32 retval;
+	U32 mask;
+	S32 sig;
 
 	retval = FALSE;
 
 	if ( ! unit )
 	{
 		USBERROR( "Printer : Unit_Startup : NULL Pointer" );
+
 		goto bailout;
 	}
 
@@ -34,6 +37,7 @@ S32 sig;
 	if ( ! Unit_Startup_USB( unit ))
 	{
 		USBERROR( "Printer : Failed to open usb2.device" );
+
 		goto bailout;
 	}
 
@@ -42,14 +46,16 @@ S32 sig;
 	sig = AllocSignal( -1 );
 
 	msg.Result	= 0;
+
 	msg.Parent	= FindTask( NULL );
+
 	msg.Mask	= ( sig == -1 ) ? ( SIGBREAKF_CTRL_D ) : ( 1UL << sig );
 	msg.Unit	= unit;
 
 	// Clear signal
 	SetSignal( 0, msg.Mask );
 
-	if ( CreateNewProcTags( 
+	if ( CreateNewProcTags(
 		NP_Name,		unit->unit_TaskName,
 		NP_Child,		FALSE,
 		NP_Priority,	5,
@@ -77,6 +83,7 @@ S32 sig;
 	if ( ! msg.Result )
 	{
 		USBERROR( "Printer : Failed to Printer process" );
+
 		goto bailout;
 	}
 
@@ -92,7 +99,7 @@ bailout:
 
 	USBDEBUG( "Printer : Unit_Startup : Leave : Retval %ld", retval );
 
-	return( retval );
+	return ( retval );
 }
 
 // --

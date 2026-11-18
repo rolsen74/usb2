@@ -12,10 +12,12 @@
 
 // --
 
-static PTR _manager_Expunge( struct DeviceManagerInterface *Self )
+static PTR
+_manager_Expunge( struct DeviceManagerInterface *Self )
 {
-struct PrinterBase *devBase;
-PTR seglist;
+	struct PrinterBase *devBase;
+
+	PTR seglist;
 
 	USBDEBUG( "Printer : _manager_Expunge" );
 
@@ -30,6 +32,7 @@ PTR seglist;
 		Remove( (PTR) devBase );
 
 		DeleteLibrary( (PTR) devBase );
+
 		devBase = NULL;
 	}
 	else
@@ -38,7 +41,7 @@ PTR seglist;
 		seglist = NULL;
 	}
 
-	return( seglist );
+	return ( seglist );
 }
 
 // --

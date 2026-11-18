@@ -14,10 +14,11 @@
 
 #include "cmd_0009_PDQuery.c"
 
-static void __myProcess_Main_BeginIO( struct PrinterUnit *unit )
+static void
+__myProcess_Main_BeginIO( struct PrinterUnit *unit )
 {
-struct IORequest *ioreq;
-struct IOExtPar *pario;
+	struct IORequest *ioreq;
+	struct IOExtPar *pario;
 
 	while( TRUE )
 	{
@@ -36,7 +37,9 @@ struct IOExtPar *pario;
 			pario->IOPar.io_Actual = 0;
 			pario->IOPar.io_Error = ParErr_NotOpen;
 			pario->io_Status = 0;
+
 			ReplyMsg( (PTR) pario );
+
 			continue;
 		}
 
@@ -54,6 +57,7 @@ struct IOExtPar *pario;
 				{
 					Cmd_Write_Direct( unit, (PTR) ioreq );
 				}
+
 				break;
 			}
 
@@ -62,14 +66,18 @@ struct IOExtPar *pario;
 				USBERROR( "BeginIO : PDCMD_QUERY" );
 
 				Cmd_PDQuery( unit, (PTR) ioreq );
+
 				break;
 			}
 
 			default:
 			{
 				USBINFO( "Unknown Command (%ld) -- This should really not chould happen", ioreq->io_Command );
+
 				ioreq->io_Error = IOERR_NOCMD;
+
 				ReplyMsg( (PTR) ioreq );
+
 				break;
 			}
 		}
