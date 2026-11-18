@@ -53,10 +53,16 @@ U32 cnt;
 
 		IO_DO(ioreq);
 
-		if ( ioreq->io_Error == USB2Err_NoError )
+		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == sizeof( struct USB2_Device_Desc ) ) )
 		{
 			break;
 		}
+	}
+
+	if ( ( fn->fkt_DeviceDescriptor->Length < sizeof( struct USB2_Device_Desc ) ) || ( fn->fkt_DeviceDescriptor->DescriptorType != DSCTYPE_Device ) )
+	{
+		USBERROR( "__Get_Device_Desc : Invalid device descriptor" );
+		goto bailout;
 	}
 
 	retval = TRUE;
