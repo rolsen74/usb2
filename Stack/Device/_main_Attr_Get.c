@@ -145,8 +145,6 @@ PTR mem;
 		}
 	}
 
-	usbbase->usb_IExec->DebugPrintF( "Attr_Get: mem %p, buf %p, size %ld, len %ld\n", mem, buffer, buffersize, len );
-
 	if (( mem ) && ( buffer ))
 	{
 		len = MIN( buffersize, len );
