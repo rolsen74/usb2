@@ -22,7 +22,7 @@ S32 error;
 	error = TRUE;
 
 	unit = AllocVecTags( sizeof( struct EthernetUnit ),
-		AVT_Clear, 0,
+		AVT_ClearWithValue, 0,
 		TAG_END
 	);
 
@@ -35,6 +35,12 @@ S32 error;
 	unit->unit_UnitNr = unitnr;
 	unit->unit_TaskState = TASK_State_Stopped;
 
+	InitSemaphore( & unit->unit_CommandLock );
+
+	NewList( & unit->unit_Pending );
+
+	NewList( & unit->unit_Multicast );
+
 	unit->unit_TaskName = ASPrintf( "RTL8188 unit #%ld", unitnr );
 
 	if ( ! unit->unit_TaskName )
@@ -42,12 +48,6 @@ S32 error;
 		USBERROR( "RTL8188 : Error allocating memory" );
 		goto bailout;
 	}
-
-	// --
-
-	// hmm lets not start a Process here.
-	// If someone just want to Query the Device type,
-	// we don't need too startup every thing for that.
 
 	// --
 
