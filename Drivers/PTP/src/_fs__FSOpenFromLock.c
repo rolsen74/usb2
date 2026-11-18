@@ -12,13 +12,13 @@
 
 // --
 
-int32
-_fs__FSOpenFromLock( struct FSVP *vp, int32 *res2, struct FileHandle *file, struct Lock *objlock )
+LONG
+_fs__FSOpenFromLock( struct FSVP *vp, LONG *res2, struct FileHandle *file, struct Lock *objlock )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjLock *lock;
 
-	int32 error;
+	S32 error;
 
 	fs = vp->FSV.FSPrivate;
 	lock = (PTR) objlock;
