@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -36,7 +37,7 @@ enum VSTAT vstat;
 
 	else if ( tm == (PTR) 0x55555555 )
 	{
-		USBPANIC( "__TaskMsg_Valid          : TM %p : Free'd Memory : (%s)", tm, (file)?file:"<NULL>" );		
+		USBPANIC( "__TaskMsg_Valid          : TM    %p : Free'd Memory : (%s)", tm, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 
@@ -44,17 +45,17 @@ enum VSTAT vstat;
 
 	else if ( tm->tm_StructID == 0 )
 	{
-		USBDEBUG( "__TaskMsg_Valid          : TM %p : Not Initalized : (%s)", tm, (file)?file:"<NULL>" );
+		USBDEBUG( "__TaskMsg_Valid          : TM    %p : Not Initalized : (%s)", tm, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 	else if ( tm->tm_StructID == ID_USB2_FREED )
 	{
-		USBDEBUG( "__TaskMsg_Valid          : TM %p : Structure allready freed : (%s)", tm, (file)?file:"<NULL>" );		
+		USBDEBUG( "__TaskMsg_Valid          : TM    %p : Structure allready freed : (%s)", tm, (file)?file:"<NULL>" );
 		vstat = VSTAT_Null;
 	}
 	else if ( tm->tm_StructID != ID_USB2_TMSG )
 	{
-		USBDEBUG( "__TaskMsg_Valid          : TM %p : Invalid ID $%08lx : (%s)", tm, tm->tm_StructID, (file)?file:"<NULL>" );
+		USBDEBUG( "__TaskMsg_Valid          : TM    %p : Invalid ID $%08lx : (%s)", tm, tm->tm_StructID, (file)?file:"<NULL>" );
 		vstat = VSTAT_Error;
 	}
 	else
@@ -62,7 +63,7 @@ enum VSTAT vstat;
 		vstat = VSTAT_Okay;
 	}
 
-//	USBDEBUG( "__TaskMsg_Valid          : TM %p : Stat %ld", tm, vstat );
+//	USBDEBUG( "__TaskMsg_Valid          : TM    %p : Stat %ld", tm, vstat );
 
 	TASK_NAME_LEAVE();
 
