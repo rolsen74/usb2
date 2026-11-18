@@ -41,29 +41,29 @@ struct PTP_Container *con;
 
 	con = (PTR) ioreq->io_Data;
 
-	if ( ioreq->io_Length < 12 )
+	if ( ( ! con ) || ( ioreq->io_Actual < 12 ) )
 	{
-		MYERROR( "PTP-USB : Invalid Reposnce 1 Length %ld", (S32) ioreq->io_Length );
+		MYERROR( "PTP-USB : Invalid Response Length %ld", (S32) ioreq->io_Actual );
 
-		// hmm what do I do now?
+		us->us_Running = FALSE;
 	}
 	else if ( LE_SWAP32( con->Length ) != 12 )
 	{
 		MYERROR( "PTP-USB : Invalid Reposnce 2 Length %ld", (S32) LE_SWAP32( con->Length ) );
 
-		// hmm what do I do now?
+		us->us_Running = FALSE;
 	}
 	else if ( LE_SWAP16( con->Type ) != CTYPE_Response )
 	{
 		MYERROR( "PTP-USB : Invalid Container Type %ld", (S32) LE_SWAP16( con->Type ) );
 
-		// hmm what do I do now?
+		us->us_Running = FALSE;
 	}
 	else if ( LE_SWAP32( con->TransID ) != us->us_TransactionID )
 	{
 		MYERROR( "PTP-USB : TransactionID mismatch $%08lx", (S32) LE_SWAP32( con->TransID ) );
 
-		// hmm what do I do now?
+		us->us_Running = FALSE;
 	}
 	else
 	{
