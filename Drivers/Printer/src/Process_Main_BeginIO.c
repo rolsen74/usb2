@@ -17,6 +17,7 @@
 static void __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 {
 struct IORequest *ioreq;
+struct IOExtPar *pario;
 
 	while( TRUE )
 	{
@@ -28,6 +29,16 @@ struct IORequest *ioreq;
 		}
 
 		ioreq->io_Error = 0;
+
+		if ( unit->unit_Detached )
+		{
+			pario = (PTR) ioreq;
+			pario->IOPar.io_Actual = 0;
+			pario->IOPar.io_Error = ParErr_NotOpen;
+			pario->io_Status = 0;
+			ReplyMsg( (PTR) pario );
+			continue;
+		}
 
 		switch( ioreq->io_Command )
 		{
