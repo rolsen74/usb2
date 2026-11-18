@@ -12,10 +12,10 @@
 
 // --
 
-int32 _fs__FSVolumeInfoData( struct FSVP *vp, int32 *res2, struct InfoData *info )
+LONG _fs__FSVolumeInfoData( struct FSVP *vp, LONG *res2, struct InfoData *info )
 {
 struct FS_Struct *fs;
-int32 retval;
+S32 retval;
 
 	MYINFO( "PTP-FS : _fs__FSVolumeInfoData" );
 
