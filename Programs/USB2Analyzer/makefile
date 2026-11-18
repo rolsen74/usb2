@@ -21,7 +21,7 @@ CFLAGS		+= -MMD
 CFLAGS		+= -MP
 CFLAGS		+= -mcrt=newlib
 # CFLAGS		+= -fanalyzer
-CFLAGS		+= -gstabs
+# The current cross compiler no longer supports STABS debug information.
 
 # Dont optimize code into memcpy functions
 #CFLAGS		+= -fno-builtin
