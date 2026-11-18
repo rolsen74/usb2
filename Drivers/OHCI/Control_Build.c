@@ -49,31 +49,32 @@
 
 // --
 
-SEC_CODE S32 OHCI_Control_Build( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
+SEC_CODE S32
+OHCI_Control_Build ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 {
-struct USB2_EndPointNode *ep;
-struct RealFunctionNode *fn;
-struct OHCI_TD *status;
-struct OHCI_TD *dummy;
-struct OHCI_TD *setup;
-struct OHCI_TD *data;
-struct OHCI_TD *last;
-struct OHCI_ED *ed;
-S32 handled;
-S32 err;
-U32 val;
-U32 len;
-PTR buf;
+	struct USB2_EndPointNode * ep UNUSED;
+	struct RealFunctionNode *  fn UNUSED;
+	struct OHCI_TD *		   status;
+	struct OHCI_TD *		   dummy;
+	struct OHCI_TD *		   setup;
+	struct OHCI_TD *		   data;
+	struct OHCI_TD *		   last;
+	struct OHCI_ED *		   ed;
+	S32						   handled;
+	S32						   err;
+	U32						   val;
+	U32						   len;
+	PTR						   buf;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "OHCI : OHCI_Control_Build" );
+	struct USBBase * usbbase UNUSED = hn->hn_USBBase;
+	TASK_NAME_ENTER ( "OHCI : OHCI_Control_Build" );
 
-	fn			= ioreq->req_Function;
-	ep			= ioreq->req_EndPoint;
+	fn = ioreq->req_Function;
+	ep = ioreq->req_EndPoint;
 
-	handled		= TRUE;
+	handled = TRUE;
 
-	#if 0
+#if 0
 //	#ifdef DO_DEBUG
 
 	STR Speeds[] = { "Low","Full","High","Super" };
@@ -100,50 +101,50 @@ PTR buf;
 //		OHCI_DUMP_SETUP( hn, ioreq->req_Public.io_SetupData );
 //	}
 
-	#endif
+#endif
 
 	/* -- Header -- */
 
-	ed = OHCI_Get_EDBuffer( hn, ioreq );
+	ed = OHCI_Get_EDBuffer ( hn, ioreq );
 
 	if ( ! ed )
 	{
-		USBDEBUG( "Error allocating ED buffer" );
+		USBDEBUG ( "Error allocating ED buffer" );
 		err = USB2Err_Stack_NoMemory;
 		goto bailout;
 	}
 
 	/* -- Setup -- */
 
-	setup = OHCI_Get_TDBuffer( hn );
+	setup = OHCI_Get_TDBuffer ( hn );
 
 	if ( ! setup )
 	{
-		USBDEBUG( "Error allocating TD buffer" );
+		USBDEBUG ( "Error allocating TD buffer" );
 		err = USB2Err_Stack_NoMemory;
 		goto bailout;
 	}
 
-	ed->ed_headp		= LE_SWAP32( setup->ptd_self_phy );
-	ed->ped_first_td	= setup;
+	ed->ed_headp	 = LE_SWAP32 ( setup->ptd_self_phy );
+	ed->ped_first_td = setup;
 
 	// Control always start with DataToggle off
 
-	len  = ioreq->req_Public.io_SetupLength;
-	buf	 = ioreq->req_Public.io_SetupData;
+	len = ioreq->req_Public.io_SetupLength;
+	buf = ioreq->req_Public.io_SetupData;
 
-	val  = OHCI_TD_TOGGLE_0;
+	val = OHCI_TD_TOGGLE_0;
 	val |= OHCI_TD_NOINTR;
 	val |= OHCI_TD_SETUP;
 	val |= OHCI_TD_NOCC;
 
-	setup->td_flags		= LE_SWAP32( val );
+	setup->td_flags = LE_SWAP32 ( val );
 
-	if (( len ) && ( buf ))
+	if ( ( len ) && ( buf ) )
 	{
-		if ( ! OHCI_Get_8kBuffer( hn, setup, buf, len ))
+		if ( ! OHCI_Get_8kBuffer ( hn, setup, buf, len ) )
 		{
-			USBDEBUG( "Error allocating buffer" );
+			USBDEBUG ( "Error allocating buffer" );
 			err = USB2Err_Stack_NoMemory;
 			goto bailout;
 		}
@@ -155,33 +156,33 @@ PTR buf;
 
 	if ( ioreq->req_Public.io_Length )
 	{
-		data = OHCI_Get_TDBuffer( hn );
+		data = OHCI_Get_TDBuffer ( hn );
 
 		if ( ! data )
 		{
-			USBDEBUG( "Error allocating TD buffer" );
+			USBDEBUG ( "Error allocating TD buffer" );
 			err = USB2Err_Stack_NoMemory;
 			goto bailout;
 		}
 
-		last->td_nexttd		= LE_SWAP32( data->ptd_self_phy );
-		last->ptd_virt_next	= data;
-		last = data;
+		last->td_nexttd		= LE_SWAP32 ( data->ptd_self_phy );
+		last->ptd_virt_next = data;
+		last				= data;
 
-		len		 = ( ioreq->req_Public.io_Length );
-		buf		 = ( ioreq->req_Public.io_Command == CMD_READ ) ? NULL : ioreq->req_Public.io_Data ;
+		len = ( ioreq->req_Public.io_Length );
+		buf = ( ioreq->req_Public.io_Command == CMD_READ ) ? NULL : ioreq->req_Public.io_Data;
 
-		val	= ( ioreq->req_Public.io_Command == CMD_READ ) ? OHCI_TD_IN : OHCI_TD_OUT;
+		val = ( ioreq->req_Public.io_Command == CMD_READ ) ? OHCI_TD_IN : OHCI_TD_OUT;
 		val |= OHCI_TD_NOINTR;
 		val |= OHCI_TD_TOGGLE_1;
 		val |= OHCI_TD_NOCC;
-		val |= (( ioreq->req_Public.io_Command == CMD_READ ) && ( ioreq->req_Public.io_AllowShortPackets )) ? OHCI_TD_R : 0;
+		val |= ( ( ioreq->req_Public.io_Command == CMD_READ ) && ( ioreq->req_Public.io_AllowShortPackets ) ) ? OHCI_TD_R : 0;
 
-		data->td_flags		= LE_SWAP32( val );
+		data->td_flags = LE_SWAP32 ( val );
 
-		if ( ! OHCI_Get_8kBuffer( hn, data, buf, len ))
+		if ( ! OHCI_Get_8kBuffer ( hn, data, buf, len ) )
 		{
-			USBDEBUG( "Error allocating buffer" );
+			USBDEBUG ( "Error allocating buffer" );
 			err = USB2Err_Stack_NoMemory;
 			goto bailout;
 		}
@@ -189,55 +190,55 @@ PTR buf;
 
 	/* -- Status -- */
 
-	status = OHCI_Get_TDBuffer( hn );
+	status = OHCI_Get_TDBuffer ( hn );
 
 	if ( ! status )
 	{
-		USBDEBUG( "Error allocating TD buffer" );
+		USBDEBUG ( "Error allocating TD buffer" );
 		err = USB2Err_Stack_NoMemory;
 		goto bailout;
 	}
 
-	last->td_nexttd		= LE_SWAP32( status->ptd_self_phy );
-	last->ptd_virt_next	= status;
-	last = status;
+	last->td_nexttd		= LE_SWAP32 ( status->ptd_self_phy );
+	last->ptd_virt_next = status;
+	last				= status;
 
 	// As I understand it, it always ends with DataToggle on
 
-	val  = OHCI_TD_TOGGLE_1;
+	val = OHCI_TD_TOGGLE_1;
 	val |= OHCI_TD_NOCC;
 	val |= ( ioreq->req_Public.io_Command == CMD_READ ) ? OHCI_TD_OUT : OHCI_TD_IN;
-	val |= OHCI_TD_SET_DI(1);
+	val |= OHCI_TD_SET_DI ( 1 );
 
-	status->td_flags	= LE_SWAP32( val );
+	status->td_flags = LE_SWAP32 ( val );
 
 	/* -- Dummy -- */
 
-	dummy = OHCI_Get_TDBuffer( hn );
+	dummy = OHCI_Get_TDBuffer ( hn );
 
 	if ( ! dummy )
 	{
-		USBDEBUG( "Error allocating TD buffer" );
+		USBDEBUG ( "Error allocating TD buffer" );
 		err = USB2Err_Stack_NoMemory;
 		goto bailout;
 	}
 
-	last->td_nexttd		= LE_SWAP32( dummy->ptd_self_phy );
-	last->ptd_virt_next	= dummy;
+	last->td_nexttd		= LE_SWAP32 ( dummy->ptd_self_phy );
+	last->ptd_virt_next = dummy;
 
 	/* Link TD into ED */
-	ed->ed_tailp		= LE_SWAP32( dummy->ptd_self_phy );
+	ed->ed_tailp = LE_SWAP32 ( dummy->ptd_self_phy );
 
 	// --
 	/* -- Done -- */
 
-	#if 0
+#if 0
 	OHCI_DUMP_ED( hn, ed, TRUE );
-	#endif
+#endif
 
 	err = USB2Err_NoError;
 
-	handled	= FALSE;
+	handled = FALSE;
 
 bailout:
 
@@ -246,9 +247,9 @@ bailout:
 		ioreq->req_Public.io_Error = err;
 	}
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( handled );
+	return ( handled );
 }
 
 // --
