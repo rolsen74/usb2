@@ -12,170 +12,90 @@
 
 // --
 
-struct FS_ObjNode *_fs_Node_Locate_Rel(
-	struct FS_Struct *fs,
-	struct FS_ObjNode **parent,
-	struct FS_ObjLock *lock,
-	int32 follow_links,
-	int32 *res2,
-	STR name )
+struct FS_ObjNode *
+_fs_Node_Locate_Rel( struct FS_Struct *fs, int32 *res2, struct FS_ObjLock *lock, CONST_STRPTR name )
 {
-struct FS_ObjNode *retval;
-struct FS_ObjNode *dptr;
-U32 len;
+	struct FS_ObjNode *node;
 
-	MYINFO( "PTP-FS : _fs_Node_Locate_Rel" );
+	CONST_STRPTR end;
+	int32 error;
 
-	retval = NULL;
+	node = lock ? lock->Node : fs->fs_RootNode;
+	error = 0;
 
-	/*
-	**  Must handle the relative lock first. !!!
-	**  If lock is non-zero, use the lock node.
-	**  If lock is NULL, use the root dir node.
-	*/
-
-	if ( lock )
-	{
-		/* extract object node from lock */
-		dptr = lock->Node;
-	}
-	else
-	{
-		/* handle zero relative root locks here */
-		dptr = fs->fs_RootNode;
-	}
-
-	/*
-	**  This can't really happen, but check it anyway.
-	*/
-	
-	if ( ! dptr )
-	{
-		MYERROR( "PTP-FS : NULL Pointer" );
-
-		if ( res2 )
-		{
-			*res2 = ERROR_REQUIRED_ARG_MISSING;
-		}
-		goto bailout;
-	}
-
-	/*
-	**  This can't really happen either, but check it anyway.
-	*/
-	
 	if ( ! name )
 	{
-		MYERROR( "PTP-FS : NULL Pointer" );
+		name = "";
+	}
 
-		if ( res2 )
+	if ( ! Strnicmp( name, "PTP:", 4 ) )
+	{
+		name += 4;
+		node = fs->fs_RootNode;
+	}
+
+	while( node )
+	{
+		if ( ( node->on_CameraRoot ) && ( ! node->on_CameraRoot->on_Camera ) )
 		{
-			*res2 = ERROR_REQUIRED_ARG_MISSING;
+			error = ERROR_DEVICE_NOT_MOUNTED;
+			break;
 		}
-		goto bailout;
-	}
 
-	/*
-	**  If the name is an empty string ("").
-	**  We return the current relative node, REGARDLESS of type
-	**  because it can also be a file node.
-	*/
-
-	if ( name[0] == 0 )
-	{
-		retval = dptr;
-		goto bailout;
-	}
-
-	/*
-	**  Now, if we are going to search a directory for our named object,
-	**  we must make sure we are using a directory as the relative reference.
-	*/
-
-	if ( dptr->on_Type != FSO_TYPE_DIRECTORY )
-	{
-		MYERROR( "PTP-FS : Not a Directory Type" );
-
-		if ( res2 )
-		{
-			*res2 = ERROR_OBJECT_WRONG_TYPE;
-		}
-		goto bailout;
-	}
-
-	retval = (PTR) GetHead( & dptr->on_Content_List );
-	len = strlen( name );
-
-	while( retval )
-	{
-		if (( len == retval->on_NameLen ) && ( ! memcmp( name, retval->on_Name, len )))
+		if ( ! *name )
 		{
 			break;
 		}
-		else
+
+		if ( node->on_Type != FSO_TYPE_DIRECTORY )
 		{
-			retval = (PTR) GetSucc( (PTR) retval );
+			error = ERROR_OBJECT_WRONG_TYPE;
+			break;
 		}
-	}
 
-	if ( ! retval )
-	{
-		MYERROR( "PTP-FS : Object not found" );
-
-		if ( res2 )
+		if ( *name == '/' )
 		{
-			*res2 = ERROR_OBJECT_NOT_FOUND;
+			node = node->on_Parent_dir;
+			name++;
+			continue;
 		}
-		goto bailout;
-	}
 
-	/*
-	** Handle hard and soft links resolution.
-	*/
+		error = _fs_Node_Load( fs, node );
 
-	if ( follow_links )
-	{
-		if ( retval->on_Type & FSOF_LINK )
+		if ( error )
 		{
-			switch( retval->on_Type & FSO_TYPE_MASK )
-			{
-				case FSO_TYPE_SOFTLINK:
-				{
-					/* This error code is also required */
-
-					if ( res2 )
-					{
-						*res2 = ERROR_IS_SOFT_LINK;
-					}
-					
-					/* Must return NULL it's a softlink. */
-					retval = NULL;
-					break;
-				}
-
-				case FSO_TYPE_FILE:
-				case FSO_TYPE_DIRECTORY:
-				{
-					retval = retval->on_HardLink_Target;
-					break;
-				}
-
-				default:
-				{
-					break;
-				}
-			}
+			break;
 		}
+
+		end = strchr( name, '/' );
+
+		if ( ! end )
+		{
+			end = name + strlen( name );
+		}
+
+		node = _fs_Node_Find( node, name, end - name );
+
+		if ( ( node ) && ( node->on_Pending ) )
+		{
+			error = ERROR_OBJECT_IN_USE;
+			break;
+		}
+
+		name = *end ? end + 1 : end;
 	}
 
-bailout:
-
-	if ( parent )
+	if ( ( ! node ) && ( ! error ) )
 	{
-		*parent = dptr;
+		error = ERROR_OBJECT_NOT_FOUND;
 	}
 
-	return(	retval );
+	if ( res2 )
+	{
+		*res2 = error;
+	}
+
+	return ( error ? NULL : node );
 }
 
 // --
