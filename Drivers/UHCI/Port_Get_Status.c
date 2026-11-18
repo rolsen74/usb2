@@ -86,29 +86,8 @@ UHCI_Port_Get_Status ( struct USB2_HCDNode * hn, U32 port )
 	// UHCI root ports are permanently powered.
 	retval |= HUBF_Status_Power;
 
-#if 1
 #ifdef DO_DEBUG
-	{
-		TEXT buf[256];
-
-		snprintf ( buf, 255, "%s%s%s%s%s%s%s", ( retval & HUBF_Status_Connection ) ? "Current Connect Status, " : "",
-				   ( retval & HUBF_Status_Enable ) ? "Port Enable, " : "",
-				   ( retval & HUBF_Status_Suspend ) ? "Port Suspend, " : "",
-				   ( retval & HUBF_Status_Over_Current ) ? "Over Current active, " : "",
-				   ( retval & HUBF_Status_Reset ) ? "Port Reset, " : "", ( retval & HUBF_Status_Power ) ? "Port Power, " : "",
-				   ( retval & HUBF_Status_Low_Speed ) ? "Low Speed, " : "" );
-
-		USBDEBUG ( "%s", buf );
-
-		snprintf ( buf, 255, "%s%s%s%s%s", ( retval & HUBF_Chg_Connection ) ? "Connect Change, " : "",
-				   ( retval & HUBF_Chg_Enable ) ? "Port Enable Change, " : "",
-				   ( retval & HUBF_Chg_Suspend ) ? "Port Suspend Change, " : "",
-				   ( retval & HUBF_Chg_Over_Current ) ? "Over Current Change, " : "",
-				   ( retval & HUBF_Chg_Reset ) ? "Port Reset Change" : "" );
-
-		USBDEBUG ( "%s", buf );
-	}
-#endif
+	USBDEBUG ( "UHCI : Port status %08lx, change %08lx", retval & 0x0000ffff, retval & 0xffff0000 );
 #endif
 
 	return ( retval );
