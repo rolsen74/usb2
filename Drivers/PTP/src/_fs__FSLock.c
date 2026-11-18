@@ -12,12 +12,13 @@
 
 // --
 
-struct Lock *_fs__FSLock( struct FSVP *vp, int32 *res2, struct Lock *rel_ptr, CONST_STRPTR name, int32 mode )
+struct Lock *_fs__FSLock( struct FSVP *vp, LONG *res2, struct Lock *rel_ptr, const char *name, LONG mode )
 {
 struct FS_Struct *fs;
 struct FS_ObjNode *obj;
 struct FS_ObjLock *rel;
 PTR retval;
+S32 error;
 
 	MYINFO( "PTP-FS : _fs__FSLock '%s'", name );
 
@@ -27,12 +28,17 @@ PTR retval;
 
 	ObtainSemaphore( & fs->fs_Semaphore );
 
-	obj = _fs_Node_Locate_Rel( fs, res2, rel, name );
+	obj = _fs_Node_Locate_Rel( fs, & error, rel, (STR) name );
 	retval = NULL;
 
 	if ( obj )
 	{
-		retval = _fs_Lock_New_From_Node( fs, obj, res2, mode );
+		retval = _fs_Lock_New_From_Node( fs, obj, & error, mode );
+	}
+
+	if ( res2 )
+	{
+		*res2 = error;
 	}
 
 	ReleaseSemaphore( & fs->fs_Semaphore );
