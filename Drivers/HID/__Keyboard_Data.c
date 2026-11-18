@@ -68,7 +68,7 @@ U32 id;
 
 	while( un )
 	{
-		for( id = un->Min ; id <= un->Max ; idx++, id++ )
+		for( id = un->Min ; ( id <= un->Max ) && ( idx < bn->BitCount ) ; idx++, id++ )
 		{
 			switch( id )
 			{
