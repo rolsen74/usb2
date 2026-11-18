@@ -12,7 +12,7 @@
 
 // --
 
-struct FS_ObjNode *_fs_Node_CreateDir( struct FS_Struct *fs, int32 *res2, STR name )
+struct FS_ObjNode *_fs_Node_CreateDir( struct FS_Struct *fs, S32 *res2, STR name )
 {
 struct FS_ObjNode *node;
 S32 retval;
