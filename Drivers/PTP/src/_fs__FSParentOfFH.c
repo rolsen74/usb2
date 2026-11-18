@@ -12,12 +12,13 @@
 
 // --
 
-struct Lock *_fs__FSParentOfFH( struct FSVP *vp, int32 *res2, struct FileHandle *file )
+struct Lock *_fs__FSParentOfFH( struct FSVP *vp, LONG *res2, struct FileHandle *file )
 {
 struct FS_Struct *fs;
 struct FS_ObjLock *lock;
 struct FS_ObjNode *node;
 struct Lock *retval;
+S32 error;
 
 	MYINFO( "PTP-FS : _fs__FSParentOfFH" );
 
@@ -41,7 +42,12 @@ struct Lock *retval;
 
 				if ( node )
 				{
-					retval = (PTR) _fs_Lock_New_From_Node( fs, node, res2, SHARED_LOCK );
+					retval = (PTR) _fs_Lock_New_From_Node( fs, node, & error, SHARED_LOCK );
+
+					if ( res2 )
+					{
+						*res2 = error;
+					}
 				}
 			}
 		}
