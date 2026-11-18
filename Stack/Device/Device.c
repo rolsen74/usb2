@@ -39,6 +39,7 @@
 #include "_main_Ifc_Find.c"
 #include "_main_Ifc_Claim.c"
 #include "_main_Ifc_Declaim.c"
+#include "_main_Ifc_SetAlt.c"
 
 #include "_main_Reg_Register.c"
 #include "_main_Reg_Unregister.c"
@@ -49,6 +50,7 @@
 
 #include "_main_Notify_Add.c"
 #include "_main_Notify_Remove.c"
+#include "Notify_Function.c"
 
 // --
 
@@ -106,6 +108,7 @@ SEC_RODATA static const PTR main_v1_vectors[] =
 
 	(PTR) _main_Notify_Add,
 	(PTR) _main_Notify_Remove,
+	(PTR) _main_Ifc_SetAlt,
 
 	(PTR) -1
 };
