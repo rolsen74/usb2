@@ -16,6 +16,7 @@ int32 _fs_Lock_Free( struct FS_Struct *fs, struct FS_ObjLock *lock )
 {
 struct FS_ObjLock *parent;
 struct FS_ObjLock *next;
+struct FS_ObjNode *camera;
 S32 retval;
 
 	MYINFO( "PTP-FS : _fs_Lock_Free : %p", lock );
@@ -85,16 +86,20 @@ S32 retval;
 		parent->Lock.fl_Link = lock->Lock.fl_Link;
 	}
 
- 	/*
-	**  Do we need to update on this lock?
-	**  Must happen AFTER removing lock from list..
-	*/
+	_fs_FileCache_Close( lock );
 
-	if ( lock->Flags & LOCK_MODIFY )
+	camera = lock->Node->on_CameraRoot;
+
+	if ( lock->Node->on_Pending )
 	{
-		lock->Flags &= ~LOCK_MODIFY;
+		Remove( & lock->Node->on_Node );
 
-		_fs_Recursive_Change_Update( fs, lock->Node );
+		_fs_Node_Delete( fs, lock->Node );
+	}
+
+	if ( ( camera ) && ( ! --camera->on_References ) && ( ! camera->on_Camera ) )
+	{
+		_fs_Node_Delete( fs, camera );
 	}
 
 	/*
