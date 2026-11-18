@@ -119,7 +119,6 @@ S32 errcode;
 
 	IO_DO( ioreq );
 
-	usbbase->usb_IExec->Disable();
 	if (( ioreq->io_Error  == USB2Err_NoError )
 	&&	( ioreq->io_Actual == 0 ))
 	{
