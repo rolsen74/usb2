@@ -18,6 +18,16 @@ struct USB2_IORequest *usbio;
 struct PrtBuffer *pb;
 U32 ionr;
 
+	if ( unit->unit_Detached )
+	{
+		if ( ( unit->unit_Shutdown ) && ( ! unit->unit_USB_IOReq_ActiveCount ) )
+		{
+			unit->unit_Running = FALSE;
+		}
+
+		return;
+	}
+
 	while( TRUE )
 	{
 		USBERROR( "Printer : Buffer_Schedule : USB Active %ld : PAR Waiting %ld : BUF Waiting %ld : BUF Free %ld :",
