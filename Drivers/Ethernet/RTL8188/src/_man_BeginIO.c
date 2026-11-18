@@ -9,64 +9,53 @@
 // --
 
 #include "All.h"
+#include "Manager.h"
 
 // --
 
-static void _manager_BeginIO( struct DeviceManagerInterface *Self UNUSED, struct IORequest *ioreq )
+void
+_manager_BeginIO( struct DeviceManagerInterface *Self UNUSED, struct IORequest *ioreq )
 {
-struct EthernetUnit *unit;
+	struct EthernetUnit *unit;
 
-	USBDEBUG( "RTL8188 : _manager_BeginIO : IOReq %p", ioreq );
-
-	// Disable QUICK IO - we do not support that
 	ioreq->io_Flags &= ~IOF_QUICK;
-	ioreq->io_Error = 0;
+	ioreq->io_Message.mn_Node.ln_Type = NT_MESSAGE;
 
-//	ioreq->req_Public.io_Message.mn_Node.ln_Type = NT_MESSAGE;
-//	ioreq->req_Public.io_Flags	= 0;
-//	ioreq->req_Public.io_Error	= 0;
-//	ioreq->req_Public.io_Actual	= 0;
-
-	switch( ioreq->io_Command )
+	if ( ioreq->io_Command == NSCMD_DEVICEQUERY )
 	{
-		case /* 4000 */ NSCMD_DEVICEQUERY:
+		if ( ioreq->io_Message.mn_Length >= sizeof( struct IOStdReq ) )
 		{
 			_cmd_4000_NSCmd_DeviceQuery( (PTR) ioreq );
-			break;
+
+			return;
 		}
 
-		case /* 0003 */	CMD_WRITE:
-		{
-			unit = (PTR) ioreq->io_Unit;
-
-			if (( ! unit->unit_Shutdown ) && ( ! unit->unit_StartupComplete ))
-			{
-				Unit_Startup( unit );
-			}
-
-			if (( ! unit->unit_Shutdown ) && ( unit->unit_StartupComplete ))
-			{
-				PutMsg( unit->unit_ETH_Begin_MsgPort, (PTR) ioreq );
-			}
-			else
-			{
-				ioreq->io_Error = IOERR_UNITBUSY;
-				ReplyMsg( (PTR) ioreq );
-			}
-			break;
-		}
-
-		default:
-		{
-			USBDEBUG( "RTL8188 : _manager_BeginIO : Unknown Cmd ($%04lx)", (U32) ioreq->io_Command );
-
-			// Unknown Command
-			ioreq->io_Error = IOERR_NOCMD;
-
-			ReplyMsg( (PTR) ioreq );
-			break;
-		}
+		ioreq->io_Error = IOERR_BADLENGTH;
 	}
+	else if ( ( ioreq->io_Command == CMD_INVALID ) &&
+		( ioreq->io_Message.mn_Length < sizeof( struct IOSana2Req ) ) )
+	{
+		ioreq->io_Error = IOERR_NOCMD;
+	}
+	else if ( ioreq->io_Message.mn_Length < sizeof( struct IOSana2Req ) )
+	{
+		ioreq->io_Error = IOERR_BADLENGTH;
+	}
+	else
+	{
+		unit = (PTR) ioreq->io_Unit;
+
+		if ( unit )
+		{
+			Sana2BeginIO( unit, (PTR) ioreq );
+
+			return;
+		}
+
+		ioreq->io_Error = IOERR_UNITBUSY;
+	}
+
+	ReplyMsg( (PTR) ioreq );
 }
 
 // --
