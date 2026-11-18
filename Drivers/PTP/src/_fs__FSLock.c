@@ -27,11 +27,13 @@ PTR retval;
 
 	ObtainSemaphore( & fs->fs_Semaphore );
 
-	obj = _fs_Handle_Rel_Args( fs, rel, name );
+	obj = _fs_Node_Locate_Rel( fs, res2, rel, name );
+	retval = NULL;
 
-	retval = _fs_Lock_New_From_Node( fs, obj, res2, mode );
-
-	DebugPrintF( "New Lock : %p\n", retval );
+	if ( obj )
+	{
+		retval = _fs_Lock_New_From_Node( fs, obj, res2, mode );
+	}
 
 	ReleaseSemaphore( & fs->fs_Semaphore );
 
