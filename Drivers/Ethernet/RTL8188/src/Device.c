@@ -9,20 +9,7 @@
 // --
 
 #include "All.h"
-
-// --
-// -- Manager Interface
-
-#include "_man_Init.c"
-
-#include "_man_AbortIO.c"
-#include "_man_BeginIO.c"
-
-#include "_man_Obtain.c"
-#include "_man_Release.c"
-#include "_man_Expunge.c"
-#include "_man_Open.c"
-#include "_man_Close.c"
+#include "Manager.h"
 
 // --
 
