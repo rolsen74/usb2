@@ -40,7 +40,8 @@ __myProcess_1_Get_Config ( struct PrinterUnit * unit )
 
 	// --
 
-	filename = ASPrintf ( "%s/unit%ld", DEVNAME, unit->unit_UnitNr );
+	// Keep the existing path for per-unit settings.
+	filename = ASPrintf ( "usb2_printer.device/unit%ld", unit->unit_UnitNr );
 
 	if ( ! filename )
 	{

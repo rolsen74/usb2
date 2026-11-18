@@ -103,7 +103,7 @@ SRCS		+= src/Dot4.c
 
 CFLAGS		+= -Isrc -D__USE_INLINE__
 LDFLAGS	:= -nostartfiles -mcrt=newlib
-TARGET		:= usb2_printer.device
+TARGET		:= usb2printer.device
 
 ###########################################################################
 # Set Compiler
@@ -160,8 +160,11 @@ all: $(BINDIR)/$(TARGET)
 
 ###############################################################################
 
-$(BINDIR)/$(TARGET): $(OBJS)
+$(BINDIR)/$(TARGET): $(OBJS) | $(BINDIR)
 	$(CC) $(LDFLAGS) -o $(BINDIR)/$(TARGET) $(OBJS) $(LIBS) -Wl,--cref,-M,-Map=usb2.map
+
+$(BINDIR):
+	$(MKDIR) $(BINDIR)
 
 ###############################################################################
 

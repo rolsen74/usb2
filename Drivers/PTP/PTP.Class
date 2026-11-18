@@ -1,0 +1,4 @@
+TYPE Interface
+TITLE "Picture Transfer Protocol"
+DRIVER "PTP.Driver"
+CLASS 0x06

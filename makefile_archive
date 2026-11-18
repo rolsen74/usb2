@@ -7,13 +7,12 @@ BINDIR				:= $(ROOTDIR)/_Data
 
 all: build_all
 
+.PHONY: all build_all build_dir_tree build_stack build_printer build_video \
+	build_ptp build_serial build_analyzer build_archive
+
 ###########################################################################
 
-build_all: \
-	build_dir_tree \
-	build_stack \
-	build_printer \
-	build_archive
+build_all: build_archive
 	@echo "Done"
 
 ###########################################################################
@@ -23,35 +22,78 @@ build_dir_tree:
 	mkdir -p $(BINDIR)/usb2/Devs
 	mkdir -p $(BINDIR)/usb2/Libs/USB2
 	mkdir -p $(BINDIR)/usb2/Kickstart
+	mkdir -p $(BINDIR)/usb2/Tools
 
 ###########################################################################
 
-build_stack:
+build_stack: | build_dir_tree
 	@echo "Building Stack"
 	cd $(ROOTDIR) && \
-	make -f makefile clean && \
-	make -f makefile && \
-	make -f makefile strip && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	$(MAKE) -f makefile strip && \
 	cp bin/usb2.device $(BINDIR)/usb2/Kickstart
 	@echo "Stack done"
 
 ###########################################################################
 
-build_printer:
+build_printer: | build_dir_tree
 	@echo "Building Printer Driver"
 	cd $(ROOTDIR)/Drivers/Printer && \
-	make -f makefile USBTYPE=USB2 clean && \
-	make -f makefile USBTYPE=USB2 && \
-	make -f makefile USBTYPE=USB2 strip && \
-	cp bin/usb2_printer.device $(BINDIR)/usb2/Devs
+	$(MAKE) -f makefile USBTYPE=USB2 clean && \
+	$(MAKE) -f makefile USBTYPE=USB2 && \
+	$(MAKE) -f makefile USBTYPE=USB2 strip && \
+	cp bin/usb2printer.device $(BINDIR)/usb2/Devs
 	@echo "Printer done"
 
 ###########################################################################
 
-build_archive:
+build_video: | build_dir_tree
+	@echo "Building Video Driver"
+	cd $(ROOTDIR)/Drivers/Video && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	cp bin/Video.Driver Video.Class $(BINDIR)/usb2/Libs/USB2
+	@echo "Video done"
+
+###########################################################################
+
+build_ptp: | build_dir_tree
+	@echo "Building PTP Driver"
+	cd $(ROOTDIR)/Drivers/PTP && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	$(MAKE) -f makefile strip && \
+	cp bin/PTP.Driver PTP.Class $(BINDIR)/usb2/Libs/USB2
+	@echo "PTP done"
+
+###########################################################################
+
+build_serial: | build_dir_tree
+	@echo "Building PL2303 Serial Driver"
+	cd $(ROOTDIR)/Drivers/Serial/PL2303 && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	cp bin/PL2303.Driver PL2303.Class $(BINDIR)/usb2/Libs/USB2
+	@echo "PL2303 Serial done"
+
+###########################################################################
+
+build_analyzer: | build_dir_tree
+	@echo "Building USB2Analyzer"
+	cd $(ROOTDIR)/Programs/USB2Analyzer && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	$(MAKE) -f makefile strip && \
+	cp bin/USB2Analyzer $(BINDIR)/usb2/Tools
+	@echo "USB2Analyzer done"
+
+###########################################################################
+
+build_archive: build_stack build_printer build_video build_ptp build_serial build_analyzer
 	@echo "Building Archive"
 	@rm -f usb2.lha
-	lha a usb2.lha $(BINDIR)/usb2
+	cd "$(BINDIR)" && lha a "$(ROOTDIR)/usb2.lha" usb2
 	@echo "Building done"
 
 ###########################################################################

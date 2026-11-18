@@ -65,6 +65,47 @@ Mass-storage limitations:
 - The recent CD/DVD, floppy, media-change, and 64-bit paths build successfully
   but have not been verified with physical drives in this workspace.
 
+## USB Printers
+
+The [printer driver](Drivers/Printer/) exposes `usb2printer.device`. It
+supports the USB Printer Class unidirectional and bidirectional protocols,
+plus printing over the IEEE 1284.4 (DOT4) `PRINT` channel. DOT4 support
+has been cross-compiled and awaits physical printer testing.
+
+Set the device name to `usb2printer.device` in printer preferences or
+applications that reference the previous `usb2_printer.device` name. The
+driver still looks for per-unit settings under `usb2_printer.device/unitN`.
+
+## USB Video (Experimental)
+
+The external [Video driver](Drivers/Video/) matches USB Video Class (UVC)
+VideoStreaming interfaces (class `0x0E`, subclass `0x02`). It exposes frame
+capture through `usb2video.device` and supports MJPEG and raw YUY2 over bulk
+and isochronous IN endpoints. The driver selects a format and frame size
+from the camera's descriptors. Applications can use `VIDEO_CMD_QUERY` to
+retrieve the selected format and negotiated frame interval, then `CMD_READ`
+to capture one frame.
+
+```sh
+make -C Drivers/Video -j4
+make -C Drivers/Video/Test -j4
+```
+
+Install `Drivers/Video/bin/Video.Driver` and `Drivers/Video/Video.Class` in
+`Libs:USB2` on AmigaOS 4. Run `Drivers/Video/Test/VideoTest` on AmigaOS to
+capture one frame from unit 0. It saves MJPEG as `RAM:usbvideo.jpg` or raw
+YUY2 as `RAM:usbvideo.yuy2`.
+
+Isochronous capture requires the current stack. EHCI handles high-speed
+isochronous transfers and OHCI handles full-speed isochronous transfers.
+EHCI split isochronous transfers and SuperSpeed isochronous burst and Mult
+modes are unsupported.
+
+The stack, driver, and capture utility cross-compiled without warnings.
+Host tests covered UVC negotiation, bulk and isochronous frame assembly,
+packet-error recovery, and abort and detach cleanup. Capture with a physical
+webcam on AmigaOS 4 remains unverified.
+
 ## PL2303 Serial (Untested)
 
 The external PL2303 driver matches USB device `067b:2303` and exposes it as
@@ -91,6 +132,52 @@ build succeeds; operation with a physical adapter has not been tested.
 With the AmigaOS 4 cross-compiler installed, run `make -j4`. The default
 build enables UHCI, OHCI, EHCI, xHCI, HUB, HID, and MSD. To exclude xHCI,
 use `make DRV_XHCI=0 -j4`; its hardware validation is still pending.
+
+### Building the distribution archive
+
+With the AmigaOS 4 cross-compiler and `lha` installed, run the following
+from the repository root.
+
+```sh
+make -f makefile_archive -j4
+```
+
+The archive is written to `usb2.lha` in the repository root. Extracting it
+creates this directory tree.
+
+```text
+usb2/
+├── Kickstart/
+│   └── usb2.device
+├── Devs/
+│   └── usb2printer.device
+├── Libs/
+│   └── USB2/
+│       ├── PL2303.Class
+│       ├── PL2303.Driver
+│       ├── PTP.Class
+│       ├── PTP.Driver
+│       ├── Video.Class
+│       └── Video.Driver
+└── Tools/
+    └── USB2Analyzer
+```
+
+- **Core stack** — Copy `usb2.device` to `SYS:Kickstart/` and reference the
+  installed filename in your USB2 Kicklayout entry. The default build includes
+  the host controller, hub, HID, and mass-storage drivers.
+- **Printer** — Copy `usb2printer.device` to `DEVS:` and select that device in
+  your printer preferences.
+- **External class drivers** — Copy each `.Class` file together with its
+  matching `.Driver` file to `LIBS:USB2/`. The stack reads the `.Class`
+  files to match USB interfaces and load the corresponding drivers.
+  - `PL2303` exposes supported USB serial adapters through `usb2serial.device`.
+  - `PTP` provides Picture Transfer Protocol access to compatible digital cameras.
+  - `Video` exposes USB webcam capture through `usb2video.device`. Build
+    `VideoTest` separately using the commands in the USB Video section.
+- **USB2Analyzer** — Run it from the extracted `Tools/` directory after
+  booting with the USB2 stack. It displays host controllers, attached
+  devices, and their interfaces.
 
 ## Project Goals (Original)
 

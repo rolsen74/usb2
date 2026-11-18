@@ -13,7 +13,7 @@
 
 // --
 
-#define DEVNAME		"usb2_printer.device"
+#define DEVNAME		"usb2printer.device"
 
 #define VERSION		1
 #define REVISION	1
