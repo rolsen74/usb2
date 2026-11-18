@@ -12,8 +12,8 @@
 
 // --
 
-int32
-_fs__FSExamineDir( struct FSVP *vp, int32 *res2, struct PRIVATE_ExamineDirContext *context )
+LONG
+_fs__FSExamineDir( struct FSVP *vp, LONG *res2, struct PRIVATE_ExamineDirContext *context )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjLock *lock;
@@ -21,7 +21,7 @@ _fs__FSExamineDir( struct FSVP *vp, int32 *res2, struct PRIVATE_ExamineDirContex
 	struct FS_ObjNode *entry;
 	struct ExamineData *data;
 
-	int32 error;
+	S32 error;
 
 	if ( ! context )
 	{
