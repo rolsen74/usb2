@@ -19,6 +19,7 @@ struct DoBulkResult *dbr;
 struct MSDDevice *msddev;
 struct ExecIFace *IExec;
 enum PhaseStat stat;
+enum PhaseStat data_stat;
 U32 host_Tag;
 U32 csw_Tag;
 U32 residue;
@@ -52,6 +53,9 @@ S32 tries;
 
 	for( tries=0 ; tries<3 ; tries++ )
 	{
+		data_stat = PS_Okay;
+		dbs->dbs_Data_Actual = 0;
+
 		// Reset result struct for this attempt
 		if ( dbr )
 		{
@@ -61,6 +65,11 @@ S32 tries;
 			dbr->csw_Status		= 0;
 			dbr->csw_SigOK		= 0;
 			dbr->csw_TagOK		= 0;
+		}
+
+		if ( msddev->msddev_Detached )
+		{
+			break;
 		}
 
 		// Zero ID is invalid
@@ -76,6 +85,11 @@ S32 tries;
 
 		if ( stat != PS_Okay )
 		{
+			if ( msddev->msddev_Detached )
+			{
+				break;
+			}
+
 			IExec->DebugPrintF( "-- Doing another try : Try cnt %ld\n", tries );
 
 			MSD_DoBulk_Recovery( usbbase, msddisk );
@@ -88,7 +102,7 @@ S32 tries;
 		{
 //			IExec->DebugPrintF( "MSD_Bulk_Cmd_Data : Calling Function\n" );
 
-			stat =MSD_Bulk_Cmd_Data( usbbase, msddisk, dbs );
+			data_stat = MSD_Bulk_Cmd_Data( usbbase, msddisk, dbs );
 
 //			IExec->DebugPrintF( "MSD_Bulk_Cmd_Data : Stat %ld\n", stat );
 
@@ -105,7 +119,23 @@ S32 tries;
 
 		if (( stat != PS_Okay ) && ( stat != PS_Stall ))
 		{
+			if ( msddev->msddev_Detached )
+			{
+				break;
+			}
+
 			IExec->DebugPrintF( "-- Doing another try : Try cnt %ld\n", tries );
+
+			MSD_DoBulk_Recovery( usbbase, msddisk );
+			continue;
+		}
+
+		if ( data_stat == PS_Error )
+		{
+			if ( msddev->msddev_Detached )
+			{
+				break;
+			}
 
 			MSD_DoBulk_Recovery( usbbase, msddisk );
 			continue;
@@ -136,16 +166,6 @@ S32 tries;
 		residue	= LE_SWAP32( msddisk->msddisk_CSW.csw_DataResidue );
 		actual	= (( dbs->dbs_Data ) && ( dbs->dbs_Data_Length )) ? (( dbs->dbs_Data_Length > residue ) ? ( dbs->dbs_Data_Length - residue ) : 0 ) : 0 ;
 
-		if ( dbr )
-		{
-			dbr->csw_DataResidue= residue;
-			dbr->csw_DataActual	= actual;
-			dbr->csw_Valid		= TRUE;
-			dbr->csw_Status		= msddisk->msddisk_CSW.csw_Status;
-			dbr->csw_SigOK		= TRUE;
-			dbr->csw_TagOK		= TRUE;
-		}
-
 		// Residue sanity check
 		if ( residue > dbs->dbs_Data_Length )
 		{
@@ -155,8 +175,32 @@ S32 tries;
 			continue;
 		}
 
+		if ( actual != dbs->dbs_Data_Actual )
+		{
+			IExec->DebugPrintF( "Status: data count %lu differs from CSW count %lu\n", dbs->dbs_Data_Actual, actual );
+
+			MSD_DoBulk_Recovery( usbbase, msddisk );
+			continue;
+		}
+
+		if ( dbr )
+		{
+			dbr->csw_DataResidue = residue;
+			dbr->csw_DataActual = actual;
+			dbr->csw_Valid = TRUE;
+			dbr->csw_Status = msddisk->msddisk_CSW.csw_Status;
+			dbr->csw_SigOK = TRUE;
+			dbr->csw_TagOK = TRUE;
+		}
+
 		/**/ if ( msddisk->msddisk_CSW.csw_Status == MSDCSW_Status_CmdPassed )
 		{
+			if ( data_stat != PS_Okay )
+			{
+				MSD_DoBulk_Recovery( usbbase, msddisk );
+				continue;
+			}
+
 			// Optional strictness: enforce no-short unless SHORT_OK
 			if (( dbs->dbs_Data ) && ( dbs->dbs_Data_Length ) && !( dbs->dbs_Flags & DOBULKF_SHORT_OK ) && ( residue ))
 			{
