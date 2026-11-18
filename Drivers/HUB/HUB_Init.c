@@ -46,7 +46,7 @@
 
 SEC_CODE S32 HUB_Init( struct USBBase *usbbase, struct intern *in )
 {
-struct RealFunctionNode *fn;
+struct RealFunctionNode *fn UNUSED;
 //struct USB2_IORequest *ioreq;
 //struct USB2_SetupData *sd;
 struct Task *self;
@@ -126,6 +126,7 @@ S32 retval;
 	if ( ! HUB_GetDesc( usbbase, in ))
 	{
 		USBERROR( "HUB_Init                  : Error failed to get HUB Descriptor" );
+		goto bailout;
 	}
 
 	// --
@@ -143,7 +144,7 @@ S32 retval;
 	in->Res_Interrupt = ENDPOINTRES_OBTAINTAGS( in->Register,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
 		USB2Tag_EPRes_EPType, EPATT_Type_Interrupt,
-		USB2Tag_EPRes_BufferSize, ( in->Ports + 7 ) / 8,
+		USB2Tag_EPRes_BufferSize, ( in->Ports / 8 ) + 1,
 		TAG_END
 	);
 
