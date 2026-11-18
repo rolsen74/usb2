@@ -21,6 +21,7 @@ struct MSDDisk *msddisk;
 U64 blk_blocks;
 U64 blk_start;
 U32 actual;
+U32 protected;
 S32 reply;
 S32 stat;
 
@@ -29,6 +30,32 @@ S32 stat;
 
 	reply = TRUE;
 	msddisk = (PTR) ioreq->io_Unit;
+
+	if ( ( msddisk ) && ( msddisk->msddisk_Removable ) && ( ! msddisk->msddisk_MediaPresent ) )
+	{
+		MSD_Disk_MediaCheck( usbbase, msddisk );
+	}
+
+	if ( ( msddisk ) && ( ! msddisk->msddisk_MediaPresent ) )
+	{
+		ioreq->io_Actual = 0;
+		ioreq->io_Error = TDERR_DiskChanged;
+		goto bailout;
+	}
+
+	if ( ( msddisk ) && ( ! msddev->msddev_Detached ) && ( msddisk->msddisk_DeviceType == DG_CDROM ) )
+	{
+		ioreq->io_Actual = 0;
+		ioreq->io_Error = TDERR_WriteProt;
+		goto bailout;
+	}
+
+	if ( ( msddisk ) && ( ! msddev->msddev_Detached ) && ( msddisk->msddisk_Removable ) && ( MSD_SCSI_GetWriteProtect( usbbase, msddisk, & protected ) ) && ( protected ) )
+	{
+		ioreq->io_Actual = 0;
+		ioreq->io_Error = TDERR_WriteProt;
+		goto bailout;
+	}
 
 //	USBERROR( "MSD : io_Data .......... : %p", ioreq->io_Data );
 //	USBERROR( "MSD : io_Length ........ : %ld", ioreq->io_Length );
@@ -68,12 +95,12 @@ S32 stat;
 			USBERROR( "MSD : _cmd_0003_CMD_Write : io_Length Zero Length" );
 		}
 //		else if ( ! ioreq->io_Offset % msddisk->msddisk_Block_Size )
-		else if ( ! ( ioreq->io_Offset & msddisk->msddisk_Block_Mask ))
+		else if ( ioreq->io_Offset & msddisk->msddisk_Block_Mask )
 		{
 			USBERROR( "MSD : _cmd_0003_CMD_Write : invalid io_Offset (%lu)", ioreq->io_Offset );
 		}
 //		else if ( ! ioreq->io_Length % msddisk->msddisk_Block_Size )
-		else if ( ! ( ioreq->io_Length & msddisk->msddisk_Block_Mask ))
+		else if ( ioreq->io_Length & msddisk->msddisk_Block_Mask )
 		{
 			USBERROR( "MSD : _cmd_0003_CMD_Write : invalid io_Length (%lu)", ioreq->io_Length );
 		}
@@ -101,15 +128,14 @@ S32 stat;
 
 	actual = 0;
 
-	stat = MSD_SCSI_Write10( 
-		usbbase,
-		msddisk,
-		NULL,	// & dbr, 
-		blk_start,
-		blk_blocks,
-		ioreq->io_Data,
-		& actual
-	);
+	if ( ( blk_start > 0xffffffffULL ) || ( blk_blocks - 1 > 0xffffffffULL - blk_start ) )
+	{
+		stat = MSD_SCSI_Write16( usbbase, msddisk, NULL, blk_start, blk_blocks, ioreq->io_Data, & actual );
+	}
+	else
+	{
+		stat = MSD_SCSI_Write10( usbbase, msddisk, NULL, blk_start, blk_blocks, ioreq->io_Data, & actual );
+	}
 
 	// Report actual tranfered even on fail
 	ioreq->io_Actual = actual;
