@@ -110,6 +110,9 @@ U32 val;
 	}
 
 	// --
+	val = LE_SWAP32( ed->ed_headp );
+	ioreq->req_EndPoint->ep_DataToggle = ( val & OHCI_TOGGLECARRY ) ? TRUE : FALSE;
+
 	// its no longer active, but still controlled by HCD
 	ioreq->req_PublicStat = IORS_HCD;
 
