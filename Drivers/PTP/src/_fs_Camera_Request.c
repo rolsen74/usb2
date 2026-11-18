@@ -12,12 +12,12 @@
 
 // --
 
-int32
+S32
 _fs_Camera_Request( struct CameraInfoNode *camera, struct CommandMessage *request )
 {
 	struct MsgPort *reply;
 
-	int32 queued;
+	S32 queued;
 
 	if ( ! camera )
 	{
