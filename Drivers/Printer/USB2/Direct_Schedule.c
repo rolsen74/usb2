@@ -19,6 +19,25 @@ struct IOExtPar *pario;
 U32 ionr;
 U8 data[1];
 
+	if ( unit->unit_Detached )
+	{
+		while(( pario = (PTR) RemHead( unit->unit_PAR_IOReq_WaitingList )))
+		{
+			unit->unit_PAR_IOReq_WaitingCount--;
+			pario->IOPar.io_Actual = 0;
+			pario->IOPar.io_Error = ParErr_NotOpen;
+			pario->io_Status = 0;
+			ReplyMsg( (PTR) pario );
+		}
+
+		if ( ( unit->unit_Shutdown ) && ( ! unit->unit_USB_IOReq_ActiveCount ) )
+		{
+			unit->unit_Running = FALSE;
+		}
+
+		return;
+	}
+
 	while( TRUE )
 	{
 		USBERROR( "Printer : Direct_Schedule : USB Active %ld : PAR Waiting %ld : BUF Waiting %ld : BUF Free %ld :",
@@ -106,7 +125,7 @@ U8 data[1];
 		usbio->io_Command	= CMD_WRITE;
 		usbio->io_UserData	= pario;
 //		usbio->io_Offset	= 0;
-		usbio->io_Length	= pario->IOPar.io_Length;
+		usbio->io_Length	= ( pario->IOPar.io_Length == -1U ) ? strlen( pario->IOPar.io_Data ) : pario->IOPar.io_Length;
 		usbio->io_Data		= pario->IOPar.io_Data;
 
 		SendIO( (PTR) usbio );
