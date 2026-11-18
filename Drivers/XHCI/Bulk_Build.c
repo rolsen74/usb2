@@ -29,14 +29,16 @@ XHCI_Bulk_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	U32 length;
 	U32 packet;
 	U32 td_size;
+	S32 add_zero;
 
 	state = hn->hn_HCD.XHCI.State;
 	ep = req->req_EndPoint;
 	length = req->req_Public.io_Length;
 	packet = ep->ep_MaxPacketSize & 0x7ff;
 	direction = req->req_Public.io_Command == CMD_READ;
+	add_zero = ! direction && length && packet && req->req_Public.io_AddZeroPackets && ( length % packet == 0 );
 
-	if ( ( length > 254 * 4096 ) || ( ( length ) && ( ! req->req_Public.io_Data ) ) )
+	if ( ( length > ( 254U - add_zero ) * 4096 ) || ( ( length ) && ( ! req->req_Public.io_Data ) ) )
 	{
 		req->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
 
@@ -84,19 +86,13 @@ XHCI_Bulk_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		}
 	}
 
-	if ( ! length )
-	{
-		req->req_HCD.XHCI.Last_TRB = XHCI_Ring_Queue ( ring, 0, 0, 0,
-			XHCI_TRB_TYPE ( XHCI_TRB_NORMAL ) | XHCI_TRB_IOC );
-	}
-
 	for ( buffer = req->req_HCD.XHCI.Buffers; buffer; buffer = buffer->Next )
 	{
-		td_size = buffer->Next ? MIN ( 31, ( length + packet - 1 ) / packet -
-			( buffer->Offset + buffer->Length ) / packet ) : 0;
+		td_size = ( buffer->Next || add_zero ) ? MIN ( 31, ( length + packet - 1 ) / packet -
+			( buffer->Offset + buffer->Length ) / packet + add_zero ) : 0;
 		control = XHCI_TRB_TYPE ( XHCI_TRB_NORMAL ) | ( direction ? XHCI_TRB_ISP : 0 );
 
-		if ( buffer->Next )
+		if ( buffer->Next || add_zero )
 		{
 			control |= XHCI_TRB_CHAIN;
 		}
@@ -108,6 +104,12 @@ XHCI_Bulk_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		buffer->TRB_Physical = XHCI_Ring_Queue ( ring, buffer->Physical, 0,
 			buffer->Length | ( td_size << 17 ), control );
 		req->req_HCD.XHCI.Last_TRB = buffer->TRB_Physical;
+	}
+
+	if ( ! length || add_zero )
+	{
+		req->req_HCD.XHCI.Last_TRB = XHCI_Ring_Queue ( ring, 0, 0, 0,
+			XHCI_TRB_TYPE ( XHCI_TRB_NORMAL ) | XHCI_TRB_IOC );
 	}
 
 	return ( FALSE );
