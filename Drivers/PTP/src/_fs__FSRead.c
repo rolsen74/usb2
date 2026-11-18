@@ -12,8 +12,8 @@
 
 // --
 
-int32
-_fs__FSRead( struct FSVP *vp, int32 *res2, struct FileHandle *file, STR buffer, int32 count )
+LONG
+_fs__FSRead( struct FSVP *vp, LONG *res2, struct FileHandle *file, STR buffer, LONG count )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjLock *lock;
@@ -21,8 +21,8 @@ _fs__FSRead( struct FSVP *vp, int32 *res2, struct FileHandle *file, STR buffer, 
 	struct CameraInfoNode *camera;
 	struct CommandMessage request;
 
-	int32 result;
-	int32 error;
+	S32 result;
+	S32 error;
 
 	fs = vp->FSV.FSPrivate;
 	result = -1;
