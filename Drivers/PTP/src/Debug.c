@@ -19,23 +19,17 @@ static struct UtilityIFace *__IU = NULL;
 
 void VARARGS68K _MYDEBUG( U32 lvl UNUSED, STR fmt, ... )
 {
-struct UtilityIFace *IUtility;
-struct ExecIFace *IExec;
 struct Task *self;
 va_list ap;
 STR buf;
 
 	// lvl : 0 = Debug, 1 = Info, 2 = Error
 
-	IExec = (PTR)(*(struct ExecBase **)4)->MainInterface;
-
 	if ( ! __IU )
 	{
 		PTR base = OpenLibrary( "utility.library", 0 );
 		__IU = (PTR) GetInterface( base, "main", 1, NULL );
 	}
-
-	IUtility = __IU;
 
 	// ---
 
