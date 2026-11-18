@@ -12,7 +12,7 @@
 
 // --
 
-void Master_Free( struct M_Struct *ms )
+void Master_Free( struct M_Struct *ms UNUSED )
 {
 	MYERROR( "PTP : Master_Free : Enter" );
 }
