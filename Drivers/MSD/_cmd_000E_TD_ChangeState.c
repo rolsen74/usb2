@@ -14,8 +14,9 @@
 // --
 #if 1
 
-SEC_CODE S32 MSD_Cmd_000E_TD_ChangeState( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE S32 MSD_Cmd_000E_TD_ChangeState( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq )
 {
+struct MSDDisk *msddisk;
 S32 reply;
 
 	TASK_NAME_ENTER( "MSD : _cmd_000E_TD_ChangeState" );
@@ -27,8 +28,15 @@ S32 reply;
 				indicates there is no disk
 	#endif
 
-	// 0 = Attached, 1 = Removed
-	ioreq->io_Actual = ( msddev->msddev_Detached ) ? TRUE : FALSE ;
+	msddisk = (PTR) ioreq->io_Unit;
+
+	if ( ( msddisk ) && ( msddisk->msddisk_Removable ) && ( ! msddev->msddev_Detached ) )
+	{
+		MSD_Disk_MediaCheck( usbbase, msddisk );
+	}
+
+	// 0 = media present, 1 = no media
+	ioreq->io_Actual = ( ( msddev->msddev_Detached ) || ( ! msddisk ) || ( ! msddisk->msddisk_MediaPresent ) ) ? TRUE : FALSE;
 	ioreq->io_Error = 0;
 	reply = TRUE;
 
