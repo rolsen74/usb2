@@ -57,6 +57,7 @@ S32 err;
 	node->on_NameLen = strlen( name );
 
 	node->on_Type = FSO_TYPE_DIRECTORY;
+	node->on_Protection = EXDF_NO_WRITE | EXDF_NO_DELETE;
 
 	/* set creation date */
 	DateStamp( & node->on_Date );
