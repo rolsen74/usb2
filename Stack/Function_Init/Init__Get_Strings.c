@@ -82,7 +82,7 @@ static S32 __myGetString(
 	S32 *StringLen )
 {
 S32 retval;
-STR buf;
+U8 *buf;
 
 	retval = FALSE;
 
@@ -123,6 +123,12 @@ STR buf;
 	if ( buf[1] != DSCTYPE_String )
 	{
 		USBERROR( "__myGetString: Expected a String Descriptor (%ld != %ld)", buf[1], DSCTYPE_String );
+		goto bailout;
+	}
+
+	if ( ( buf[0] < 2 ) || ( buf[0] & 1 ) || ( buf[0] > ioreq->io_Actual ) )
+	{
+		USBERROR( "__myGetString: Invalid String Descriptor Length %lu", (U32) buf[0] );
 		goto bailout;
 	}
 
