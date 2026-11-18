@@ -76,7 +76,10 @@ U32 port;
 		#endif
 
 		// Turn the power on
-		HUB__Port_Feature_Set( usbbase, in, port, PORT_POWER );
+		if ( HUB__Port_Feature_Set( usbbase, in, port, PORT_POWER ) != USB2Err_NoError )
+		{
+			goto bailout;
+		}
 
 		#ifdef DO_DEBUG
 		// Again Get Stat.. but why, for debug?
@@ -89,8 +92,11 @@ U32 port;
 	delay = in->Function->fkt_HUBDescriptor->PwrOn2PwrGood * 2;
 
 	HUB_DELAY_MS( delay + USB_EXTRA_POWER_UP_TIME );
+	retval = TRUE;
 
 	// --
+
+	bailout:
 
 	return( retval );
 }
