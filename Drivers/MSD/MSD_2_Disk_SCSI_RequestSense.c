@@ -20,6 +20,7 @@ SEC_CODE S32 MSD_SCSI_RequestSense(
 	PTR mem,
 	U32 reqlen )
 {
+struct DoBulkResult result;
 struct DoBulkStruct dbs;
 S32 retval;
 U32 len;
@@ -29,20 +30,17 @@ U32 len;
 
 	retval = FALSE;
 
-	len = reqlen;
-
-	if (( len < 4 ) || ( 255 < len ))
+	if ( ( ! mem ) || ( reqlen < 4 ) )
 	{
-		len = MIN( reqlen, 255 );
-		len = MAX( len, 4 );
-
-		USBERROR( "MSD : MSD_SCSI_RequestSense : Clamping length %ld -> %ld", reqlen, len );
+		goto bailout;
 	}
+
+	len = MIN( reqlen, 255 );
 
 	// --
 	MEM_SET( & dbs, 0, sizeof( dbs ));
 	dbs.dbs_Flags			= DOBULKF_DIR_IN | DOBULKF_SHORT_OK;
-	dbs.dbs_Result			= dbr;
+	dbs.dbs_Result			= & result;
 	dbs.dbs_Command_Length	= 6;
 	dbs.dbs_Data			= mem;
 	dbs.dbs_Data_Length		= len;
@@ -70,15 +68,26 @@ U32 len;
 		goto bailout;
 	}
 
+	if ( result.csw_DataActual < 4 )
+	{
+		USBERROR( "MSD_SCSI_RequestSense() returned only %lu bytes", result.csw_DataActual );
+		goto bailout;
+	}
+
+	if ( dbr )
+	{
+		*dbr = result;
+	}
+
 	#if 1
 {
 	U8 *sense = (U8 *)mem;
 
-	if (( sense[0] & 0x7F) == 0x70 )
+	if ( ( result.csw_DataActual >= 14 ) && ( ( sense[0] & 0x7F ) == 0x70 ) )
 	{
-		U8 senseKey	= sense[2] & 0x0F;
-		U8 asc		= sense[12];
-		U8 ascq		= sense[13];
+		U8 senseKey UNUSED	= sense[2] & 0x0F;
+		U8 asc UNUSED		= sense[12];
+		U8 ascq UNUSED		= sense[13];
 
 		USBDEBUG( "MSD : Sense Key: $%02lx  ASC: $%02lx  ASCQ: $%02lx", senseKey, asc, ascq );
 	}
