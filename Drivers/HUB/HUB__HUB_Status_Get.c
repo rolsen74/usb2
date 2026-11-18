@@ -44,77 +44,42 @@
 
 // --
 
-SEC_CODE S32 HUB__HUB_Status_Get( struct USBBase *usbbase UNUSED, struct intern *in UNUSED, struct USB2_HUBStatus *stat UNUSED )
+SEC_CODE S32 HUB__HUB_Status_Get( struct USBBase *usbbase, struct intern *in, struct USB2_HUBStatus *stat )
 {
-	// --
+	struct USB2_IORequest *ioreq;
+	struct USB2_SetupData *sd;
 
-//	usbbase->usb_IExec->Disable();
-//	usbbase->usb_IExec->DebugPrintF( "\nHUB : Get HUB Status\n" );
-//	usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
-//	usbbase->usb_IExec->Enable();
+	ioreq = in->Res_Control->IORequests[0];
+	sd = in->Res_Control->SetupData;
 
-	// --
+	sd->RequestType = REQTYPE_Read | REQTYPE_Class | REQTYPE_Device;
+	sd->RequestCode = REQCODE_Get_Status;
+	sd->Value = 0;
+	sd->Index = 0;
+	sd->Length = LE_SWAP16( sizeof( *stat ) );
 
-	#if 0
-struct USB2_IORequest *ioreq;
-struct USB2_SetupData *sd;
-S32 errcode;
-
-//	  usbbase->usb_IExec->Disable();
-//	  usbbase->usb_IExec->DebugPrintF( "\nGet HUB Status\n" );
-//	  usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %ld\n", in->Function->fkt_Tier );
-//	  usbbase->usb_IExec->Enable();
-
-	ioreq	= in->Res_Control->IORequests[0];
-	sd		= in->Res_Control->SetupData;
-
-	sd->RequestType	= REQTYPE_Read | REQTYPE_Class | REQTYPE_Device;
-	sd->RequestCode	= REQCODE_Get_Status;
-	sd->Value		= LE_SWAP16( 0 );
-	sd->Index		= LE_SWAP16( 0 );
-	sd->Length		= LE_SWAP16( sizeof( struct USB2_HUBStatus ) );
-
-	ioreq->io_Command		= CMD_READ;
-	ioreq->io_Data			= stat;
-	ioreq->io_Length		= sizeof( struct USB2_HUBStatus );
-	ioreq->io_SetupData		= sd;
-	ioreq->io_SetupLength	= sizeof( struct USB2_SetupData );
+	ioreq->io_Command = CMD_READ;
+	ioreq->io_Data = stat;
+	ioreq->io_Length = sizeof( *stat );
+	ioreq->io_SetupData = sd;
+	ioreq->io_SetupLength = sizeof( *sd );
 
 	IO_DO( ioreq );
 
-	if (( ioreq->io_Error  == USB2Err_NoError )
-	&&	( ioreq->io_Actual == sizeof( struct USB2_HUBStatus )))
+	if ( ioreq->io_Error != USB2Err_NoError )
 	{
-		stat->wHubStatus = LE_SWAP16( stat->wHubStatus );
-		stat->wHubChange = LE_SWAP16( stat->wHubChange );
-
-		USBDEBUG( "HUBStatus 0x%04lx", stat->wHubStatus );
-		USBDEBUG( "HUBChange 0x%04lx", stat->wHubChange );
-
-//		  usbbase->usb_IExec->Disable();
-//		  usbbase->usb_IExec->DebugPrintF( "\nGet HUB Status Success\n" );
-//		  usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
-//		  usbbase->usb_IExec->DebugPrintF( "HUB Status : 0x%04lx\n", stat->wHubStatus );
-//		  usbbase->usb_IExec->DebugPrintF( "HUB Change : 0x%04lx\n", stat->wHubChange );
-//		  usbbase->usb_IExec->Enable();
-
-		errcode = USB2Err_NoError;
-	}
-	else
-	{
-		stat->wHubStatus = 0;
-		stat->wHubChange = 0;
-
-//		  usbbase->usb_IExec->Disable();
-//		  usbbase->usb_IExec->DebugPrintF( "\nGet HUB Status Failed\n" );
-//		  usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %ld\n", in->Function->fkt_Tier );
-//		  usbbase->usb_IExec->Enable();
-
-		errcode = -1;
+		return ( ioreq->io_Error );
 	}
 
-	return( errcode );
-	#endif
+	if ( ioreq->io_Actual != sizeof( *stat ) )
+	{
+		return ( USB2Err_Host_RuntPacket );
+	}
 
-	return( -1 );
+	stat->wHubStatus = LE_SWAP16( stat->wHubStatus );
+	stat->wHubChange = LE_SWAP16( stat->wHubChange );
+
+	return ( USB2Err_NoError );
 }
+
+// --
