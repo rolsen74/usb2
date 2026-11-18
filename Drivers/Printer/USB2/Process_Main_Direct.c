@@ -73,10 +73,10 @@ U32 ionr;
 			{
 				USBERROR( "__myProcess_Main_Direct : USB2Err_NoError" );
 				pario->IOPar.io_Actual = usbio->io_Actual;
-				pario->IOPar.io_Error = 0;
+				pario->IOPar.io_Error = ( usbio->io_Actual == usbio->io_Length ) ? 0 : ParErr_LineErr;
 				pario->io_Status = 0;
 
-				if (( usbio->io_Data ) &&  ( usbio->io_Actual > 0 ))
+				if ( ( usbio->io_Data ) && ( usbio->io_Actual > 0 ) && ( usbio->io_Actual <= usbio->io_Length ) )
 				{
 					U8 *buf = usbio->io_Data;
 					U32 off = usbio->io_Actual-1;
@@ -100,9 +100,14 @@ U32 ionr;
 			{
 				USBERROR( "__myProcess_Main_Direct : Destalling" );
 
+				pario->IOPar.io_Actual = usbio->io_Actual;
+				pario->IOPar.io_Error = ParErr_LineErr;
+				pario->io_Status = 0;
+
 				if ( ! USB2_EPRes_Destall( unit->unit_Bulk_Tx_Resource ))
 				{
 					unit->unit_Detached = TRUE;
+					pario->IOPar.io_Error = ParErr_NotOpen;
 				}
 
 				break;
@@ -137,8 +142,5 @@ U32 ionr;
 		AddTail( unit->unit_USB_IOReq_FreeList, (PTR) usbio );
 	}
 
-	if ( ! unit->unit_Detached )
-	{
-		Direct_Schedule( unit );
-	}
+	Direct_Schedule( unit );
 }
