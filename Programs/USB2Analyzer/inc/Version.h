@@ -17,13 +17,13 @@
 
 // --
 
-#define PRGNAME		"USB2Analyzer"
-#define VERSION		1
-#define REVISION	1
-#define DATE		"08.3.2026"		// dd.mm.yyyy
-#define VERS		PRGNAME " 1.1"
-#define VSTRING		PRGNAME " 1.1 (" DATE ")\r\n"
-#define VERSTAG		"\0$VER: " PRGNAME " 1.1 (" DATE ")"
+#define PRGNAME	 "USB2Analyzer"
+#define VERSION	 1
+#define REVISION 1
+#define DATE	 "17.11.2026" // dd.mm.yyyy
+#define VERS	 PRGNAME " 1.1"
+#define VSTRING	 PRGNAME " 1.1 (" DATE ")\r\n"
+#define VERSTAG	 "\0$VER: " PRGNAME " 1.1 (" DATE ")"
 
 // --
 
