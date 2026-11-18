@@ -103,15 +103,13 @@ S32 stat;
 		// --
 		// Check Interface
 
-//		if ( ! IUSB2 )
-		{
-			IUSB2 = (PTR) GetInterface( (PTR) USB2Base, "main", 1, NULL );
+		IUSB2 = (PTR) GetInterface( (PTR) USB2Base, "main", 1, NULL );
 
-			if ( ! IUSB2 )
-			{
-				USBERROR( "RTL8188 : Error getting USB2 Interface" );
-				goto bailout;
-			}
+		if ( ! IUSB2 )
+		{
+			USBERROR( "RTL8188 : Error getting USB2 Interface" );
+
+			goto bailout;
 		}
 	}
 
