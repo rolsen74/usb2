@@ -49,69 +49,70 @@
 
 // --
 
-SEC_CODE S32 OHCI_Get_8kBuffer( struct USB2_HCDNode *hn, struct OHCI_TD *td, PTR data, U32 len )
+SEC_CODE S32
+OHCI_Get_8kBuffer ( struct USB2_HCDNode * hn, struct OHCI_TD * td, PTR data, U32 len )
 {
-S32 retval;
-U32 phy;
-U8 *mem;
+	S32	 retval;
+	U32	 phy;
+	U8 * mem;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "OHCI : OHCI_Get_8kBuffer" );
+	struct USBBase * usbbase = hn->hn_USBBase;
+	TASK_NAME_ENTER ( "OHCI : OHCI_Get_8kBuffer" );
 
 	retval = FALSE;
 
 	// --
 
-	mem = MEMORY_ALLOC( MEMID_HCD_8k, FALSE );
+	mem = MEMORY_ALLOC ( MEMID_HCD_8k, FALSE );
 
 	if ( ! mem )
 	{
-		USBERROR( "OHCI_Get_8kBuffer : Error allocating memory" );
+		USBERROR ( "OHCI_Get_8kBuffer : Error allocating memory" );
 		goto bailout;
 	}
 
-	phy = ((struct Mem_FreeNode *)mem)->mfn_Addr;
-//	ed  = (struct OHCI_ED *)mem;
+	phy = ( (struct Mem_FreeNode *)mem )->mfn_Addr;
+	//	ed  = (struct OHCI_ED *)mem;
 
-	#ifdef DO_PANIC
+#ifdef DO_PANIC
 
 	if ( phy == 0 )
 	{
-		USBPANIC( "Error PhyAddress is Zero (8k %p)", mem );
+		USBPANIC ( "Error PhyAddress is Zero (8k %p)", mem );
 	}
 
 	if ( phy & 0xf )
 	{
-		USBPANIC( "Bad Alignment 0x%08lx", phy );
+		USBPANIC ( "Bad Alignment 0x%08lx", phy );
 	}
 
 	if ( len > 2 * 4096 )
 	{
-		USBPANIC( "Buffer overflow ( len : %ld )", len );
+		USBPANIC ( "Buffer overflow ( len : %ld )", len );
 	}
-	
-	#endif
 
-	#if 0
+#endif
+
+#if 0
 	if (( hn->hn_Is_ISP1561 ) && ( len < 32 ))
 	{
 		phy += 32;
 		mem += 32;
 	}
-	#endif
+#endif
 
 	/*
 	** Init Transfer Descriptor.
 	*/
 
-    if ( td )
-    {
-		td->td_cbp				= LE_SWAP32( phy );
-		td->td_be				= LE_SWAP32( phy + len - 1 );
-		td->ptd_buffer_virt		= mem;
-		td->ptd_buffer_phy		= phy;
-		td->ptd_buffer_size		= len;
-    }
+	if ( td )
+	{
+		td->td_cbp			= LE_SWAP32 ( phy );
+		td->td_be			= LE_SWAP32 ( phy + len - 1 );
+		td->ptd_buffer_virt = mem;
+		td->ptd_buffer_phy	= phy;
+		td->ptd_buffer_size = len;
+	}
 
 	if ( len )
 	{
@@ -119,21 +120,23 @@ U8 *mem;
 		{
 			// Send command
 			// copy src, dest, len
-			MEM_COPY( data, mem, len );
+			MEM_COPY ( data, mem, len );
 		}
-		#ifdef DO_DEBUG
+#ifdef DO_DEBUG
 		else
 		{
-			MEM_SET( mem, 0xac, 2 * 4096 );
+			MEM_SET ( mem, 0xac, 2 * 4096 );
 		}
-		#endif
+#endif
 	}
 
 	retval = TRUE;
 
 bailout:
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( retval );
+	return ( retval );
 }
+
+// --
