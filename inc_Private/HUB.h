@@ -38,7 +38,7 @@ struct myHUB_Cfg
 //#define REQCODE_Reset_TT			0x09
 //#define REQCODE_Get_TT_State		0x0a
 //#define REQCODE_Stop_TT			0x0b
-//#define REQCODE_Set_Depth			0x0c
+#define REQCODE_Set_Depth			0x0c
 
 //--#define USBD_RESTART_MAX 		20
 #define DSCTYPE_HUB					0x29
@@ -59,6 +59,7 @@ struct myHUB_Cfg
 #define HUBF_Status_High_Speed			0x0080U
 #define HUBF_Status_Test				0x0100U
 #define HUBF_Status_Indicator			0x0200U
+#define HUBF_Status_Super_Speed			0x8000U
 
 // Change Bits
 #define HUBF_Chg_Connection				0x0400U
@@ -115,7 +116,10 @@ enum
 
 	// Optional or EHCI-specific
 	PORT_TEST				= 21,	// For test mode (per EHCI spec)
-	PORT_INDICATOR			= 22	// Port status LEDs (optional)
+	PORT_INDICATOR			= 22,	// Port status LEDs (optional)
+	PORT_CLR_LINK_STATE		= 25,
+	PORT_CLR_CONFIG_ERROR		= 26,
+	PORT_CLR_BH_RESET		= 29
 };
 
 struct USB2_HUBStatus
