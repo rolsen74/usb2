@@ -115,7 +115,6 @@ S32 err;
 			usbbase->usb_IExec->Enable();
 			#endif
 
-			struct RealFunctionNode *fn = in->PortFunctions[port];
 //			usbbase->usb_IExec->DebugPrintF( "HUB : Removing Device : FN    %p : Port #%ld : Class %ld\n", fn, port, fn->fkt_Class );
 
 			HUB__Port_Function_Rem( usbbase, in, port );
@@ -137,7 +136,6 @@ S32 err;
 			}
 			else
 			{
-				struct RealFunctionNode *fn = in->PortFunctions[port];
 //				usbbase->usb_IExec->DebugPrintF( "HUB : Added Device : FN    %p : Port #%ld : Class %ld\n", fn, port, fn->fkt_Class );
 			}
 		}
@@ -149,19 +147,19 @@ S32 err;
 	{
 		#ifdef DO_INFO
 		usbbase->usb_IExec->Disable();
-		usbbase->usb_IExec->DebugPrintF( "\nHUB : Clearing Enable Change (todo)\n" );
+		usbbase->usb_IExec->DebugPrintF( "\nHUB : Clearing Enable Change\n" );
 		usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
 		usbbase->usb_IExec->DebugPrintF( "Port        : %lu\n", port );
 		usbbase->usb_IExec->Enable();
 		#endif
 
-//		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_ENABLE );
-//
-//		if ( err != USB2Err_NoError )
-//		{
-//			USBDEBUG( "Error clearing Port Enable (%ld)", err );
-//			goto bailout;
-//		}
+		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_ENABLE );
+
+		if ( err != USB2Err_NoError )
+		{
+			USBDEBUG( "Error clearing Port Enable (%ld)", err );
+			goto bailout;
+		}
 	}
 
 	// -- Handle Port Suspend
@@ -170,19 +168,19 @@ S32 err;
 	{
 		#ifdef DO_INFO
 		usbbase->usb_IExec->Disable();
-		usbbase->usb_IExec->DebugPrintF( "\nHUB : Clearing Suspend Change (todo)\n" );
+		usbbase->usb_IExec->DebugPrintF( "\nHUB : Clearing Suspend Change\n" );
 		usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
 		usbbase->usb_IExec->DebugPrintF( "Port        : %lu\n", port );
 		usbbase->usb_IExec->Enable();
 		#endif
 
-//		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_SUSPEND );
-//
-//		if ( err != USB2Err_NoError )
-//		{
-//			USBDEBUG( "Error clearing Port Suspend (%ld)", err );
-//			goto bailout;
-//		}
+		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_SUSPEND );
+
+		if ( err != USB2Err_NoError )
+		{
+			USBDEBUG( "Error clearing Port Suspend (%ld)", err );
+			goto bailout;
+		}
 	}
 
 	// -- Handle Port Over Current
@@ -191,19 +189,19 @@ S32 err;
 	{
 		#ifdef DO_INFO
 		usbbase->usb_IExec->Disable();
-		usbbase->usb_IExec->DebugPrintF( "\nHUB : Clearing OverCurrent Change (todo)\n" );
+		usbbase->usb_IExec->DebugPrintF( "\nHUB : Clearing OverCurrent Change\n" );
 		usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
 		usbbase->usb_IExec->DebugPrintF( "Port        : %lu\n", port );
 		usbbase->usb_IExec->Enable();
 		#endif
 
-//		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_OVER_CURRENT );
-//
-//		if ( err != USB2Err_NoError )
-//		{
-//			USBDEBUG( "Error clearing Port OverCurrent (%ld)", err );
-//			goto bailout;
-//		}
+		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_OVER_CURRENT );
+
+		if ( err != USB2Err_NoError )
+		{
+			USBDEBUG( "Error clearing Port OverCurrent (%ld)", err );
+			goto bailout;
+		}
 	}
 
 	// -- Handle Port Reset
@@ -212,19 +210,52 @@ S32 err;
 	{
 		#ifdef DO_INFO
 		usbbase->usb_IExec->Disable();
-		usbbase->usb_IExec->DebugPrintF( "\nHUB : Clearing Reset Change (todo)\n" );
+		usbbase->usb_IExec->DebugPrintF( "\nHUB : Clearing Reset Change\n" );
 		usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
 		usbbase->usb_IExec->DebugPrintF( "Port        : %lu\n", port );
 		usbbase->usb_IExec->Enable();
 		#endif
 
-//		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_RESET );
-//
-//		if ( err != USB2Err_NoError )
-//		{
-//			USBDEBUG( "Error clearing Port Reset (%ld)", err );
-//			goto bailout;
-//		}
+		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_RESET );
+
+		if ( err != USB2Err_NoError )
+		{
+			USBDEBUG( "Error clearing Port Reset (%ld)", err );
+			goto bailout;
+		}
+	}
+
+	if ( in->Function->fkt_Speed >= USBSPEED_Super )
+	{
+		if ( stat.wPortChange & PORTCHGF_BH_PORT_RESET )
+		{
+			err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_BH_RESET );
+
+			if ( err != USB2Err_NoError )
+			{
+				goto bailout;
+			}
+		}
+
+		if ( stat.wPortChange & PORTCHGF_PORT_LINK_STATE )
+		{
+			err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_LINK_STATE );
+
+			if ( err != USB2Err_NoError )
+			{
+				goto bailout;
+			}
+		}
+
+		if ( stat.wPortChange & PORTCHGF_PORT_CONFIG_ERROR )
+		{
+			err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_CONFIG_ERROR );
+
+			if ( err != USB2Err_NoError )
+			{
+				goto bailout;
+			}
+		}
 	}
 
 	// --
