@@ -124,7 +124,7 @@ S32 Main_BuildWindow( void )
 {
 S32 retval;
 
-	retval = TRUE;
+	retval = FALSE;
 
 	DeviceTreeColInfo = AllocLBColumnInfo( 2,
 		LBCIA_Column, 0,
@@ -315,6 +315,14 @@ PTR node;
 		Main_WinObject = NULL;
 	}
 
+	FreeListBrowserList( & DeviceTreeGUIList );
+
+	if ( DeviceTreeColInfo )
+	{
+		FreeLBColumnInfo( DeviceTreeColInfo );
+		DeviceTreeColInfo = NULL;
+	}
+
 //	if ( DeviceTreeUSBList )
 	{
 		while(( node = RemHead( & DeviceTreeUSBList )))
@@ -470,7 +478,7 @@ char namebuf[256];
 	ShowAllListBrowserChildren( & DeviceTreeGUIList );
 
 	RefreshSetGadgetAttrs( (PTR) Main_Objects[ GADMAINID_DeviceTree ], Main_WindowAdr, NULL,
-		LISTBROWSER_Labels, DeviceTreeGUIList,
+		LISTBROWSER_Labels, & DeviceTreeGUIList,
 		TAG_END
 	);
 }
@@ -617,7 +625,7 @@ U32 cnt;
 
 		if ( n->IfcDesc )
 		{
-			GetClassName(
+			clsstring = GetClassName(
 				n->IfcDesc->InterfaceClass,
 				n->IfcDesc->InterfaceSubClass,
 				n->IfcDesc->InterfaceProtocol
