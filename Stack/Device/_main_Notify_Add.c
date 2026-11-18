@@ -137,7 +137,7 @@ U32 hcdid;
 	{
 		fn = n->un_Data;
 
-		if (( fn ) && ( ! fn->fkt_Detach ))
+		if (( fn ) && ( fn->fkt_Initialized ) && ( ! fn->fkt_Detach ))
 		{
 			msg = MEMORY_ALLOC( MEMID_NotifyMessage, TRUE );
 
@@ -197,7 +197,7 @@ struct USB2_Node *n;
 	{
 		fn = n->un_Data;
 
-		if (( fn ) && ( ! fn->fkt_Detach ))
+		if (( fn ) && ( fn->fkt_Initialized ) && ( ! fn->fkt_Detach ))
 		{
 			cn = fn->fkt_Config_Active;
 
