@@ -12,8 +12,8 @@
 
 // --
 
-int32
-_fs__FSDeviceInfoData( struct FSVP *vp, int32 *res2, struct InfoData *info )
+LONG
+_fs__FSDeviceInfoData( struct FSVP *vp, LONG *res2, struct InfoData *info )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjNode *root;
