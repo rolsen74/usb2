@@ -30,6 +30,7 @@ struct USB_Command *cmd;
 	else
 	{
 		us->us_CmdListCnt--;
+		memset( cmd, 0, sizeof( struct USB_Command ) );
 	}
 
 	return( cmd );
