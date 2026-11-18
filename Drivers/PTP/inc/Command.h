@@ -54,7 +54,7 @@ struct CommandMessage
 	S32						cm_SendData;
 	S32						cm_Allocate;
 	S32						cm_WantData;
-	int32					cm_Error;
+	S32					cm_Error;
 };
 
 // --
