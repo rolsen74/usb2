@@ -9,5 +9,33 @@
 // --
 
 #include "All.h"
+#include "Firmware.h"
+#include "Commands.h"
+#include "Radio.h"
+
+// --
+
+void
+Cmd_Online( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
+{
+	if ( ! unit->unit_Configured )
+	{
+		ioreq->ios2_Req.io_Error = S2ERR_BAD_STATE;
+		ioreq->ios2_WireError = S2WERR_NOT_CONFIGURED;
+	}
+	else if ( ( ! unit->unit_TxReady ) || ( ! unit->unit_AssocID ) )
+	{
+		ioreq->ios2_Req.io_Error = S2ERR_BAD_STATE;
+		ioreq->ios2_WireError = S2WERR_UNIT_DISCONNECTED;
+	}
+	else if ( ! unit->unit_Online )
+	{
+		unit->unit_Online = TRUE;
+
+		RTL8188EU_SubmitRX( unit );
+
+		SignalSana2Event( unit, S2EVENT_ONLINE );
+	}
+}
 
 // --
