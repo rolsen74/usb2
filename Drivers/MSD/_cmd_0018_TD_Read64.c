@@ -21,7 +21,6 @@ struct MSDDisk *msddisk;
 U64 blk_blocks;
 U64 blk_start;
 U32 blk_shift;
-U32 blk_size;
 U32 blk_mask;
 U64 offset;
 U64 length;
@@ -34,6 +33,18 @@ S32 stat;
 
 	reply = TRUE;
 	msddisk = (PTR) ioreq->io_Unit;
+
+	if ( ( msddisk ) && ( msddisk->msddisk_Removable ) && ( ! msddisk->msddisk_MediaPresent ) )
+	{
+		MSD_Disk_MediaCheck( usbbase, msddisk );
+	}
+
+	if ( ( msddisk ) && ( ! msddisk->msddisk_MediaPresent ) )
+	{
+		ioreq->io_Actual = 0;
+		ioreq->io_Error = TDERR_DiskChanged;
+		goto bailout;
+	}
 
 //	USBERROR( "MSD : io_Data .......... : %p", ioreq->io_Data );
 //	USBERROR( "MSD : io_Length ........ : %ld", ioreq->io_Length );
@@ -76,7 +87,6 @@ S32 stat;
 
 	// --
 
-	blk_size	= msddisk->msddisk_Block_Size;
 	blk_mask	= msddisk->msddisk_Block_Mask;
 	blk_shift	= msddisk->msddisk_Block_Shift;
 	offset		= (( (U64) ioreq->io_Actual << 32 ) | ( (U64) ioreq->io_Offset << 0 ));
@@ -88,7 +98,7 @@ S32 stat;
 //	if (( offset % blk_size ) || ( length % blk_size ))
 	if (( offset & blk_mask ) || ( length & blk_mask ))
 	{
-		USBERROR( "MSD : TD_Read64 : Unaligned request (off=%llu len=%lu bs=%lu)", offset, length, blk_size );
+		USBERROR( "MSD : TD_Read64 : Unaligned request (off=%llu len=%lu bs=%lu)", offset, length, msddisk->msddisk_Block_Size );
 		ioreq->io_Error = IOERR_BADLENGTH;
 		goto bailout;
 	}
@@ -100,7 +110,7 @@ S32 stat;
 //	blk_blocks	= length / blk_size;
 	blk_blocks	= length >> blk_shift;
 
-	if (( blk_start + blk_blocks ) > ( msddisk->msddisk_TotalBlocks ))
+	if ( ( blk_start >= msddisk->msddisk_TotalBlocks ) || ( blk_blocks > msddisk->msddisk_TotalBlocks - blk_start ) )
 	{
 		USBERROR( "MSD : TD_Read64 : OOB" );
 		ioreq->io_Error = IOERR_BADLENGTH;
@@ -113,7 +123,8 @@ S32 stat;
 	actual = 0;
 
 	if (( blk_start  > 0xFFFFFFFFULL )
-	||	( blk_blocks > 0x0000FFFFUL ))
+	||	( blk_blocks > 0x0000FFFFUL )
+	||	( blk_blocks - 1 > 0xFFFFFFFFULL - blk_start ))
 	{
 		USBERROR( "MSD : TD_Read64 : Using MSD_SCSI_Read16" );
 
