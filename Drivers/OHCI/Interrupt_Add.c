@@ -56,7 +56,7 @@ struct OHCI_ED *new;
 struct OHCI_ED *ed;
 U32 slot;
 		
-	struct USBBase *usbbase = hn->hn_USBBase;
+	struct USBBase *usbbase UNUSED = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Interrupt_Add" );
 
 	// -- Find Last Entry
