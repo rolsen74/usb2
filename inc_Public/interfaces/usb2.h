@@ -48,6 +48,8 @@ struct USB2IFace
 
 	PTR								APICALL (*USB2_Notify_Add)(struct USB2IFace *Self, U32 type, struct MsgPort *mp );
 	void							APICALL (*USB2_Notify_Remove)(struct USB2IFace *Self, PTR notify );
+	// Select an owned interface's alternate setting and update its active endpoints.
+	S32								APICALL (*USB2_Ifc_SetAlt)(struct USB2IFace *Self, struct USB2_Register *reg, struct USB2_Interface *ifc, U32 alt );
 };
 
 /***************************************************************************/
