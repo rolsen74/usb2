@@ -13,11 +13,11 @@
 // --
 
 static U16
-ObjectFormat( CONST_STRPTR name )
+ObjectFormat( STR name )
 {
 	static const struct
 	{
-		CONST_STRPTR Extension;
+		STR Extension;
 		U16 Format;
 	} formats[] =
 	{
@@ -28,7 +28,7 @@ ObjectFormat( CONST_STRPTR name )
 		{ "mpeg", 0x300b },
 	};
 
-	CONST_STRPTR extension;
+	STR extension;
 	U32 length;
 	U32 index;
 
@@ -55,7 +55,7 @@ ObjectFormat( CONST_STRPTR name )
 
 // --
 
-int32
+S32
 _fs_File_Upload( struct FS_ObjLock *lock )
 {
 	struct FS_ObjNode *node;
@@ -68,7 +68,7 @@ _fs_File_Upload( struct FS_ObjLock *lock )
 	U32 index;
 	U32 size;
 	U16 format;
-	int32 error;
+	S32 error;
 	S32 closed;
 
 	if ( lock->WriteError )
