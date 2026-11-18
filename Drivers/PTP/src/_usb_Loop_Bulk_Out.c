@@ -28,7 +28,7 @@ struct USB_Command *cmd;
 			break;
 		}
 
-		us->us_Errors_Int++;
+		us->us_Errors_Bulk++;
 
 		/**/ if ( ioreq->io_Error == USB2Err_Device_Detached )
 		{
@@ -41,12 +41,19 @@ struct USB_Command *cmd;
 			MYINFO( "PTP-USB : USB2Err_Host_Stall" );
 			USB2_EPRes_Destall( us->us_Res_BulkIn );
 			USB2_EPRes_Destall( us->us_Res_BulkOut );
+			us->us_Running = FALSE;
 		}
 		else if ( ioreq->io_Error == USB2Err_NoError )
 		{
 			us->us_Errors_Bulk = 0;
 
 			cmd = us->us_USBActive;
+
+			if ( ! cmd )
+			{
+				us->us_Running = FALSE;
+				break;
+			}
 
 			if ( cmd->ucmd_Next )
 			{
@@ -63,6 +70,7 @@ struct USB_Command *cmd;
 		else
 		{
 			MYINFO( "PTP-USB : Unknown error" );
+			us->us_Running = FALSE;
 		}
 	}
 }
