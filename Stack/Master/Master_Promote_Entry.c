@@ -18,26 +18,27 @@
 // Well I start a process, change the Task Signals, MsgPorts and TaskAdrs to our new process
 // I guess this is a dangerous process, that may not fail
 
-S32 __myProcess_Reinit( struct USBBase *usbbase, struct intern *in );
+S32 __myProcess_Reinit ( struct USBBase * usbbase, struct intern * in );
 
-SEC_CODE void Master_Promote_Entry( void )
+SEC_CODE void
+Master_Promote_Entry ( void )
 {
-struct MasterStartMsg *msg;
-struct USB2_TaskNode *tn;
-struct ExecIFace *IExec;
-struct USBBase *usbbase;
-struct intern *in;
-struct Task *parent;
-//struct Task *self;
-U32 mask;
+	struct MasterStartMsg * msg;
+	struct USB2_TaskNode *	tn;
+	struct ExecIFace *		IExec;
+	struct USBBase *		usbbase;
+	struct intern *			in;
+	struct Task *			parent;
+	// struct Task *self;
+	U32 mask;
 
-	IExec	= (PTR)(*(struct ExecBase **)4)->MainInterface;
-	msg		= (PTR)(IExec->FindTask(NULL)->tc_UserData);
+	IExec = USB2_GetExecIFace();
+	msg	  = (PTR)( IExec->FindTask ( NULL )->tc_UserData );
 
-	usbbase	= msg->usbbase;
+	usbbase = msg->usbbase;
 	parent	= msg->Parent;
 	mask	= msg->Mask;
-//	self	= TASK_FIND();
+	//	self	= TASK_FIND();
 
 	msg->Result = FALSE;
 
@@ -45,38 +46,38 @@ U32 mask;
 
 	in = usbbase->usb_Master_Intern;
 
-	tn = & usbbase->usb_Master_Task;
-//	tn->tn_State = TASK_State_Starting;
+	tn = &usbbase->usb_Master_Task;
+	//	tn->tn_State = TASK_State_Starting;
 
 	// --
 
-	if ( __myProcess_Init( usbbase, in, TRUE ))
+	if ( __myProcess_Init ( usbbase, in, TRUE ) )
 	{
 		msg->Result = TRUE;
-		TASK_SIGNAL( parent, mask );
-		TASK_SETPRI( 25 );
+		TASK_SIGNAL ( parent, mask );
+		TASK_SETPRI ( 25 );
 
-		__myProcess_Main( usbbase, in );
+		__myProcess_Main ( usbbase, in );
 
 		tn->tn_State = TASK_State_Stopping;
 
 		// --
 
-		parent	= usbbase->usb_Master_Task.tn_Parent;
-		mask	= usbbase->usb_Master_Task.tn_Mask;
+		parent = usbbase->usb_Master_Task.tn_Parent;
+		mask   = usbbase->usb_Master_Task.tn_Mask;
 
 		tn->tn_TaskAdr = NULL;
 	}
 
-	__myProcess_Free( usbbase, in );
+	__myProcess_Free ( usbbase, in );
 
-	usbbase->usb_IExec->Disable();
+	usbbase->usb_IExec->Disable ();
 
 	tn->tn_State = TASK_State_Stopped;
 
 	// --
 	// Parent can be NULL
-	TASK_SIGNAL( parent, mask );
+	TASK_SIGNAL ( parent, mask );
 }
 
 // --
