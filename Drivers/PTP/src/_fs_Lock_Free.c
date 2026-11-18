@@ -12,7 +12,7 @@
 
 // --
 
-int32 _fs_Lock_Free( struct FS_Struct *fs, struct FS_ObjLock *lock )
+S32 _fs_Lock_Free( struct FS_Struct *fs, struct FS_ObjLock *lock )
 {
 struct FS_ObjLock *parent;
 struct FS_ObjLock *next;
