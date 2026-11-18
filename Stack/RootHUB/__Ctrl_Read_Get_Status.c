@@ -22,6 +22,8 @@ UNUSED	struct USBBase *usbbase,
 S32 err;
 U16 val;
 
+	err = USB2Err_Host_Stall;
+
 	/**/ if	( sd->RequestType == ( REQTYPE_Read | REQTYPE_Standard | REQTYPE_Device ))
 	{
 		struct USB2_DeviceStatus *devstat = buffer;
@@ -113,6 +115,11 @@ U16 val;
 		wIndex = LE_SWAP16( sd->Index );
 		port = ( wIndex & 0x00ff );
 
+		if ( ( ! port ) || ( port > hn->hn_HUB_NumPorts ) )
+		{
+			return ( USB2Err_Host_Stall );
+		}
+
 		// Get HCD Driver Port Status
 		if ( hn->HCD_Functions.Port_Get_Status )
 		{
@@ -137,6 +144,11 @@ U16 val;
 				(( status &	HUBF_Status_High_Speed )	? PORTSTATF_High_Speed	: 0 ) |
 				(( status &	HUBF_Status_Test )			? PORTSTATF_Test		: 0 ) |
 				(( status &	HUBF_Status_Indicator )		? PORTSTATF_Indicator	: 0 ) ;
+
+		if ( status & HUBF_Status_Super_Speed )
+		{
+			val |= PORTSTATF_Super_Speed;
+		}
 
 		portstat->wPortStatus = LE_SWAP16( val );
 
