@@ -49,62 +49,63 @@
 
 // --
 
-SEC_CODE struct OHCI_TD *OHCI_Get_TDBuffer( struct USB2_HCDNode *hn )
+SEC_CODE struct OHCI_TD *
+OHCI_Get_TDBuffer ( struct USB2_HCDNode * hn )
 {
-struct OHCI_TD *td;
-U32 phy;
-U8 *mem;
+	struct OHCI_TD * td;
+	U32				 phy;
+	U8 *			 mem;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "OHCI : OHCI_Get_TDBuffer" );
+	struct USBBase * usbbase = hn->hn_USBBase;
+	TASK_NAME_ENTER ( "OHCI : OHCI_Get_TDBuffer" );
 
 	td = NULL;
 
 	// --
 
-	mem = MEMORY_ALLOC( MEMID_OHCI_TD, FALSE );
+	mem = MEMORY_ALLOC ( MEMID_OHCI_TD, FALSE );
 
 	if ( ! mem )
 	{
-		USBERROR( "OHCI_Get_TDBuffer : Error allocating memory" );
+		USBERROR ( "OHCI_Get_TDBuffer : Error allocating memory" );
 		goto bailout;
 	}
 
-	phy = ((struct Mem_FreeNode *)mem)->mfn_Addr;
-	td  = (struct OHCI_TD *)mem;
+	phy = ( (struct Mem_FreeNode *)mem )->mfn_Addr;
+	td	= (struct OHCI_TD *)mem;
 
-	#ifdef DO_PANIC
+#ifdef DO_PANIC
 
 	if ( phy == 0 )
 	{
-		USBPANIC( "Error PhyAddress is Zero (td %p)", td );
+		USBPANIC ( "Error PhyAddress is Zero (td %p)", td );
 	}
 
 	if ( phy & 0xf )
 	{
-		USBPANIC( "Bad Alignment 0x%08lx", phy );
+		USBPANIC ( "Bad Alignment 0x%08lx", phy );
 	}
-	
-	#endif
+
+#endif
 
 	// Standard - Don't change
-	td->td_flags		= 0;
-	td->td_cbp			= 0;
-	td->td_nexttd		= 0;
-	td->td_be			= 0;
+	td->td_flags  = 0;
+	td->td_cbp	  = 0;
+	td->td_nexttd = 0;
+	td->td_be	  = 0;
 
 	// Private
 	td->ptd_self_phy	= phy;
 	td->ptd_virt_next	= NULL;
 	td->ptd_buffer_phy	= 0;
-	td->ptd_buffer_virt	= NULL;
-	td->ptd_buffer_size	= 0;
+	td->ptd_buffer_virt = NULL;
+	td->ptd_buffer_size = 0;
 
 bailout:
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return(	td );
+	return ( td );
 }
 
 // --
