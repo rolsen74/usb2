@@ -416,11 +416,13 @@ struct USB2_IORequest
 	U8						io_AllowShortPackets;
 	U8						io_Pad[2];
 
-	// Optional isochronous read results. One entry per service interval.
+	// Optional isochronous packet lengths. One entry per service interval.
 	// Buffers are spaced by the endpoint's maximum bytes per interval.
-	// Count must match the number of intervals requested. Results are
-	// valid on request success. An individual failed interval is reported
-	// as USB2_ISO_PACKET_ERROR. Keep the array valid until the request returns.
+	// For writes, supply each packet's nonzero length before submitting.
+	// io_Length includes the full stride of every packet slot for such writes.
+	// For reads, the array receives the lengths on successful completion.
+	// A failed interval is reported as USB2_ISO_PACKET_ERROR where supported.
+	// Keep the array valid until the request returns.
 	U16 *					io_IsoPacketLengths;
 	U32						io_IsoPacketCount;
 
@@ -794,6 +796,7 @@ enum USB2HCDType
 #define USB2Tag_Attr_ConfigSize			( USB2Tag_Dummy + 255 )	 // v1.1  - [G.] U32
 #define USB2Tag_Attr_ConfigDesc			( USB2Tag_Dummy + 256 )	 // v1.1  - [G.] struct USB2_Config_Desc
 #define USB2Tag_Attr_HUBPorts			( USB2Tag_Dummy + 257 )	 // v1.1  - [G.] U32
+#define USB2Tag_Attr_Speed			( USB2Tag_Dummy + 258 )	 // [G.] U32, enum USBSPEED
 
 
 
