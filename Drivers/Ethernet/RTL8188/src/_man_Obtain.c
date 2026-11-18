@@ -9,10 +9,12 @@
 // --
 
 #include "All.h"
+#include "Manager.h"
 
 // --
 
-static U32 _manager_Obtain( struct DeviceManagerInterface *Self )
+U32
+_manager_Obtain( struct DeviceManagerInterface *Self )
 {
 	USBDEBUG( "RTL8188 : _manager_Obtain" );
 
