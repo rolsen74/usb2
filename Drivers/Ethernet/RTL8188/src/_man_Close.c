@@ -9,18 +9,19 @@
 // --
 
 #include "All.h"
+#include "Manager.h"
 
 // --
 
-static PTR _manager_Close( struct DeviceManagerInterface *Self, struct IORequest *ioreq )
+PTR
+_manager_Close( struct DeviceManagerInterface *Self, struct IORequest *ioreq )
 {
 struct EthernetBase *ethBase;
 struct EthernetUnit *unit;
-PTR seglist;
+struct BufferManagement *opener;
+struct IOSana2Req *sana;
 
 	USBDEBUG( "RTL8188 : _manager_Close : IOReq %p", ioreq );
-
-	seglist = NULL;
 
 	ethBase = (PTR) Self->Data.LibBase;
 
@@ -35,29 +36,34 @@ PTR seglist;
 		goto bailout;
 	}
 
-	// Check Unit open count
-	if ( unit->unit_Unit.unit_OpenCnt )
+	if ( ioreq->io_Message.mn_Length >= sizeof( struct IOSana2Req ) )
 	{
-		unit->unit_Unit.unit_OpenCnt--;
+		sana = (PTR) ioreq;
+		opener = sana->ios2_BufferManagement;
+
+		if ( opener )
+		{
+			ObtainSemaphore( & unit->unit_CommandLock );
+
+			AbortPendingCommands( unit, NULL, opener );
+
+			ReleaseSemaphore( & unit->unit_CommandLock );
+
+			FreeVec( opener );
+
+			sana->ios2_BufferManagement = NULL;
+		}
 	}
 
-	if ( unit->unit_Unit.unit_OpenCnt )
-	{
-		// Hmm since we only have one Opener pr unit.. this is an error
-		USBERROR( "RTL8188 : Unit open count not Zero : OpenCnt %ld", unit->unit_Unit.unit_OpenCnt );
-		goto bailout;
-	}
-
-	// Clear Open Array Ptr
-	ethBase->eth_ETH_Units[ unit->unit_UnitNr ] = NULL;
-
-	// Free Unit
-	Unit_Free( unit );
-	unit = NULL;
-
-	// Make sure unit can't be closed again
 	ioreq->io_Device = NULL;
 	ioreq->io_Unit = NULL;
+
+	if ( --unit->unit_Unit.unit_OpenCnt == 0 )
+	{
+		ethBase->eth_ETH_Units[ unit->unit_UnitNr ] = NULL;
+
+		Unit_Free( unit );
+	}
 
 	// Update Device open count
 	if ( ethBase->eth_Base.dd_Library.lib_OpenCnt )
@@ -70,7 +76,9 @@ PTR seglist;
 	{
 		if ( ethBase->eth_Base.dd_Library.lib_Flags & LIBF_DELEXP )
 		{
-			seglist = _manager_Expunge( Self );
+			ReleaseSemaphore( & ethBase->eth_ETH_Semaphore );
+
+			return ( _manager_Expunge( Self ) );
 		}
 	}
 
@@ -78,7 +86,7 @@ bailout:
 
 	ReleaseSemaphore( & ethBase->eth_ETH_Semaphore );
 
-	return( seglist );
+	return ( NULL );
 }
 
 // --
