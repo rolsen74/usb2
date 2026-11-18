@@ -47,6 +47,13 @@ struct USB2_HCDNode *hn;
 		}
 
 		USBINFO( "__HCD_Controllers_Stop   :  4 : Freeing hn %p", hn );
+		if ( hn->hn_PCIDevice )
+		{
+			if ( hn->hn_PCIDevResource )
+				hn->hn_PCIDevice->FreeResourceRange( hn->hn_PCIDevResource );
+			if ( hn->hn_PCIDevLock ) hn->hn_PCIDevice->Unlock();
+			usbbase->usb_IPCI->FreeDevice( hn->hn_PCIDevice );
+		}
 
 		HCD_FREE( hn );
 	}
