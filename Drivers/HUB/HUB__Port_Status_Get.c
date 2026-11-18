@@ -154,10 +154,8 @@ S32 errcode;
 //		usbbase->usb_IExec->DebugPrintF( "Port        : %lu\n", port );
 //		usbbase->usb_IExec->Enable();
 	
-		errcode = -1;
+		errcode = ioreq->io_Error ? ioreq->io_Error : USB2Err_Host_RuntPacket;
 	}
-
-	errcode = ioreq->io_Error;
 
 	#ifdef DO_STABLE
 	bailout:
