@@ -58,6 +58,7 @@ SEC_CODE U32 OHCI_Bulk_Length( struct USB2_HCDNode *hn, struct RealRequest *iore
 struct OHCI_ED *ed;
 struct OHCI_TD *td;
 U32 status;
+U32 tail;
 U32 actual;
 U32 bytes;
 S32 copy;
@@ -66,7 +67,7 @@ PTR mem;
 U32 len;
 U32 CBP;
 U32 BE;
-U8 err;
+S32 err;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Bulk_Length" );
@@ -92,91 +93,12 @@ U8 err;
 		copy = FALSE;
 	}
 
-	// -- Setup Data
-
+	// Count every queued bulk TD up to the dummy tail.
 	td = ed->ped_first_td;
+	tail = LE_SWAP32( ed->ed_tailp );
 
-	if ( ! td )
+	while( ( td ) && ( td->ptd_self_phy != tail ) )
 	{
-		goto bailout;
-	}
-
-	status = OHCI_TD_GET_CC( LE_SWAP32( td->td_flags ) );
-
-	/**/ if ( status == OHCI_CC_NOT_ACCESSED )
-	{
-		// Transfer not finished yet
-		goto bailout;
-	}
-	else if ( status != OHCI_CC_NO_ERROR )
-	{
-		switch( status )
-		{
-			case OHCI_CC_STALL:
-			{
-				err = USB2Err_Host_Stall;
-				break;
-			}
-
-			case OHCI_CC_CRC:
-			case OHCI_CC_BIT_STUFFING:
-			case OHCI_CC_PID_CHECK_FAILURE:
-			{
-				err = USB2Err_Host_CRCError;
-				break;
-			}
-
-			case OHCI_CC_DEVICE_NOT_RESPONDING:
-			{
-				err = USB2Err_Host_Timeout;
-				break;
-			}
-
-			case OHCI_CC_DATA_OVERRUN:
-			case OHCI_CC_BUFFER_OVERRUN:
-			{
-				err = USB2Err_Host_Overflow;
-				break;
-			}
-
-			case OHCI_CC_DATA_UNDERRUN:
-			case OHCI_CC_BUFFER_UNDERRUN:
-			{
-				err = USB2Err_Host_RuntPacket;
-				break;
-			}
-
-			case OHCI_CC_UNEXPECTED_PID:
-			case OHCI_CC_DATA_TOGGLE_MISMATCH:
-			{
-				err = USB2Err_Host_HostError;
-				break;
-			}
-	
-			default:
-			{
-				err = USB2Err_Host_UnknownError;
-				break;
-			}
-		}
-
-		ioreq->req_Public.io_Error = err;
-		goto bailout;
-	}
-
-	// Skip first Setup TD
-	td = td->ptd_virt_next;
-
-	// --
-	// run all execpt last one
-
-	while( td )
-	{
-		if ( ! td->ptd_buffer_virt )
-		{
-			break;
-		}
-
 		BE  	= LE_SWAP32( td->td_be );
 		CBP		= LE_SWAP32( td->td_cbp );
 		status	= OHCI_TD_GET_CC( LE_SWAP32( td->td_flags ) );
@@ -197,14 +119,14 @@ U8 err;
 
  		len	= ( size >= bytes ) ? ( size - bytes ) : ( 0 ) ;
 
-		/**/ if ( status == OHCI_CC_NOT_ACCESSED )
+		/**/ if ( ( status & OHCI_CC_NOT_ACCESSED_MASK ) == OHCI_CC_NOT_ACCESSED )
 		{
 			break;
 		}
-		else if (( status != OHCI_CC_NO_ERROR ) && ( status != OHCI_CC_DATA_UNDERRUN ))
+		else if ( ( status != OHCI_CC_NO_ERROR ) &&
+			( ( status != OHCI_CC_DATA_UNDERRUN ) || ( ioreq->req_Public.io_Command != CMD_READ ) ||
+				( ! ioreq->req_Public.io_AllowShortPackets ) ) )
 		{
-			// treat 'OHCI_CC_DATA_UNDERRUN' as normal completion, correct for Control/Bulk
-
 			switch( status )
 			{
 				case OHCI_CC_STALL:
@@ -234,6 +156,7 @@ U8 err;
 					break;
 				}
 
+				case OHCI_CC_DATA_UNDERRUN:
 				case OHCI_CC_BUFFER_UNDERRUN:
 				{
 					err = USB2Err_Host_RuntPacket;
@@ -262,13 +185,14 @@ U8 err;
 		{
 			// copy src, dest, len
 			MEM_COPY( td->ptd_buffer_virt, mem, len );
+
+			mem += len;
 		}
 
-		actual	+= len;
-		mem		+= len;
+		actual += len;
 
 		// Check for short Packet
-		if ( len < size )
+		if ( ( len < size ) || ( status == OHCI_CC_DATA_UNDERRUN ) )
 		{
 			break;
 		}
