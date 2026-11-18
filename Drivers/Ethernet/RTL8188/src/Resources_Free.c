@@ -16,11 +16,42 @@ void Resources_Free( struct EthernetBase *ethBase UNUSED )
 {
 	USBDEBUG( "RTL8188 : Resources_Free" );
 
+	if ( IUSB2 )
+	{
+		DropInterface( (PTR) IUSB2 );
+
+		IUSB2 = NULL;
+	}
+
+	if ( USB2Base )
+	{
+		CloseDevice( USB2IOReq );
+
+		USB2Base = NULL;
+	}
+
+	if ( USB2IOReq )
+	{
+		FreeSysObject( ASOT_IOREQUEST, USB2IOReq );
+
+		USB2IOReq = NULL;
+	}
+
+	if ( USB2MsgPort )
+	{
+		FreeSysObject( ASOT_PORT, USB2MsgPort );
+
+		USB2MsgPort = NULL;
+	}
+
 	// --
 
+	if ( IRTL8188Timer )
+	{
+		DropInterface( (PTR) IRTL8188Timer );
 
-
-	// --
+		IRTL8188Timer = NULL;
+	}
 
 	if ( IUtility )
 	{	
