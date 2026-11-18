@@ -54,10 +54,10 @@ static const struct myHUB_Cfg HUBConfigDsc =
 /* Length			*/ sizeof( struct USB2_Config_Desc ),
 /* DescriptorType	*/ DSCTYPE_Configuration,
 /* TotalLength		*/ LE_SWAP16( sizeof( struct myHUB_Cfg ) ),
-/* NumInterfaces	*/ 0x00,
+/* NumInterfaces	*/ 0x01,
 /* ConfigurationValu*/ HUB_Cfg_Nr,
 /* Configuration	*/ 0x00,
-/* Attributes		*/ 0x00,
+/* Attributes		*/ 0xc0,
 /* MaxPower			*/ 0x00,
 },
 { // struct USB2_Interface_Desc
@@ -66,7 +66,7 @@ static const struct myHUB_Cfg HUBConfigDsc =
 /* InterfaceNumber	*/ HUB_Ifc_Nr,
 /* AlternateSetting	*/ 0x00,
 /* NumEndPoints		*/ 1,
-/* InterfaceClass	*/ 0x00,
+/* InterfaceClass	*/ USBCLASS_HUB,
 /* InterfaceSubClass*/ 0x00,
 /* InterfaceProtocol*/ 0x00,
 /* InterfaceStrNr	*/ 0x00,
@@ -180,8 +180,13 @@ U8 buf[MAX_BUFFER];
 		if ( err == USB2Err_NoError )
 		{
 			len = MIN( max, ioreq->req_Public.io_Length );
+			len = MIN( len, LE_SWAP16( sd->Length ) );
 
-			if ( len )
+			if ( ( len ) && ( ! ioreq->req_Public.io_Data ) )
+			{
+				err = USB2Err_Host_Stall;
+			}
+			else if ( len )
 			{
 				MEM_COPY( buf, ioreq->req_Public.io_Data, len );
 			}
