@@ -268,7 +268,7 @@ U32 to;
 				{
 					in = ih->ih_Active;
 
-					epn = in->in_EndPoints.uh_Head;
+					epn = ( in ) ? in->in_EndPoints.uh_Head : NULL;
 
 					if ( ep )
 					{
@@ -426,20 +426,31 @@ U32 to;
 
 	#ifdef DO_PANIC
 
-	if ( ! epr->epr_Public.IORequests )
+	if ( ( noi ) && ( ! epr->epr_Public.IORequests ) )
 	{
 		USBPANIC( "__EndPointRes_ObtainList : NULL Pointer 1" );
 	}
 
-	if ( ! epr->epr_Public.IORequests[0] )
+	if ( ( noi ) && ( ! epr->epr_Public.IORequests[0] ) )
 	{
 		USBPANIC( "__EndPointRes_ObtainList : NULL Pointer 2" );
 	}
 
 	#endif
 
-	epr->epr_Public.MsgPort		= epr->epr_Public.IORequests[0]->io_Message.mn_ReplyPort;
-	epr->epr_Public.MsgPortBit	= 1UL << epr->epr_Public.MsgPort->mp_SigBit;
+	if ( noi )
+	{
+		epr->epr_Public.MsgPort = epr->epr_Public.IORequests[0]->io_Message.mn_ReplyPort;
+	}
+	else
+	{
+		epr->epr_Public.MsgPort = mp;
+	}
+
+	if ( epr->epr_Public.MsgPort )
+	{
+		epr->epr_Public.MsgPortBit = 1UL << epr->epr_Public.MsgPort->mp_SigBit;
+	}
 
 	if ( epn->ep_Type == EPATT_Type_Control )
 	{
@@ -467,8 +478,8 @@ bailout:
 
 			if ( REGISTER_VALID( epr->epr_Register ) == VSTAT_Okay )
 			{
-				REGISTER_UNLOCK( reg );
 				NODE_REMNODE( & reg->reg_EPRHeader, & epr->epr_Node );
+				REGISTER_UNLOCK( reg );
 				epr->epr_Register = NULL;
 			}
 
