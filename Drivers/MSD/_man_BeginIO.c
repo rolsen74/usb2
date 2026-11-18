@@ -35,6 +35,27 @@ struct MSDDisk *msddisk;
 	// so just pass the message to msgport
 	switch( ioreq->io_Command )
 	{
+		// These commands manage held requests directly, including reuse of the
+		// original ADD request for REMOVE.
+		case NSCMD_TD_ADDSTATCALLBACK:
+		{
+			if ( MSD_Cmd_A006_NSCmd_AddStatCallBack( usbbase, ioreq ) )
+			{
+				MSGPORT_REPLYMSG( ioreq );
+			}
+
+			break;
+		}
+
+		case NSCMD_TD_REMSTATCALLBACK:
+		{
+			MSD_Cmd_A007_NSCmd_RemStatCallBack( usbbase, ioreq );
+
+			MSGPORT_REPLYMSG( ioreq );
+
+			break;
+		}
+
 		// case /* 0001 */ CMD_RESET:
 		case /* 0002 */ CMD_READ:
 		case /* 0003 */ CMD_WRITE:
@@ -62,8 +83,6 @@ struct MSDDisk *msddisk;
 		case /* 4000 */ NSCMD_DEVICEQUERY:
 		case /* A004 */ NSCMD_TD_GETGEOMETRY64:			// Mounter.lib
 		case /* A005 */	NSCMD_TD_CHANGEUNIT:			// Mounter.lib
-		case /* A006 */	NSCMD_TD_ADDSTATCALLBACK:		// Mounter.lib
-		case /* A007 */	NSCMD_TD_REMSTATCALLBACK:		// Mounter.lib
 		case /* C000 */ NSCMD_TD_READ64:
 		case /* C001 */ NSCMD_TD_WRITE64:
 		case /* C002 */ NSCMD_TD_SEEK64:

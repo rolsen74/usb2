@@ -10,31 +10,83 @@
 
 #include "usb2_all.h"
 #include "MSD.h"
+#include <utility/hooks.h>
 
 // --
-#if 1
 
-SEC_CODE S32 MSD_Cmd_A006_NSCmd_AddStatCallBack( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE S32
+MSD_Cmd_A006_NSCmd_AddStatCallBack( struct USBBase *usbbase, struct IOStdReq *ioreq )
 {
-struct MSDDisk *msddisk;
-S32 reply;
+	struct MSDDisk *msddisk;
+	struct MSDStatCallback *callback;
+	struct Hook *hook;
 
-	TASK_NAME_ENTER( "MSD : NSCmd_AddStatCallBack" );
-	USBERROR( "MSD : _cmd_A006_NSCmd_AddStatCallBack" );
-
-	reply = FALSE;
+	S32 reply;
 
 	msddisk = (PTR) ioreq->io_Unit;
+	hook = ioreq->io_Data;
+	ioreq->io_Actual = 0;
 
-	SEMAPHORE_OBTAIN( & msddisk->msddisk_MSDUnit_Semaphore );
+	if ( ! msddisk )
+	{
+		ioreq->io_Error = TDERR_BadUnitNum;
 
-	NODE_ADDTAIL( & msddisk->msddisk_MSDUnit_StatList, ioreq );
+		return ( TRUE );
+	}
 
-	SEMAPHORE_RELEASE( & msddisk->msddisk_MSDUnit_Semaphore );
+	if ( ( ! hook ) || ( ! hook->h_Entry ) )
+	{
+		ioreq->io_Error = IOERR_BADADDRESS;
 
-	TASK_NAME_LEAVE();
-	return( reply );
+		return ( TRUE );
+	}
+
+	usbbase->usb_IExec->ObtainSemaphore( & msddisk->msddisk_StatSemaphore );
+
+	// Keep the registration off the request's own message node.
+	for( callback = Header_Head( & msddisk->msddisk_MSDUnit_StatList ); callback; callback = Node_Next( callback ) )
+	{
+		if ( callback->Request == ioreq )
+		{
+			usbbase->usb_IExec->ReleaseSemaphore( & msddisk->msddisk_StatSemaphore );
+
+			return ( FALSE );
+		}
+
+		if ( callback->Hook == hook )
+		{
+			ioreq->io_Error = IOERR_UNITBUSY;
+			break;
+		}
+	}
+
+	if ( msddisk->msddisk_MSDDev->msddev_Detached )
+	{
+		ioreq->io_Error = TDERR_DiskChanged;
+	}
+
+	if ( ! ioreq->io_Error )
+	{
+		callback = MEM_ALLOCVEC( sizeof( struct MSDStatCallback ), TRUE );
+
+		if ( callback )
+		{
+			callback->Request = ioreq;
+			callback->Hook = hook;
+
+			NODE_ADDTAIL( & msddisk->msddisk_MSDUnit_StatList, callback );
+		}
+		else
+		{
+			ioreq->io_Error = TDERR_NoMem;
+		}
+	}
+
+	reply = ioreq->io_Error != 0;
+
+	usbbase->usb_IExec->ReleaseSemaphore( & msddisk->msddisk_StatSemaphore );
+
+	return ( reply );
 }
 
-#endif
 // --

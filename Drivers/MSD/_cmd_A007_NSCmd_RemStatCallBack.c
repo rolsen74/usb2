@@ -12,55 +12,32 @@
 #include "MSD.h"
 
 // --
-#if 1
 
-SEC_CODE S32 MSD_Cmd_A007_NSCmd_RemStatCallBack( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE void
+MSD_Cmd_A007_NSCmd_RemStatCallBack( struct USBBase *usbbase, struct IOStdReq *ioreq )
 {
-struct MSDDisk *msddisk;
-S32 reply;
-PTR node;
-
-	TASK_NAME_ENTER( "MSD : NSCmd_RemStatCallBack" );
-	USBERROR( "MSD : _cmd_A007_NSCmd_RemStatCallBack" );
-
-	reply = TRUE;
+	struct MSDDisk *msddisk;
+	struct IOStdReq *registered;
 
 	msddisk = (PTR) ioreq->io_Unit;
 
-	SEMAPHORE_OBTAIN( & msddisk->msddisk_MSDUnit_Semaphore );
+	registered = MSD_Disk_RemoveStatCallback( usbbase, msddisk, ioreq, NULL );
 
-	node = msddisk->msddisk_MSDUnit_StatList.uh_Head;
-
-	while( node )
+	if ( ( ! registered ) && ( ioreq->io_Data ) )
 	{
-		if ( node == ioreq )
-		{
-			break;
-		}
-		else
-		{
-			node = Node_Next( node );
-		}
+		registered = MSD_Disk_RemoveStatCallback( usbbase, msddisk, NULL, ioreq->io_Data );
 	}
 
-	if ( ! node )
-	{
-		USBERROR( "MSD : Unknwon IOReq %p", ioreq );
-		ioreq->io_Error = TDERR_NotSpecified;
-//		reply = FALSE;
-	}
-	else
-	{
-		NODE_REMNODE( & msddisk->msddisk_MSDUnit_StatList, node );
-		ioreq->io_Error = 0;
-//		reply = TRUE;
-	}
+	ioreq->io_Actual = 0;
+	ioreq->io_Error = registered ? 0 : TDERR_NotSpecified;
 
-	SEMAPHORE_RELEASE( & msddisk->msddisk_MSDUnit_Semaphore );
+	if ( ( registered ) && ( registered != ioreq ) )
+	{
+		registered->io_Actual = 0;
+		registered->io_Error = 0;
 
-	TASK_NAME_LEAVE();
-	return( reply );
+		MSGPORT_REPLYMSG( registered );
+	}
 }
 
-#endif
 // --

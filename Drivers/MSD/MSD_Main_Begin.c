@@ -55,8 +55,6 @@ S32 reply;
 			case /* 4000 */ NSCMD_DEVICEQUERY:			reply = MSD_Cmd_4000_NSCmd_DeviceQuery( usbbase, msddev, (PTR) ioreq ); break;
 			case /* A004 */ NSCMD_TD_GETGEOMETRY64:		reply = MSD_Cmd_A004_NSCmd_GetGeometry64( usbbase, msddev, (PTR) ioreq ); break;
 			case /* A005 */ NSCMD_TD_CHANGEUNIT:		reply = MSD_Cmd_A005_NSCmd_ChangeUnit( usbbase, msddev, (PTR) ioreq ); break;
-			case /* A006 */ NSCMD_TD_ADDSTATCALLBACK:	reply = MSD_Cmd_A006_NSCmd_AddStatCallBack( usbbase, msddev, (PTR) ioreq ); break;
-			case /* A007 */ NSCMD_TD_REMSTATCALLBACK:	reply = MSD_Cmd_A007_NSCmd_RemStatCallBack( usbbase, msddev, (PTR) ioreq ); break;
 			case /* C000 */ NSCMD_TD_READ64:			reply = MSD_Cmd_C000_NSCmd_Read64( usbbase, msddev, (PTR) ioreq ); break;
 			case /* C001 */ NSCMD_TD_WRITE64:			reply = MSD_Cmd_0019_TD_Write64( usbbase, msddev, (PTR) ioreq ); break;
 			case /* C002 */ NSCMD_TD_SEEK64:			reply = MSD_Cmd_001A_TD_Seek64( usbbase, msddev, (PTR) ioreq ); break;
@@ -82,6 +80,8 @@ S32 reply;
 
 		if ( reply )
 		{
+			MSD_Disk_NotifyStatCallbacks( usbbase, ioreq );
+
 			MSGPORT_REPLYMSG( ioreq );
 		}
 	}

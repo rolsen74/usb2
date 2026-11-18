@@ -13,34 +13,32 @@
 
 // --
 
-SEC_CODE void MSD_Manager_AbortIO( struct DeviceManagerInterface *Self UNUSED, struct IOStdReq *ioreq UNUSED )
+SEC_CODE void
+MSD_Manager_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq )
 {
-	TASK_NAME_ENTER( "MSD : MSD_Manager_AbortIO" );
-//	USBERROR( "MSD : MSD_Manager_AbortIO" );
+	struct MSDBase *msdbase;
+	struct USBBase *usbbase;
+	struct MSDDisk *msddisk;
+	struct IOStdReq *registered;
 
-	#if 0
-	// Fast check, is it pending?
-	if ( ioreq->io_Message.mn_Node.ln_Type != NT_MESSAGE )
+	if ( ( ! ioreq ) || ( ioreq->io_Command != NSCMD_TD_ADDSTATCALLBACK ) || ( ! ioreq->io_Unit ) )
 	{
-		goto bailout;
+		return;
 	}
 
-	switch( ioreq->io_Command )
+	msdbase = (PTR) Self->Data.LibBase;
+	usbbase = msdbase->msdbase_usbbase;
+	msddisk = (PTR) ioreq->io_Unit;
+
+	registered = MSD_Disk_RemoveStatCallback( usbbase, msddisk, ioreq, NULL );
+
+	if ( registered )
 	{
+		registered->io_Error = IOERR_ABORTED;
+		registered->io_Actual = 0;
 
-		default:
-		case CMD_STOP:
-		case CMD_START:
-		case NSCMD_DEVICEQUERY:
-		{
-			SHOWMSG( "Unknown Command (%04lx)", ioreq->io_Command );
-			break;
-		}
+		MSGPORT_REPLYMSG( registered );
 	}
-
-bailout:
-	#endif
-
-	TASK_NAME_LEAVE();
-	return;
 }
+
+// --

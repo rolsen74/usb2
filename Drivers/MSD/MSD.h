@@ -204,6 +204,15 @@ struct MSDDevice
 };
 
 // --
+struct MSDStatCallback
+{
+	struct USB2_Node		Node;
+	struct IOStdReq *		Request;
+	struct Hook *		Hook;
+};
+
+// --
+
 // one pr. lun
 
 struct MSDDisk
@@ -229,7 +238,9 @@ struct MSDDisk
 
 	struct USB2_Semaphore 			msddisk_MSDUnit_Semaphore;
 	struct USB2_Header				msddisk_MSDUnit_ChangeList;
+	struct SignalSemaphore		msddisk_StatSemaphore;
 	struct USB2_Header				msddisk_MSDUnit_StatList;
+	struct MSDStatCallback *	msddisk_StatNext;
 
 	// -- Config
 	U8								msddisk_DeviceType;				// Disk or CDRom
@@ -238,6 +249,7 @@ struct MSDDisk
 	U8								msddisk_MotorOn;			// Last requested state; drive may stop automatically
 	U8								msddisk_InRecovery;
 	U8								msddisk_Announced;
+	U8								msddisk_Detached;
 };
 
 // --
@@ -287,8 +299,8 @@ S32 MSD_Cmd_001B_TD_Format64( struct USBBase *usbbase, struct MSDDevice *msddev,
 S32 MSD_Cmd_4000_NSCmd_DeviceQuery( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
 S32 MSD_Cmd_A004_NSCmd_GetGeometry64( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
 S32 MSD_Cmd_A005_NSCmd_ChangeUnit( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
-S32 MSD_Cmd_A006_NSCmd_AddStatCallBack( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
-S32 MSD_Cmd_A007_NSCmd_RemStatCallBack( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
+S32 MSD_Cmd_A006_NSCmd_AddStatCallBack( struct USBBase *usbbase, struct IOStdReq *ioreq );
+void MSD_Cmd_A007_NSCmd_RemStatCallBack( struct USBBase *usbbase, struct IOStdReq *ioreq );
 S32 MSD_Cmd_C000_NSCmd_Read64( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
 
 enum PhaseStat MSD_Bulk_Cmd_Phase( struct USBBase *usbbase, struct MSDDisk *msddisk, struct DoBulkStruct *dbs );
@@ -335,6 +347,9 @@ void					MSD_Device_Free(		struct USBBase *usbbase, struct MSDDevice *msddev );
 U32						MSD_Device_GetMaxLun(	struct USBBase *usbbase, struct MSDDevice *msddev );
 
 struct MSDDisk *		MSD_Disk_Alloc(			struct USBBase *usbbase, struct MSDDevice *msddev, U32 lun );
+void MSD_Disk_NotifyStatCallbacks( struct USBBase *usbbase, struct IOStdReq *ioreq );
+struct IOStdReq *MSD_Disk_RemoveStatCallback( struct USBBase *usbbase, struct MSDDisk *msddisk, struct IOStdReq *ioreq, struct Hook *hook );
+
 void					MSD_Disk_Free(			struct USBBase *usbbase, struct MSDDisk *msddisk );
 S32						MSD_Disk_DoBulk(		struct USBBase *usbbase, struct MSDDisk *msddisk, struct DoBulkStruct *dbs );
 S32						MSD_Disk_TestUnitReady(	struct USBBase *usbbase, struct MSDDisk *msddisk );

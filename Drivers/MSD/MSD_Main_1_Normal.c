@@ -67,7 +67,11 @@ U32 mask;
 
 				while( msddisk )
 				{
-					if ( ( msddisk->msddisk_Removable ) && ( ! msddev->msddev_Detached ) )
+					if ( msddev->msddev_Register->reg_Function->fkt_Detach )
+					{
+						MSD_Disk_Detach( usbbase, msddisk );
+					}
+					else if ( ( msddisk->msddisk_Removable ) && ( ! msddev->msddev_Detached ) )
 					{
 						MSD_Disk_MediaCheck( usbbase, msddisk );
 

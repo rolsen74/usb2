@@ -42,6 +42,8 @@ U8 type;
 		goto bailout;
 	}
 
+	usbbase->usb_IExec->InitSemaphore( & msddisk->msddisk_StatSemaphore );
+
 	msddisk->msddisk_Lun = lun;
 	msddisk->msddisk_MSDDev = msddev;
 	msddisk->msddisk_MSDBase = msdbase;
