@@ -27,7 +27,7 @@
 // #include <proto/Picasso96API.h>
 // #include <proto/slider.h>
 // #include <proto/space.h>
-#include <proto/usb2.h>
+#include <interfaces/usb2.h>
 #include <proto/utility.h>
 
 // #undef __USE_INLINE__
