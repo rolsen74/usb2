@@ -1,7 +1,7 @@
 # USB2 AHI Playback
 
 `usb2.audio` plays audio through the first playback unit of
-[`usb2audio.device`](_Audio.md). It sets the AHI mixer to the USB playback
+[`usb2audio.device`](Audio.md). It sets the AHI mixer to the USB playback
 unit's sample rate and uses the **USB2: 16-bit stereo playback** mode.
 
 ## Build and install
@@ -10,7 +10,7 @@ unit's sample rate and uses the **USB2: 16-bit stereo playback** mode.
 make -C Drivers/Audio/AHI -j4
 ```
 
-1. Install the current USB2 stack and the [USB Audio driver](_Audio.md).
+1. Install the current USB2 stack and the [USB Audio driver](Audio.md).
 2. Copy `Drivers/Audio/AHI/bin/usb2.audio` to `DEVS:AHI/` and
    `Drivers/Audio/AHI/bin/USB2` to `DEVS:AudioModes/`. The distribution archive
    includes both files in their respective directories under `usb2/Devs/`.

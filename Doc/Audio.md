@@ -20,7 +20,7 @@ Install the current USB2 stack and copy `Audio.Driver` and `Audio.Class` to
 `LIBS:USB2/`. Run `AudioTest` on AmigaOS to save a one-second capture to
 `RAM:usb2audio.wav`. Run `AudioTest PLAY` to play a short test tone.
 
-See the [AHI guide](_AHI.md) for the playback driver and mode file.
+See the [AHI guide](AHI.md) for the playback driver and mode file.
 
 Playback supports synchronous and adaptive UAC1 endpoints without feedback.
 UAC2, asynchronous feedback, USB mixer controls, and AHI recording are

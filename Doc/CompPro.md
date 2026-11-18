@@ -2,8 +2,8 @@
 
 The Competition Pro USB2 port targets the USB game controller with vendor
 and product ID `0079:181c`. Its sources are in
-[`Drivers/AmigaInput/CompPro/src/`](Drivers/AmigaInput/CompPro/src/) and its
-headers are in [`Drivers/AmigaInput/CompPro/inc/`](Drivers/AmigaInput/CompPro/inc/).
+[`Drivers/AmigaInput/CompPro/src/`](../Drivers/AmigaInput/CompPro/src/) and its
+headers are in [`Drivers/AmigaInput/CompPro/inc/`](../Drivers/AmigaInput/CompPro/inc/).
 
 ## Build and status
 

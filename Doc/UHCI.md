@@ -8,4 +8,4 @@ UHCI operation on a Pegasus2 under QEMU.
 
 The default `usb2.device` build includes UHCI through `DRV_UHCI=1`.
 Run `make -j4` from the repository root, then follow the
-[stack installation steps](README.md#building-the-distribution-archive).
+[stack installation steps](../README.md#building-the-distribution-archive).

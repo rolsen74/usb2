@@ -24,48 +24,48 @@ Compiling a driver does not establish that it works with hardware.
 
 | Component | Guides |
 | --- | --- |
-| Host controllers | [EHCI](_EHCI.md), [OHCI](_OHCI.md), [UHCI](_UHCI.md), [xHCI](_XHCI.md) |
-| Built-in device drivers | [HUB](_HUB.md), [HID](_HID.md), [MSD](_MSD.md) |
-| External device drivers | [PTP](_PTP.md), [Printer](_Printer.md), [Video](_Video.md), [Audio](_Audio.md), [PL2303](_PL2303.md) |
-| Networking | [RTL8152](_RTL8152.md), [RTL8188EU](_RTL8188.md) |
-| AHI and AmigaInput | [AHI playback](_AHI.md), [Competition Pro](_CompPro.md) |
+| Host controllers | [EHCI](Doc/EHCI.md), [OHCI](Doc/OHCI.md), [UHCI](Doc/UHCI.md), [xHCI](Doc/XHCI.md) |
+| Built-in device drivers | [HUB](Doc/HUB.md), [HID](Doc/HID.md), [MSD](Doc/MSD.md) |
+| External device drivers | [PTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md), [PL2303](Doc/PL2303.md) |
+| Networking | [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md) |
+| AHI and AmigaInput | [AHI playback](Doc/AHI.md), [Competition Pro](Doc/CompPro.md) |
 
 ## Human Interface Devices
 
 USB HID covers keyboards, mice, and experimental pen tablet support. See the
-[HID guide](_HID.md).
+[HID guide](Doc/HID.md).
 
 ## Mass Storage
 
 USB Bulk-Only Transport devices are exposed through `usb2disk.device`. See the
-[MSD guide](_MSD.md).
+[MSD guide](Doc/MSD.md).
 
 ## USB Printers
 
 Print through `usb2printer.device` using the USB Printer Class or DOT4. See
-the [Printer guide](_Printer.md).
+the [Printer guide](Doc/Printer.md).
 
 ## USB Video (Experimental)
 
 UVC cameras expose MJPEG and YUY2 capture through `usb2video.device`. See the
-[Video guide](_Video.md).
+[Video guide](Doc/Video.md).
 
 ## USB Audio (Experimental)
 
 USB Audio Class 1.0 PCM capture and playback use `usb2audio.device`. See the
-[Audio guide](_Audio.md) and [AHI playback guide](_AHI.md).
+[Audio guide](Doc/Audio.md) and [AHI playback guide](Doc/AHI.md).
 
 ## PL2303 Serial (Untested)
 
 Compatible USB serial adapters are exposed through `usb2serial.device`. See
-the [PL2303 guide](_PL2303.md).
+the [PL2303 guide](Doc/PL2303.md).
 
 ## USB Networking (Experimental)
 
 | Adapter | USB vendor:product IDs | SANA-II device |
 | --- | --- | --- |
-| [RTL8152 wired Ethernet](_RTL8152.md) | `0bda:8152` | `usb2rtl8152.device` |
-| [RTL8188EU 2.4 GHz Wi-Fi](_RTL8188.md) | `0bda:8179`, `07b8:8179`, `2357:010c` | `usb2rtl8188.device` |
+| [RTL8152 wired Ethernet](Doc/RTL8152.md) | `0bda:8152` | `usb2rtl8152.device` |
+| [RTL8188EU 2.4 GHz Wi-Fi](Doc/RTL8188.md) | `0bda:8179`, `07b8:8179`, `2357:010c` | `usb2rtl8188.device` |
 
 Install the devices in `DEVS:Networks/`. Physical adapter testing on
 AmigaOS 4 remains pending. The RTL8188EU guide covers firmware and supplicant
@@ -137,15 +137,15 @@ usb2/
   your printer preferences.
 - **Networking** — Copy the RTL8152 or RTL8188EU device from `Devs/Networks/`
   to `DEVS:Networks/`. Supply the RTL8188EU firmware and wireless supplicant
-  separately as described in the [RTL8188EU guide](_RTL8188.md).
+  separately as described in the [RTL8188EU guide](Doc/RTL8188.md).
 - **External class drivers** — Copy each `.Class` file together with its
   matching `.Driver` file to `LIBS:USB2/`. The stack reads the `.Class`
   files to match USB interfaces and load the corresponding drivers.
   - `Audio` provides PCM capture and playback through `usb2audio.device`.
   - `PL2303` exposes supported USB serial adapters through `usb2serial.device`.
-  - [PTP](_PTP.md) provides Picture Transfer Protocol access to compatible digital cameras.
+  - [PTP](Doc/PTP.md) provides Picture Transfer Protocol access to compatible digital cameras.
   - `Video` exposes USB webcam capture through `usb2video.device`. Build
-    `VideoTest` separately using the commands in the [Video guide](_Video.md).
+    `VideoTest` separately using the commands in the [Video guide](Doc/Video.md).
 - **AHI playback** — Copy `Devs/AHI/usb2.audio` and `Devs/AudioModes/USB2`
   to the corresponding directories under `DEVS:`.
 - **USB2Analyzer** — Run it from the extracted `Tools/` directory after

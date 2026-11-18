@@ -9,5 +9,5 @@ interface or function.
 
 The default `usb2.device` build includes hub support through `DRV_HUB=1`.
 Run `make -j4` from the repository root, then follow the
-[stack installation steps](README.md#building-the-distribution-archive). USB2Analyzer can display the hub
+[stack installation steps](../README.md#building-the-distribution-archive). USB2Analyzer can display the hub
 and its attached devices.
