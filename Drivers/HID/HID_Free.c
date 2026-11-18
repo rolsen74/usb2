@@ -15,6 +15,8 @@
 
 SEC_CODE void HID_Free( struct USBBase *usbbase, struct HIDData *hd )
 {
+struct HID_ReportNode *rn;
+
 	USBDEBUG( "HID : HID_Free" );
 	TASK_NAME_ENTER( "HID_Free" );
 
@@ -31,6 +33,24 @@ SEC_CODE void HID_Free( struct USBBase *usbbase, struct HIDData *hd )
 
 	MSGPORT_FREE( & hd->Timer_MsgPort );
 	ASYNC_FREE( & hd->ASync_Drivers );
+
+	while( TRUE )
+	{
+		rn = NODE_REMHEAD( & hd->Reports );
+
+		if ( ! rn )
+		{
+			break;
+		}
+
+		Node_Report_Free( usbbase, rn );
+	}
+
+	if ( hd->ReportBuffer )
+	{
+		MEM_FREEVEC( hd->ReportBuffer );
+		hd->ReportBuffer = NULL;
+	}
 
 	// --
 
