@@ -48,7 +48,8 @@ U32 IsRead;
 	// Don't set DataIn flag if there are no Mem/MemLen and we are a Write command
 	msddisk->msddisk_CBW.cbw_Flags			= (( IsRead ) && ( dbs->dbs_Data ) && ( dbs->dbs_Data_Length )) ? MSDCBW_Flags_DataIn : 0 ;
 	msddisk->msddisk_CBW.cbw_LUN			= ( msddisk->msddisk_Lun & 0x0F );
-	msddisk->msddisk_CBW.cbw_CBLength		= dbs->dbs_Command_Length;
+	// ATAPI, UFI, and SFF command blocks are 12 bytes, including zero padding.
+	msddisk->msddisk_CBW.cbw_CBLength		= ( msddev->msddev_SubClass == MSD_SubClass_SCSI ) ? dbs->dbs_Command_Length : 12;
 
 	// The cmd my only be eg. 6 bytes, but sender
 	// have to send a 16 bytes zero padded buffer
