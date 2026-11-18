@@ -81,12 +81,11 @@ U32 slot;
 	new->qh_link		= sqh->qh_link;
 	new->pqh_virt_next	= sqh->pqh_virt_next;
 
-	// -- Stop / Start .. around link
+	// Publish the prepared QH before the controller can follow the new link.
+	__asm__ volatile ( "sync" ::: "memory" );
 
-	EHCI_Periodic_Stop( hn );
 	sqh->qh_link		= LE_SWAP32( new->pqh_self_phy | EHCI_LINK_QH );
 	sqh->pqh_virt_next	= new;
-	EHCI_Periodic_Start( hn );
 
 	// --
 	ioreq->req_PublicStat = IORS_HCD_Active;
