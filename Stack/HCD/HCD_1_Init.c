@@ -120,7 +120,11 @@ S32 undo;
 
 	if ( hn->HCD_Functions.Chip_Start )
 	{
-		hn->HCD_Functions.Chip_Start( hn );
+		if ( ! hn->HCD_Functions.Chip_Start( hn ) )
+		{
+			USBDEBUG( "__myInit (HCD)           : Chip_Start() Failed" );
+			goto bailout;
+		}
 	}
 
 	USBDEBUG( "__myInit (HCD)           : 8" );
