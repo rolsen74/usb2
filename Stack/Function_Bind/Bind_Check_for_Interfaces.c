@@ -129,6 +129,8 @@ U32 retval;
 //	}
 
 	dn->dn_Message.rdm_Public.IUSB2 = usbbase->usb_IUSB2;
+	dn->dn_Message.rdm_Public.VendorID = LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID );
+	dn->dn_Message.rdm_Public.DeviceID = LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID );
 	dn->dn_Message.rdm_Public.Function = (PTR) fn;
 	dn->dn_Message.rdm_Public.ConfigDescriptors = (PTR) fn->fkt_Config_Desc_Buf;
 	
@@ -276,6 +278,18 @@ S32 stat;
 	{
 		while( fdn->fdn_Type == USB2Val_FDriver_Interface )
 		{
+			if ( ( fdn->fdn_VendorID ) &&
+				( fdn->fdn_VendorID != LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ) ) )
+			{
+				break;
+			}
+
+			if ( ( fdn->fdn_DeviceID ) &&
+				( fdn->fdn_DeviceID != LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ) ) )
+			{
+				break;
+			}
+
 //			usbbase->usb_IExec->DebugPrintF( "FDN Check Interface : %p\n", fdn );
 
 			if ( fdn->fdn_Detach )
