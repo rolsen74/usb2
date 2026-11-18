@@ -13,7 +13,7 @@
 // --
 
 struct FS_ObjNode *
-_fs_Node_Find( struct FS_ObjNode *node, CONST_STRPTR name, U32 length )
+_fs_Node_Find( struct FS_ObjNode *node, STR name, U32 length )
 {
 	struct FS_ObjNode *child;
 
