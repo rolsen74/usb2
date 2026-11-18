@@ -44,60 +44,40 @@
 
 // --
 
-SEC_CODE void HUB__HUB_Chg( struct USBBase *usbbase UNUSED, struct intern *in UNUSED )
+SEC_CODE void HUB__HUB_Chg( struct USBBase *usbbase, struct intern *in )
 {
-	// --
+	struct USB2_HUBStatus stat;
 
-//	usbbase->usb_IExec->Disable();
-//	usbbase->usb_IExec->DebugPrintF( "\nHUB : Handle HUB Change\n" );
-//	usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
-//	usbbase->usb_IExec->Enable();
+	S32 err;
 
-	// --
-
-	#if 0
-struct USB2_HUBStatus stat;
-S32 err;
-
-//	  usbbase->usb_IExec->Disable();
-//	  usbbase->usb_IExec->DebugPrintF( "\nHandle HUB Change\n" );
-//	  usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
-//	  usbbase->usb_IExec->Enable();
-
-	err = HUB_GetHUBStatus( usbbase, in, &stat );
+	err = HUB__HUB_Status_Get( usbbase, in, &stat );
 
 	if ( err != USB2Err_NoError )
 	{
-		USBDEBUG( "Error reading HUB Status (%ld)", err );
-		goto bailout;
+		USBERROR( "HUB__HUB_Chg : Error reading HUB status (%ld)", err );
+
+		return;
 	}
 
 	if ( stat.wHubChange & HUBCHGF_Local_Power_Chg )
 	{
-		USBDEBUG( "Clearing Local HUB Power Change" );
+		err = HUB__HUB_Feature_Clr( usbbase, in, HUB_CLR_LOCAL_POWER );
 
-		HUB_ClrHUBFeature( usbbase, in, C_HUB_LOCAL_POWER );
-
-		if ( stat.wHubStatus & HUBSTATF_Local_Power )
+		if ( err != USB2Err_NoError )
 		{
-
+			USBERROR( "HUB__HUB_Chg : Error clearing power change (%ld)", err );
 		}
 	}
 
 	if ( stat.wHubChange & HUBCHGF_Over_Current_Chg )
 	{
-		USBDEBUG( "Clearing HUB Current Change" );
+		err = HUB__HUB_Feature_Clr( usbbase, in, HUB_CLR_OVER_CURRENT );
 
-		HUB_ClrHUBFeature( usbbase, in, C_HUB_OVER_CURRENT );
-
-		if ( stat.wHubStatus & HUBSTATF_Local_Power )
+		if ( err != USB2Err_NoError )
 		{
-
+			USBERROR( "HUB__HUB_Chg : Error clearing over-current change (%ld)", err );
 		}
 	}
-
-bailout:
-	#endif
-
-	return;
 }
+
+// --
