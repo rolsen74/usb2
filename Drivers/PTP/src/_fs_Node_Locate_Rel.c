@@ -13,12 +13,12 @@
 // --
 
 struct FS_ObjNode *
-_fs_Node_Locate_Rel( struct FS_Struct *fs, int32 *res2, struct FS_ObjLock *lock, CONST_STRPTR name )
+_fs_Node_Locate_Rel( struct FS_Struct *fs, S32 *res2, struct FS_ObjLock *lock, STR name )
 {
 	struct FS_ObjNode *node;
 
-	CONST_STRPTR end;
-	int32 error;
+	STR end;
+	S32 error;
 
 	node = lock ? lock->Node : fs->fs_RootNode;
 	error = 0;
