@@ -412,7 +412,6 @@ PTR node;
 
 	#endif
 	// --
-
 	USBDEBUG( "__ROMInit : 1111 :" );
 
 	if ( ! HCD_CONTROLLERS_START() )
