@@ -311,7 +311,8 @@ U8 newdata[6];
 	for( cnt=0 ; cnt<6 ; cnt++ )
 	{
 //		sss[cnt] = idx + ( cnt * bn->BitSize );
-		newdata[cnt] = Report_Read_Value( usbbase, ioreq, bn, idx + ( cnt * bn->BitSize ), FALSE );
+		newdata[cnt] = ( idx + cnt < bn->BitCount ) ?
+			Report_Read_Value( usbbase, ioreq, bn, idx + cnt, FALSE ) : 0;
 	}
 
 	#if 0
