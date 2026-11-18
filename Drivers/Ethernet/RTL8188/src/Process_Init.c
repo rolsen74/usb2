@@ -12,68 +12,15 @@
 
 // --
 
-SEC_CODE static S32 __myProcess_Init( struct EthernetUnit *unit )
+S32
+Process_Init( struct EthernetUnit *unit )
 {
-S32 retval;
-
-	retval = FALSE;
-
-	USBERROR( "RTL8188 : __myProcess_Init" );
-
-	// --
-
-//	if ( ! __myProcess_1_Get_Config( unit ))
-//	{
-//		USBERROR( "RTL8188 : __myProcess_Init : Error parsing config" );
-//		goto bailout;
-//	}
-
-	// --
-
-	if ( ! Process_Find_Device( unit ))
+	if ( ! Process_Find_Device( unit ) )
 	{
-		USBERROR( "RTL8188 : __myProcess_Init : Error did not find usb device" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	// --
-
-	unit->unit_USB_IOReq_FreeList		= AllocSysObjectTags( ASOT_LIST, TAG_END );
-	unit->unit_PAR_IOReq_WaitingList	= AllocSysObjectTags( ASOT_LIST, TAG_END );
-	unit->unit_Buffer_FreeList			= AllocSysObjectTags( ASOT_LIST, TAG_END );
-	unit->unit_Buffer_WaitingList		= AllocSysObjectTags( ASOT_LIST, TAG_END );
-	unit->unit_ETH_Begin_MsgPort			= AllocSysObjectTags( ASOT_PORT, TAG_END );
-	unit->unit_ETH_Abort_MsgPort			= AllocSysObjectTags( ASOT_PORT, TAG_END );
-
-	if (( ! unit->unit_USB_IOReq_FreeList )
-	||	( ! unit->unit_PAR_IOReq_WaitingList )
-	||	( ! unit->unit_Buffer_FreeList )
-	||	( ! unit->unit_Buffer_WaitingList )
-	||	( ! unit->unit_ETH_Begin_MsgPort )
-	||	( ! unit->unit_ETH_Abort_MsgPort ))
-	{
-		USBERROR( "RTL8188 : __myProcess_Init : Error creating objects" );
-		goto bailout;
-	}
-
-	unit->unit_ETH_Begin_MsgPortBit = 1UL << unit->unit_ETH_Begin_MsgPort->mp_SigBit;
-	unit->unit_ETH_Abort_MsgPortBit = 1UL << unit->unit_ETH_Abort_MsgPort->mp_SigBit;
-
-	// --
-
-	if ( ! Process_Setup_Device( unit ))
-	{
-		USBERROR( "RTL8188 : __myProcess_Init : Error setting up usb device" );
-		goto bailout;
-	}
-
-	// --
-
-	retval = TRUE;
-
-bailout:
-
-	return( retval );
+	return ( Process_Setup_Device( unit ) );
 }
 
 // --
