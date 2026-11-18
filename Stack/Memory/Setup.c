@@ -42,6 +42,8 @@ static const struct myMemList TheMemList[MEMID_Last] =
 	[MEMID_OHCI_ED]				= { .Max = 25, .Pre = 0, .Align = OHCI_ED_ALIGN, .Size = sizeof( struct OHCI_ED ) },
 	[MEMID_OHCI_TD]				= { .Max = 25, .Pre = 0, .Align = OHCI_TD_ALIGN, .Size = sizeof( struct OHCI_TD ) },
 	[MEMID_OHCI_HCCA]			= { .Max = 25, .Pre = 0, .Align = OHCI_HCCA_ALIGN, .Size = sizeof( struct OHCI_HCCA ) },
+	[MEMID_UHCI_QH]				= { .Max = 25, .Pre = 0, .Align = 16, .Size = sizeof( struct UHCI_QH ) },
+	[MEMID_UHCI_TD]				= { .Max = 25, .Pre = 0, .Align = 16, .Size = sizeof( struct UHCI_TD ) },
 	[MEMID_HCD_20k]				= { .Max = 25, .Pre = 0, .Align = 1024 * 4, .Size = 1024 * 20 },
 	[MEMID_HCD_8k]				= { .Max = 25, .Pre = 0, .Align = 1024 * 4, .Size = 1024 * 8 },
 	[MEMID_HCD_4k]				= { .Max = 25, .Pre = 0, .Align = 1024 * 4, .Size = 1024 * 4 },
@@ -84,6 +86,8 @@ SEC_RWDATA char *idnames[MEMID_Last] =
 	[MEMID_OHCI_ED]					= "MEMID_OHCI_ED",
 	[MEMID_OHCI_TD]					= "MEMID_OHCI_TD",
 	[MEMID_OHCI_HCCA]				= "MEMID_OHCI_HCCA",
+	[MEMID_UHCI_QH]				= "MEMID_UHCI_QH",
+	[MEMID_UHCI_TD]				= "MEMID_UHCI_TD",
 
 	// Notify
 	[MEMID_NotifyNode]				= "MEMID_NotifyNode",
