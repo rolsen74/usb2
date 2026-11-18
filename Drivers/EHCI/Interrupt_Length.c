@@ -64,7 +64,7 @@ S32 copy;
 U32 size;
 U32 len;
 PTR mem;
-U8 err;
+S32 err;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Interrupt_Length" );
@@ -116,6 +116,10 @@ U8 err;
 			{
 				err = USB2Err_Host_UnknownError;	// buffer/page problem on host side
 			} 
+			else if ( status & EHCI_TD_MISSEDMICRO )
+			{
+				err = USB2Err_Host_HostError;
+			}
 			else if ( status & EHCI_TD_XACTERR )
 			{
 				err = USB2Err_Host_Timeout;			// CRC/timeout type error bucket
@@ -126,6 +130,14 @@ U8 err;
 			}
 
 			ioreq->req_Public.io_Error = err;
+
+			usbbase->usb_IExec->DebugPrintF( "[%s] EHCI interrupt halt: Addr %lu EP $%02lx qTD $%08lx QH $%08lx error %ld\n",
+				usbbase->usb_IExec->FindTask( NULL )->tc_Node.ln_Name,
+				(U32) ioreq->req_Function->fkt_Address,
+				ioreq->req_EndPoint->ep_Number |
+					( ioreq->req_Public.io_Command == CMD_READ ? EPADR_Dir_In : EPADR_Dir_Out ),
+				status, LE_SWAP32( qh->qh_status ), err );
+
 			break;
 		}
 
