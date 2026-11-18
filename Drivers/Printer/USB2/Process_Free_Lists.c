@@ -14,6 +14,9 @@
 
 static void __myProcess_Free_Lists( struct PrinterUnit *unit )
 {
+struct PrtBuffer *pb;
+struct IOExtPar *pario;
+
 	USBERROR( "Printer : __myProcess_Free_Lists" );
 
 	// --
@@ -48,11 +51,46 @@ static void __myProcess_Free_Lists( struct PrinterUnit *unit )
 	{
 		USBINFO( "Printer : Freeing Tx Waiting List" );
 
-//		Abort_IOList( unit, unit->unit_QueueList );
-//		  Abort_BulkOut( unit, unit->unit_TxCurrentIO );
+		while(( pario = (PTR) RemHead( unit->unit_PAR_IOReq_WaitingList )))
+		{
+			pario->IOPar.io_Actual = 0;
+			pario->IOPar.io_Error = ParErr_NotOpen;
+			pario->io_Status = 0;
+			ReplyMsg( (PTR) pario );
+		}
 
 		FreeSysObject( ASOT_LIST, unit->unit_PAR_IOReq_WaitingList );
 		unit->unit_PAR_IOReq_WaitingList = NULL;
+	}
+
+	// --
+
+	if ( unit->unit_Buffer_Active )
+	{
+		FreeVec( unit->unit_Buffer_Active );
+		unit->unit_Buffer_Active = NULL;
+	}
+
+	if ( unit->unit_Buffer_FreeList )
+	{
+		while(( pb = (PTR) RemHead( unit->unit_Buffer_FreeList )))
+		{
+			FreeVec( pb );
+		}
+
+		FreeSysObject( ASOT_LIST, unit->unit_Buffer_FreeList );
+		unit->unit_Buffer_FreeList = NULL;
+	}
+
+	if ( unit->unit_Buffer_WaitingList )
+	{
+		while(( pb = (PTR) RemHead( unit->unit_Buffer_WaitingList )))
+		{
+			FreeVec( pb );
+		}
+
+		FreeSysObject( ASOT_LIST, unit->unit_Buffer_WaitingList );
+		unit->unit_Buffer_WaitingList = NULL;
 	}
 
 	// --
