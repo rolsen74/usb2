@@ -12,116 +12,88 @@
 
 // --
 
-U32 _usb_Init( struct USB_Struct *us )
+U32
+_usb_Init( struct USB_Struct *us )
 {
-U32 retval;
+	struct CommandMessage request;
+	struct USB2IFace *usb;
 
-	MYINFO( "PTP-USB : _usb_Init" );
+	U32 interface;
 
-	retval = FALSE;
-	
-	// --
+	usb = us->us_StartMsg->IUSB2;
+	interface = us->us_StartMsg->InterfaceDescriptor->InterfaceNumber;
 
-	NewList( & us->us_USBList );
-	NewList( & us->us_CmdList );
-	us->us_CmdListCnt = 0;
+	InitSemaphore( & us->us_CameraNode.cin_Gate );
 
 	us->us_CmdMsgPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
 	if ( ! us->us_CmdMsgPort )
 	{
-		MYERROR( "PTP-USB : Error creating MsgPort" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	// --
-
-	us->us_Register = USB2_Reg_RegisterTags(
+	us->us_Register = usb->USB2_Reg_RegisterTags(
 		USB2Tag_Reg_DriverMessage, us->us_StartMsg,
-		TAG_END
-	);
+		USB2Tag_Reg_Title, "Picture Transfer Protocol",
+		TAG_END );
 
 	if ( ! us->us_Register )
 	{
-		MYERROR( "PTP-USB : Error Registering Device" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	us->us_Res_Control = us->us_Register->Res_Control;
-
-	// --
-
-	us->us_Res_Interrupt = USB2_EPRes_ObtainTags( us->us_Register,
-		USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
-		USB2Tag_EPRes_EPType, EPATT_Type_Interrupt,
-		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize,
-		TAG_END
-	);
-
-	if ( ! us->us_Res_Interrupt )
-	{
-		MYERROR( "PTP-USB : Error obtaining IntIn EndPoint Resource" );
-		goto bailout;
-	}
-
-	// --
-
-	us->us_Res_BulkIn = USB2_EPRes_ObtainTags( us->us_Register,
-		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize_2,
+	us->us_Res_BulkIn = usb->USB2_EPRes_ObtainTags( us->us_Register,
+		USB2Tag_EPRes_InterfaceNr, interface,
+		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize_16,
 		USB2Tag_EPRes_AllowShortPackets, TRUE,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
 		USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
-		TAG_END
-	);
+		TAG_END );
 
 	if ( ! us->us_Res_BulkIn )
 	{
-		MYERROR( "PTP-USB : Error obtaining BulkIn EndPoint Resource" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	// --
-
-	us->us_Res_BulkOut = USB2_EPRes_ObtainTags( us->us_Register,
-		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize,
+	us->us_Res_BulkOut = usb->USB2_EPRes_ObtainTags( us->us_Register,
+		USB2Tag_EPRes_InterfaceNr, interface,
+		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize_16,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_Out,
 		USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
-		USB2Tag_EPRes_AddZeroPacket, TRUE,
-		TAG_END
-	);
+		TAG_END );
 
 	if ( ! us->us_Res_BulkOut )
 	{
-		MYERROR( "PTP-USB : Error obtaining BulkOut EndPoint Resource" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	// --
-	// Reset Start IDs
-	us->us_SessionID = 1;
+	memset( & request, 0, sizeof( request ) );
+
+	request.cm_Operation = PTP_Open_Session;
+	request.cm_ParameterCount = 1;
+	request.cm_Parameters[0] = 1;
+	us->us_Running = TRUE;
+
+	_usb_Transaction( us, & request );
+
+	if ( request.cm_Error )
+	{
+		return ( FALSE );
+	}
+
+	us->us_Session = TRUE;
 	us->us_TransactionID = 1;
+	_usb_QueryUpload( us );
 
-	if ( ! _usb__Open_Session( us ))
+	if ( ! us->us_Running )
 	{
-		MYERROR( "PTP-USB : Open Session failed" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	if ( ! _usb__Get_Device_Info( us ))
-	{
-		MYERROR( "PTP-USB : Get Device Info failed" );
-		goto bailout;
-	}
+	us->us_CameraNode.cin_ID = us->us_Register->FKT_ID;
+	us->us_CameraNode.cin_MsgPort = us->us_CmdMsgPort;
 
-	MYERROR( "Yay We are setup" );
-
-	// --
-
-	retval = TRUE;
-
-bailout:
-
-	return( retval );
+	return ( TRUE );
 }
 
 // --
