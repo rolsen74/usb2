@@ -12,11 +12,11 @@
 
 // --
 
-int32 _fs__FSUnLock( struct FSVP *vp, int32 *res2, struct Lock *lock_ptr )
+LONG _fs__FSUnLock( struct FSVP *vp, LONG *res2, struct Lock *lock_ptr )
 {
 struct FS_Struct *fs;
 struct FS_ObjLock *lock;
-int32 retval;
+S32 retval;
 
 	lock = (PTR) lock_ptr;
 
