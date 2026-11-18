@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -25,7 +26,7 @@ SEC_CODE void __Task_Stop_TN( struct USBBase *usbbase, struct USB2_TaskNode *tn 
 {
 struct USB2_TaskMsg *tm;
 
-	USBINFO( "__Task_Stop_TN           :  1 : TN %p : (%s)", tn, (file)?file:"<NULL>" );
+	USBINFO( "__Task_Stop_TN           :  1 : TN    %p : (%s)", tn, (file)?file:"<NULL>" );
 
 	if ( TASK_VALID( tn ) == VSTAT_Okay )
 	{
@@ -51,7 +52,7 @@ struct USB2_TaskMsg *tm;
 				}
 				else
 				{
-					USBINFO( "__Task_Stop_TN           :  4 : Free Msg : TM %p", tm );
+					USBINFO( "__Task_Stop_TN           :  4 : Free Msg : TM    %p", tm );
 					TASKMSG_FREE( tm );
 				}
 			}
@@ -67,7 +68,7 @@ struct USB2_TaskMsg *tm;
 		}
 	}
 
-	USBINFO( "__Task_Stop_TN           : 99 : TN %p", tn );
+	USBINFO( "__Task_Stop_TN           : 99 : TN    %p", tn );
 }
 
 // --
