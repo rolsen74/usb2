@@ -9,22 +9,28 @@
 // --
 
 #include "All.h"
+#include "Manager.h"
 
 // --
 
-static S32 _manager_Open(
+S32
+_manager_Open(
 	struct DeviceManagerInterface *Self,
 	struct IORequest *ioreq,
 	U32 unitnum,
-	U32 flags UNUSED )
+	U32 flags )
 {
 struct EthernetBase *ethBase;
 struct EthernetUnit *unit;
+struct IOSana2Req *sana;
+struct BufferManagement *opener;
 S32 error;
 
 	USBDEBUG( "RTL8188 : _manager_Open" );
 
-	error = 0;
+	error = IOERR_OPENFAIL;
+	opener = NULL;
+	sana = NULL;
 
 	ethBase = (PTR) Self->Data.LibBase;
 
@@ -49,12 +55,40 @@ S32 error;
 		goto bailout;
 	}
 
-	/* Only one opener pr. unit, check if its in use */
-	if ( ethBase->eth_ETH_Units[ unitnum ] )
+	if ( flags & SANA2OPF_PROM )
 	{
-		USBERROR( "RTL8188 : Unit alreay in use : Unit nr #%lu", unitnum );
-		error = IOERR_OPENFAIL;
 		goto bailout;
+	}
+
+	if ( ioreq->io_Message.mn_Length >= sizeof( struct IOSana2Req ) )
+	{
+		sana = (PTR) ioreq;
+
+		opener = AllocVecTags( sizeof( *opener ), AVT_ClearWithValue, 0, TAG_END );
+
+		if ( ! opener )
+		{
+			goto bailout;
+		}
+
+		if ( sana->ios2_BufferManagement )
+		{
+			opener->bm_CopyToBuff = (PTR) GetTagData( S2_CopyToBuff, 0, sana->ios2_BufferManagement );
+
+			opener->bm_CopyFromBuff = (PTR) GetTagData( S2_CopyFromBuff, 0, sana->ios2_BufferManagement );
+		}
+	}
+
+	unit = ethBase->eth_ETH_Units[ unitnum ];
+
+	if ( unit )
+	{
+		if ( ( unit->unit_Exclusive ) || ( unit->unit_Detached ) || ( flags & SANA2OPF_MINE ) )
+		{
+			goto bailout;
+		}
+
+		goto opened;
 	}
 
 	/* Create new unit */
@@ -67,8 +101,28 @@ S32 error;
 		goto bailout;
 	}
 
+	if ( ! Unit_Startup( unit ) )
+	{
+		Unit_Free( unit );
+
+		error = IOERR_OPENFAIL;
+
+		goto bailout;
+	}
+
+	unit->unit_Exclusive = ( flags & SANA2OPF_MINE ) != 0;
+
+	ethBase->eth_ETH_Units[unitnum] = unit;
+
+opened:
+
 	ioreq->io_Unit = (PTR) unit;
 	unit->unit_Unit.unit_OpenCnt++;
+
+	if ( sana )
+	{
+		sana->ios2_BufferManagement = opener;
+	}
  
 	/* Prevent delayed expunges */
 	ethBase->eth_Base.dd_Library.lib_Flags &= ~LIBF_DELEXP;
@@ -84,7 +138,13 @@ bailout:
 	}
 	else
 	{
+		if ( opener )
+		{
+			FreeVec( opener );
+		}
+
 		ioreq->io_Device = NULL;
+		ioreq->io_Unit = NULL;
 	}
 
 	ioreq->io_Error = error;
