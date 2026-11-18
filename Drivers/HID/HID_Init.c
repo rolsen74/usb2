@@ -19,6 +19,7 @@ struct USB2_Interface_Desc *ifcdsc;
 struct USB2_IORequest *ioreq;
 struct USB2_SetupData *sd;
 struct HID_ReportNode *rn;
+enum TaskReturn stat;
 S32 retval;
 S32 ifcnr;
 STR name;
@@ -139,7 +140,7 @@ U32 cnt;
 			USBDEBUG( "HID_Init : Boot Keyboard" );
 			hd->Driver_Type = HID_DType_Keyboard;
 
-			name = "Boot Mouse";
+			name = "Boot Keyboard";
 			init = __Boot_Keyboard_Init;
 			main = __Boot_Keyboard_Main;
 			free = __Boot_Keyboard_Free;
@@ -149,7 +150,7 @@ U32 cnt;
 			USBDEBUG( "HID_Init : Boot Mouse" );
 			hd->Driver_Type = HID_DType_Mouse;
 
-			name = "Boot Keyboard";
+			name = "Boot Mouse";
 			init = __Boot_Mouse_Init;
 			main = __Boot_Mouse_Main;
 			free = __Boot_Mouse_Free;
@@ -175,7 +176,7 @@ U32 cnt;
 
 		// --
 
-		TASK_START(
+		stat = TASK_START(
 			TASK_Tag_Func_Init, init,
 			TASK_Tag_Func_Main, main,
 			TASK_Tag_Func_Free, free,
@@ -186,6 +187,11 @@ U32 cnt;
 			TASK_Tag_Name, name,
 			TAG_END
 		);
+
+		if ( ( stat != TASK_Return_Stack_Okay ) && ( stat != TASK_Return_Okay ) )
+		{
+			goto bailout;
+		}
 
 		// --
 	}
