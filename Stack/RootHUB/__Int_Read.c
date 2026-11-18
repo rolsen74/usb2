@@ -24,7 +24,7 @@ U32 port;
 	// Clear Buffer
 	MEM_SET( buffer, 0, buflen );
 
-	loops	= MIN( hn->hn_HUB_NumPorts, buflen*8 );
+	loops	= buflen ? MIN( hn->hn_HUB_NumPorts, buflen*8 - 1 ) : 0;
 	actual	= 0;
 	update	= FALSE;
 
