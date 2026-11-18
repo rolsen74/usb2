@@ -28,13 +28,14 @@ enum
 	_Class,
 	_SubClass,
 	_Protocol,
+	_Vendor,
+	_Product,
+	_Device,
 // _StackSize,
 // _Priority,
 // _Hotkey,
-// _Device,
 // _Date,
 // // --
-// _Device,
 // _Quirk,
 	// --
 	_LAST
@@ -50,7 +51,7 @@ static struct CmdStruct Cmds[] =
 	{ 8, "PROTOCOL",	_Protocol	},
 //	{ 5, "STACK",		_StackSize	},
 //	{ 8, "PRIORITY",	_Priority	},
-//	{ 6, "DEVICE",		_Device		},	// Device:Device:Quirk
+	{ 6, "DEVICE",		_Device		},	// VendorID:ProductID
 //	{ 6, "HOTKEY",		_Hotkey		},
 	{ 0, NULL,			0			},
 };
@@ -419,6 +420,27 @@ S32 chr;
 					{
 						Tags[_Protocol].ti_Tag  = USB2Tag_FDriver_Protocol;
 						Tags[_Protocol].ti_Data = ReadValue( & mem[pos] );
+					}
+					break;
+				}
+
+				case _Device:
+				{
+					if ( ( mem[pos] ) && ( mem[pos] != 10 ) )
+					{
+						Tags[_Vendor].ti_Tag = USB2Tag_FDriver_VendorID;
+						Tags[_Vendor].ti_Data = ReadValue( & mem[pos] );
+
+						while( ( mem[pos] ) && ( mem[pos] != ':' ) && ( mem[pos] != 10 ) && ( mem[pos] != 13 ) )
+						{
+							pos++;
+						}
+
+						if ( mem[pos] == ':' )
+						{
+							Tags[_Product].ti_Tag = USB2Tag_FDriver_DeviceID;
+							Tags[_Product].ti_Data = ReadValue( & mem[pos+1] );
+						}
 					}
 					break;
 				}
