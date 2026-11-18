@@ -12,7 +12,7 @@
 
 // --
 
-struct Lock *_fs__FSDupLockFromFH( struct FSVP *vp, int32 *res2, struct FileHandle *file )
+struct Lock *_fs__FSDupLockFromFH( struct FSVP *vp, LONG *res2, struct FileHandle *file )
 {
 struct FS_Struct *fs;
 struct Lock *retval;
