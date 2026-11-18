@@ -15,36 +15,27 @@
 #if defined( DO_ERROR ) || defined( DO_INFO ) || defined( DO_DEBUG )
 
 static struct Task *__TASK = NULL;
-static struct UtilityIFace *__IU = NULL;
 
-void VARARGS68K _MYDEBUG( U32 lvl UNUSED, STR fmt, ... )
+void VARARGS68K
+_MYDEBUG( U32 lvl UNUSED, STR fmt, ... )
 {
 struct Task *self;
+
 va_list ap;
 STR buf;
 
 	// lvl : 0 = Debug, 1 = Info, 2 = Error
 
-	if ( ! __IU )
+	buf = NULL;
+
+	if ( IUtility )
 	{
-		PTR base = OpenLibrary( "utility.library", 0 );
-		__IU = (PTR) GetInterface( base, "main", 1, NULL );
-	}
+		va_start( ap, fmt );
 
-	// ---
-
-	va_start( ap, fmt );
-
-	if ( __IU )
-	{
 		buf = VASPrintf( fmt, va_getlinearva( ap, PTR ));
-	}
-	else
-	{
-		buf = NULL;
-	}
 
-	va_end( ap );
+		va_end( ap );
+	}
 
 	// ---
 

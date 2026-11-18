@@ -64,9 +64,6 @@ struct PTPBase *libBase;
 
 		/* Make it public */
 		AddLibrary( (PTR) libBase );
-
-		/* Optional: small startup message */
-		DebugPrintF( "PTP : Rock'n Roll\n" );
 	}
 	else
 	{

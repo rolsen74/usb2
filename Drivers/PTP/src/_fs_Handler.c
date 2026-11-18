@@ -84,8 +84,6 @@ U32 retval;
 
 	if ( _fs_Handler_Init( fs ))
 	{
-		DebugPrintF( "_fs_Handler 22\n" );
-
 		startup_dp->dp_Res1 = TRUE;
 		startup_dp->dp_Res2 = 0;
 		ReplyMsg( startup_msg );
@@ -99,8 +97,6 @@ U32 retval;
 	_fs_Handler_Free( fs );
 
 bailout:
-
-	DebugPrintF( "_fs_Handler 33\n" );
 
 	if ( startup_dp )
 	{
