@@ -64,9 +64,15 @@ S32 max;
 		// Do delay here?
 	}
 
-	if (( ioreq->io_Error ) || ( ioreq->io_Length < 6 ))
+	if ( ( ioreq->io_Error ) || ( ioreq->io_Actual < 9 ) )
 	{
 // usbbase->usb_IExec->DebugPrintF( "Error retriving HID Descriptor (%ld)\n", (S32) ioreq->io_Error );
+		goto bailout;
+	}
+
+	if ( ( hiddsc->Length < 9 ) || ( hiddsc->Length > ioreq->io_Actual ) ||
+		( hiddsc->NumDescriptors > ( ( hiddsc->Length - 6 ) / 3 ) ) )
+	{
 		goto bailout;
 	}
 
@@ -95,6 +101,12 @@ S32 max;
 	// --- Get Report Desciptor
 
 	hd->ReportSize		= LE_SWAP16( hiddsc->Descriptors[cnt].Length );
+
+	if ( ! hd->ReportSize )
+	{
+		goto bailout;
+	}
+
 	hd->ReportBuffer	= MEM_ALLOCVEC( hd->ReportSize, TRUE );
 
 	if ( ! hd->ReportBuffer )
@@ -128,8 +140,7 @@ S32 max;
 
 		IO_DO( ioreq );
 
-		if (( ioreq->io_Error == 0 ) 
-		&&	( ioreq->io_Length == hd->ReportSize ))
+		if ( ( ioreq->io_Error == 0 ) && ( ioreq->io_Actual == hd->ReportSize ) )
 		{
 			// Done
 			break;
@@ -138,7 +149,7 @@ S32 max;
 		// Do delay here?
 	}
 
-	if (( ioreq->io_Error ) || ( ioreq->io_Length != hd->ReportSize ))
+	if ( ( ioreq->io_Error ) || ( ioreq->io_Actual != hd->ReportSize ) )
 	{
 // usbbase->usb_IExec->DebugPrintF( "Error reading Report Descriptor (%ld)\n", ioreq->io_Error );
 		goto bailout;
@@ -149,6 +160,11 @@ S32 max;
 	error = TRUE;
 
 bailout:
+	if ( ( ! error ) && ( hd->ReportBuffer ) )
+	{
+		MEM_FREEVEC( hd->ReportBuffer );
+		hd->ReportBuffer = NULL;
+	}
 
 	return( error );
 }
