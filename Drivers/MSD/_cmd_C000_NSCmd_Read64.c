@@ -35,6 +35,18 @@ S32 stat;
 	reply = TRUE;
 	msddisk = (PTR) ioreq->io_Unit;
 
+	if ( ( msddisk ) && ( msddisk->msddisk_Removable ) && ( ! msddisk->msddisk_MediaPresent ) )
+	{
+		MSD_Disk_MediaCheck( usbbase, msddisk );
+	}
+
+	if ( ( msddisk ) && ( ! msddisk->msddisk_MediaPresent ) )
+	{
+		ioreq->io_Actual = 0;
+		ioreq->io_Error = TDERR_DiskChanged;
+		goto bailout;
+	}
+
 //	USBERROR( "MSD : io_Data .......... : %p", ioreq->io_Data );
 //	USBERROR( "MSD : io_Length ........ : %ld", ioreq->io_Length );
 //	USBERROR( "MSD : io_Actual ........ : $%08lx", ioreq->io_Actual );
@@ -102,7 +114,7 @@ S32 stat;
 //	blk_blocks	= length / blk_size;
 	blk_blocks	= length >> blk_shift;
 
-	if (( blk_start + blk_blocks ) > ( msddisk->msddisk_TotalBlocks ))
+	if ( ( blk_start >= msddisk->msddisk_TotalBlocks ) || ( blk_blocks > msddisk->msddisk_TotalBlocks - blk_start ) )
 	{
 		USBERROR( "MSD : NSCmd_Read64 : OOB" );
 		ioreq->io_Error = IOERR_BADLENGTH;
@@ -115,7 +127,8 @@ S32 stat;
 	actual = 0;
 
 	if (( blk_start  > 0xFFFFFFFFULL )
-	||	( blk_blocks > 0x0000FFFFUL ))
+	||	( blk_blocks > 0x0000FFFFUL )
+	||	( blk_blocks - 1 > 0xFFFFFFFFULL - blk_start ))
 	{
 		USBERROR( "MSD : NSCmd_Read64 : Using MSD_SCSI_Read16" );
 
@@ -147,14 +160,14 @@ S32 stat;
 	// Report actual tranfered even on fail
 	ioreq->io_Actual = actual;
 
-	USBERROR( "MSD : NSCmd_Read64() okay : io_Actual %lu, csw Actual %ld", actual, dbr.csw_DataActual );
-
 	if ( ! stat )
 	{
 		USBERROR( "MSD : NSCmd_Read64() failed" );
 		ioreq->io_Error = IOERR_BADLENGTH;
 		goto bailout;
 	}
+
+	USBERROR( "MSD : NSCmd_Read64() okay : io_Actual %lu, csw Actual %ld", actual, dbr.csw_DataActual );
 
 	// --
 
