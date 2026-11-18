@@ -72,6 +72,11 @@ S32 err;
 
 		port = ( wIndex & 0x00ff );
 
+		if ( ( ! port ) || ( port > hn->hn_HUB_NumPorts ) )
+		{
+			return ( USB2Err_Host_Stall );
+		}
+
 		USBDEBUG( "SetPortFeature on port %lu", port );
 
 		switch( LE_SWAP16( sd->Value ))
