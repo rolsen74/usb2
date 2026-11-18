@@ -94,10 +94,32 @@ U32 cnt;
 //		}
 //	}
 
-//	if ( fkt->fkt_Speed < USBSPEED_Super )
+	if ( ( fn->fkt_Tier != 0 ) && ( fn->fkt_Speed >= USBSPEED_Super ) &&
+		( fn->fkt_HCD->hn_HCDType == HCDTYPE_XHCI ) )
+	{
+		sd->RequestType = REQTYPE_Write | REQTYPE_Class | REQTYPE_Device;
+		sd->RequestCode = REQCODE_Set_Depth;
+		sd->Value = LE_SWAP16( fn->fkt_Tier - 1 );
+		sd->Index = 0;
+		sd->Length = 0;
+		ioreq->io_Command = CMD_WRITE;
+		ioreq->io_Data = NULL;
+		ioreq->io_Length = 0;
+		ioreq->io_SetupData = sd;
+		ioreq->io_SetupLength = sizeof( struct USB2_SetupData );
+
+		IO_DO( ioreq );
+
+		if ( ioreq->io_Error )
+		{
+			goto bailout;
+		}
+
+		dsctype = DSCTYPE_SS_HUB;
+	}
+	else
 	{
 		USBDEBUG( "HUB_GetDesc : Retrieving HUB Descriptor" );
-
 		dsctype = DSCTYPE_HUB;
 	}
 //	else
@@ -139,7 +161,9 @@ U32 cnt;
 
 		IO_DO(ioreq);
 
-		if ( ioreq->io_Error == 0 )
+		if ( ( ioreq->io_Error == USB2Err_NoError ) &&
+			( ioreq->io_Actual >= ( dsctype == DSCTYPE_SS_HUB ? 12 : 7 ) ) &&
+			( desc->Length <= ioreq->io_Actual ) )
 		{
 			// yay success
 			break;
@@ -160,7 +184,8 @@ U32 cnt;
 
 		IO_DO(ioreq);
 
-		if ( ioreq->io_Error != 0 )
+		if ( ( ioreq->io_Error != USB2Err_NoError ) || ( ioreq->io_Actual != 2 ) ||
+			( desc->Length < ( dsctype == DSCTYPE_SS_HUB ? 12 : 7 ) ) )
 		{
 			// fail .. try again
 			continue;
@@ -181,14 +206,15 @@ U32 cnt;
 
 		IO_DO(ioreq);
 
-		if ( ioreq->io_Error == 0 )
+		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == desc->Length ) )
 		{
 			// yay success
 			break;
 		}
 	}
 
-	if ( desc->DescriptorType != dsctype )
+	if ( ( desc->DescriptorType != dsctype ) ||
+		( desc->Length < ( dsctype == DSCTYPE_SS_HUB ? 12 : 7 ) ) )
 	{
 		USBDEBUG( "HUB_GetDesc : Invalid HUB Descriptor type" );
 		goto bailout;
@@ -209,6 +235,7 @@ U32 cnt;
 	// --
 
 	retval = TRUE;
+	USB2_Notify_Function( usbbase, fn, USBNC_Updating );
 
 bailout:
 
