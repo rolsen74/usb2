@@ -12,14 +12,14 @@
 
 // --
 
-int32
-_fs__FSClose( struct FSVP *vp, int32 *res2, struct FileHandle *file )
+LONG
+_fs__FSClose( struct FSVP *vp, LONG *res2, struct FileHandle *file )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjLock *lock;
 
-	int32 result;
-	int32 error;
+	S32 result;
+	S32 error;
 
 	fs = vp->FSV.FSPrivate;
 	result = DOSFALSE;
