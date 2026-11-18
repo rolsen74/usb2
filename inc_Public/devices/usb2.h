@@ -709,6 +709,9 @@ enum USB2HCDType
 
 #define USB2Tag_FDriver_Protocol		( USB2Tag_Dummy + 59 )	 // v1.1  - U32
 
+#define USB2Tag_FDriver_VendorID		( USB2Tag_Dummy + 60 )	 // U16, zero matches any vendor
+#define USB2Tag_FDriver_DeviceID		( USB2Tag_Dummy + 61 )	 // U16, zero matches any product
+
 // -- + --
 // -- Register
 
@@ -780,6 +783,7 @@ enum USB2HCDType
 
 #define USB2Tag_Attr_ConfigSize			( USB2Tag_Dummy + 255 )	 // v1.1  - [G.] U32
 #define USB2Tag_Attr_ConfigDesc			( USB2Tag_Dummy + 256 )	 // v1.1  - [G.] struct USB2_Config_Desc
+#define USB2Tag_Attr_HUBPorts			( USB2Tag_Dummy + 257 )	 // v1.1  - [G.] U32
 
 
 
