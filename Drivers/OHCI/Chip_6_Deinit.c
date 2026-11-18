@@ -51,7 +51,6 @@
 
 SEC_CODE void OHCI_Chip_Deinit( struct USB2_HCDNode *hn )
 {
-struct OHCI_QH *qh;
 U32 cnt;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
