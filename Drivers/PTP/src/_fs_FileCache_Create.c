@@ -12,15 +12,15 @@
 
 // --
 
-int32
-_fs_FileCache_Create( struct FS_ObjLock *lock, int32 mode )
+S32
+_fs_FileCache_Create( struct FS_ObjLock *lock, S32 mode )
 {
 	struct DevProc *target;
 
 	BPTR directory;
 	STR folder;
 	STR name;
-	int32 error;
+	S32 error;
 
 	// A PTP: assignment would recurse while the filesystem semaphore is held.
 	target = GetDeviceProc( "T:", NULL );
