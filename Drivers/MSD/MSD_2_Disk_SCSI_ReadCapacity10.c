@@ -20,6 +20,7 @@ SEC_CODE S32 MSD_SCSI_ReadCapacity10(
 	PTR mem,
 	U32 len )
 {
+struct DoBulkResult result;
 struct DoBulkStruct dbs;
 S32 retval;
 
@@ -30,8 +31,8 @@ S32 retval;
 
 	// --
 	MEM_SET( & dbs, 0, sizeof( dbs ));
-	dbs.dbs_Flags			= DOBULKF_DIR_IN | DOBULKF_SHORT_OK;
-	dbs.dbs_Result			= dbr;
+	dbs.dbs_Flags			= DOBULKF_DIR_IN;
+	dbs.dbs_Result			= & result;
 	dbs.dbs_Command_Length	= 10;
 	dbs.dbs_Data			= mem;
 	dbs.dbs_Data_Length		= len;
@@ -57,6 +58,17 @@ S32 retval;
 	{
 		USBERROR( "MSD_SCSI_ReadCapacity10() failed" );
 		goto bailout;
+	}
+
+	if ( result.csw_DataActual != len )
+	{
+		USBERROR( "MSD_SCSI_ReadCapacity10() returned %lu of %lu bytes", result.csw_DataActual, len );
+		goto bailout;
+	}
+
+	if ( dbr )
+	{
+		*dbr = result;
 	}
 
 	#if 0
