@@ -12,34 +12,27 @@
 
 // --
 
-void _fs_Node_Delete( struct FS_Struct *fs UNUSED, struct FS_ObjNode *node )
+void
+_fs_Node_Delete( struct FS_Struct *fs, struct FS_ObjNode *node )
 {
-	MYINFO( "PTP-FS : _fs_Node_Delete" );
+	struct FS_ObjNode *child;
 
 	if ( ! node )
 	{
-		goto bailout;
+		return;
+	}
+
+	while(( child = (PTR) RemHead( & node->on_Content_List ) ))
+	{
+		_fs_Node_Delete( fs, child );
 	}
 
 	if ( node->on_Name )
 	{
 		FreeVec( node->on_Name );
-		node->on_NameLen = 0;
-		node->on_Name = NULL;
 	}
 
-	// if ( node->DeadMessage )
-	// {
-	// 	node->DeadMessage->cm_Result = TRUE;
-	// 	ReplyMsg( (PTR) node->DeadMessage );
-	// 	node->DeadMessage = NULL;
-	// }
-
 	FreeVec( node );
-
-bailout:
-
-	return;
 }
 
 // --
