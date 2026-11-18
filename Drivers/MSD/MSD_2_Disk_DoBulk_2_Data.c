@@ -47,6 +47,7 @@ U32 IsRead;
 	ioreq->io_TimeOut		= 5 * 1000000;		// 5 sec
 
 	IO_DO( ioreq );
+	dbs->dbs_Data_Actual = ioreq->io_Actual;
 
 //	IExec->DebugPrintF( "Data : io_Error = %ld : io_Actual %ld\n", ioreq->io_Error, ioreq->io_Actual );
 
