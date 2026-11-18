@@ -101,6 +101,19 @@ PTR mem;
 			break;
 		}
 
+		case USB2Tag_Attr_Speed:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( fn )
+			{
+				value = fn->fkt_Speed;
+				len = sizeof( value );
+				mem = & value;
+			}
+			break;
+		}
+
 		case USB2Tag_Attr_ConfigSize:
 		{
 			fn = Find_Function( usbbase, id );
