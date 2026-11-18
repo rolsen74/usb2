@@ -14,9 +14,10 @@
 // --
 #if 1
 
-SEC_CODE S32 MSD_Cmd_000F_TD_ProtStatus( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE S32 MSD_Cmd_000F_TD_ProtStatus( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq )
 {
-//struct MSDDisk *msddisk;
+struct MSDDisk *msddisk;
+U32 protected;
 S32 reply;
 
 	TASK_NAME_ENTER( "MSD : _cmd_000F_TD_ProtStatus" );
@@ -28,12 +29,32 @@ S32 reply;
 				protected, while any other value indicates it is.
 	#endif
 
-//	msddisk = (PTR) ioreq->io_Unit;
+	msddisk = (PTR) ioreq->io_Unit;
+	protected = TRUE;
 
-	#warning fix me
-//	ioreq->io_Actual = ( msddisk->msdunit_WriteProtected ) ? TRUE : FALSE ;
-	ioreq->io_Actual = FALSE;
-	ioreq->io_Error = 0;
+	if ( ( msddisk ) && ( msddisk->msddisk_Removable ) && ( ! msddev->msddev_Detached ) )
+	{
+		MSD_Disk_MediaCheck( usbbase, msddisk );
+	}
+
+	/**/ if ( ( ! msddisk ) || ( msddev->msddev_Detached ) || ( ! msddisk->msddisk_MediaPresent ) )
+	{
+		ioreq->io_Error = TDERR_DiskChanged;
+	}
+	else if ( msddisk->msddisk_DeviceType == DG_CDROM )
+	{
+		ioreq->io_Error = 0;
+	}
+	else if ( MSD_SCSI_GetWriteProtect( usbbase, msddisk, & protected ) )
+	{
+		ioreq->io_Error = 0;
+	}
+	else
+	{
+		ioreq->io_Error = TDERR_NotSpecified;
+	}
+
+	ioreq->io_Actual = protected;
 	reply = TRUE;
 
 	TASK_NAME_LEAVE();
