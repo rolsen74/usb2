@@ -366,6 +366,11 @@ enum FSTAT fstat;
 
 	USBINFO( "__Function_Free           : Freeing %p : (%s)", fn, (file)?file:"<NULL>" );
 
+	if ( fn->fkt_Initialized )
+	{
+		USB2_Notify_Function( usbbase, fn, USBNC_Removing );
+	}
+
 	// --
 
 	#ifdef DO_PANIC
