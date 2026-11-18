@@ -29,7 +29,7 @@ PTR node;
 
 	SEMAPHORE_OBTAIN( & msddisk->msddisk_MSDUnit_Semaphore );
 
-	node = msddisk->msddisk_MSDUnit_ChangeList.uh_Head;
+	node = msddisk->msddisk_MSDUnit_StatList.uh_Head;
 
 	while( node )
 	{
@@ -51,7 +51,7 @@ PTR node;
 	}
 	else
 	{
-		NODE_REMNODE( & msddisk->msddisk_MSDUnit_ChangeList, node );
+		NODE_REMNODE( & msddisk->msddisk_MSDUnit_StatList, node );
 		ioreq->io_Error = 0;
 //		reply = TRUE;
 	}
