@@ -17,13 +17,16 @@ SEC_CODE S32 Report_Bind_Drivers( struct USBBase *usbbase, struct HIDData *hd UN
 {
 struct HID_ReportNode *next;
 struct HID_ReportNode *rn;
+enum TaskReturn stat;
 S32 error;
+U32 started;
 PTR init;
 PTR main;
 PTR free;
 STR name;
 
 	error = TRUE;
+	started = 0;
 
 	// --
 
@@ -81,7 +84,7 @@ STR name;
 		{
 			HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Bind ReportID : %ld\n", rn->ReportID ); )
 
-			TASK_START(
+			stat = TASK_START(
 				TASK_Tag_Func_Init, init,
 				TASK_Tag_Func_Main, main,
 				TASK_Tag_Func_Free, free,
@@ -92,6 +95,16 @@ STR name;
 				TASK_Tag_Name, name,
 				TAG_END
 			);
+
+			if ( ( stat == TASK_Return_Stack_Okay ) || ( stat == TASK_Return_Okay ) )
+			{
+				started++;
+			}
+			else
+			{
+				NODE_REMNODE( & hd->Reports, rn );
+				Node_Report_Free( usbbase, rn );
+			}
 		}
 		else
 		{
@@ -105,7 +118,7 @@ STR name;
 		rn = next;
 	}
 
-	error = FALSE;
+	error = ( started == 0 );
 
 //bailout:
 
