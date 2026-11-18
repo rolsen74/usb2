@@ -281,17 +281,16 @@ U32 cnt;
 			break;
 		}
 
-		NODE_ADDTAIL( & usbbase->usb_HCDHeader, node );
-
-		// --
-
 		node->hn_PCIDevLock = pcidev->Lock( PCI_LOCK_EXCLUSIVE );
 	
 		if ( ! node->hn_PCIDevLock )
 		{
 			USBERROR( "Error locking PCI device" );
+			HCD_FREE( node );
+			IPCI->FreeDevice( pcidev );
 			continue;
 		}
+		node->hn_PCIDevice = pcidev;
 
 		// --- Enable IO, Memory, Master
 
@@ -311,6 +310,9 @@ U32 cnt;
 		if ( ! range )
 		{
 			USBERROR( "Error getting PCI Resource" );
+			pcidev->Unlock();
+			IPCI->FreeDevice( pcidev );
+			HCD_FREE( node );
 			continue;
 		}
 
@@ -320,6 +322,30 @@ U32 cnt;
 		if ( ! node->hn_PCIDevIOBase )
 		{
 			USBERROR( "Error Base Address not found" );
+			pcidev->FreeResourceRange( range );
+			pcidev->Unlock();
+			IPCI->FreeDevice( pcidev );
+			HCD_FREE( node );
+			continue;
+		}
+
+		if (( fs->fs_HCDType == HCDTYPE_UHCI ) && ! ( range->Flags & PCI_RANGE_IO ))
+		{
+			USBERROR( "UHCI requires a PCI I/O range" );
+			pcidev->FreeResourceRange( range );
+			pcidev->Unlock();
+			IPCI->FreeDevice( pcidev );
+			HCD_FREE( node );
+			continue;
+		}
+
+		if (( fs->fs_HCDType == HCDTYPE_XHCI ) && ( range->Flags & PCI_RANGE_IO ))
+		{
+			USBERROR( "XHCI requires a PCI memory range" );
+			pcidev->FreeResourceRange( range );
+			pcidev->Unlock();
+			IPCI->FreeDevice( pcidev );
+			HCD_FREE( node );
 			continue;
 		}
 
@@ -400,6 +426,8 @@ U32 cnt;
 			MEM_COPY( (PTR) & XHCIFunctions, & node->HCD_Functions, sizeof( struct HCDFunctions ));
 		}
 		#endif
+
+		NODE_ADDTAIL( & usbbase->usb_HCDHeader, node );
 	}
 
 	TASK_NAME_LEAVE();
