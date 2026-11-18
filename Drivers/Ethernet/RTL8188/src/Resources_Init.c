@@ -14,9 +14,13 @@
 
 extern struct Interface *INewlib;
 extern struct Library *NewlibBase;
+struct TimerIFace *IRTL8188Timer;
 
 S32 Resources_Init( struct EthernetBase *ethBase )
 {
+struct ExecBase *exec;
+struct Library *timer;
+
 S32 retval;
 
 	USBDEBUG( "RTL8188 : Resources_Init" );
@@ -57,6 +61,14 @@ S32 retval;
 	}
 
 	// --
+
+	exec = (PTR) IExec->Data.LibBase;
+	timer = (PTR) FindName( & exec->DeviceList, "timer.device" );
+
+	if ( timer )
+	{
+		IRTL8188Timer = (PTR) GetInterface( timer, "main", 1, NULL );
+	}
 
 	InitSemaphore( & ethBase->eth_ETH_Semaphore );
 
