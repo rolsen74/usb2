@@ -51,6 +51,13 @@ Mass-storage limitations:
 - The recent CD/DVD, floppy, media-change, and 64-bit paths build successfully
   but have not been verified with physical drives in this workspace.
 
+## PL2303 Serial (Untested)
+
+The external PL2303 driver matches USB device `067b:2303` and exposes it as
+`usb2serial.device`. Build it with `make -C Drivers/Serial/PL2303 -j4`, then
+install `PL2303.Class` and `PL2303.Driver` in `Libs:USB2`. The cross-compiler
+build succeeds; operation with a physical adapter has not been tested.
+
 ## General Limitations
 
 - The stack is **not feature-complete**
