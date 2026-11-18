@@ -26,6 +26,7 @@ SEC_CODE enum FSTAT __EndPointRes_Release( struct USBBase *usbbase, struct USB2_
 struct RealEndPointResource *real;
 struct RealRegister *reg;
 enum FSTAT stat;
+U32 control;
 
 	USBDEBUG( "__EndPointRes_Release : EPR   %p : (%s)", epr, (file)?file:"<NULL>" );
 
@@ -40,27 +41,31 @@ enum FSTAT stat;
 		if ( ENDPOINTRES_VALID(real) == VSTAT_Okay )
 		{
 			reg = real->epr_Register;
+			control = FALSE;
 
 			if ( reg )
 			{
+				if ( reg->reg_Public.Res_Control == & real->epr_Public )
+				{
+					reg->reg_Public.Res_Control = NULL;
+					control = TRUE;
+				}
+
 				USBDEBUG( "--> : REM 2 : EPR   %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
 				NODE_REMNODE( & reg->reg_EPRHeader, & real->epr_Node );
 			}
 
 			stat = ENDPOINTRES_FREE( real );
 
-			if (( reg ) && ( stat != FSTAT_Okay ))
+			if ( ( reg ) && ( stat != FSTAT_Okay ) )
 			{
+				if ( control )
+				{
+					reg->reg_Public.Res_Control = & real->epr_Public;
+				}
+
 				USBDEBUG( "--> : ADD 3 :EPR %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
 				NODE_ADDHEAD( & reg->reg_EPRHeader, & real->epr_Node );
-			}
-			else
-			{
-				if ( reg->reg_Public.Res_Control == & real->epr_Public )
-				{
-					USBDEBUG( "__Register_Free          : Found Control EPR (2)" );
-					reg->reg_Public.Res_Control = NULL;
-				}
 			}
 		}
 		else
