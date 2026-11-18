@@ -42,7 +42,7 @@ struct ExecIFace *IExec;
 struct DOSIFace *IDOS;
 struct Library *DOSBase;
 
-	IExec = (PTR)(*(struct ExecBase **)4)->MainInterface;
+	IExec = USB2_GetExecIFace();
 	IExec->DebugPrintF( "USB : Full Boot\n" );
 
 	IDOS = NULL;
@@ -114,7 +114,7 @@ U8 usbstat;
 
 	// ----
 
-	IExec = (struct ExecIFace *)(*(struct ExecBase **)4)->MainInterface;
+	IExec = USB2_GetExecIFace();
 	IDOS  = (PTR)((struct Task *)IExec->FindTask(NULL))->tc_UserData;
 
 	// Prevent DOS opening any windows
