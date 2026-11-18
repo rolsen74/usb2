@@ -111,6 +111,7 @@ SEC_CODE void	HUB_Free( struct USBBase *usbbase, struct intern *in );
 SEC_CODE U32	HUB_GetDesc( struct USBBase *usbbase, struct intern *in );
 SEC_CODE void	HUB_Handle_Interrupt( struct USBBase *usbbase, struct intern *in );
 SEC_CODE S32	HUB_Power_Up( struct USBBase *usbbase, struct intern *in );
+SEC_CODE void	HUB_Initial_Scan( struct USBBase *usbbase, struct intern *in );
 SEC_CODE void	HUB_Schedule( struct USBBase *usbbase, struct intern *in );
 SEC_CODE void	HUB_Handle_Stack( struct USBBase *usbbase, struct intern *in );
 SEC_CODE void	HUB_Wait_ms( struct USBBase *usbbase, struct intern *in, U32 ms );
