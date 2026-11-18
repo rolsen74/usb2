@@ -15,6 +15,8 @@
 
 /***************************************************************************/
 
+struct USBBase;
+
 struct USB2_NotifyNode
 {
 	struct USB2_Node				nn_Node;
@@ -24,6 +26,8 @@ struct USB2_NotifyNode
 	struct MsgPort *				nn_MsgPort;			// Normal Exec Port from User
 	U32								nn_Type;
 };
+
+void USB2_Notify_Function( struct USBBase *usbbase, struct RealFunctionNode *fn, U32 command );
 
 /***************************************************************************/
 
