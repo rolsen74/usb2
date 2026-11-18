@@ -12,122 +12,76 @@
 
 // --
 
-void _fs_Handler__Commands( struct FS_Struct *fs )
+void
+_fs_Handler__Commands( struct FS_Struct *fs )
 {
-struct CommandMessage *msg;
-struct CameraInfoNode *cin;
-S32 reply;
+	struct CommandMessage *msg;
+	struct CameraInfoNode *camera;
+	struct FS_ObjNode *node;
+
+	STR name;
 
 	ObtainSemaphore( & fs->fs_Semaphore );
 
-	while( TRUE )
+	while(( msg = (PTR) GetMsg( FS_CmdMsgPort ) ))
 	{
-		msg = (PTR) GetMsg( FS_CmdMsgPort );
-
-		if ( ! msg )
-		{
-			break;
-		}
+		camera = msg->cm_InfoNode;
+		msg->cm_Error = 0;
 
 		switch( msg->cm_Command )
 		{
 			case CMD_Camera_Added:
-			{
-				MYERROR( "PTP-FS : CMD_Camera_Added" );
+				name = ASPrintf( "Camera-%08lx%08lx", (U32) ( camera->cin_ID >> 32 ), (U32) camera->cin_ID );
 
-				cin = (PTR) GetHead( & fs->fs_CameraList );
-
-				while( cin )
+				if ( ! name )
 				{
-					if ( msg->cm_InfoNode == cin )
-					{
-						break;
-					}
-					else
-					{
-						cin = (PTR) GetSucc( (PTR) cin );
-					}
+					msg->cm_Error = ERROR_NO_FREE_STORE;
+					break;
 				}
 
-				if ( ! cin )
+				node = _fs_Node_CreateDir( fs, & msg->cm_Error, name );
+
+				FreeVec( name );
+
+				if ( node )
 				{
-					cin = msg->cm_InfoNode;
+					node->on_Parent_dir = fs->fs_RootNode;
+					node->on_CameraRoot = node;
+					node->on_Camera = camera;
+					camera->cin_DirNode = node;
 
-					cin->cin_DirNode = _fs_Node_CreateDir( fs, NULL, cin->cin_Name );
-
-					if ( cin->cin_DirNode )
-					{
-						AddTail( & fs->fs_CameraList, (PTR) cin );
-						AddTail( & fs->fs_RootNode->on_Content_List, (PTR) cin->cin_DirNode );
-					}
+					AddTail( & fs->fs_RootNode->on_Content_List, & node->on_Node );
 				}
 
-			FreeVec( msg );
-				reply = FALSE;
 				break;
-			}
 
 			case CMD_Camera_Removed:
-			{
-				MYERROR( "PTP-FS : CMD_Camera_Removed" );
+				node = camera->cin_DirNode;
 
-				cin = (PTR) GetHead( & fs->fs_CameraList );
-
-				while( cin )
+				if ( node )
 				{
-					if ( msg->cm_InfoNode == cin )
+					Remove( & node->on_Node );
+
+					node->on_Camera = NULL;
+					camera->cin_DirNode = NULL;
+
+					if ( ! node->on_References )
 					{
-						break;
-					}
-					else
-					{
-						cin = (PTR) GetSucc( (PTR) cin );
+						_fs_Node_Delete( fs, node );
 					}
 				}
 
-				if ( cin )
-				{
-					Remove( (PTR) cin );
-//					FreeVec( msg );
-				}
-
-			if ( msg->cm_Message.mn_ReplyPort )
-			{
-				ReplyMsg( (PTR) msg );
-			}
-			else
-			{
-				FreeVec( msg );
-			}
-				reply = FALSE;
 				break;
-			}
-
-//--		case PTPCMD_Storage_Added:
-//--		{
-//--			Handle_Storage_Add( fs, msg );
-//--			break;
-//--		}
-
-//--		case PTPCMD_Storage_Removed:
-//--		{
-//--			Handle_Storage_Remove( fs, msg );
-//--			break;
-//--		}
 
 			default:
-			{
-				MYERROR( "PTP-FS : Unknown Command (%ld)", msg->cm_Command );
-				reply = TRUE;
+				msg->cm_Error = ERROR_ACTION_NOT_KNOWN;
 				break;
-			}
 		}
 
-		if ( reply )
-		{
-			ReplyMsg( (PTR) msg );
-		}
+		ReplyMsg( (PTR) msg );
 	}
 
 	ReleaseSemaphore( & fs->fs_Semaphore );
 }
+
+// --
