@@ -13,11 +13,17 @@
 
 // --
 
-SEC_CODE S32 Report_Read_Item( struct USBBase *usbbase, struct HIDData *hd UNUSED, struct pintern *pi )
+SEC_CODE S32 Report_Read_Item( struct USBBase *usbbase UNUSED, struct HIDData *hd UNUSED, struct pintern *pi )
 {
 S32 error;
 
 	error = TRUE;
+	pi->len = ( pi->bSize == 3 ) ? 4 : pi->bSize;
+
+	if ( ( pi->data > pi->end ) || ( (U32) ( pi->end - pi->data ) < pi->len ) )
+	{
+		goto bailout;
+	}
 
 	switch( pi->bSize )
 	{
@@ -56,8 +62,9 @@ S32 error;
 			pi->len  = 4;
 			pi->mask = 0xffffffff;
 
-			pi->sval = (S32) (( pi->data[3] << 24 ) | ( pi->data[2] << 16 ) | ( pi->data[1] << 8 ) | ( pi->data[0] << 0 ));
-			pi->uval = (U32) (( pi->data[3] << 24 ) | ( pi->data[2] << 16 ) | ( pi->data[1] << 8 ) | ( pi->data[0] << 0 ));
+			pi->uval = ( (U32) pi->data[3] << 24 ) | ( (U32) pi->data[2] << 16 ) |
+				( (U32) pi->data[1] << 8 ) | pi->data[0];
+			pi->sval = (S32) pi->uval;
 			break;
 		}
 
