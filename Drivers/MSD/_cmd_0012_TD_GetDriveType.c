@@ -14,21 +14,33 @@
 // --
 #if 1
 
-SEC_CODE S32 MSD_Cmd_0012_TD_GetDriveType( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE S32 MSD_Cmd_0012_TD_GetDriveType( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev, struct IOStdReq *ioreq )
 {
-S32 reply;
+struct MSDDisk *msddisk;
 
 	TASK_NAME_ENTER( "MSD : TD_GetDriveType" );
-	USBERROR( "MSD : _cmd_0012_TD_GetDriveType" );
 
-	// todo : Convert TD_GETGEOMETRY's dg_DeviceType to DRIVExxx ?
+	msddisk = (PTR) ioreq->io_Unit;
+	ioreq->io_Actual = 0;
 
-	ioreq->io_Actual = DRIVE3_5;	// hmm proberly not correct
-	ioreq->io_Error = 0;
-	reply = TRUE;
+	if ( ( msddev->msddev_Detached ) || ( ! msddisk ) )
+	{
+		ioreq->io_Error = TDERR_DiskChanged;
+	}
+	else if ( msddev->msddev_SubClass == MSD_SubClass_UFI )
+	{
+		ioreq->io_Actual = DRIVE3_5;
+		ioreq->io_Error = 0;
+	}
+	else
+	{
+		// Drive type codes describe floppy drives; use TD_GETGEOMETRY for disks and CDs.
+		ioreq->io_Error = IOERR_NOCMD;
+	}
 
 	TASK_NAME_LEAVE();
-	return( reply );
+
+	return ( TRUE );
 }
 
 #endif
