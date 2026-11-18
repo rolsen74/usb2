@@ -8,7 +8,7 @@ BINDIR				:= $(ROOTDIR)/_Data
 all: build_all
 
 .PHONY: all build_all build_dir_tree build_stack build_printer build_video \
-	build_ptp build_serial build_analyzer build_archive
+	build_ptp build_serial build_audio build_rtl8152 build_rtl8188 build_analyzer build_archive
 
 ###########################################################################
 
@@ -20,6 +20,9 @@ build_all: build_archive
 build_dir_tree:
 	rm -rf $(BINDIR)
 	mkdir -p $(BINDIR)/usb2/Devs
+	mkdir -p $(BINDIR)/usb2/Devs/AHI
+	mkdir -p $(BINDIR)/usb2/Devs/AudioModes
+	mkdir -p $(BINDIR)/usb2/Devs/Networks
 	mkdir -p $(BINDIR)/usb2/Libs/USB2
 	mkdir -p $(BINDIR)/usb2/Kickstart
 	mkdir -p $(BINDIR)/usb2/Tools
@@ -79,6 +82,42 @@ build_serial: | build_dir_tree
 
 ###########################################################################
 
+build_audio: | build_dir_tree
+	@echo "Building Audio Driver"
+	cd $(ROOTDIR)/Drivers/Audio && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	$(MAKE) -C AHI clean && \
+	$(MAKE) -C AHI && \
+	cp bin/Audio.Driver Audio.Class $(BINDIR)/usb2/Libs/USB2 && \
+	cp AHI/bin/usb2.audio $(BINDIR)/usb2/Devs/AHI && \
+	cp AHI/bin/USB2 $(BINDIR)/usb2/Devs/AudioModes
+	@echo "Audio done"
+
+###########################################################################
+
+build_rtl8152: | build_dir_tree
+	@echo "Building RTL8152 Ethernet Driver"
+	cd $(ROOTDIR)/Drivers/Ethernet/RTL8152 && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	$(MAKE) -f makefile strip && \
+	cp bin/usb2rtl8152.device $(BINDIR)/usb2/Devs/Networks
+	@echo "RTL8152 Ethernet done"
+
+###########################################################################
+
+build_rtl8188: | build_dir_tree
+	@echo "Building RTL8188EU Wi-Fi Driver"
+	cd $(ROOTDIR)/Drivers/Ethernet/RTL8188 && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	$(MAKE) -f makefile strip && \
+	cp bin/usb2rtl8188.device $(BINDIR)/usb2/Devs/Networks
+	@echo "RTL8188EU Wi-Fi done"
+
+###########################################################################
+
 build_analyzer: | build_dir_tree
 	@echo "Building USB2Analyzer"
 	cd $(ROOTDIR)/Programs/USB2Analyzer && \
@@ -90,7 +129,8 @@ build_analyzer: | build_dir_tree
 
 ###########################################################################
 
-build_archive: build_stack build_printer build_video build_ptp build_serial build_analyzer
+build_archive: build_stack build_printer build_video build_ptp build_serial build_audio \
+	build_rtl8152 build_rtl8188 build_analyzer
 	@echo "Building Archive"
 	@rm -f usb2.lha
 	cd "$(BINDIR)" && lha a "$(ROOTDIR)/usb2.lha" usb2
