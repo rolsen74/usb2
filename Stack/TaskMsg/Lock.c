@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -27,7 +28,7 @@ enum LSTAT lstat;
 
 	TASK_NAME_ENTER( "__TaskMsg_Lock" );
 
-	USBDEBUG( "__TaskMsg_Lock           : TM %p : Locks %ld (old) : (%s)", tm, (tm)?tm->tm_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__TaskMsg_Lock           : TM    %p : Locks %2ld (old) : (%s)", tm, (tm)?tm->tm_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -36,11 +37,11 @@ enum LSTAT lstat;
 		tm->tm_Locks++;
 		lstat = LSTAT_Okay;
 
-//		USBDEBUG( "__TaskMsg_Lock           : TM %p : New Lock Count : %ld (+1)", tm, tm->tm_Locks );
+//		USBDEBUG( "__TaskMsg_Lock           : TM    %p : New Lock Count : %ld (+1)", tm, tm->tm_Locks );
 	}
 	else
 	{
-		USBPANIC( "__TaskMsg_Lock           : TM %p : Lock failed : (%s)", tm, file );
+		USBPANIC( "__TaskMsg_Lock           : TM    %p : Lock failed : (%s)", tm, file );
 		lstat = LSTAT_Error;
 	}
 
