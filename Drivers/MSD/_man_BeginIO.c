@@ -44,20 +44,20 @@ struct MSDDisk *msddisk;
 		// case /* 0007 */ CMD_START:
 		// case /* 0008 */ CMD_FLUSH:
 		case /* 0009 */ TD_MOTOR:
-		// case /* 000A */ TD_SEEK:
-		// case /* 000B */ TD_FORMAT:
-		// case /* 000D */ TD_CHANGENUM:
+		case /* 000A */ TD_SEEK:
+		case /* 000B */ TD_FORMAT:
+		case /* 000D */ TD_CHANGENUM:
 		case /* 000E */ TD_CHANGESTATE:
 		case /* 000F */ TD_PROTSTATUS:
 		case /* 0012 */ TD_GETDRIVETYPE:
 		case /* 0014 */ TD_ADDCHANGEINT:
 		case /* 0015 */ TD_REMCHANGEINT:
 		case /* 0016 */ TD_GETGEOMETRY:
-		// case /* 0017 */ TD_EJECT:
+		case /* 0017 */ TD_EJECT:
 		case /* 0018 */ TD_READ64:
-		// case /* 0019 */ TD_WRITE64:
-		// case /* 001A */ TD_SEEK64:
-		// case /* 001B */ TD_FORMAT64:
+		case /* 0019 */ TD_WRITE64:
+		case /* 001A */ TD_SEEK64:
+		case /* 001B */ TD_FORMAT64:
 		case /* 001C */ HD_SCSICMD:
 		case /* 4000 */ NSCMD_DEVICEQUERY:
 		case /* A004 */ NSCMD_TD_GETGEOMETRY64:			// Mounter.lib
@@ -65,9 +65,9 @@ struct MSDDisk *msddisk;
 		case /* A006 */	NSCMD_TD_ADDSTATCALLBACK:		// Mounter.lib
 		case /* A007 */	NSCMD_TD_REMSTATCALLBACK:		// Mounter.lib
 		case /* C000 */ NSCMD_TD_READ64:
-		// case /* C001 */ NSCMD_TD_WRITE64:
-		// case /* C002 */ NSCMD_TD_SEEK64:
-		// case /* C003 */ NSCMD_TD_FORMAT64:
+		case /* C001 */ NSCMD_TD_WRITE64:
+		case /* C002 */ NSCMD_TD_SEEK64:
+		case /* C003 */ NSCMD_TD_FORMAT64:
 		{
 			if ( msddisk->msddisk_MsgPort_Begin )
 			{
