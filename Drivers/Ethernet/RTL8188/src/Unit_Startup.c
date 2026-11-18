@@ -41,9 +41,14 @@ S32 sig;
 	// Try and alloc signal
 	sig = AllocSignal( -1 );
 
+	if ( sig < 0 )
+	{
+		goto bailout;
+	}
+
 	msg.Result	= 0;
 	msg.Parent	= FindTask( NULL );
-	msg.Mask	= ( sig == -1 ) ? ( SIGBREAKF_CTRL_D ) : ( 1UL << sig );
+	msg.Mask	= 1UL << sig;
 	msg.Unit	= unit;
 
 	// Clear signal
@@ -69,10 +74,7 @@ S32 sig;
 		}
 	}
 
-	if ( sig != -1 )
-	{
-		FreeSignal( sig );
-	}
+	FreeSignal( sig );
 
 	if ( ! msg.Result )
 	{
@@ -81,9 +83,6 @@ S32 sig;
 	}
 
 	// --
-
-	// Startup complete, we can now handle IOReq
-	unit->unit_StartupComplete = TRUE;
 
 	// All okay
 	retval = TRUE;
