@@ -33,7 +33,6 @@ usbbase->usb_IExec->DebugPrintF( "\n\n## ---- ##\n" ); )
 
 	pi.data		= hd->ReportBuffer;
 	pi.size		= hd->ReportSize;
-	pi.end		= & pi.data[pi.size];
 	pi.gn		= & gstack;
 
 	error		= TRUE;
@@ -44,6 +43,8 @@ usbbase->usb_IExec->DebugPrintF( "\n\n## ---- ##\n" ); )
 	{
 		goto bailout;
 	}
+
+	pi.end = & pi.data[pi.size];
 
 	// --
 
@@ -69,7 +70,7 @@ HID_DEBUG(
 		{
 			// Skip Long Tag Item
 
-			if ( pi.data + 2 > pi.end )
+			if ( (U32) ( pi.end - pi.data ) < 2 )
 			{
 				// Out of bound
 // usbbase->usb_IExec->DebugPrintF( "LongTag: Out of bound 1\n" );
@@ -79,7 +80,7 @@ HID_DEBUG(
 			pi.len  = *pi.data++;
 			pi.bTag = *pi.data++;
 
-			if ( pi.data + pi.len > pi.end )
+			if ( (U32) ( pi.end - pi.data ) < pi.len )
 			{
 				// Out of bound
 // usbbase->usb_IExec->DebugPrintF( "LongTag: Out of bound 2 : Len %lu\n", (U32) pi.len );
@@ -199,14 +200,28 @@ bailout:
 		}
 	}
 
+	while( TRUE )
+	{
+		struct HID_UsageNode *un;
+
+		un = NODE_REMHEAD( & pi.usages );
+
+		if ( ! un )
+		{
+			break;
+		}
+
+		Node_Usage_Free( usbbase, un );
+	}
+
 	// --
 	// Make sure we don't leave with stack'ed Globals
 
-	pi.gn = gstack.Parent;
-
-	while( pi.gn )
+	while( ( pi.gn ) && ( pi.gn != & gstack ) )
 	{
-		PTR next = pi.gn->Parent;
+		struct HID_GlobalNode *next;
+
+		next = pi.gn->Parent;
 
 		Node_Global_Free( usbbase, pi.gn );
 
