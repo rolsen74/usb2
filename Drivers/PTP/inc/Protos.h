@@ -46,14 +46,29 @@ void				_fs_Handler__FSVector(			struct FS_Struct *fs );
 void				_fs_Handler__Commands(			struct FS_Struct *fs );
 
 // Helper Functions
-struct FS_ObjNode *	_fs_Handle_Rel_Args(			struct FS_Struct *fs, struct FS_ObjLock *rel, CONST_STRPTR name );
-struct FS_ObjNode *	_fs_Node_CreateDir(				struct FS_Struct *fs, int32 *res2, STR name );
-void				_fs_Node_Delete(				struct FS_Struct *fs, struct FS_ObjNode *node );
-struct FS_ObjNode *	_fs_Node_Locate_Rel(			struct FS_Struct *fs, struct FS_ObjNode **parent, struct FS_ObjLock *lock, int32 follow_links, int32 *res2, STR name );
-struct FS_ObjNode *	_fs_Node_Find(					struct FS_Struct *fs, struct FS_ObjNode *node, int32 *res2, STR name );
-struct FS_ObjLock * _fs_Lock_New_From_Node(			struct FS_Struct *fs, struct FS_ObjNode *node, int32 *res2, int32 access );
-int32				_fs_Lock_Free(					struct FS_Struct *fs, struct FS_ObjLock *lock );
-void				_fs_Recursive_Change_Update(	struct FS_Struct *fs, struct FS_ObjNode *node );
+struct FS_ObjNode *_fs_Node_CreateDir( struct FS_Struct *fs, int32 *res2, STR name );
+void _fs_Node_Delete( struct FS_Struct *fs, struct FS_ObjNode *node );
+struct FS_ObjNode *_fs_Node_Locate_Rel( struct FS_Struct *fs, int32 *res2, struct FS_ObjLock *lock, CONST_STRPTR name );
+struct FS_ObjNode *_fs_Node_Find( struct FS_ObjNode *node, CONST_STRPTR name, U32 length );
+int32 _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node );
+struct ExamineData *_fs_ExamineNode( struct FS_ObjNode *node, struct PRIVATE_ExamineDirContext *context );
+struct FS_ObjLock *_fs_Lock_New_From_Node( struct FS_Struct *fs, struct FS_ObjNode *node, int32 *res2, int32 access );
+int32 _fs_Lock_Free( struct FS_Struct *fs, struct FS_ObjLock *lock );
+int32 _fs_FileCache_Create( struct FS_ObjLock *lock, int32 mode );
+struct FS_ObjLock *_fs_File_Create( struct FS_Struct *fs, int32 *res2, struct FS_ObjLock *rel, CONST_STRPTR name );
+int32 _fs_File_Upload( struct FS_ObjLock *lock );
+int32 _fs_FileCache( struct FS_ObjLock *lock );
+void _fs_FileCache_Close( struct FS_ObjLock *lock );
+int32 _fs__FSOpen( struct FSVP *vp, int32 *res2, struct FileHandle *file, struct Lock *rel, CONST_STRPTR name, int32 mode );
+int32 _fs__FSOpenFromLock( struct FSVP *vp, int32 *res2, struct FileHandle *file, struct Lock *lock );
+int32 _fs__FSClose( struct FSVP *vp, int32 *res2, struct FileHandle *file );
+int32 _fs__FSWrite( struct FSVP *vp, int32 *res2, struct FileHandle *file, STR buffer, int32 count );
+int32 _fs__FSRead( struct FSVP *vp, int32 *res2, struct FileHandle *file, STR buffer, int32 count );
+int32 _fs__FSChangeFilePosition( struct FSVP *vp, int32 *res2, struct FileHandle *file, int32 mode, S64 position );
+S64 _fs__FSGetFilePosition( struct FSVP *vp, int32 *res2, struct FileHandle *file );
+S64 _fs__FSGetFileSize( struct FSVP *vp, int32 *res2, struct FileHandle *file );
+
+// --
 
 // Vector Entries .. Use Semaphore Locks
 int32				_fs__FSDeviceInfoData(			struct FSVP *vp, int32 *res2, struct InfoData *id );
@@ -85,27 +100,11 @@ void	_usb_Free(			struct USB_Struct *us );
 void	_usb_Loop(			struct USB_Struct *us );
 
 
-U32		_usb__Open_Session(				struct USB_Struct *us );
-U32		_usb__Get_Device_Info(			struct USB_Struct *us );
-void	_usb_Loop_Event(				struct USB_Struct *us );
-void	_usb_Loop_Stack(				struct USB_Struct *us );
-void	_usb_Loop_Bulk_In(				struct USB_Struct *us );
-void	_usb_Loop_Bulk_Out(				struct USB_Struct *us );
-
-// --
-
-struct USB_Command *_usb_Bulk_Cmd_Get(	struct USB_Struct *us );
-void	_usb_Bulk_Cmd_Free(				struct USB_Struct *us, struct USB_Command *cmd );
-void	_usb_Bulk_Schedule(				struct USB_Struct *us );
-
-void	_usb_Bulk_Stage_Send_Header1(	struct USB_Struct *us, struct USB_Command *cmd );
-void	_usb_Bulk_Stage_Send_Header2(	struct USB_Struct *us, struct USB_Command *cmd );
-
-void	_usb_Bulk_Stage_Read_Data1(		struct USB_Struct *us, struct USB_Command *cmd );
-
-void	_usb_Bulk_Stage_Send_Data1(		struct USB_Struct *us, struct USB_Command *cmd );
-
-void	_usb_Bulk_Stage_Read_Stat1(		struct USB_Struct *us, struct USB_Command *cmd );
-void	_usb_Bulk_Stage_Read_Stat2(		struct USB_Struct *us, struct USB_Command *cmd );
+void _usb_Loop_Stack( struct USB_Struct *us );
+void _usb_QueryUpload( struct USB_Struct *us );
+S32 _usb_SendData( struct USB_Struct *us, struct CommandMessage *request, U32 transaction );
+S32 _usb_WriteBulk( struct USB_Struct *us, U32 length, S32 final );
+void _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request );
+int32 _fs_Camera_Request( struct CameraInfoNode *camera, struct CommandMessage *request );
 
 #endif
