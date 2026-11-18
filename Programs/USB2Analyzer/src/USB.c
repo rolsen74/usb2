@@ -27,7 +27,6 @@ U32							USBNotifyBit			= 0;
 static S32 Handle_Notify_HCD( struct USB2_NotifyMessage *msg );
 static S32 Handle_Notify_Function( struct USB2_NotifyMessage *msg );
 static S32 Handle_Notify_Interface( struct USB2_NotifyMessage *msg );
-struct USB2_Descriptor *Desc_GetNext( struct USB2_Descriptor *desc );
 
 // --
 
@@ -333,6 +332,8 @@ static S32 Handle_Notify_Function( struct USB2_NotifyMessage *msg )
 struct USB2_HUB_Desc HUBDsc;
 struct USB2_FktNode *parent;
 struct USB2_FktNode *node;
+struct USB2_FktNode *child;
+U32 ports;
 S32 rebuild;
 // U32 max;
 // U32 cnt;
@@ -352,6 +353,11 @@ S32 rebuild;
 	{
 		case USBNC_Adding:
 		{
+			if ( FktNode_Find( & DeviceTreeUSBList, msg->nm_ID ) )
+			{
+				break;
+			}
+
 			node = FktNode_Alloc( TYPE_FUNCTION, msg->nm_ID );
 
 			if ( ! node )
@@ -364,19 +370,34 @@ S32 rebuild;
 
 			// --
 
-			USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_DeviceDesc, & node->DevDsc, sizeof( struct USB2_Device_Desc ));
+			if ( USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_DeviceDesc,
+				& node->DevDsc, sizeof( node->DevDsc ) ) != sizeof( node->DevDsc ) )
+			{
+				FktNode_Delete( node );
+				break;
+			}
 
 			// --
 
 			if ( node->DevDsc.DeviceClass == USBCLASS_HUB )
 			{
-				USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_HUBDesc, & HUBDsc, sizeof( struct USB2_HUB_Desc ));
+				ports = 0;
 
-				node->Ports = HUBDsc.NbrPorts;
+				if ( USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_HUBPorts,
+					& ports, sizeof( ports ) ) != sizeof( ports ) )
+				{
+					if ( USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_HUBDesc,
+						& HUBDsc, sizeof( HUBDsc ) ) == sizeof( HUBDsc ) )
+					{
+						ports = HUBDsc.NbrPorts;
+					}
+				}
+
+				node->Ports = ports;
 
 				if ( node->Ports )
 				{
-					node->Functions = AllocVecTags( node->Ports * 4,
+					node->Functions = AllocVecTags( node->Ports * sizeof( *node->Functions ),
 						AVT_Clear, 0,
 						TAG_END
 					);
@@ -390,14 +411,22 @@ S32 rebuild;
 				}
 			}
 
-			if ( parent->Functions )
+			if ( ( parent->Functions ) &&
+				( ( node->Port < 1 ) || ( node->Port > parent->Ports ) ) )
 			{
-				parent->Functions[ node->Port-1 ] = node;
+				FktNode_Delete( node );
+				break;
 			}
 
 			// --
 
-			USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_ConfigSize, & node->CfgSize, sizeof( U32 ));
+			if ( ( USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_ConfigSize,
+				& node->CfgSize, sizeof( U32 ) ) != sizeof( U32 ) ) ||
+				( node->CfgSize <= 0 ) || ( node->CfgSize > 65535 ) )
+			{
+				FktNode_Delete( node );
+				break;
+			}
 			// IUSB2->Stack_GetAttribute( msg->nm_ID, USB2Tag_FKT_ConfigDescriptorSize, &node->Data.Function.ConfigSize, sizeof( U32 ));
 
 			node->CfgDesc = AllocVecTags( node->CfgSize + 2,	// Adding empty Type+Len
@@ -411,7 +440,12 @@ S32 rebuild;
 				break;
 			}
 
-			USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_ConfigDesc, node->CfgDesc, node->CfgSize );
+			if ( USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_ConfigDesc,
+				node->CfgDesc, (U32) node->CfgSize ) != (U32) node->CfgSize )
+			{
+				FktNode_Delete( node );
+				break;
+			}
 			// IUSB2->Stack_GetAttribute( msg->nm_ID, USB2Tag_FKT_ConfigDescriptor, node->Data.Function.ConfigDesc, node->Data.Function.ConfigSize );
 
 			// --
@@ -479,6 +513,11 @@ S32 rebuild;
 
 			// --
 
+			if ( parent->Functions )
+			{
+				parent->Functions[ node->Port-1 ] = node;
+			}
+
 			AddTail( & parent->Header, (PTR) node );
 
 			rebuild = TRUE;
@@ -493,18 +532,41 @@ S32 rebuild;
 			{
 				if ( node->DevDsc.DeviceClass == USBCLASS_HUB )
 				{
-					USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_HUBDesc, & HUBDsc, sizeof( struct USB2_HUB_Desc ));
+					ports = 0;
 
-					if (( node->Ports == 0 ) && ( node->Ports != HUBDsc.NbrPorts ))
+					if ( USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_HUBPorts,
+						& ports, sizeof( ports ) ) != sizeof( ports ) )
 					{
-						node->Ports = HUBDsc.NbrPorts;
+						if ( USB2_Attr_Get( msg->nm_ID, USB2Tag_Attr_HUBDesc,
+							& HUBDsc, sizeof( HUBDsc ) ) == sizeof( HUBDsc ) )
+						{
+							ports = HUBDsc.NbrPorts;
+						}
+					}
 
-						node->Functions = AllocVecTags( node->Ports * 4,
+					if ( ( node->Ports == 0 ) && ( ports > 0 ) )
+					{
+						node->Functions = AllocVecTags( ports * sizeof( *node->Functions ),
 							AVT_Clear, 0,
 							TAG_END
 						);
 
-						rebuild = TRUE;
+						if ( node->Functions )
+						{
+							node->Ports = ports;
+
+							for ( child = (PTR) GetHead( & node->Header ); child;
+								child = (PTR) GetSucc( (PTR) child ) )
+							{
+								if ( ( child->Type == TYPE_FUNCTION ) &&
+									( child->Port >= 1 ) && ( child->Port <= node->Ports ) )
+								{
+									node->Functions[child->Port-1] = child;
+								}
+							}
+
+							rebuild = TRUE;
+						}
 					}
 				}
 			}
@@ -515,14 +577,16 @@ S32 rebuild;
 		{
 			node = FktNode_Find( & DeviceTreeUSBList, msg->nm_ID );
 
-			if (( node ) && ( parent->Functions ))
+			if ( ( node ) && ( parent->Functions ) &&
+				( node->Port >= 1 ) && ( node->Port <= parent->Ports ) )
 			{
 				parent->Functions[ node->Port-1 ] = NULL;
 			}
 
 			if ( node )
 			{
-				FktNode_Reset( node );
+				Remove( (PTR) node );
+				FktNode_Delete( node );
 
 				rebuild = TRUE;
 			}
@@ -568,6 +632,11 @@ S32 rebuild;
 	{
 		case USBNC_Adding:
 		{
+			if ( FktNode_Find( & DeviceTreeUSBList, msg->nm_ID ) )
+			{
+				break;
+			}
+
 			node = FktNode_Alloc( TYPE_INTERFACE, msg->nm_ID );
 
 			if ( ! node )
@@ -580,8 +649,9 @@ S32 rebuild;
 			dsc = (PTR) parent->CfgDesc;
 			len = (S32) parent->CfgSize;
 
-			if ( ! node->CfgDesc )
+			if ( ! parent->CfgDesc )
 			{
+				FktNode_Delete( node );
 				break;
 			}
 
@@ -589,16 +659,31 @@ S32 rebuild;
 
 			cfgnr = -1;
 
-			while(( dsc ) && ( len > 0 ) && ( ! node->IfcDesc ))
+			while ( ( dsc ) && ( len >= 2 ) && ( ! node->IfcDesc ) )
 			{
+				if ( ( dsc->Length < 2 ) || ( dsc->Length > len ) )
+				{
+					break;
+				}
+
 				/**/ if ( dsc->DescriptorType == DSCTYPE_Configuration )
 				{
+					if ( dsc->Length < sizeof( struct USB2_Config_Desc ) )
+					{
+						break;
+					}
+
 					struct USB2_Config_Desc * cfgdsc = (PTR) dsc ;
 
 					cfgnr = cfgdsc->ConfigurationValue;
 				}
 				else if ( dsc->DescriptorType == DSCTYPE_Interface )
 				{
+					if ( dsc->Length < sizeof( struct USB2_Interface_Desc ) )
+					{
+						break;
+					}
+
 					struct USB2_Interface_Desc * ifcdsc = (PTR) dsc ;
 
 					while( TRUE )
@@ -625,11 +710,12 @@ S32 rebuild;
 				}
 
 				len -= dsc->Length;
-				dsc  = Desc_GetNext( dsc );
+				dsc = len >= 2 ? (PTR)( (U8 *)dsc + dsc->Length ) : NULL;
 			}
 
 			if ( ! node->IfcDesc )
 			{
+				FktNode_Delete( node );
 				break;
 			}
 
@@ -948,39 +1034,6 @@ STR name;
 	}
 
 	return( name );
-}
-
-// --
-
-struct USB2_Descriptor *Desc_GetNext( struct USB2_Descriptor *desc )
-{
-struct USB2_Descriptor *dsc;
-U8 *data;
-U32 pos;
-
-	dsc = NULL;
-
-	if ( ! desc )
-	{
-		goto bailout;
-	}
-
-	if (( desc->Length ) && ( desc->DescriptorType ))
-	{
-		data = (PTR) desc;
-		pos = desc->Length;
-
-		desc = (PTR) & data[pos];
-
-		if (( desc->Length ) && ( desc->DescriptorType ))
-		{
-			dsc = desc;
-		}
-	}
-
-bailout:
-
-	return( dsc );
 }
 
 // --
