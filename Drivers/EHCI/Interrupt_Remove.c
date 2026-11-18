@@ -55,13 +55,9 @@ struct USB2_EndPointNode *epn;
 struct EHCI_QH *cur;
 struct EHCI_QH *qh;
 U32 status;
+S32 stop;
 
-	// --
-
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
-
 
 	qh = ioreq->req_HCD.EHCI.QH_Header;
 
@@ -86,19 +82,29 @@ U32 status;
 
 	EHCI_Slot_Free( hn, ioreq->req_HCD.EHCI.Start_Slot );
 
-	// --
-	// -- Stop / Start .. around unlink
+	// A forced removal may still have a transaction in progress.
+	stop = ioreq->req_Public.io_Error != USB2Err_NoError;
 
-	EHCI_Periodic_Stop( hn );
+	if ( stop )
+	{
+		EHCI_Periodic_Stop( hn );
+	}
 
-	cur->pqh_virt_next	= qh->pqh_virt_next;
-	cur->qh_link		= qh->qh_link;
+	cur->pqh_virt_next = qh->pqh_virt_next;
+	cur->qh_link = qh->qh_link;
 
-	EHCI_Periodic_Start( hn );
+	__asm__ volatile ( "sync" ::: "memory" );
 
-	// --
-	// - Save DataToggle and Ping state
-	// - Read Status after DoorBell
+	if ( stop )
+	{
+		EHCI_Periodic_Start( hn );
+	}
+	else
+	{
+		// The controller can still hold the old link. Keep the QH and qTDs
+		// alive for two frames before the request's descriptors are freed.
+		MISC_MICRODELAY( 2000 );
+	}
 
 	status = LE_SWAP32( qh->qh_status );
 
