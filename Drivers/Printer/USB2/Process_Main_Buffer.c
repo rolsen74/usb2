@@ -73,7 +73,7 @@ U32 ionr;
 			{
 				USBERROR( "__myProcess_Main_Buffer : USB2Err_NoError" );
 
-				if (( usbio->io_Data ) &&  ( usbio->io_Actual > 0 ))
+				if ( ( usbio->io_Data ) && ( usbio->io_Actual > 0 ) && ( usbio->io_Actual <= usbio->io_Length ) )
 				{
 					U8 *buf = usbio->io_Data;
 					U32 off = usbio->io_Actual-1;
@@ -132,8 +132,5 @@ U32 ionr;
 		}
 	}
 
-	if ( ! unit->unit_Detached )
-	{
-		Buffer_Schedule( unit );
-	}
+	Buffer_Schedule( unit );
 }
