@@ -22,8 +22,8 @@
 struct FS_ObjLock *_fs_Lock_New_From_Node(
 	struct FS_Struct *fs,
 	struct FS_ObjNode *objnode,
-	int32 *res2,
-	int32 access )
+	S32 *res2,
+	S32 access )
 {
 struct FS_ObjLock *retval;
 struct FS_ObjLock *lock;
