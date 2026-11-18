@@ -12,14 +12,14 @@
 
 // --
 
-int32
-_fs__FSChangeFilePosition( struct FSVP *vp, int32 *res2, struct FileHandle *file, int32 mode, S64 position )
+LONG
+_fs__FSChangeFilePosition( struct FSVP *vp, LONG *res2, struct FileHandle *file, LONG mode, S64 position )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjLock *lock;
 
 	S64 base;
-	int32 error;
+	S32 error;
 
 	fs = vp->FSV.FSPrivate;
 	lock = NULL;
