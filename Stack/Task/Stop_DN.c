@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -25,7 +26,7 @@ SEC_CODE void __Task_Stop_DN( struct USBBase *usbbase, struct USB2_DriverNode *d
 {
 struct USB2_TaskNode *tn;
 
-	USBDEBUG( "__Task_Stop_DN           :  1 : DN %p : (%s)", dn, (file)?file:"<NULL>" );
+	USBDEBUG( "__Task_Stop_DN           :  1 : DN    %p : (%s)", dn, (file)?file:"<NULL>" );
 
 	if ( DRIVER_LOCK( dn ) == LSTAT_Okay )
 	{
@@ -34,7 +35,7 @@ struct USB2_TaskNode *tn;
 
 		if ( TASK_LOCK( tn ) == LSTAT_Okay )
 		{
-			USBDEBUG( "__Task_Stop_DN           :  2 : TN %p : Calling TASK_STOP_TN()", tn );
+			USBDEBUG( "__Task_Stop_DN           :  2 : TN    %p : Calling TASK_STOP_TN()", tn );
 
 			TASK_STOP_TN( tn );
 
@@ -52,7 +53,7 @@ struct USB2_TaskNode *tn;
 		USBDEBUG( "__Task_Stop_DN           :  4 : Invalid DN %p : (%s)", dn, (file)?file:"<NULL>" );
 	}
 
-	USBDEBUG( "__Task_Stop_DN           : 99 : DN %p", dn );
+	USBDEBUG( "__Task_Stop_DN           : 99 : DN    %p", dn );
 }
 
 // --
