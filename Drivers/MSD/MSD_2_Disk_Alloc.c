@@ -17,8 +17,8 @@ SEC_CODE struct MSDDisk *MSD_Disk_Alloc( struct USBBase *usbbase, struct MSDDevi
 {
 struct MSDBase *msdbase;
 struct MSDDisk *msddisk;
-U32 capdata10[2];
 U32 blk_size;
+U64 blk_secs;
 U32 unit_nr;
 S32 error;
 S32 stat;
@@ -103,7 +103,7 @@ U8 type;
 	// --
 	// We need to execute a Test Unit Ready .. too turn on the device
 
-	if ( ! MSD_Disk_TestUnitReady( usbbase, msddisk ))
+	if ( ( ! msddisk->msddisk_Removable ) && ( ! MSD_Disk_TestUnitReady( usbbase, msddisk ) ) )
 	{
 		USBERROR( "MSD : MSD_Disk_Alloc : MSD_Disk_TestUnitReady() failed" );
 		goto bailout;
@@ -112,36 +112,40 @@ U8 type;
 	// --
 	// Get Block Size
 
-	stat = MSD_SCSI_ReadCapacity10( usbbase, msddisk, NULL, capdata10, sizeof( capdata10 ));
-
-	if ( ! stat )
+	if ( msddisk->msddisk_Removable )
 	{
-		USBERROR( "MSD : MSD_Disk_Parse : MSD_SCSI_ReadCapacity10() failed" );
+		stat = MSD_Disk_MediaCheck( usbbase, msddisk );
+
+		if ( msddev->msddev_Detached )
+		{
+			goto bailout;
+		}
+	}
+	else
+	{
+		stat = MSD_SCSI_GetCapacity( usbbase, msddisk, & blk_secs, & blk_size );
+	}
+
+	if ( ( ! stat ) && ( ! msddisk->msddisk_Removable ) )
+	{
+		USBERROR( "MSD : MSD_Disk_Parse : MSD_SCSI_GetCapacity() failed" );
 		goto bailout;
 	}
 
-	// --
-	// Sanity on block size
-
-	blk_size = BE_SWAP32( capdata10[1] );
-
-	if (( ! blk_size ) || (( blk_size & ( blk_size - 1 )))) 
-	{
-		// Not a power of two → fail (or fallback to 512 if you prefer)
-		USBERROR( "MSD : TD_GetGeometry : bad Block Size %llu (Defaults to 512)", blk_size );
-		blk_size = 512;
-	}
-
 	// Mask and Shift is too avoid 64bit compiler __umoddi3 and __udivi3 functions
-	msddisk->msddisk_TotalBlocks = BE_SWAP32( capdata10[0] );
-	msddisk->msddisk_Block_Size = blk_size;
-	msddisk->msddisk_Block_Mask = blk_size - 1;
-	msddisk->msddisk_Block_Shift = 0;
-
-	while( blk_size > 1 )
+	if ( ! msddisk->msddisk_Removable )
 	{
-		msddisk->msddisk_Block_Shift++;
-		blk_size >>= 1;
+		msddisk->msddisk_TotalBlocks = blk_secs;
+		msddisk->msddisk_Block_Size = blk_size;
+		msddisk->msddisk_Block_Mask = blk_size - 1;
+		msddisk->msddisk_Block_Shift = 0;
+		msddisk->msddisk_MediaPresent = TRUE;
+
+		while( blk_size > 1 )
+		{
+			msddisk->msddisk_Block_Shift++;
+			blk_size >>= 1;
+		}
 	}
 
 	USBERROR( "msddisk_Block_Size ... : %lu",  msddisk->msddisk_Block_Size );
