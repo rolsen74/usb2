@@ -12,7 +12,7 @@
 
 // --
 
-void _usb_Bulk_Stage_Send_Data1( struct USB_Struct *us, struct USB_Command *cmd )
+void _usb_Bulk_Stage_Send_Data1( struct USB_Struct *us, struct USB_Command *cmd UNUSED )
 {
 	MYINFO( "PTP-USB : _usb_Bulk_Stage_Send_Data1 : TransID %ld", us->us_TransactionID );
 	MYINFO( "PTP-USB : _usb_Bulk_Stage_Read_Data1 : MaxP %ld", us->us_Res_BulkOut->EndPointMax );
