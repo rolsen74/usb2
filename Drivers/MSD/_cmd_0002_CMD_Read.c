@@ -31,6 +31,18 @@ S32 stat;
 	reply = TRUE;
 	msddisk = (PTR) ioreq->io_Unit;
 
+	if ( ( msddisk ) && ( msddisk->msddisk_Removable ) && ( ! msddisk->msddisk_MediaPresent ) )
+	{
+		MSD_Disk_MediaCheck( usbbase, msddisk );
+	}
+
+	if ( ( msddisk ) && ( ! msddisk->msddisk_MediaPresent ) )
+	{
+		ioreq->io_Actual = 0;
+		ioreq->io_Error = TDERR_DiskChanged;
+		goto bailout;
+	}
+
 //	USBERROR( "MSD : io_Data .......... : %p", ioreq->io_Data );
 //	USBERROR( "MSD : io_Length ........ : %lu", ioreq->io_Length );
 //	USBERROR( "MSD : io_Offset ........ : $%08lx", ioreq->io_Offset );
@@ -69,12 +81,12 @@ S32 stat;
 			USBERROR( "MSD : _cmd_0002_CMD_Read : io_Length Zero Length" );
 		}
 //		else if ( ! ioreq->io_Offset % msddisk->msddisk_Block_Size )
-		else if ( ! ( ioreq->io_Offset & msddisk->msddisk_Block_Mask ))
+		else if ( ioreq->io_Offset & msddisk->msddisk_Block_Mask )
 		{
 			USBERROR( "MSD : _cmd_0002_CMD_Read : invalid io_Offset (%lu)", ioreq->io_Offset );
 		}
 //		else if ( ! ioreq->io_Length % msddisk->msddisk_Block_Size )
-		else if ( ! ( ioreq->io_Length & msddisk->msddisk_Block_Mask ))
+		else if ( ioreq->io_Length & msddisk->msddisk_Block_Mask )
 		{
 			USBERROR( "MSD : _cmd_0002_CMD_Read : invalid io_Length (%lu)", ioreq->io_Length );
 		}
@@ -102,15 +114,14 @@ S32 stat;
 
 	actual = 0;
 
-	stat = MSD_SCSI_Read10( 
-		usbbase, 
-		msddisk,
-		& dbr, 
-		blk_start,
-		blk_blocks,
-		ioreq->io_Data,
-		& actual
-	);
+	if ( ( blk_start > 0xffffffffULL ) || ( blk_blocks - 1 > 0xffffffffULL - blk_start ) )
+	{
+		stat = MSD_SCSI_Read16( usbbase, msddisk, & dbr, blk_start, blk_blocks, ioreq->io_Data, & actual );
+	}
+	else
+	{
+		stat = MSD_SCSI_Read10( usbbase, msddisk, & dbr, blk_start, blk_blocks, ioreq->io_Data, & actual );
+	}
 
 	// Report actual tranfered even on fail
 	ioreq->io_Actual = actual;
