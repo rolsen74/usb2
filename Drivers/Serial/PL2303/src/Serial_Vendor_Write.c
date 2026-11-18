@@ -1,0 +1,19 @@
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+// --
+
+#include "inc/All.h"
+
+// --
+
+SEC_CODE S32 Serial_Vendor_Write( struct SerialContext *ctx, struct SerialUnit *unit, U16 value, U16 index )
+{
+	return ( Serial_Control( ctx, unit, REQTYPE_Write | REQTYPE_Vendor | REQTYPE_Device, 1, value, index, NULL, 0 ) );
+}
+
+// --
