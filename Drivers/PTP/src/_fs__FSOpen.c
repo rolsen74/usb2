@@ -12,16 +12,18 @@
 
 // --
 
-int32
-_fs__FSOpen( struct FSVP *vp, int32 *res2, struct FileHandle *file, struct Lock *rel, CONST_STRPTR name, int32 mode )
+LONG
+_fs__FSOpen( struct FSVP *vp, LONG *res2, struct FileHandle *file, struct Lock *rel, const char *filename, LONG mode )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjNode *node;
 	struct FS_ObjLock *lock;
 
-	int32 error;
+	STR name;
+	S32 error;
 
 	fs = vp->FSV.FSPrivate;
+	name = (STR) filename;
 	lock = NULL;
 	error = 0;
 
