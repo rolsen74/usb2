@@ -37,13 +37,20 @@ S32 reply;
 			case /* 0002 */ CMD_READ:					reply = MSD_Cmd_0002_CMD_Read( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0003 */ CMD_WRITE:					reply = MSD_Cmd_0003_CMD_Write( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0009 */ TD_MOTOR:					reply = MSD_Cmd_0009_TD_Motor( usbbase, msddev, (PTR) ioreq ); break;
+			case /* 000A */ TD_SEEK:					reply = MSD_Cmd_000A_TD_Seek( usbbase, msddev, (PTR) ioreq ); break;
+			case /* 000B */ TD_FORMAT:					reply = MSD_Cmd_000B_TD_Format( usbbase, msddev, (PTR) ioreq ); break;
+			case /* 000D */ TD_CHANGENUM:				reply = MSD_Cmd_000D_TD_ChangeNum( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 000E */ TD_CHANGESTATE:				reply = MSD_Cmd_000E_TD_ChangeState( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 000F */ TD_PROTSTATUS:				reply = MSD_Cmd_000F_TD_ProtStatus( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0012 */ TD_GETDRIVETYPE:			reply = MSD_Cmd_0012_TD_GetDriveType( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0014 */ TD_ADDCHANGEINT:			reply = MSD_Cmd_0014_TD_AddChangeInt( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0015 */ TD_REMCHANGEINT:			reply = MSD_Cmd_0015_TD_RemChangeInt( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0016 */ TD_GETGEOMETRY:				reply = MSD_Cmd_0016_TD_GetGeometry( usbbase, msddev, (PTR) ioreq ); break;
+			case /* 0017 */ TD_EJECT:					reply = MSD_Cmd_0017_TD_Eject( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0018 */ TD_READ64:					reply = MSD_Cmd_0018_TD_Read64( usbbase, msddev, (PTR) ioreq ); break;
+			case /* 0019 */ TD_WRITE64:					reply = MSD_Cmd_0019_TD_Write64( usbbase, msddev, (PTR) ioreq ); break;
+			case /* 001A */ TD_SEEK64:					reply = MSD_Cmd_001A_TD_Seek64( usbbase, msddev, (PTR) ioreq ); break;
+			case /* 001B */ TD_FORMAT64:				reply = MSD_Cmd_001B_TD_Format64( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 001C */ HD_SCSICMD:					reply = MSD_Cmd_001C_HD_SCSICmd( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 4000 */ NSCMD_DEVICEQUERY:			reply = MSD_Cmd_4000_NSCmd_DeviceQuery( usbbase, msddev, (PTR) ioreq ); break;
 			case /* A004 */ NSCMD_TD_GETGEOMETRY64:		reply = MSD_Cmd_A004_NSCmd_GetGeometry64( usbbase, msddev, (PTR) ioreq ); break;
@@ -51,13 +58,11 @@ S32 reply;
 			case /* A006 */ NSCMD_TD_ADDSTATCALLBACK:	reply = MSD_Cmd_A006_NSCmd_AddStatCallBack( usbbase, msddev, (PTR) ioreq ); break;
 			case /* A007 */ NSCMD_TD_REMSTATCALLBACK:	reply = MSD_Cmd_A007_NSCmd_RemStatCallBack( usbbase, msddev, (PTR) ioreq ); break;
 			case /* C000 */ NSCMD_TD_READ64:			reply = MSD_Cmd_C000_NSCmd_Read64( usbbase, msddev, (PTR) ioreq ); break;
+			case /* C001 */ NSCMD_TD_WRITE64:			reply = MSD_Cmd_0019_TD_Write64( usbbase, msddev, (PTR) ioreq ); break;
+			case /* C002 */ NSCMD_TD_SEEK64:			reply = MSD_Cmd_001A_TD_Seek64( usbbase, msddev, (PTR) ioreq ); break;
+			case /* C003 */ NSCMD_TD_FORMAT64:		reply = MSD_Cmd_001B_TD_Format64( usbbase, msddev, (PTR) ioreq ); break;
 
-			case /* 0004 */ CMD_UPDATE:
-			{
-				USBERROR( "MSD : _cmd_0004_CMD_UPDATE" );
-				reply = TRUE;
-				break;
-			}
+			case /* 0004 */ CMD_UPDATE:				reply = MSD_Cmd_0004_CMD_Update( usbbase, msddev, (PTR) ioreq ); break;
 
 			case /* 0005 */ CMD_CLEAR:
 			{
