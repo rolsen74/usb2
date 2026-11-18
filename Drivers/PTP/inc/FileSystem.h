@@ -49,7 +49,7 @@ struct FS_ObjLock
 	U64						Position;
 	BPTR					Cache;
 	STR						CacheName;
-	int32					WriteError;
+	S32					WriteError;
 };
 
 struct FS_Struct
