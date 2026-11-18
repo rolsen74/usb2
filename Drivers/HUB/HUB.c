@@ -155,6 +155,12 @@ U32 retval;
 		goto bailout;
 	}
 
+	if ( ! HUB_Power_Up( usbbase, in ))
+	{
+		USBERROR( "HUB_Entry                : Error powering HUB ports" );
+		goto bailout;
+	}
+
 	// -- Peek into intern Stack Structure
 	// we do this to make sure RootHUB driver
 	// is started correct, so stack work.
@@ -175,8 +181,7 @@ U32 retval;
 
 	retval = TASK_Return_Okay;
 
-	// Enable Ports
-	HUB_Power_Up( usbbase, in );
+	HUB_Initial_Scan( usbbase, in );
 
 	// Start Reading Interrupts
 	HUB_Schedule( usbbase, in );
