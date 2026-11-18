@@ -77,7 +77,6 @@ U32 retval;
 	}
 
 	InitSemaphore( & fs->fs_Semaphore );
-	NewList( & fs->fs_CameraList );
 
 	fs->fs_DeviceNode = BADDR( startup_dp->dp_Arg3 );
 
