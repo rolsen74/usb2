@@ -40,6 +40,8 @@ struct USB2_FktDriverNode
 	U16								fdn_Class;
 	U16								fdn_SubClass;
 	U16								fdn_Protocol;
+	U16								fdn_VendorID;
+	U16								fdn_DeviceID;
 	// --
 	struct List						fdn_Devices;		// Exec List, don't change
 	U32							( * fdn_Entry )  ( struct USBBase *usbbase, struct USB2_DriverMessage *msg );
