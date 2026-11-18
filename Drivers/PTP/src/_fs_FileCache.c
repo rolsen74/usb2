@@ -12,13 +12,13 @@
 
 // --
 
-int32
+S32
 _fs_FileCache( struct FS_ObjLock *lock )
 {
 	struct FS_ObjNode *node;
 	struct CommandMessage request;
 
-	int32 error;
+	S32 error;
 
 	node = lock->Node;
 
