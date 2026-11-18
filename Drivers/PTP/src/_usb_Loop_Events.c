@@ -41,8 +41,9 @@ struct PTP_Container *condata;
 		{
 			condata = ioreq->io_Data;
 
-			if (( BE_SWAP32( ioreq->io_Length ) >= 12 ) 
+			if ( ( condata ) && ( ioreq->io_Actual >= 12 )
 			&&	( LE_SWAP32( condata->Length ) >= 12 )
+			&&	( LE_SWAP32( condata->Length ) <= ioreq->io_Actual )
 			&&	( LE_SWAP16( condata->Type ) == CTYPE_Event ))
 			{
 				us->us_Errors_Int = 0;
