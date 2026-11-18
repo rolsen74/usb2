@@ -13,14 +13,14 @@
 // --
 
 struct ExamineData *
-_fs__FSExamineLock( struct FSVP *vp, int32 *res2, struct Lock *objlock )
+_fs__FSExamineLock( struct FSVP *vp, LONG *res2, struct Lock *objlock )
 {
 	struct FS_Struct *fs;
 	struct FS_ObjLock *lock;
 	struct FS_ObjNode *node;
 	struct ExamineData *data;
 
-	int32 error;
+	S32 error;
 
 	fs = vp->FSV.FSPrivate;
 	lock = (PTR) objlock;
