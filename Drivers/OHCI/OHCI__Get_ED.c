@@ -49,18 +49,19 @@
 
 // --
 
-SEC_CODE struct OHCI_ED *OHCI_Get_EDBuffer( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
+SEC_CODE struct OHCI_ED *
+OHCI_Get_EDBuffer ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 {
-struct USB2_EndPointNode *ep;
-struct RealFunctionNode *fn;
-struct OHCI_ED *ed;
-U32 speed;
-U32 phy;
-U32 val;
-U8 *mem;
+	struct USB2_EndPointNode * ep;
+	struct RealFunctionNode *  fn;
+	struct OHCI_ED *		   ed;
+	U32						   speed;
+	U32						   phy;
+	U32						   val;
+	U8 *					   mem;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "OHCI : OHCI_Get_EDBuffer" );
+	struct USBBase * usbbase = hn->hn_USBBase;
+	TASK_NAME_ENTER ( "OHCI : OHCI_Get_EDBuffer" );
 
 	ed = NULL;
 
@@ -71,7 +72,7 @@ U8 *mem;
 		fn = ioreq->req_Function;
 		ep = ioreq->req_EndPoint;
 
-		switch( fn->fkt_Speed )
+		switch ( fn->fkt_Speed )
 		{
 			case USBSPEED_Low:
 			{
@@ -87,19 +88,19 @@ U8 *mem;
 
 			default:
 			{
-				#ifdef DO_DEBUG
-				USBPANIC( "OHCI_Get_EDBuffer : Invalid Speed %lu", fn->fkt_Speed );
-				#else
-				USBDEBUG( "OHCI_Get_EDBuffer : Invalid Speed %lu", fn->fkt_Speed );
-				#endif
+#ifdef DO_DEBUG
+				USBPANIC ( "OHCI_Get_EDBuffer : Invalid Speed %lu", fn->fkt_Speed );
+#else
+				USBDEBUG ( "OHCI_Get_EDBuffer : Invalid Speed %lu", fn->fkt_Speed );
+#endif
 				goto bailout;
 			}
 		}
 
 		// Dest EndPoint Address
-		val  = OHCI_ED_SET_FA( fn->fkt_Address );
+		val = OHCI_ED_SET_FA ( fn->fkt_Address );
 		// Dest EndPoint Number
-		val |= OHCI_ED_SET_EN( ep->ep_Number );
+		val |= OHCI_ED_SET_EN ( ep->ep_Number );
 		// Get Direction from TD's
 		val |= OHCI_ED_DIR_TD;
 		// Speed, Low/Full
@@ -107,35 +108,35 @@ U8 *mem;
 		// a General TD, ie non isochronous td
 		val |= OHCI_ED_FORMAT_GEN;
 		// Max Packet Size
-		val |= OHCI_ED_SET_MAXP( ep->ep_MaxPacketSize );
+		val |= OHCI_ED_SET_MAXP ( ep->ep_MaxPacketSize );
 	}
 	else
 	{
-		val = LE_SWAP32( OHCI_ED_SKIP );
+		val = LE_SWAP32 ( OHCI_ED_SKIP );
 	}
 
 	// --
 
-	mem = MEMORY_ALLOC( MEMID_OHCI_ED, FALSE );
+	mem = MEMORY_ALLOC ( MEMID_OHCI_ED, FALSE );
 
 	if ( ! mem )
 	{
-		USBERROR( "OHCI_Get_EDBuffer : Error allocating memory" );
+		USBERROR ( "OHCI_Get_EDBuffer : Error allocating memory" );
 		goto bailout;
 	}
 
-	phy = ((struct Mem_FreeNode *)mem)->mfn_Addr;
-	ed  = (struct OHCI_ED *)mem;
+	phy = ( (struct Mem_FreeNode *)mem )->mfn_Addr;
+	ed	= (struct OHCI_ED *)mem;
 
 	/* Fill the ED */
-	ed->ed_flags		= LE_SWAP32( val );
-	ed->ed_tailp		= 0;
-	ed->ed_headp		= 0;
-	ed->ed_nexted		= 0;
+	ed->ed_flags  = LE_SWAP32 ( val );
+	ed->ed_tailp  = 0;
+	ed->ed_headp  = 0;
+	ed->ed_nexted = 0;
 	/* Private part */
-	ed->ped_self_phy	= phy;
-	ed->ped_virt_next	= NULL;
-	ed->ped_first_td	= NULL;
+	ed->ped_self_phy  = phy;
+	ed->ped_virt_next = NULL;
+	ed->ped_first_td  = NULL;
 
 	if ( ioreq )
 	{
@@ -144,9 +145,9 @@ U8 *mem;
 
 bailout:
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return(	ed );
+	return ( ed );
 }
 
 // --
