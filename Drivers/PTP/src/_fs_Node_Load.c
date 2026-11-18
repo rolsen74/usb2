@@ -20,7 +20,7 @@ Read32( const U8 *data )
 
 // --
 
-static int32
+static S32
 AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, U32 id )
 {
 	struct FS_ObjNode *node;
@@ -34,7 +34,7 @@ AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, U32 id )
 	U32 size;
 	U32 suffix;
 	U16 format;
-	int32 error;
+	S32 error;
 	char name[256];
 	STR unique;
 
@@ -171,7 +171,7 @@ AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, U32 id )
 
 // --
 
-int32
+S32
 _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 {
 	struct FS_ObjNode *child;
@@ -180,7 +180,7 @@ _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 	U32 count;
 	U32 index;
 	U32 id;
-	int32 error;
+	S32 error;
 	STR name;
 
 	if ( ! node->on_CameraRoot )
