@@ -61,7 +61,8 @@ U16 key;
 		//	$6A = Middle Mouse button (not used)
 		key = ( rawkey & ~IECODE_UP_PREFIX );
 
-		if (( key < 0x60 ) && ( key > 0x6A ))
+		if ( ( ! ( rawkey & IECODE_UP_PREFIX ) ) &&
+			( ( key < 0x60 ) || ( key > 0x6A ) ) )
 		{
 			usbbase->usb_HID_Prev_Code[1] = usbbase->usb_HID_Prev_Code[0];
 			usbbase->usb_HID_Prev_Code[0] = rawkey;
