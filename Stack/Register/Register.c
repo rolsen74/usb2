@@ -144,11 +144,7 @@ struct USB2_ConfigNode *cn;
 
 	if ( msg )
 	{
-		if (( msg->DeviceID ) || ( msg->DeviceID ))
-		{
-//			dev = TRUE;
-		}
-		else if ( msg->Interface )
+		if ( msg->Interface )
 		{
 //			ih = (PTR) msg->Interface;
 			ih = (PTR) ( (char *) msg->Interface - offsetof( struct USB2_InterfaceHeader, ih_Public ));
