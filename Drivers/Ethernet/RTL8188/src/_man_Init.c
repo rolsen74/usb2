@@ -9,10 +9,12 @@
 // --
 
 #include "All.h"
+#include "Manager.h"
 
 // --
 
-static PTR _manager_Init( PTR Dummy UNUSED, PTR SegList, struct ExecBase *mySysBase )
+PTR
+_manager_Init( PTR Dummy UNUSED, PTR SegList, struct ExecBase *mySysBase )
 {
 struct EthernetBase *ethBase;
 
@@ -30,7 +32,6 @@ struct EthernetBase *ethBase;
 		goto bailout;
 	}
 
-	extern const PTR devInterfaces[];
 	ethBase = (PTR) CreateLibraryTags(
 		CLT_DataSize, sizeof( struct EthernetBase ),
 		CLT_Interfaces,	devInterfaces,
@@ -67,12 +68,14 @@ struct EthernetBase *ethBase;
 
 		Resources_Free( ethBase );
 
+		DeleteLibrary( (PTR) ethBase );
+
 		ethBase = NULL;
 	}
 
 bailout:
 
-	return( NULL );
+	return ( ethBase );
 }
 
 // --
