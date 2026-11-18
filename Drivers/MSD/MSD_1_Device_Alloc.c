@@ -82,6 +82,7 @@ U32 lun;
 	ifcnr	= ifcdsc->InterfaceNumber;
 
 	msddev->msddev_InterfaceNr = ifcnr;
+	msddev->msddev_SubClass = ifcdsc->InterfaceSubClass;
 
 	// ---
 	// Support check
@@ -91,6 +92,9 @@ U32 lun;
 
 	switch( ifcdsc->InterfaceSubClass )
 	{
+		case /* 0x02 */ MSD_SubClass_ATAPI:
+		case /* 0x04 */ MSD_SubClass_UFI:
+		case /* 0x05 */ MSD_SubClass_SFF:
 		case /* 0x06 */ MSD_SubClass_SCSI:
 		{
 			switch( ifcdsc->InterfaceProtocol )
