@@ -53,13 +53,16 @@ S32 reply;
 				{
 					cin = msg->cm_InfoNode;
 
-					AddTail( & fs->fs_CameraList, (PTR) cin );
-
 					cin->cin_DirNode = _fs_Node_CreateDir( fs, NULL, cin->cin_Name );
 
-					AddTail( & fs->fs_RootNode->on_Content_List, (PTR) cin->cin_DirNode );
+					if ( cin->cin_DirNode )
+					{
+						AddTail( & fs->fs_CameraList, (PTR) cin );
+						AddTail( & fs->fs_RootNode->on_Content_List, (PTR) cin->cin_DirNode );
+					}
 				}
 
+			FreeVec( msg );
 				reply = FALSE;
 				break;
 			}
@@ -88,7 +91,14 @@ S32 reply;
 //					FreeVec( msg );
 				}
 
+			if ( msg->cm_Message.mn_ReplyPort )
+			{
+				ReplyMsg( (PTR) msg );
+			}
+			else
+			{
 				FreeVec( msg );
+			}
 				reply = FALSE;
 				break;
 			}
