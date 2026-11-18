@@ -27,6 +27,7 @@
 #define USB2_Ifc_FindList(x)				IUSB2->USB2_Ifc_FindList((x))
 #define USB2_Ifc_Claim(x,y)					IUSB2->USB2_Ifc_Claim((x),(y))
 #define USB2_Ifc_Declaim(x,y)				IUSB2->USB2_Ifc_Declaim((x),(y))
+#define USB2_Ifc_SetAlt(x,y,z)				IUSB2->USB2_Ifc_SetAlt((x),(y),(z))
 
 #define USB2_Reg_RegisterTags(...)			IUSB2->USB2_Reg_RegisterTags(__VA_ARGS__)
 #define USB2_Reg_RegisterList(x)			IUSB2->USB2_Reg_RegisterList((x))
