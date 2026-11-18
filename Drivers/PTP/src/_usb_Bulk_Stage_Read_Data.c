@@ -29,7 +29,7 @@ struct USB2_IORequest *ioreq;
 
 	ioreq = us->us_Res_BulkIn->IORequests[0];
 	ioreq->io_Data		= us->us_Res_BulkIn->Buffers[0];
-	ioreq->io_Length	= us->us_Res_BulkIn->EndPointMax;
+	ioreq->io_Length	= us->us_Res_BulkIn->BufferSize;
 	SendIO( (PTR) ioreq );
 }
 
@@ -51,23 +51,26 @@ U8 *data;
 
 	con = (PTR) ioreq->io_Data;
 
-	if ( ioreq->io_Length < 12 )
+	if ( ( ! con ) || ( ioreq->io_Actual < 12 ) )
 	{
-		MYERROR( "PTP-USB : Invalid Reposnce 1 Length %ld", (S32) ioreq->io_Length );
+		MYERROR( "PTP-USB : Invalid Response Length %ld", (S32) ioreq->io_Actual );
 
-		// hmm what do I do now?
+		us->us_Running = FALSE;
+		cmd->ucmd_Next = NULL;
 	}
 	else if ( LE_SWAP32( con->Length ) < 12 )
 	{
 		MYERROR( "PTP-USB : Invalid Reposnce 2 Length %ld", (S32) LE_SWAP32( con->Length ) );
 
-		// hmm what do I do now?
+		us->us_Running = FALSE;
+		cmd->ucmd_Next = NULL;
 	}
 	else if ( LE_SWAP32( con->TransID ) != us->us_TransactionID )
 	{
 		MYERROR( "PTP-USB : TransactionID mismatch $%08lx", (S32) LE_SWAP32( con->TransID ) );
 
-		// hmm what do I do now?
+		us->us_Running = FALSE;
+		cmd->ucmd_Next = NULL;
 	}
 	else if ( LE_SWAP16( con->Type ) == CTYPE_Response )
 	{
@@ -85,14 +88,16 @@ U8 *data;
 		{
 			MYERROR( "PTP-USB : Error Code $%04lx", (S32) LE_SWAP16( con->Code ) );
 
-			// hmm what do I do now?
+			us->us_Running = FALSE;
+			cmd->ucmd_Next = NULL;
 		}
 	}
 	else if ( LE_SWAP16( con->Type ) != CTYPE_Data )
 	{
 		MYERROR( "PTP-USB : Invalid Container Type %ld", (S32) LE_SWAP16( con->Type ) );
 
-		// hmm what do I do now?
+		us->us_Running = FALSE;
+		cmd->ucmd_Next = NULL;
 	}
 	else
 	{
@@ -105,7 +110,8 @@ U8 *data;
 		{
 			MYERROR( "PTP-USB : Out of mem %ld", cmd->ucmd_Data_Length );
 
-			// hmm what do I do now?
+			us->us_Running = FALSE;
+			cmd->ucmd_Next = NULL;
 		}
 		else
 		{
@@ -118,10 +124,10 @@ U8 *data;
 			left = cmd->ucmd_Data_Length - cmd->ucmd_Data_Current;
 
 			// We only read one MaxPacket at a time
-			len	= MIN( us->us_Res_BulkIn->EndPointMax, left );
+			len	= MIN( us->us_Res_BulkIn->BufferSize, left );
 
 			// Make sure we skip Header
-			len	= MIN( ioreq->io_Length-12, len );
+			len	= MIN( ioreq->io_Actual - 12, len );
 
 			// Copy Data minus header
 			memcpy( & cmd->ucmd_Data_Buffer[ cmd->ucmd_Data_Current ], & data[12], len );
@@ -159,10 +165,17 @@ U8 *data;
 	left = cmd->ucmd_Data_Length - cmd->ucmd_Data_Current;
 
 	// We only read one MaxPacket at a time
-	len	= MIN( us->us_Res_BulkIn->EndPointMax, left );
+	len	= MIN( us->us_Res_BulkIn->BufferSize, left );
 
 	// it may be last chunky that is less than MaxPacket
-	len	= MIN( ioreq->io_Length, len );
+	len	= MIN( ioreq->io_Actual, len );
+
+	if ( ! len )
+	{
+		us->us_Running = FALSE;
+		cmd->ucmd_Next = NULL;
+		return;
+	}
 
 	memcpy( & cmd->ucmd_Data_Buffer[ cmd->ucmd_Data_Current ], data, len );
 
