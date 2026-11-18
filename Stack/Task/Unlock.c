@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -25,7 +26,7 @@ SEC_CODE void __Task_Unlock( struct USBBase *usbbase, struct USB2_TaskNode *tn )
 {
 	TASK_NAME_ENTER( "__Task_Unlock" );
 
-	USBDEBUG( "__Task_Unlock            : TN %p : Locks %ld (old) : (%s)", tn, (tn)?tn->tn_Locks:0, (file)?file:"<NULL>" );
+	USBDEBUG( "__Task_Unlock            : TN    %p : Locks %2ld (old) : (%s)", tn, (tn)?tn->tn_Locks:0, (file)?file:"<NULL>" );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
@@ -35,16 +36,16 @@ SEC_CODE void __Task_Unlock( struct USBBase *usbbase, struct USB2_TaskNode *tn )
 		{
 			tn->tn_Locks--;
 
-//			USBDEBUG( "__Task_Unlock            : TN %p : New Lock Count : %ld (-1)", tn, tn->tn_Locks );
+//			USBDEBUG( "__Task_Unlock            : TN    %p : New Lock Count : %ld (-1)", tn, tn->tn_Locks );
 		}
 		else
 		{
-			USBPANIC( "__Task_Unlock            : TN %p : Driver Node NOT Locked (%ld)", tn, tn->tn_Locks );
+			USBPANIC( "__Task_Unlock            : TN    %p : Driver Node NOT Locked (%ld)", tn, tn->tn_Locks );
 		}
 	}
 	else
 	{
-		USBERROR( "__Task_Unlock            : TN %p : Invalid Driver Node", tn );
+		USBERROR( "__Task_Unlock            : TN    %p : Invalid Driver Node", tn );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
