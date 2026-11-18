@@ -12,125 +12,47 @@
 
 // --
 
-struct ExamineData *_fs__FSExamineLock( struct FSVP *vp, int32 *res2, struct Lock *objLock )
+struct ExamineData *
+_fs__FSExamineLock( struct FSVP *vp, int32 *res2, struct Lock *objlock )
 {
-struct FS_Struct *fs;
-struct ExamineData *exd;
-struct FS_ObjNode *objnode;
-struct FS_ObjLock *lock;
+	struct FS_Struct *fs;
+	struct FS_ObjLock *lock;
+	struct FS_ObjNode *node;
+	struct ExamineData *data;
 
-	MYINFO( "PTP-FS : _fs__FSExamineLock" );
+	int32 error;
 
 	fs = vp->FSV.FSPrivate;
+	lock = (PTR) objlock;
+	data = NULL;
+	error = 0;
 
 	ObtainSemaphore( & fs->fs_Semaphore );
 
+	node = lock ? lock->Node : fs->fs_RootNode;
 
-	exd = NULL;
-
-	lock = (PTR) objLock;
-
-	if ( ! lock )
+	if ( ( node->on_CameraRoot ) && ( ! node->on_CameraRoot->on_Camera ) )
 	{
-		MYERROR( "PTP-FS : Mising Lock" );
+		error = ERROR_DEVICE_NOT_MOUNTED;
+	}
+	else
+	{
+		data = _fs_ExamineNode( node, NULL );
 
-		if ( res2 )
+		if ( ! data )
 		{
-			*res2 = ERROR_REQUIRED_ARG_MISSING;
-		}
-		goto bailout;
-	}
-
-	objnode = lock->Node;
-
-	if ( ! objnode )
-	{
-		MYERROR( "PTP-FS : NULL Pointer" );
-		goto bailout;
-	}
-
-	/*
-	**  If the node is for a hardlink,
-	**  show info for the target instead.
-	*/
-
-	/**/ if (( FSOF_LINK|FSO_TYPE_FILE ) == objnode->on_Type )
-	{
-		objnode = objnode->on_HardLink_Target;
-	}
-	else if (( FSOF_LINK|FSO_TYPE_DIRECTORY ) == objnode->on_Type )
-	{
-		objnode = objnode->on_HardLink_Target;
-	}
-
-	if ( ! objnode )
-	{
-		MYERROR( "PTP-FS : NULL Pointer" );
-		goto bailout;
-	}
-
-	#define safe_strlen(str)  ((str) ? strlen(str) : 0 )
-	exd = AllocDosObjectTags( DOS_EXAMINEDATA,
-		ADO_ExamineData_NameSize,	1 + safe_strlen( objnode->on_Name ),
-		ADO_ExamineData_CommentSize,1 + safe_strlen( objnode->on_Comment ),  /* can be NULL */
-		TAG_END
-	);
-
-	if ( ! exd )
-	{
-		if ( res2 )
-		{
-			*res2 = ERROR_NO_FREE_STORE;
-		}
-		goto bailout;
-	}
-
-	exd->Type = objnode->on_Type;
-
-	switch( exd->Type )
-	{
-		case FSO_TYPE_FILE:
-		{
-			exd->FileSize = (int64) objnode->on_File_Size;
-			break;
-		}
-
-		case (FSO_TYPE_FILE|FSOF_LINK):
-		{
-			exd->FileSize = (int64) objnode->on_HardLink_Target->on_File_Size;
-			break;
-		}
-
-		default:
-		{
-			exd->FileSize = -1LL;
-			break;
+			error = ERROR_NO_FREE_STORE;
 		}
 	}
-
-	strncpy( exd->Name, objnode->on_Name, exd->NameSize );
-
-	if ( objnode->on_Comment )
-	{
-		strncpy( exd->Comment, objnode->on_Comment, exd->CommentSize );
-	}
-
-	exd->Date.ds_Days	= objnode->on_Date.ds_Days;
-	exd->Date.ds_Minute	= objnode->on_Date.ds_Minute;
-	exd->Date.ds_Tick	= objnode->on_Date.ds_Tick;
-
-	exd->RefCount		= 0;					/* FIX: do something with this. */
-	exd->ObjectID		= (U32) objnode;		/* use inode address */
-	exd->Protection		= objnode->on_Protection;
-	exd->OwnerUID		= objnode->on_Owner;
-	exd->OwnerGID		= objnode->on_Group;
-
-bailout:
 
 	ReleaseSemaphore( & fs->fs_Semaphore );
 
-	return(	exd );
+	if ( res2 )
+	{
+		*res2 = error;
+	}
+
+	return ( data );
 }
 
 // --
-
