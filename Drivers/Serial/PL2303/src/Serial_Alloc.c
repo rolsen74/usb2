@@ -20,7 +20,7 @@ U32 ifcnr;
 U32 index;
 
 	base = ctx->Device;
-	unit = AllocVecTags( sizeof( struct SerialUnit ), AVT_Clear, TRUE, TAG_END );
+	unit = AllocVecTags( sizeof( struct SerialUnit ), AVT_Clear, 0, TAG_END );
 
 	if ( ! unit )
 	{
