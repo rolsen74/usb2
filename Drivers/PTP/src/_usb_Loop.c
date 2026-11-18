@@ -12,137 +12,114 @@
 
 // --
 
-void _usb_Loop( struct USB_Struct *us )
+void
+_usb_Loop( struct USB_Struct *us )
 {
-struct USB2_IORequest *ioreq;
-struct CommandMessage *remove_cm;
-struct CommandMessage *cm;
-U32 wait;
-U32 mask;
-U32 announced;
+	struct CommandMessage notice;
+	struct CommandMessage *request;
+	struct CameraInfoNode *camera;
 
-	MYINFO( "PTP-USB : _usb_Loop" );
-	announced = FALSE;
+	U32 signals;
+	U32 wait;
 
-	// --
-
-	cm = AllocVecTags( sizeof( struct CommandMessage ),
-		AVT_Clear, 0,
-		TAG_END
-	);
-	remove_cm = AllocVecTags( sizeof( struct CommandMessage ),
-		AVT_Clear, 0,
-		TAG_END
-	);
-
-	if ( ( cm ) && ( remove_cm ) && ( FS_CmdMsgPort ) )
+	if ( ! FS_CmdMsgPort )
 	{
-		us->us_CameraNode.cin_Name = "Hello World";
-		us->us_CameraNode.cin_MsgPort = us->us_CmdMsgPort;
-		// --
-		cm->cm_Command = CMD_Camera_Added;
-		cm->cm_InfoNode = & us->us_CameraNode;
-		PutMsg( FS_CmdMsgPort, (PTR) cm );
-		announced = TRUE;
-	}
-	else if ( cm )
-	{
-		FreeVec( cm );
+		return;
 	}
 
-	if ( ! announced )
+	memset( & notice, 0, sizeof( notice ) );
+
+	camera = & us->us_CameraNode;
+	camera->cin_Online = TRUE;
+	notice.cm_Command = CMD_Camera_Added;
+	notice.cm_InfoNode = camera;
+	notice.cm_Message.mn_ReplyPort = us->us_CmdMsgPort;
+	notice.cm_Message.mn_Length = sizeof( notice );
+
+	PutMsg( FS_CmdMsgPort, (PTR) & notice );
+
+	// The filesystem can queue reads as soon as the camera is published.
+	wait = us->us_Register->Stack_MsgPortBit | ( 1UL << us->us_CmdMsgPort->mp_SigBit ) | SIGBREAKF_CTRL_C;
+
+	while( ( us->us_Running ) && ( ! us->us_Detached ) )
 	{
-		if ( remove_cm )
+		signals = Wait( wait );
+
+		if ( signals & us->us_Register->Stack_MsgPortBit )
 		{
-			FreeVec( remove_cm );
-		}
-	}
-
-	// --
-	// Start Reading from Events
-
-	ioreq = us->us_Res_Interrupt->IORequests[0];
-	ioreq->io_AllowShortPackets = TRUE;
-	SendIO( (PTR) ioreq );
-
-	// --
-	// Start Bulk transfers
-
-	us->us_Running = TRUE;
-
-	_usb_Bulk_Schedule( us );
-
-	// --
-
-	wait = SIGBREAKF_CTRL_C;
-	wait |=	us->us_Res_BulkIn->MsgPortBit;
-	wait |=	us->us_Res_BulkOut->MsgPortBit;
-	wait |=	us->us_Res_Interrupt->MsgPortBit;
-	wait |=	us->us_Register->Stack_MsgPortBit;
-
-	MYINFO( "PTP-USB : BulkIn ..... : $%08lx", us->us_Res_BulkIn->MsgPortBit );
-	MYINFO( "PTP-USB : BulkOut .... : $%08lx", us->us_Res_BulkOut->MsgPortBit );
-	MYINFO( "PTP-USB : Interrupt .. : $%08lx", us->us_Res_Interrupt->MsgPortBit );
-	MYINFO( "PTP-USB : Stack ...... : $%08lx", us->us_Register->Stack_MsgPortBit );
-	MYINFO( "PTP-USB : Stack MP ... : %p", us->us_Register->Stack_MsgPort );
-
-	while(( us->us_Running ) && ( ! us->us_Detached ))
-	{
-		MYINFO( "PTP-USB : Waiting for $%08lx", wait );
-
-		mask = Wait( wait );
-
-		MYINFO( "PTP-USB : Got $%08lx", mask );
-
-		if ( mask &	us->us_Res_BulkIn->MsgPortBit )
-		{
-			MYINFO( "PTP-USB : Got BulkIn Bit" );
-			_usb_Loop_Bulk_In( us );
-			_usb_Bulk_Schedule( us );
-		}
-
-		if ( mask &	us->us_Res_BulkOut->MsgPortBit )
-		{
-			MYINFO( "PTP-USB : Got BulkOut Bit" );
-			_usb_Loop_Bulk_Out( us );
-			_usb_Bulk_Schedule( us );
-		}
-
-		if ( mask &	us->us_Res_Interrupt->MsgPortBit )
-		{
-			MYINFO( "PTP-USB : Got Interrupt Bit" );
-			_usb_Loop_Event( us );
-		}
-
-		if ( mask &	us->us_Register->Stack_MsgPortBit )
-		{
-			MYINFO( "PTP-USB : Got Stack Bit" );
 			_usb_Loop_Stack( us );
 		}
 
-		if ( mask & SIGBREAKF_CTRL_C )
+		if ( ( us->us_Detached ) || ( signals & SIGBREAKF_CTRL_C ) )
 		{
-			MYINFO( "PTP-USB : Got CTRL+C" );
-			us->us_Running = FALSE;
+			break;
+		}
+
+		while(( request = (PTR) GetMsg( us->us_CmdMsgPort ) ))
+		{
+			if ( request == & notice )
+			{
+				if ( notice.cm_Error )
+				{
+					us->us_Running = FALSE;
+				}
+
+				continue;
+			}
+
+			if ( us->us_Running )
+			{
+				_usb_Transaction( us, request );
+			}
+			else
+			{
+				request->cm_Error = ERROR_DEVICE_NOT_MOUNTED;
+			}
+
+			ReplyMsg( (PTR) request );
 		}
 	}
 
-	// --
+	// Stop new requests before replying to any caller waiting under the filesystem lock.
+	ObtainSemaphore( & camera->cin_Gate );
 
-	if ( announced )
+	camera->cin_Online = FALSE;
+
+	ReleaseSemaphore( & camera->cin_Gate );
+
+	while(( request = (PTR) GetMsg( us->us_CmdMsgPort ) ))
 	{
-		remove_cm->cm_Command = CMD_Camera_Removed;
-		remove_cm->cm_InfoNode = & us->us_CameraNode;
-		remove_cm->cm_Message.mn_ReplyPort = us->us_CmdMsgPort;
-		PutMsg( FS_CmdMsgPort, (PTR) remove_cm );
+		if ( request == & notice )
+		{
+			continue;
+		}
 
-		WaitPort( us->us_CmdMsgPort );
-		GetMsg( us->us_CmdMsgPort );
-		FreeVec( remove_cm );
+		request->cm_Error = ERROR_DEVICE_NOT_MOUNTED;
+
+		ReplyMsg( (PTR) request );
 	}
 
-	// --
+	// Use a separate notice so a racing attach acknowledgement stays valid.
+	{
+		struct CommandMessage remove;
 
+		memset( & remove, 0, sizeof( remove ) );
+
+		remove.cm_Command = CMD_Camera_Removed;
+		remove.cm_InfoNode = camera;
+		remove.cm_Message.mn_ReplyPort = us->us_CmdMsgPort;
+		remove.cm_Message.mn_Length = sizeof( remove );
+
+		PutMsg( FS_CmdMsgPort, (PTR) & remove );
+
+		do
+		{
+			WaitPort( us->us_CmdMsgPort );
+
+			request = (PTR) GetMsg( us->us_CmdMsgPort );
+		}
+		while( request != & remove );
+	}
 }
 
 // --
