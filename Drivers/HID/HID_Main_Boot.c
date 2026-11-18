@@ -97,6 +97,7 @@ S32 max;
 			{
 				USBDEBUG( "HID_Boot : Int : Detached" );
 				hd->Running = FALSE;
+				reply = FALSE;
 				break;
 			}
 
