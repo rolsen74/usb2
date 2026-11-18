@@ -13,13 +13,7 @@
 
 // --
 
-#if defined(_USB2_)
-#define DEVNAME		"usb2_rtl8188.device"
-#elif defined(_SIRION_)
-#define DEVNAME		"rusb_rtl8188.device"
-#else
-#error Unsupported USB Target
-#endif
+#define DEVNAME		"usb2rtl8188.device"
 
 #define VERSION		1
 #define REVISION	1
