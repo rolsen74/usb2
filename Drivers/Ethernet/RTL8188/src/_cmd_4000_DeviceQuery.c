@@ -9,33 +9,43 @@
 // --
 
 #include "All.h"
+#include "Radio.h"
 
 // --
 
 /* Supported commands */
 static const U16 _DevNSDCmds[] =
 {
-// Common device commands
-/* 0000 */	//	CMD_INVALID,		// Not a real command
-/* 0001 */	//	CMD_RESET,
-/* 0002 */	//	CMD_READ,
-/* 0003 */	CMD_WRITE,
-/* 0004 */	//	CMD_UPDATE,
-/* 0005 */	//	CMD_CLEAR,
-/* 0006 */	//	CMD_STOP,
-/* 0007 */	//	CMD_START,
-/* 0008 */	//	CMD_FLUSH,
-/* 0009	*/	//	CMD_NONSTD,			// Normal first Device Specific Command
-
-// Parallel.dev commands
-/* 0009 */	//	PDCMD_QUERY,			// CMD_NONSTD+0
-/* 000A */	//	PDCMD_SETPARAMS,
-
-/* 4000 */	NSCMD_DEVICEQUERY,
+	CMD_READ,
+	CMD_WRITE,
+	CMD_FLUSH,
+	S2_DEVICEQUERY,
+	S2_GETSTATIONADDRESS,
+	S2_CONFIGINTERFACE,
+	S2_ADDMULTICASTADDRESS,
+	S2_DELMULTICASTADDRESS,
+	S2_MULTICAST,
+	S2_BROADCAST,
+	S2_GETSPECIALSTATS,
+	S2_GETGLOBALSTATS,
+	S2_ONEVENT,
+	S2_READORPHAN,
+	S2_ONLINE,
+	S2_OFFLINE,
+	NSCMD_DEVICEQUERY,
+	S2_GETEXTENDEDGLOBALSTATS,
+	S2_SAMPLE_THROUGHPUT,
+	S2_SANA2HOOK,
+	S2_SETOPTIONS,
+	S2_SETKEY,
+	S2_READMGMT,
+	S2_WRITEMGMT,
+	S2_GETCRYPTTYPES,
 	0
 };
 
-void _cmd_4000_NSCmd_DeviceQuery( struct IOStdReq *ioreq )
+void
+_cmd_4000_NSCmd_DeviceQuery( struct IOStdReq *ioreq )
 {
 struct NSDeviceQueryResult *nsd;
 
@@ -47,7 +57,7 @@ struct NSDeviceQueryResult *nsd;
 	{
 		nsd->DevQueryFormat		= 0;
 		nsd->SizeAvailable		= sizeof( struct NSDeviceQueryResult );
-		nsd->DeviceType			= NSDEVTYPE_PARALLEL;
+		nsd->DeviceType			= NSDEVTYPE_SANA2;
 		nsd->DeviceSubType		= 0;
 		nsd->SupportedCommands	= (PTR) _DevNSDCmds;
 
@@ -56,7 +66,9 @@ struct NSDeviceQueryResult *nsd;
 	}
 	else
 	{
-		USBDEBUG( "RTL8188 : Supplied Query buffer is to small" );
+		USBDEBUG( "RTL8188 : Supplied query buffer is too small" );
+
+		ioreq->io_Actual		= 0;
 		ioreq->io_Error			= IOERR_BADLENGTH;
 	}
 
