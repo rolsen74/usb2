@@ -50,6 +50,7 @@ UHCI_Isochronous_Add ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	struct UHCI_TD * td;
 
 	U32 frame;
+	U32 step;
 
 	qh = ioreq->req_HCD.UHCI.QH_Header;
 
@@ -61,6 +62,8 @@ UHCI_Isochronous_Add ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	UHCI_Chip_Stop ( hn );
 
 	frame = ( PCI_READWORD ( UHCI_FRNUM ) + 2 ) & ( UHCI_FRAMELIST_COUNT - 1 );
+	step = 1U << ( ioreq->req_EndPoint->ep_Interval - 1 );
+
 	for ( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
 	{
 		td->ptd_frame					 = frame;
@@ -68,7 +71,7 @@ UHCI_Isochronous_Add ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 		td->td_link						 = hn->hn_HCD.UHCI.FrameList[frame];
 		hn->hn_HCD.UHCI.FrameTD[frame]	 = td;
 		hn->hn_HCD.UHCI.FrameList[frame] = LE_SWAP32 ( td->ptd_self_phy );
-		frame							 = ( frame + 1 ) & ( UHCI_FRAMELIST_COUNT - 1 );
+		frame							 = ( frame + step ) & ( UHCI_FRAMELIST_COUNT - 1 );
 	}
 
 	qh->pqh_linked = TRUE;
