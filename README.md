@@ -6,17 +6,52 @@ The stack is **functional** and supports several common USB device classes, but 
 
 ## Status
 
-The following functionality is known to work:
+The following functionality has been reported working:
 
 - USB Hubs
 - USB Mouse (HID)
 - USB Keyboard (HID)
 - USB Mass Storage Devices (MSD)
 - USB Printer Class (Printer Protocol)
+- UHCI (USB 1.1 Host Controller; tested on Pegasus2 under QEMU)
 - OHCI (USB 1.1 Host Controller)
 - EHCI (USB 2.0 Host Controller)
 
-Limitations:
+The xHCI driver is still experimental and is enabled in the default build.
+Compiling a driver does not establish that it works with hardware.
+
+## Mass Storage
+
+The MSD driver uses USB Bulk-Only Transport. It accepts SCSI transparent,
+ATAPI CD/DVD, UFI floppy, and SFF-8070i interfaces that use this transport.
+It exposes the devices through `usb2disk.device`.
+
+- Block reads and writes support 32-bit and 64-bit byte offsets. The driver
+  uses SCSI READ/WRITE(10) or READ/WRITE(16) as needed.
+- `TD_SEEK`, `TD_FORMAT`, and their 64-bit counterparts are implemented.
+  `TD_FORMAT` writes the supplied sector data; it does not issue SCSI FORMAT UNIT.
+- Removable media is checked every two seconds. The driver tracks media
+  presence and disk changes and signals registered `TD_ADDCHANGEINT` handlers.
+- `TD_EJECT` loads or ejects media on drives that support it. `TD_MOTOR` sends
+  START STOP UNIT for UFI and SFF floppy devices.
+- CD-ROM media is reported as write-protected. `CMD_UPDATE` synchronizes the
+  cache on supported writable devices.
+
+Mass-storage limitations:
+
+- USB floppy drives using CBI transport are not supported.
+- `CMD_START`, `CMD_STOP`, `CMD_FLUSH`, and `CMD_RESET` are not implemented.
+  These are Exec queue and device-control commands, not motor or cache-flush
+  aliases. Use `TD_MOTOR` for a supported floppy motor and `CMD_UPDATE` to
+  commit buffered writes.
+- `TD_REMOVE`, `TD_GETNUMTRACKS`, `TD_RAWREAD`, `TD_RAWWRITE`, and the ETD
+  commands are not implemented. `TD_GETGEOMETRY` is available, but its track
+  layout values are synthetic; its sector size and total sector count come
+  from the device.
+- The recent CD/DVD, floppy, media-change, and 64-bit paths build successfully
+  but have not been verified with physical drives in this workspace.
+
+## General Limitations
 
 - The stack is **not feature-complete**
 - Error handling and edge cases may be missing
@@ -27,8 +62,14 @@ Limitations:
 ## Supported Environment
 
 - Target OS: **AmigaOS 4**
-- Machine: Amiga X5000/20/40
-- USB Host Controller: **EHCI** (Onboard)
+- Tested UHCI setup: **Pegasus2 under QEMU**
+- Target hardware: **Amiga X5000/20/40**, with onboard EHCI
+
+## Building
+
+With the AmigaOS 4 cross-compiler installed, run `make -j4`. The default
+build enables UHCI, OHCI, EHCI, xHCI, HUB, HID, and MSD. To exclude xHCI,
+use `make DRV_XHCI=0 -j4`; its hardware validation is still pending.
 
 ## Project Goals (Original)
 
@@ -50,8 +91,7 @@ This project is useful for:
 
 This project is licensed under the **GNU General Public License v3.0 or later**.
 
-See the `LICENSE` file for the full license text.  
-All source files include SPDX license identifiers.
+See the `LICENSE` file for the full license text.
 
 ## Contributions
 
