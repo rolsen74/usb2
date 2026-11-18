@@ -28,27 +28,18 @@ struct Message *msg;
 
 		dp = (PTR) msg->mn_Node.ln_Name;
 
-		if ( dp )
+		if ( ( dp ) && ( dp->dp_Link == msg ) )
 		{
-			DebugPrintF( "\n\nAction $%04lx\n", dp->dp_Action );
+			msg->mn_ReplyPort = dp->dp_Port;
 
-			// if ( ACTION_SHUTDOWN == dp->dp_Action )
-			// {
-			// 	Handle_Shutdown( fs, dp );
-			// }
-			// else
+			if ( fs->fs_FSVector_Port->FSV.DOSEmulatePacket )
 			{
-				if( fs->fs_FSVector_Port->FSV.DOSEmulatePacket )
-				{
-					/* Pass all other packets to the dos packet emulator */
-					fs->fs_FSVector_Port->FSV.DOSEmulatePacket( fs->fs_FSVector_Port, dp );
-				}
-				else
-				{
-					/* Emul vector was null before DOS 53.91 (OS4.1-U4 = 53.90) */
-					dp->dp_Res1 = DOSFALSE;
-					dp->dp_Res2 = ERROR_ACTION_NOT_KNOWN;
-				}
+				fs->fs_FSVector_Port->FSV.DOSEmulatePacket( fs->fs_FSVector_Port, dp );
+			}
+			else
+			{
+				dp->dp_Res1 = DOSFALSE;
+				dp->dp_Res2 = ERROR_ACTION_NOT_KNOWN;
 			}
 		}
 
