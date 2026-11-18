@@ -29,6 +29,10 @@ HID_DEBUG( char spcbuf[64]; )
 		case 9:  // Output
 		case 11: // Feature
 		{
+			if ( ! rn )
+			{
+				goto bailout;
+			}
 
 HID_DEBUG( 
 {
@@ -44,6 +48,21 @@ U32 uu;
 	spcbuf[uu++] = ' ';
 	spcbuf[uu] = 0;
 })
+
+			// For a pen collection, bind to its first input report. Other
+			// IDs in the collection have independent offsets.
+			if ( ( pi->bTag == 8 ) && ( ( rn->UsageID == HID_USAGE_PEN ) || ( rn->UsageID == HID_USAGE_DIGITIZER ) ) )
+			{
+				if ( ! rn->Offset_In )
+				{
+					rn->ReportID = pi->gn->ReportID;
+				}
+
+				if ( rn->ReportID != pi->gn->ReportID )
+				{
+					goto clear_usages;
+				}
+			}
 
 			/**/ if ( pi->bTag == 8 ) // Input
 			{
@@ -81,6 +100,8 @@ U32 uu;
 				pi->bn->BitSize		= pi->gn->ReportSize;
 				pi->bn->ReportID	= pi->gn->ReportID;
 				pi->bn->Flags		= pi->uval;
+				pi->bn->MinLogical	= pi->gn->MinLogical;
+				pi->bn->MaxLogical	= pi->gn->MaxLogical;
 
 				while( TRUE )
 				{
@@ -151,6 +172,7 @@ U32 uu;
 				rn->Offset_Feat += rn->Offset_Temp;
 			}
 
+clear_usages:
 			rn->Offset_Temp = 0;
 
 			while( TRUE )

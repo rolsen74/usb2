@@ -45,9 +45,21 @@ STR name;
 			case 0x00010002: // Mouse
 			{
 				name = "Mouse";
-				init = __Mouse_Init;
-				main = __Mouse_Main;
-				free = __Mouse_Free;
+				init = HID_Pointer_Init;
+				main = HID_Pointer_Main;
+				free = HID_Pointer_Free;
+				rn->Pointer_Data = __Mouse_Data;
+				break;
+			}
+
+			case HID_USAGE_DIGITIZER:
+			case HID_USAGE_PEN:
+			{
+				name = "Tablet";
+				init = HID_Pointer_Init;
+				main = HID_Pointer_Main;
+				free = HID_Pointer_Free;
+				rn->Pointer_Data = Tablet_Data;
 				break;
 			}
 

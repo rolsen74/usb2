@@ -13,12 +13,12 @@
 
 // --
 
-SEC_CODE void __Mouse_Free( struct USBBase *usbbase UNUSED, PTR userdata UNUSED, PTR in UNUSED )
+SEC_CODE void HID_Pointer_Free( struct USBBase *usbbase UNUSED, PTR userdata UNUSED, PTR in UNUSED )
 {
 struct HID_ReportNode *rn;
 //struct HIDData *hd;
 
-	TASK_NAME_ENTER( "__Mouse_Free" );
+	TASK_NAME_ENTER( "HID_Pointer_Free" );
 
 	rn = userdata;
 //	hd = rn->HIDData;

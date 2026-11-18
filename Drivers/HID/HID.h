@@ -79,7 +79,7 @@ struct HID_GlobalNode
 	struct HID_GlobalNode *		Parent;
 	U32							UsagePage;
 	S32							MinLogical;
-	S32							MaxLogical;
+	S64							MaxLogical;
 	S32							MinPhysical;
 	S32							MaxPhysical;
 	U32							Unit;
@@ -96,6 +96,9 @@ struct HID_CollectionNode
 //	struct USB2_Header			Items;
 };
 
+#define HID_USAGE_DIGITIZER	0x000d0001
+#define HID_USAGE_PEN		0x000d0002
+
 struct HID_ReportNode
 {
 	struct USB2_Node				Node;
@@ -108,6 +111,8 @@ struct HID_ReportNode
 	struct USB2_MsgPort				Input_MsgPort;
 	struct IOStdReq					Input_IOReq;
 	struct InputEvent				Input_Event;
+	void (*Pointer_Data)( struct USBBase *, struct HID_ReportNode *, struct RealRequest * );
+	U8								Tablet_Buttons;
 
 	U32								Timer_Added;
 	struct TimeRequest				Timer_IOReq;
@@ -161,6 +166,8 @@ struct HID_BitNode
 
 	U32							Flags;
 	U32							ReportID;
+	S32							MinLogical;
+	S64							MaxLogical;
 
 	struct USB2_Header			UsageHeader;
 };
@@ -282,10 +289,12 @@ SEC_CODE void	__Boot_Mouse_Free(		struct USBBase *usbbase, PTR userdata, PTR in_
 SEC_CODE void	__Boot_Mouse_Data(		struct USBBase *usbbase, struct HID_ReportNode *rn, struct RealRequest *ioreq );
 
 
-SEC_CODE S32	__Mouse_Init(			struct USBBase *usbbase, PTR userdata, PTR in_ptr );
-SEC_CODE void	__Mouse_Main(			struct USBBase *usbbase, PTR userdata, PTR in_ptr );
-SEC_CODE void	__Mouse_Free(			struct USBBase *usbbase, PTR userdata, PTR in_ptr );
+SEC_CODE S32	HID_Pointer_Init(			struct USBBase *usbbase, PTR userdata, PTR in_ptr );
+SEC_CODE void	HID_Pointer_Main(			struct USBBase *usbbase, PTR userdata, PTR in_ptr );
+SEC_CODE void	HID_Pointer_Free(			struct USBBase *usbbase, PTR userdata, PTR in_ptr );
 SEC_CODE void	__Mouse_Data(			struct USBBase *usbbase, struct HID_ReportNode *rn, struct RealRequest *ioreq );
+SEC_CODE void	Tablet_Data(			struct USBBase *usbbase, struct HID_ReportNode *rn, struct RealRequest *ioreq );
+SEC_CODE void	Tablet_Buttons(			struct USBBase *usbbase, struct HID_ReportNode *rn, U8 buttons );
 SEC_CODE void	__Mouse_Move(			struct USBBase *usbbase, struct HID_ReportNode *rn, struct RealRequest *ioreq, struct HID_BitNode *bn, U32 idx, U32 id );
 SEC_CODE void	__Mouse_Scroll(			struct USBBase *usbbase, struct HID_ReportNode *rn, struct RealRequest *ioreq, struct HID_BitNode *bn, U32 idx, U32 id );
 SEC_CODE void	__Mouse_Button( 		struct USBBase *usbbase, struct HID_ReportNode *rn, struct RealRequest *ioreq, struct HID_BitNode *bn, U32 idx, U32 id );

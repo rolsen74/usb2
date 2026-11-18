@@ -81,7 +81,7 @@ S32 error;
 		{
 			HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Global - Logical Maximum (%ld)\n", pi->sval ); )
 
-			cur->MaxLogical = pi->sval;
+			cur->MaxLogical = ( cur->MinLogical < 0 ) ? (S64) pi->sval : (S64) pi->uval;
 			break;
 		}
 

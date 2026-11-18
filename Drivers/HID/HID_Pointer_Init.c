@@ -13,13 +13,13 @@
 
 // --
 
-SEC_CODE S32 __Mouse_Init( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
+SEC_CODE S32 HID_Pointer_Init( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
 {
 struct HID_ReportNode *rn;
 //struct HIDData *hd;
 S32 retval;
 
-	TASK_NAME_ENTER( "__Mouse_Init" );
+	TASK_NAME_ENTER( "HID_Pointer_Init" );
 
 	rn = userdata;
 //	hd = rn->HIDData;
@@ -32,8 +32,8 @@ S32 retval;
 
 	if ( ! MSGPORT_INIT( & rn->IOReq_MsgPort ))
 	{
-		USBDEBUG( "__Boot_Keyboard_Init : Command MsgPort init failed" );
-		goto bailout;		
+		USBDEBUG( "HID_Pointer_Init : Command MsgPort init failed" );
+		goto bailout;
 	}
 
 	// --
@@ -41,7 +41,7 @@ S32 retval;
 	if ( ! MSGPORT_INIT( & rn->Input_MsgPort ))
 	{
 		USBDEBUG( "HID_Init : Error : Input MsgPort init failed" );
-		goto bailout;		
+		goto bailout;
 	}
 
 	MEM_COPY( usbbase->usb_InputIORequest, & rn->Input_IOReq, sizeof( struct IOStdReq ));

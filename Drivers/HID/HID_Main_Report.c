@@ -89,8 +89,12 @@ U8 *data;
 
 				rn = Header_Head( & hd->Reports );
 
-				if ( ( rn ) && ( rn->ReportID > 0 ) && ( data ) &&
-					( ioreq->req_Public.io_Actual > 0 ) )
+				if ( ( ! data ) || ( ! ioreq->req_Public.io_Actual ) || ( ! ioreq->req_Public.io_Length ) )
+				{
+					break;
+				}
+
+				if ( ( rn ) && ( rn->ReportID > 0 ) )
 				{
 					// Uses ID's
 					reportid = data[0];
@@ -107,12 +111,9 @@ U8 *data;
 						}
 					}
 				}
-				else if ( ( rn ) && ( rn->ReportID > 0 ) )
-				{
-					rn = NULL;
-				}
-
-				if (( rn ) && ( rn->Running ))
+				// A missing field must not be interpreted as a released key or button.
+				if ( ( rn ) && ( rn->Running ) &&
+					( (U64) MIN( ioreq->req_Public.io_Actual, ioreq->req_Public.io_Length ) * 8 >= rn->Offset_In ) )
 				{
 					MSGPORT_PUTMSG( & rn->IOReq_MsgPort, ioreq );
 					reply = FALSE;

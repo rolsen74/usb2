@@ -13,7 +13,7 @@
 
 // --
 
-SEC_CODE void __Mouse_Main( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
+SEC_CODE void HID_Pointer_Main( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
 {
 struct HID_ReportNode *rn;
 struct RealRequest *ioreq;
@@ -21,7 +21,7 @@ struct RealRequest *ioreq;
 U32 mask;
 U32 wait;
 
-	TASK_NAME_ENTER( "__Mouse_Main" );
+	TASK_NAME_ENTER( "HID_Pointer_Main" );
 
 	rn = userdata;
 //	hd = rn->HIDData;
@@ -47,7 +47,7 @@ U32 wait;
 					break;
 				}
 
-				__Mouse_Data( usbbase, rn, ioreq );
+				rn->Pointer_Data( usbbase, rn, ioreq );
 
 				IO_SEND( ioreq );
 			}
@@ -57,6 +57,11 @@ U32 wait;
 		{
 			// Used to break out of Wait so we can check ua_Counter
 		}
+	}
+
+	if ( rn->Tablet_Buttons )
+	{
+		Tablet_Buttons ( usbbase, rn, 0 );
 	}
 
 	rn->Running = FALSE;
