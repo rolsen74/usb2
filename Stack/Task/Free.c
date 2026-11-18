@@ -1,9 +1,10 @@
 
 /*
-**      -+- Universal serial bus -+-
-** Copyright (c) 2012-2026 by Rene W. Olsen
+** Universal serial bus attempt by Rene W. Olsen
 **
-** SPDX-License-Identifier: GPL-3.0-or-later
+** Copyright (c) 2012-2025 by Rene W. Olsen < renewolsen @ gmail . com >
+** All rights reserved.
+**
 */
 
 // --
@@ -45,7 +46,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__Task_Free" );
 
-	USBDEBUG( "__Task_Free               : TN %p : (%s)", tn, (file)?file:"<NULL>" );
+	USBDEBUG( "__Task_Free              : TN    %p : (%s)", tn, (file)?file:"<NULL>" );
 
 	// --
 
@@ -79,11 +80,11 @@ enum FSTAT fstat;
 			#ifdef DO_DEBUG
 			if ( tn->tn_TaskAdr )
 			{
-				USBPANIC( "Warning: DriverNode still have a Task %p : TN %p :", tn->tn_TaskAdr, tn );
+				USBPANIC( "Warning: DriverNode still have a Task %p : TN    %p :", tn->tn_TaskAdr, tn );
 			}
 			#endif
 
-			USBDEBUG( "__Task_Free               : Driver Node still have %ld locks", tn->tn_Locks );
+			USBDEBUG( "__Task_Free              : Driver Node still have %ld locks", tn->tn_Locks );
 			fstat = FSTAT_Locked;
 		}
 		else
@@ -94,7 +95,7 @@ enum FSTAT fstat;
 	}
 	else // ( vstat == VSTAT_Error )
 	{
-		USBPANIC( "__Task_Free               : Invalid Pointer (%p)", tn );
+		USBPANIC( "__Task_Free              : Invalid Pointer (%p)", tn );
 		fstat = FSTAT_Error;
 	}
 
@@ -107,7 +108,7 @@ enum FSTAT fstat;
 		goto bailout;
 	}
 
-	USBINFO( "__Task_Free               : Freeing %p : (%s)", tn, (file)?file:"<NULL>" );
+	USBINFO( "__Task_Free              : Freeing %p : (%s)", tn, (file)?file:"<NULL>" );
 
 	// --
 
@@ -116,7 +117,7 @@ enum FSTAT fstat;
 	if ((( Node_Next(tn)) && ( Node_Next(tn) != (PTR) 0xAC111111 ))
 	||	(( Node_Prev(tn)) && ( Node_Prev(tn) != (PTR) 0xAC222222 )))
 	{
-		USBPANIC( "__Task_Free               : Task Node have not been removed : Self %p : Next %p : Prev %p : (%s)", tn, Node_Next(tn), Node_Prev(tn), file );
+		USBPANIC( "__Task_Free              : Task Node have not been removed : Self %p : Next %p : Prev %p : (%s)", tn, Node_Next(tn), Node_Prev(tn), file );
 	}
 
 	#endif
