@@ -13,7 +13,7 @@
 
 // --
 
-SEC_CODE S32 Report_Parse_Global( struct USBBase *usbbase, struct HIDData *hd, struct pintern *pi )
+SEC_CODE S32 Report_Parse_Global( struct USBBase *usbbase, struct HIDData *hd UNUSED, struct pintern *pi )
 {
 struct HID_GlobalNode *new;
 struct HID_GlobalNode *cur;
