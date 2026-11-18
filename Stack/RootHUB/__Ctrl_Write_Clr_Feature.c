@@ -37,6 +37,11 @@ S32 err;
 	}
 	else if ( sd->RequestType == ( REQTYPE_Write | REQTYPE_Class | REQTYPE_Other ))
 	{
+		if ( ( ! port ) || ( port > hn->hn_HUB_NumPorts ) )
+		{
+			return ( USB2Err_Host_Stall );
+		}
+
 		// Clear Port Status
 
 		USBDEBUG( "__Clr_Feature : Clear Port Feature on port #%lu", port );
