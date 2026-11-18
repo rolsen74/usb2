@@ -96,6 +96,7 @@ void	_usb_Loop_Bulk_Out(				struct USB_Struct *us );
 
 struct USB_Command *_usb_Bulk_Cmd_Get(	struct USB_Struct *us );
 void	_usb_Bulk_Cmd_Free(				struct USB_Struct *us, struct USB_Command *cmd );
+void	_usb_Bulk_Schedule(				struct USB_Struct *us );
 
 void	_usb_Bulk_Stage_Send_Header1(	struct USB_Struct *us, struct USB_Command *cmd );
 void	_usb_Bulk_Stage_Send_Header2(	struct USB_Struct *us, struct USB_Command *cmd );
