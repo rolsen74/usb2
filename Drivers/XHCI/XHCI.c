@@ -1,4 +1,3 @@
-
 /*
 **      -+- Universal serial bus -+-
 ** Copyright (c) 2012-2026 by Rene W. Olsen
@@ -10,91 +9,72 @@
 
 #include "usb2_all.h"
 #include "XHCI.h"
- 
+
 // --
 
 SEC_RODATA const struct HCDFunctions XHCIFunctions =
 {
+	// -- Chip
 
-	// // -- Chip
+	.Chip_Preinit = XHCI_Chip_Preinit,
+	.Chip_Reset = XHCI_Chip_Reset,
+	.Chip_Alloc = XHCI_Chip_Alloc,
+	.Chip_Init = XHCI_Chip_Init,
+	.Chip_Start = XHCI_Chip_Start,
+	.Chip_Stop = XHCI_Chip_Stop,
+	.Chip_Deinit = XHCI_Chip_Deinit,
+	.Chip_Dealloc = XHCI_Chip_Dealloc,
 
-	// .Chip_Preinit			= EHCI_Chip_Preinit,
-	// .Chip_Reset				= EHCI_Chip_Reset,
-	// .Chip_Alloc				= EHCI_Chip_Alloc,
-	// .Chip_Init				= EHCI_Chip_Init,
-	// .Chip_Start				= EHCI_Chip_Start,
-	// .Chip_Stop				= EHCI_Chip_Stop,
-	// .Chip_Deinit			= EHCI_Chip_Deinit,
-	// .Chip_Dealloc			= EHCI_Chip_Dealloc,
+	// -- Handlers
 
-	// // -- Handlers
+	.Handler_HCD = XHCI_Handler_HCD,
+	.Handler_Reset = XHCI_Handler_Reset,
+	.Handler_Interrupt = XHCI_Handler_Interrupt,
 
-	// .Handler_HCD			= EHCI_Handler_HCD,
-	// .Handler_Reset			= EHCI_Handler_Reset,
-	// .Handler_Interrupt		= EHCI_Handler_Interrupt,
+	// -- Transfers
 
-	// // -- IORequest Transfers
+	.Transfer_Check = XHCI_Transfer_Check,
+	.Transfer_Free = XHCI_Transfer_Free,
 
-	// .Transfer_Check			= EHCI_Transfer_Check,
-	// .Transfer_Free			= EHCI_Transfer_Free,
+	// -- Root HUB
 
-	// // -- Port Functions
+	.Port_Clr_Enable = XHCI_Port_Clr_Enable,
+	.Port_Clr_Power = XHCI_Port_Clr_Power,
+	.Port_Clr_Connection_Chg = XHCI_Port_Clr_Connect_Chg,
+	.Port_Clr_Enable_Chg = XHCI_Port_Clr_Enable_Chg,
+	.Port_Clr_OverCurrent_Chg = XHCI_Port_Clr_OverCurrent_Chg,
+	.Port_Clr_Reset_Chg = XHCI_Port_Clr_Reset_Chg,
+	.Port_Get_Status = XHCI_Port_Get_Status,
+	.Port_Set_Reset = XHCI_Port_Set_Reset,
+	.Port_Set_Power = XHCI_Port_Set_Power,
 
-	// .Port_Clr_Connection_Chg = EHCI_Port_Clr_Connect_Chg,
-	// .Port_Clr_Reset_Chg		= EHCI_Port_Clr_Reset_Chg,
+	// -- Control
 
-	// .Port_Get_Status		= EHCI_Port_Get_Status,
+	.Control_Build = XHCI_Control_Build,
+	.Control_Add = XHCI_Control_Add,
+	.Control_Remove = XHCI_Control_Remove,
+	.Control_Length = XHCI_Control_Length,
 
-	// .Port_Set_Power			= EHCI_Port_Set_Power,
-	// .Port_Set_Reset			= EHCI_Port_Set_Reset,
+	// -- Bulk
 
-	// // -- Control / Interrupt / Bulk / Isochronous
+	.Bulk_Build = XHCI_Bulk_Build,
+	.Bulk_Add = XHCI_Bulk_Add,
+	.Bulk_Remove = XHCI_Bulk_Remove,
+	.Bulk_Length = XHCI_Bulk_Length,
 
-	// .Control_Add			= EHCI_Control_Add,
-	// .Control_Build			= EHCI_Control_Build,
-	// .Control_Length			= EHCI_Control_Length,
-	// .Control_Remove			= EHCI_Control_Remove,
+	// -- Interrupt
 
-	// .Interrupt_Add			= EHCI_Interrupt_Add,
-	// .Interrupt_Build		= EHCI_Interrupt_Build,
-	// .Interrupt_Length		= EHCI_Interrupt_Length,
-	// .Interrupt_Remove		= EHCI_Interrupt_Remove,
+	.Interrupt_Build = XHCI_Interrupt_Build,
+	.Interrupt_Add = XHCI_Interrupt_Add,
+	.Interrupt_Remove = XHCI_Interrupt_Remove,
+	.Interrupt_Length = XHCI_Interrupt_Length,
 
-	// .Bulk_Add				= EHCI_Bulk_Add,
-	// .Bulk_Build				= EHCI_Bulk_Build,
-	// .Bulk_Length			= EHCI_Bulk_Length,
-	// .Bulk_Remove			= EHCI_Bulk_Remove,
+	// -- Isochronous
 
-	// // --
-
-	// #if 0
-
-	// // -- Root HUB Functions --
-
-	// S8		( *Port_Clr_Enable )				( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Clr_Suspend )				( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Clr_Power )					( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Clr_Indicator )				( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Clr_Enable_Chg )			( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Clr_Suspend_Chg )			( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Clr_OverCurrent_Chg )		( struct USB2_HCDNode *hn, U32 port );
-	// S8 		( *Port_Clr_Reset_Chg )				( struct USB2_HCDNode *hn, U32 port );
-
-	// S8		( *Port_Set_Enable )				( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Set_Suspend )				( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Set_Reset )					( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Set_Power )					( struct USB2_HCDNode *hn, U32 port );
-	// S8		( *Port_Set_Indicator )				( struct USB2_HCDNode *hn, U32 port );
-
-	// // -- Buffer Functions --
-
-
-	// S32		( *Isochronous_Build )				( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-	// void	( *Isochronous_Add )				( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-	// void	( *Isochronous_Remove )				( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-	// U32		( *Isochronous_Length )				( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-
-	// #endif
+	.Isochronous_Build = XHCI_Isochronous_Build,
+	.Isochronous_Add = XHCI_Isochronous_Add,
+	.Isochronous_Remove = XHCI_Isochronous_Remove,
+	.Isochronous_Length = XHCI_Isochronous_Length,
 };
 
 // --
