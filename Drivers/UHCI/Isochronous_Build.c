@@ -60,6 +60,10 @@ U32 offset;
 U32 chunk_used;
 U32 chunk_phy;
 U32 len;
+U32 slot;
+U32 count;
+U32 step;
+U16 *lengths;
 U32 pid;
 S32 err;
 
@@ -74,18 +78,27 @@ offset = 0;
 chunk_used = 0;
 chunk_phy = 0;
 err = USB2Err_Stack_NoMemory;
+lengths = ( ioreq->req_Public.io_Command == CMD_WRITE ) ? ioreq->req_Public.io_IsoPacketLengths : NULL;
 
 	if ( ( fn->fkt_Speed != USBSPEED_Full ) ||
 		( ! ep->ep_MaxPacketSize ) ||
 		( ep->ep_MaxPacketSize > 1023 ) ||
+		( ! ep->ep_Interval ) || ( ep->ep_Interval > 16 ) ||
 		( ! left ) ||
-		( ! data ) ||
-		( left > ep->ep_MaxPacketSize * ( UHCI_FRAMELIST_COUNT - 2 ) ) ||
-		( ( ioreq->req_Public.io_IsoPacketLengths ) &&
-		  ( ( ep->ep_Interval != 1 ) ||
-		    ( ioreq->req_Public.io_IsoPacketCount != ( left + ep->ep_MaxPacketSize - 1 ) / ep->ep_MaxPacketSize ) ) ) )
+		( ! data ) )
 	{
 		err = USB2Err_Stack_InvalidStructure;
+		goto failed;
+	}
+
+	count = 1 + ( left - 1 ) / ep->ep_MaxPacketSize;
+	step = 1U << ( ep->ep_Interval - 1 );
+
+	if ( ( count > 1 + ( UHCI_FRAMELIST_COUNT - 3 ) / step ) ||
+		( ( ioreq->req_Public.io_IsoPacketLengths ) && ( ioreq->req_Public.io_IsoPacketCount != count ) ) )
+	{
+		err = USB2Err_Stack_InvalidStructure;
+
 		goto failed;
 	}
 
@@ -98,9 +111,22 @@ err = USB2Err_Stack_NoMemory;
 
 	pid = ( ioreq->req_Public.io_Command == CMD_READ ) ? UHCI_TD_PID_IN : UHCI_TD_PID_OUT;
 
-	while( left )
+	for( slot = 0; left; slot++ )
 	{
 		len = MIN( left, ep->ep_MaxPacketSize );
+		left -= len;
+
+		if ( lengths )
+		{
+			if ( ( ! lengths[slot] ) || ( lengths[slot] > len ) )
+			{
+				err = USB2Err_Stack_InvalidStructure;
+
+				goto failed;
+			}
+
+			len = lengths[slot];
+		}
 
 		if ( ( chunk_used + len ) > 4096 )
 		{
@@ -109,7 +135,7 @@ err = USB2Err_Stack_NoMemory;
 		}
 
 		td = UHCI_TD_Init( hn, pid, len, 0, fn->fkt_Speed,
-			fn->fkt_Address, ep->ep_Number, left == len, 0 );
+			fn->fkt_Address, ep->ep_Number, ! left, 0 );
 
 		if ( ! td )
 		{
@@ -119,7 +145,7 @@ err = USB2Err_Stack_NoMemory;
 		UHCI_TD_Append( qh, &last, td );
 		/* Isochronous TDs are scheduled directly in frame list entries. */
 		td->td_status = LE_SWAP32( UHCI_TD_ACTIVE | UHCI_TD_IOS |
-			(( left == len ) ? UHCI_TD_IOC : 0) );
+			(( ! left ) ? UHCI_TD_IOC : 0) );
 
 		if ( ! chunk )
 		{
@@ -146,8 +172,7 @@ err = USB2Err_Stack_NoMemory;
 		}
 
 		chunk_used += len;
-		offset += len;
-		left -= len;
+		offset += lengths ? ep->ep_MaxPacketSize : len;
 	}
 
 	return ( FALSE );
