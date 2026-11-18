@@ -20,6 +20,20 @@ The following functionality has been reported working:
 The xHCI driver is still experimental and is enabled in the default build.
 Compiling a driver does not establish that it works with hardware.
 
+## Human Interface Devices
+
+The HID driver handles USB keyboards and mice in boot and report modes.
+Report mode drops incomplete packets before decoding them, so missing fields
+do not generate false key or button releases.
+
+Experimental USB HID pen tablet support handles absolute X/Y, optional pressure
+and proximity, and tip and barrel buttons in the first input report of a pen
+collection. Tilt and vendor-specific tablet protocols are unsupported.
+
+Default and diagnostic AmigaOS cross builds passed. Host tests checked keyboard
+report decoding, mouse movement and buttons, and tablet reports. Tablet testing
+on AmigaOS hardware is pending.
+
 ## Mass Storage
 
 The MSD driver uses USB Bulk-Only Transport. It accepts SCSI transparent,
