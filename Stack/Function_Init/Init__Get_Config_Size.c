@@ -51,13 +51,20 @@ U32 cnt;
 
 		IO_DO(ioreq);
 
-		if ( ioreq->io_Error == USB2Err_NoError )
+		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == sizeof( desc ) ) )
 		{
 			break;
 		}
 	}
 
 	fn->fkt_Config_Desc_Size	= LE_SWAP16( desc.TotalLength );
+
+	if ( ( desc.Length < sizeof( desc ) ) || ( desc.DescriptorType != DSCTYPE_Configuration ) || ( fn->fkt_Config_Desc_Size < sizeof( desc ) ) )
+	{
+		USBERROR( "__Get_Config_Size : Invalid configuration descriptor" );
+		goto bailout;
+	}
+
 	fn->fkt_Config_Desc_Buf		= MEM_ALLOCIOBUFFER( fn->fkt_Config_Desc_Size + sizeof( struct USB2_Descriptor ), TRUE );
 
 	if ( ! fn->fkt_Config_Desc_Buf )
