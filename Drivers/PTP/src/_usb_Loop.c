@@ -15,11 +15,14 @@
 void _usb_Loop( struct USB_Struct *us )
 {
 struct USB2_IORequest *ioreq;
+struct CommandMessage *remove_cm;
 struct CommandMessage *cm;
 U32 wait;
 U32 mask;
+U32 announced;
 
 	MYINFO( "PTP-USB : _usb_Loop" );
+	announced = FALSE;
 
 	// --
 
@@ -27,8 +30,12 @@ U32 mask;
 		AVT_Clear, 0,
 		TAG_END
 	);
+	remove_cm = AllocVecTags( sizeof( struct CommandMessage ),
+		AVT_Clear, 0,
+		TAG_END
+	);
 
-	if ( cm )
+	if ( ( cm ) && ( remove_cm ) && ( FS_CmdMsgPort ) )
 	{
 		us->us_CameraNode.cin_Name = "Hello World";
 		us->us_CameraNode.cin_MsgPort = us->us_CmdMsgPort;
@@ -36,6 +43,19 @@ U32 mask;
 		cm->cm_Command = CMD_Camera_Added;
 		cm->cm_InfoNode = & us->us_CameraNode;
 		PutMsg( FS_CmdMsgPort, (PTR) cm );
+		announced = TRUE;
+	}
+	else if ( cm )
+	{
+		FreeVec( cm );
+	}
+
+	if ( ! announced )
+	{
+		if ( remove_cm )
+		{
+			FreeVec( remove_cm );
+		}
 	}
 
 	// --
@@ -47,6 +67,8 @@ U32 mask;
 
 	// --
 	// Start Bulk transfers
+
+	us->us_Running = TRUE;
 
 	_usb_Bulk_Schedule( us );
 
@@ -63,8 +85,6 @@ U32 mask;
 	MYINFO( "PTP-USB : Interrupt .. : $%08lx", us->us_Res_Interrupt->MsgPortBit );
 	MYINFO( "PTP-USB : Stack ...... : $%08lx", us->us_Register->Stack_MsgPortBit );
 	MYINFO( "PTP-USB : Stack MP ... : %p", us->us_Register->Stack_MsgPort );
-
-	us->us_Running = TRUE;
 
 	while(( us->us_Running ) && ( ! us->us_Detached ))
 	{
@@ -109,16 +129,16 @@ U32 mask;
 
 	// --
 
-	cm = AllocVecTags( sizeof( struct CommandMessage ),
-		AVT_Clear, 0,
-		TAG_END
-	);
-
-	if ( cm )
+	if ( announced )
 	{
-		cm->cm_Command = CMD_Camera_Removed;
-		cm->cm_InfoNode = & us->us_CameraNode;
-		PutMsg( FS_CmdMsgPort, (PTR) cm );
+		remove_cm->cm_Command = CMD_Camera_Removed;
+		remove_cm->cm_InfoNode = & us->us_CameraNode;
+		remove_cm->cm_Message.mn_ReplyPort = us->us_CmdMsgPort;
+		PutMsg( FS_CmdMsgPort, (PTR) remove_cm );
+
+		WaitPort( us->us_CmdMsgPort );
+		GetMsg( us->us_CmdMsgPort );
+		FreeVec( remove_cm );
 	}
 
 	// --
