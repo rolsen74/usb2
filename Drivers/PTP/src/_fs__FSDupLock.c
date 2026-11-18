@@ -12,11 +12,12 @@
 
 // --
 
-struct Lock *_fs__FSDupLock( struct FSVP *vp, int32 *res2, struct Lock *lockin )
+struct Lock *_fs__FSDupLock( struct FSVP *vp, LONG *res2, struct Lock *lockin )
 {
 struct FS_Struct *fs;
 struct FS_ObjLock *lock;
 PTR retval;
+S32 error;
 
 	MYINFO( "PTP-FS : _fs__FSDupLock" );
 
@@ -27,8 +28,14 @@ PTR retval;
 	if ( lockin )
 	{
 		lock = (PTR) lockin;
+		error = 0;
 
-		retval = _fs_Lock_New_From_Node( fs, lock->Node, res2, SHARED_LOCK );
+		retval = _fs_Lock_New_From_Node( fs, lock->Node, & error, SHARED_LOCK );
+
+		if ( res2 )
+		{
+			*res2 = error;
+		}
 	}
 	else
 	{
