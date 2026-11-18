@@ -9,10 +9,12 @@
 // --
 
 #include "All.h"
+#include "Manager.h"
 
 // --
 
-static PTR _manager_Expunge( struct DeviceManagerInterface *Self )
+PTR
+_manager_Expunge( struct DeviceManagerInterface *Self )
 {
 struct EthernetBase *ethBase;
 PTR seglist;
