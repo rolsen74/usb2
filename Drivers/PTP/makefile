@@ -34,7 +34,7 @@ CFLAGS		+= -MMD
 CFLAGS		+= -MP
 
 # Add debug info like source file / line nr ( huge binary file )
-CFLAGS		+= -gstabs
+CFLAGS		+= -g
 
 # Print Error Messages on serial
 CFLAGS		+= -DDO_ERROR
