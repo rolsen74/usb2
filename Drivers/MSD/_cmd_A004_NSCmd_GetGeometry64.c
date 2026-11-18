@@ -42,6 +42,18 @@ U32 flags;
 
 	msddisk = (PTR) ioreq->io_Unit;
 
+	if ( msddisk->msddisk_Removable )
+	{
+		MSD_Disk_MediaCheck( usbbase, msddisk );
+	}
+
+	if ( ! msddisk->msddisk_MediaPresent )
+	{
+		ioreq->io_Error = TDERR_DiskChanged;
+		ioreq->io_Actual = 0;
+		goto bailout;
+	}
+
 	MEM_SET( & tmp_dg, 0, sizeof( struct DriveGeometry64 ));
 
 	flags = 0;
