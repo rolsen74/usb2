@@ -13,7 +13,7 @@
 // --
 
 struct FS_ObjLock *
-_fs_File_Create( struct FS_Struct *fs, int32 *res2, struct FS_ObjLock *rel, CONST_STRPTR name )
+_fs_File_Create( struct FS_Struct *fs, S32 *res2, struct FS_ObjLock *rel, STR name )
 {
 	struct FS_ObjNode *parent;
 	struct FS_ObjNode *node;
@@ -129,7 +129,7 @@ _fs_File_Create( struct FS_Struct *fs, int32 *res2, struct FS_ObjLock *rel, CONS
 		return ( NULL );
 	}
 
-	node = _fs_Node_CreateDir( fs, res2, (STR) name );
+	node = _fs_Node_CreateDir( fs, res2, name );
 
 	if ( ! node )
 	{
