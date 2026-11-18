@@ -20,7 +20,12 @@ STR str;
 
 	USBERROR( "Printer : Cmd_Write_Buffer : pario %p : length %ld", pario, pario->IOPar.io_Length );
 
-	/**/ if ( pario->IOPar.io_Length == -1U )
+	/**/ if ( ! pario->IOPar.io_Data )
+	{
+		len = 0;
+		stat = FALSE;
+	}
+	else if ( pario->IOPar.io_Length == -1U )
 	{
 		str = pario->IOPar.io_Data;
 		len = strlen( str );
