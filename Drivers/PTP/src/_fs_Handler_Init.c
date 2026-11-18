@@ -30,20 +30,20 @@ static struct FileSystemVectors FSVectors =
 /* FSCreateDir			*/ NULL,
 /* FSParentDir			*/ _fs__FSParentDir,			// 29 : ACTION_PARENT
 /* FSDupLockFromFH		*/ _fs__FSDupLockFromFH,		// 19 : ACTION_COPY_LOCK_FH
-/* FSOpenFromLock		*/ NULL,
+/* FSOpenFromLock		*/ _fs__FSOpenFromLock,
 /* FSParentOfFH			*/ _fs__FSParentOfFH,			// 1031 : ACTION_PARENT_FH
-/* FSOpen				*/ NULL,						// 1004 ACTION_FINDUPDATE : 1005 ACTION_FINDINPUT : 1006 ACTION_FINDOUTPUT
-/* FSClose				*/ NULL,
+/* FSOpen				*/ _fs__FSOpen,
+/* FSClose				*/ _fs__FSClose,
 /* FSDelete				*/ NULL,
-/* FSRead				*/ NULL, // PTP_FSRead,
-/* FSWrite				*/ NULL,
+/* FSRead				*/ _fs__FSRead,
+/* FSWrite				*/ _fs__FSWrite,
 /* FSFlush				*/ NULL,
 
-/* FSChangeFilePosition	*/ NULL,
+/* FSChangeFilePosition	*/ _fs__FSChangeFilePosition,
 /* FSChangeFileSize		*/ NULL,
 
-/* FSGetFilePosition	*/ NULL,
-/* FSGetFileSize		*/ NULL,
+/* FSGetFilePosition	*/ _fs__FSGetFilePosition,
+/* FSGetFileSize		*/ _fs__FSGetFileSize,
 
 /* FSChangeLockMode		*/ NULL,
 /* FSChangeFileMode		*/ NULL,
