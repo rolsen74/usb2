@@ -67,7 +67,8 @@ U32 retval;
 	// --
 
 	us->us_Res_BulkIn = USB2_EPRes_ObtainTags( us->us_Register,
-		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize,
+		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize_2,
+		USB2Tag_EPRes_AllowShortPackets, TRUE,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
 		USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
 		TAG_END
