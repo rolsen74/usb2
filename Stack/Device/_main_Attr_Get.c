@@ -26,6 +26,7 @@ PTR mem;
 
 	len = 0;
 	mem = NULL;
+	fn = NULL;
 
 	usbbase = (PTR) Self->Data.LibBase;
 
@@ -81,6 +82,25 @@ PTR mem;
 			break;
 		}
 
+		case USB2Tag_Attr_HUBPorts:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( ( fn ) && ( fn->fkt_Class == USBCLASS_HUB ) )
+			{
+				value = fn->fkt_HUBDescriptor ? fn->fkt_HUBDescriptor->NbrPorts : 0;
+
+				if ( ( ! value ) && ( fn->fkt_Tier == 0 ) && ( fn->fkt_HCD ) )
+				{
+					value = fn->fkt_HCD->hn_HUB_NumPorts;
+				}
+
+				len = sizeof( U32 );
+				mem = &value;
+			}
+			break;
+		}
+
 		case USB2Tag_Attr_ConfigSize:
 		{
 			fn = Find_Function( usbbase, id );
@@ -128,6 +148,11 @@ PTR mem;
 		len = 0;
 	}
 
+	if ( fn )
+	{
+		SEMAPHORE_RELEASE( & usbbase->usb_Fkt_Semaphore );
+	}
+
 	return( len );
 }
 
@@ -152,10 +177,13 @@ struct USB2_Node *n;
 		{
 			break;
 		}
-		else
-		{
-			n = n->un_Prev;
-		}
+
+		n = n->un_Prev;
+	}
+
+	if ( ! n )
+	{
+		fn = NULL;
 	}
 
 	if ( ! fn )
