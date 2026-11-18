@@ -143,7 +143,7 @@ usb2/
   files to match USB interfaces and load the corresponding drivers.
   - `Audio` provides PCM capture and playback through `usb2audio.device`.
   - `PL2303` exposes supported USB serial adapters through `usb2serial.device`.
-  - [PTP](Doc/PTP.md) provides Picture Transfer Protocol access to compatible digital cameras.
+  - [PTP](Doc/PTP.md) lets you browse and download camera files through `PTP:` and upload new files on cameras that support it.
   - `Video` exposes USB webcam capture through `usb2video.device`. Build
     `VideoTest` separately using the commands in the [Video guide](Doc/Video.md).
 - **AHI playback** — Copy `Devs/AHI/usb2.audio` and `Devs/AudioModes/USB2`
