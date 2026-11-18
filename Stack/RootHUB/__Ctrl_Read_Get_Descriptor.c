@@ -12,39 +12,35 @@
 
 // --
 
-SEC_CODE static S32 __Get_Descriptor( 
-	struct USB2_SetupData *sd, 
-	struct USB2_HCDNode *hn, 
-	struct USBBase *usbbase,
-	PTR buffer,
-	U32 *max )
+SEC_CODE static S32
+__Get_Descriptor ( struct USB2_SetupData * sd, struct USB2_HCDNode * hn, struct USBBase * usbbase, PTR buffer, U32 * max )
 {
-U16 wValue;
-U16 dsctype;
-U16 dscnr;
-S32 err;
+	U16 wValue;
+	U16 dsctype;
+	U16 dscnr;
+	S32 err;
 
-	wValue	= LE_SWAP16( sd->Value );
+	wValue	= LE_SWAP16 ( sd->Value );
 	dsctype = ( wValue & 0xff00 ) >> 8;
 	dscnr	= ( wValue & 0x00ff ) >> 0;
 	err		= USB2Err_Host_Stall;
 
-	switch( dsctype )
+	switch ( dsctype )
 	{
 		case DSCTYPE_Device:
 		{
-			USBDEBUG( "Device Descriptor" );
+			USBDEBUG ( "Device Descriptor" );
 
-			if ( hn->hn_HCDType == HCDTYPE_EHCI )
+			if ( ( hn->hn_HCDType == HCDTYPE_EHCI ) || ( hn->hn_HCDType == HCDTYPE_XHCI ) )
 			{
-				MEM_COPY( (PTR) & HUB20_DeviceDsc, buffer, sizeof( struct USB2_Device_Desc ));
+				MEM_COPY ( (PTR)&HUB20_DeviceDsc, buffer, sizeof ( struct USB2_Device_Desc ) );
 			}
 			else
 			{
-				MEM_COPY( (PTR) & HUB11_DeviceDsc, buffer, sizeof( struct USB2_Device_Desc ));
+				MEM_COPY ( (PTR)&HUB11_DeviceDsc, buffer, sizeof ( struct USB2_Device_Desc ) );
 			}
 
-			*max = sizeof( struct USB2_Device_Desc );
+			*max = sizeof ( struct USB2_Device_Desc );
 
 			err = USB2Err_NoError;
 			break;
@@ -52,11 +48,16 @@ S32 err;
 
 		case DSCTYPE_Configuration:
 		{
-			USBDEBUG( "Configuration Descriptor" );
+			USBDEBUG ( "Configuration Descriptor" );
 
-			MEM_COPY( (PTR) & HUBConfigDsc, buffer, sizeof( struct myHUB_Cfg ));
+			MEM_COPY ( (PTR)&HUBConfigDsc, buffer, sizeof ( struct myHUB_Cfg ) );
 
-			*max = sizeof( struct myHUB_Cfg );
+			if ( hn->hn_HCDType == HCDTYPE_XHCI )
+			{
+				( (struct myHUB_Cfg *)buffer )->ep.MaxPacketSize = LE_SWAP16 ( 1 + hn->hn_HUB_NumPorts / 8 );
+			}
+
+			*max = sizeof ( struct myHUB_Cfg );
 
 			err = USB2Err_NoError;
 			break;
@@ -64,15 +65,15 @@ S32 err;
 
 		case DSCTYPE_String:
 		{
-			USBDEBUG( "String Descriptor" );
+			USBDEBUG ( "String Descriptor" );
 
-			switch( dscnr )
+			switch ( dscnr )
 			{
 				case 0:
 				{
-					MEM_COPY( (PTR) & LangIDs, buffer, sizeof( LangIDs ));
+					MEM_COPY ( (PTR)&LangIDs, buffer, sizeof ( LangIDs ) );
 
-					*max = sizeof( LangIDs );
+					*max = sizeof ( LangIDs );
 
 					err = USB2Err_NoError;
 					break;
@@ -88,55 +89,55 @@ S32 err;
 
 		case DSCTYPE_Interface:
 		{
-			USBDEBUG( "Interface Descriptor" );
+			USBDEBUG ( "Interface Descriptor" );
 			break;
 		}
 
 		case DSCTYPE_EndPoint:
 		{
-			USBDEBUG( "EndPoint Descriptor" );
+			USBDEBUG ( "EndPoint Descriptor" );
 			break;
 		}
 
 		case DSCTYPE_Device_Qualifier:
 		{
-			USBDEBUG( "Device Qualifier Descriptor" );
+			USBDEBUG ( "Device Qualifier Descriptor" );
 			break;
 		}
 
 		case DSCTYPE_Other_Speed_Configuration:
 		{
-			USBDEBUG( "Other Speec Config Descriptor" );
+			USBDEBUG ( "Other Speec Config Descriptor" );
 			break;
 		}
 
 		case DSCTYPE_Interface_Power:
 		{
-			USBDEBUG( "Interface Power Descriptor" );
+			USBDEBUG ( "Interface Power Descriptor" );
 			break;
 		}
 
 		case 0x29: // HUB Desc
 		{
-			struct USB2_HUB_Desc *HUBDesc;
-			U32 len;
+			struct USB2_HUB_Desc * HUBDesc;
+			U32					   len;
 
-			USBDEBUG( "Get HUB Descriptor" );
+			USBDEBUG ( "Get HUB Descriptor" );
 
 			HUBDesc = buffer;
 
-			len = 7 + (( hn->hn_HUB_NumPorts + 7 ) / 8 );
+			len = 7 + 2 * ( 1 + hn->hn_HUB_NumPorts / 8 );
 
 			HUBDesc->Length				= len;
 			HUBDesc->DescriptorType		= 0x29;
 			HUBDesc->NbrPorts			= hn->hn_HUB_NumPorts;
-			HUBDesc->HubCharacteristics = LE_SWAP16( 0 );
+			HUBDesc->HubCharacteristics = LE_SWAP16 ( 0 );
 			HUBDesc->PwrOn2PwrGood		= 0;
 			HUBDesc->HubContrCurrent	= 0;
 
 			if ( len > 7 )
 			{
-				MEM_SET( & HUBDesc->Data, 0, len - 7 );
+				MEM_SET ( &HUBDesc->Data, 0, len - 7 );
 			}
 
 			*max = len;
@@ -147,12 +148,12 @@ S32 err;
 
 		default:
 		{
-			USBDEBUG( "Unknown Descriptor Type (%ld)", dsctype );
+			USBDEBUG ( "Unknown Descriptor Type (%ld)", dsctype );
 			break;
 		}
 	}
 
-	return( err );
+	return ( err );
 }
 
 // --
