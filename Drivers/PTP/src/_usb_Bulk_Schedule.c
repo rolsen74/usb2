@@ -18,6 +18,11 @@ struct USB_Command *cmd;
 
 	MYINFO( "PTP-USB : _usb_Bulk_Schedule" );
 
+	if ( ( ! us->us_Running ) || ( us->us_Detached ) )
+	{
+		goto bailout;
+	}
+
 	if ( us->us_USBActive )
 	{
 		// We already have an active cmd
