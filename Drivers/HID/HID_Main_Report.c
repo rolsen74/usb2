@@ -89,7 +89,8 @@ U8 *data;
 
 				rn = Header_Head( & hd->Reports );
 
-				if (( rn ) && ( rn->ReportID > 0 ))
+				if ( ( rn ) && ( rn->ReportID > 0 ) && ( data ) &&
+					( ioreq->req_Public.io_Actual > 0 ) )
 				{
 					// Uses ID's
 					reportid = data[0];
@@ -106,6 +107,10 @@ U8 *data;
 						}
 					}
 				}
+				else if ( ( rn ) && ( rn->ReportID > 0 ) )
+				{
+					rn = NULL;
+				}
 
 				if (( rn ) && ( rn->Running ))
 				{
@@ -119,6 +124,7 @@ U8 *data;
 			{
 				USBDEBUG( "__Interrupt : Int : Detached" );
 				hd->Running = FALSE;
+				reply = FALSE;
 				break;
 			}
 
