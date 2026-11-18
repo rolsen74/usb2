@@ -12,52 +12,41 @@
 
 // --
 
-int32 _fs__FSDeviceInfoData( struct FSVP *vp, int32 *res2, struct InfoData *id )
+int32
+_fs__FSDeviceInfoData( struct FSVP *vp, int32 *res2, struct InfoData *info )
 {
-struct FS_Struct *fs;
-U32 num_blocks;
-
-//	MYINFO( "PTP-FS : _fs__FSDeviceInfoData" );
+	struct FS_Struct *fs;
+	struct FS_ObjNode *root;
 
 	fs = vp->FSV.FSPrivate;
 
+	memset( info, 0, sizeof( *info ) );
+
+	info->id_DiskState = ID_DISKSTATE_WRITE_PROTECTED;
+	info->id_BytesPerBlock = 512;
+	info->id_DiskType = fs->fs_VolumeNode->vn_DiskType;
+	info->id_VolumeNode = MKBADDR( fs->fs_VolumeNode );
+
 	ObtainSemaphore( & fs->fs_Semaphore );
 
-//	id->id_NumSoftErrors	= 0;	// now Reserved
-//	id->id_UnitNumber		= 0;	// now Reserved
-	id->id_DiskState		= ( fs->fs_WriteProtected ) ? ID_DISKSTATE_WRITE_PROTECTED : ID_DISKSTATE_VALIDATED;
-//	id->id_NumBlocks		= 0;		// Number of Blocks (total)
-//	id->id_NumBlocksUsed	= 0;		// Number of Blocks used
-	id->id_BytesPerBlock	= 512;
-	id->id_DOSType			= fs->fs_VolumeNode->vn_DiskType;
-	id->id_VolumeNode		= MKBADDR( fs->fs_VolumeNode );
-	id->id_UseCount			= 0;		// 0 = Not in use
-
-	/*
-	** Round up the amount of data stored. If there is nothing stored,
-	** make sure that we don't return 0 since some software is completely
-	** unprepared to handle it.
-	*/
-
-	num_blocks				= ( fs->fs_NumBytesUsed + ( id->id_BytesPerBlock - 1 )) / id->id_BytesPerBlock;
-
-	if ( ! num_blocks )
+	for( root = (PTR) GetHead( & fs->fs_RootNode->on_Content_List ); root;
+		root = (PTR) GetSucc( & root->on_Node ) )
 	{
-		num_blocks++;
+		if ( ( root->on_Camera ) && ( root->on_Camera->cin_CanUpload ) )
+		{
+			info->id_DiskState = ID_DISKSTATE_VALIDATED;
+			break;
+		}
 	}
 
-	id->id_NumBlocks		= num_blocks;
-	id->id_NumBlocksUsed	= num_blocks;		/* RAM is always 100% full */
+	ReleaseSemaphore( & fs->fs_Semaphore );
 
 	if ( res2 )
 	{
 		*res2 = 0;
 	}
 
-	ReleaseSemaphore( & fs->fs_Semaphore );
-
-	return(	DOSTRUE );
+	return ( DOSTRUE );
 }
 
 // --
-
