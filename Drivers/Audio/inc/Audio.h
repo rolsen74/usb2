@@ -14,6 +14,7 @@
 #define AUDIO_PACKET_COUNT 32
 #define AUDIO_BATCH_US 32000U
 #define AUDIO_READ_TIMEOUT ( 5U * 1000000U )
+#define AUDIO_EMPTY_BATCH_LIMIT 4
 #define AUDIO_IO_ABORT 0x80
 
 struct AudioUnit;
@@ -61,6 +62,8 @@ struct AudioUnit
 	U32 PacketCount;
 	U32 IntervalUS;
 	U32 BufferedBytes;
+	U32 EmptyBatches;
+	U32 EmptyFailedPackets;
 	U32 BufferOffset;
 	U32 WriteBytes;
 	U32 WritePhase;
@@ -73,6 +76,7 @@ struct AudioUnit
 	U8 ReadPending;
 	U8 ActiveAlt;
 	U8 FrequencyControl;
+	U8 RatePending;
 	U8 RateValid;
 };
 

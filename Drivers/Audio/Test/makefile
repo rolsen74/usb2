@@ -16,8 +16,8 @@ endif
 
 all: $(TARGET)
 
-$(TARGET): AudioTest.c ../inc/AudioDevice.h
-	$(CC) $(CFLAGS) -o $@ AudioTest.c
+$(TARGET): AudioTest.c Wav.c Wav.h ../inc/AudioDevice.h
+	$(CC) $(CFLAGS) -o $@ AudioTest.c Wav.c
 
 clean:
 	$(RM) $(TARGET)

@@ -39,11 +39,13 @@ struct AudioDriverBase *driver;
 	driver->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
 	driver->Library.lib_Version = 1;
 	driver->Library.lib_Revision = 0;
-	driver->Library.lib_IdString = (STR) "Audio.Driver 1.0 (17.11.2026)\r\n";
+	driver->Library.lib_IdString = (STR) AUDIO_DRIVER_LABEL;
 	driver->SegList = seglist;
 	InitSemaphore( & driver->Context.Lock );
 
 	AddLibrary( (PTR) driver );
+
+	AUDIO_TRACE( "Audio.Driver loaded\n" );
 
 	return ( driver );
 }

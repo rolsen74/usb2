@@ -26,10 +26,26 @@ struct AudioUnit *unit;
 		unit = base->Units[unitnr];
 	}
 
-	if ( ( ! unit ) || ( unit->Detached ) || ( unit->OpenCount ) ||
-		( ioreq->io_Message.mn_Length < sizeof( struct IOStdReq ) ) )
+	if ( ( ! unit ) || ( unit->Detached ) )
 	{
+		AUDIO_TRACE( "open unit %lu: no registered stream\n", unitnr );
+
 		ioreq->io_Error = IOERR_OPENFAIL;
+		ioreq->io_Device = NULL;
+	}
+	else if ( unit->OpenCount )
+	{
+		AUDIO_TRACE( "open unit %lu: already in use\n", unitnr );
+
+		ioreq->io_Error = IOERR_UNITBUSY;
+		ioreq->io_Device = NULL;
+	}
+	else if ( ioreq->io_Message.mn_Length < sizeof( struct IOStdReq ) )
+	{
+		AUDIO_TRACE( "open unit %lu: I/O request too short (%lu bytes)\n",
+			unitnr, (U32) ioreq->io_Message.mn_Length );
+
+		ioreq->io_Error = IOERR_BADLENGTH;
 		ioreq->io_Device = NULL;
 	}
 	else

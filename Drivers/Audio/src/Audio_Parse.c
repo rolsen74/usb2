@@ -138,6 +138,8 @@ U8 frequency;
 	if ( USB2_Attr_Get( unit->StartMsg->Function->FKT_ID, USB2Tag_Attr_ConfigSize,
 		& config_size, sizeof( config_size ) ) != sizeof( config_size ) )
 	{
+		AUDIO_TRACE( "could not query configuration descriptor size\n" );
+
 		return ( FALSE );
 	}
 
@@ -145,6 +147,8 @@ U8 frequency;
 		( config->DescriptorType != DSCTYPE_Configuration ) ||
 		( LE_SWAP16( config->TotalLength ) != config_size ) )
 	{
+		AUDIO_TRACE( "invalid configuration descriptor, reported %lu bytes\n", config_size );
+
 		return ( FALSE );
 	}
 
@@ -152,6 +156,8 @@ U8 frequency;
 		& speed, sizeof( speed ) ) != sizeof( speed ) ) ||
 		( ( speed != USBSPEED_Full ) && ( speed != USBSPEED_High ) ) )
 	{
+		AUDIO_TRACE( "could not query a supported USB speed\n" );
+
 		return ( FALSE );
 	}
 
@@ -196,6 +202,13 @@ U8 frequency;
 			active = ( data[2] == unit->InterfaceNr ) && ( data[3] ) &&
 				( data[5] == USBCLASS_Audio ) && ( data[6] == 0x02 ) && ( data[7] == 0 );
 			alt = data[3];
+
+			if ( active )
+			{
+				AUDIO_TRACE( "checking interface %lu alt %lu, %lu endpoint(s)\n",
+					(U32) unit->InterfaceNr, (U32) alt, (U32) data[4] );
+			}
+
 			packet = 0;
 			interval = 0;
 			format = NULL;

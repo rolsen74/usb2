@@ -47,6 +47,7 @@
 
 #define EHCI_LINK_TERMINATE			0x00000001UL
 #define EHCI_LINK_QH				0x02U
+#define EHCI_LINK_SITD				0x04U
 //#define EHCI_QH_SPEED_FULL			0x00U
 //#define EHCI_QH_SPEED_LOW			0x01U
 //#define EHCI_QH_SPEED_HIGH			0x02U
@@ -287,9 +288,25 @@ struct EHCI_TD
 struct EHCI_ITD
 {
 	volatile U32 Link;
-	volatile U32 Transaction[8];
-	U32 Page[7];
-	U32 PageHigh[7];
+	union
+	{
+		struct
+		{
+			volatile U32 Transaction[8];
+			U32 Page[7];
+			U32 PageHigh[7];
+		};
+
+		struct
+		{
+			U32 Endpoint;
+			U32 Schedule;
+			volatile U32 Status;
+			U32 Buffer[2];
+			U32 BackLink;
+			U32 BufferHigh[2];
+		} Split;
+	};
 
 	struct EHCI_ITD *Next;
 	struct EHCI_ITD *LinkedNext;
@@ -303,6 +320,12 @@ struct EHCI_ITD
 #define EHCI_ITD_ERRORS		0x70000000U
 #define EHCI_ITD_IOC		0x00008000U
 #define EHCI_ITD_DATA		128
+
+#define EHCI_SITD_ACTIVE	0x00000080U
+#define EHCI_SITD_ERRORS	0x0000007cU
+#define EHCI_SITD_IOC		0x80000000U
+#define EHCI_SITD_TP_BEGIN	0x00000008U
+#define EHCI_SITD_PAYLOAD	188U
 
 /***************************************************************************/
 

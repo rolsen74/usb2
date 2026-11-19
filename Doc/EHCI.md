@@ -11,6 +11,8 @@ The default `usb2.device` build includes EHCI through `DRV_EHCI=1`.
 Run `make` from the repository root, then follow the
 [stack installation steps](../README.md#building-the-distribution-archive).
 
-The driver includes high-speed isochronous transfers for applicable audio
-and video devices. EHCI split isochronous transfers through a high-speed
-hub's transaction translator are unsupported.
+The driver handles high-speed isochronous transfers and full-speed
+isochronous transfers through a high-speed hub's transaction translator.
+Split transfers use one descriptor per USB frame. Split IN endpoints are
+limited to 752 bytes per packet so their complete-splits fit in one frame.
+Each EHCI controller schedules one isochronous batch at a time.

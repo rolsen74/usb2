@@ -11,8 +11,95 @@
 #include <proto/dos.h>
 #include <devices/timer.h>
 #include <devices/usb2.h>
+#include <exec/execbase.h>
 #include <string.h>
 #include "../inc/AudioDevice.h"
+#include "Wav.h"
+
+// --
+
+#define AUDIO_TEST_WAV_LIMIT ( 32U * 1024U * 1024U )
+
+// --
+
+static void
+Audio_CheckFile( const char *name )
+{
+	BPTR lock;
+	char path[512];
+
+	lock = Lock( name, ACCESS_READ );
+
+	if ( ! lock )
+	{
+		Printf( "%s could not be found or opened (DOS error %ld).\n", name, IoErr() );
+
+		return;
+	}
+
+	if ( NameFromLock( lock, path, sizeof( path ) ) )
+	{
+		Printf( "%s resolves to %s\n", name, path );
+	}
+	else
+	{
+		Printf( "%s is present.\n", name );
+	}
+
+	UnLock( lock );
+}
+
+// --
+
+static void
+Audio_CheckSetup( void )
+{
+	const char *name;
+	struct ExecBase *base;
+	struct Library *driver;
+	struct Node *device;
+
+	char label[96];
+	U32 size;
+	S32 loaded;
+	S32 registered;
+
+	Audio_CheckFile( "LIBS:USB2/Audio.Class" );
+
+	Audio_CheckFile( "LIBS:USB2/Audio.Driver" );
+
+	base = (PTR) IExec->Data.LibBase;
+	size = 0;
+
+	Forbid();
+
+	driver = (PTR) FindName( & base->LibList, "Audio.Driver" );
+
+	device = FindName( & base->DeviceList, AUDIO_DEVICE_NAME );
+
+	loaded = driver != NULL;
+	registered = device != NULL;
+
+	if ( ( driver ) && ( driver->lib_IdString ) )
+	{
+		name = driver->lib_IdString;
+
+		while ( ( size < sizeof( label ) - 1 ) && ( name[size] ) &&
+			( name[size] != '\r' ) && ( name[size] != '\n' ) )
+		{
+			label[size] = name[size];
+			size++;
+		}
+	}
+
+	label[size] = 0;
+
+	Permit();
+
+	Printf( "Loaded Audio.Driver: %s\n", size ? label : ( loaded ? "no version string" : "none" ) );
+
+	Printf( "%s registered: %s\n", AUDIO_DEVICE_NAME, registered ? "yes" : "no" );
+}
 
 // --
 
@@ -35,7 +122,7 @@ Audio_WriteLE32( U8 *data, U32 value )
 // --
 
 static S32
-Audio_Capture( struct IOStdReq *ioreq )
+Audio_Transfer( struct IOStdReq *ioreq, U32 seconds )
 {
 	struct MsgPort *port;
 	struct TimeRequest *timer;
@@ -71,13 +158,11 @@ Audio_Capture( struct IOStdReq *ioreq )
 	}
 
 	timer->Request.io_Command = TR_ADDREQUEST;
-	timer->Time.Seconds = 10;
+	timer->Time.Seconds = seconds;
 	timer->Time.Microseconds = 0;
 	mask = ( 1UL << port->mp_SigBit ) |
 		( 1UL << ioreq->io_Message.mn_ReplyPort->mp_SigBit ) | SIGBREAKF_CTRL_C;
 	signals = 0;
-
-	Printf( "Recording one second from the USB microphone...\n" );
 
 	SendIO( & timer->Request );
 
@@ -91,11 +176,11 @@ Audio_Capture( struct IOStdReq *ioreq )
 
 	if ( signals & SIGBREAKF_CTRL_C )
 	{
-		Printf( "Capture interrupted.\n" );
+		Printf( "Audio transfer interrupted.\n" );
 	}
 	else if ( ! CheckIO( (PTR) ioreq ) )
 	{
-		Printf( "Audio capture timed out.\n" );
+		Printf( "Audio transfer timed out.\n" );
 	}
 	else
 	{
@@ -156,17 +241,59 @@ Audio_Peak( const U8 *samples, U32 length )
 // --
 
 static S32
+Audio_PlaySamples( struct IOStdReq *ioreq, const struct AudioFormat *format, U8 *samples, U32 frames )
+{
+	U32 bytes;
+	U32 seconds;
+
+	bytes = frames * format->Channels * 2;
+	seconds = 10 + 2 * ( frames / format->SampleRate );
+	ioreq->io_Data = samples;
+	ioreq->io_Length = bytes;
+	ioreq->io_Command = CMD_WRITE;
+
+	if ( ! Audio_Transfer( ioreq, seconds ) )
+	{
+		return ( RETURN_FAIL );
+	}
+
+	if ( ( ioreq->io_Error ) || ( ioreq->io_Actual != bytes ) )
+	{
+		Printf( "Playback failed: %ld, %lu of %lu bytes sent.\n",
+			(S32) ioreq->io_Error, ioreq->io_Actual, bytes );
+
+		if ( ioreq->io_Error == USB2Err_Host_NoBandWidth )
+		{
+			Printf( "The USB controller could not schedule audio. Stop any other USB capture and retry.\n" );
+		}
+		else if ( ioreq->io_Error == USB2Err_Host_IllegalSpeed )
+		{
+			Printf( "The controller cannot schedule audio at this device's USB speed.\n" );
+
+			Printf( "Check the controller and hub path in USB2Analyzer.\n" );
+		}
+
+		return ( RETURN_FAIL );
+	}
+
+	Printf( "Played %lu bytes.\n", ioreq->io_Actual );
+
+	return ( RETURN_OK );
+}
+
+// --
+
+static S32
 Audio_PlayTone( struct IOStdReq *ioreq, const struct AudioFormat *format, U8 *samples, U32 frames )
 {
+	U8 *output;
 	U32 frame;
 	U32 channel;
 	U32 phase;
 	S32 sample;
 
 	phase = 0;
-	ioreq->io_Data = samples;
-	ioreq->io_Length = frames * format->Channels * 2;
-	ioreq->io_Command = CMD_WRITE;
+	output = samples;
 
 	for( frame = 0; frame < frames; frame++ )
 	{
@@ -177,22 +304,99 @@ Audio_PlayTone( struct IOStdReq *ioreq, const struct AudioFormat *format, U8 *sa
 
 		for( channel = 0; channel < format->Channels; channel++ )
 		{
-			Audio_WriteLE16( samples, (U16) sample );
+			Audio_WriteLE16( output, (U16) sample );
 
-			samples += 2;
+			output += 2;
 		}
 	}
 
-	if ( DoIO( (PTR) ioreq ) )
-	{
-		Printf( "Playback failed: %ld, %ld bytes sent\n", (S32) ioreq->io_Error, ioreq->io_Actual );
+	return ( Audio_PlaySamples( ioreq, format, samples, frames ) );
+}
 
-		return ( RETURN_FAIL );
+// --
+
+static S32
+Audio_PlayWav( struct IOStdReq *ioreq, const struct AudioFormat *format, const char *name )
+{
+	struct AudioWav wav;
+
+	BPTR file;
+	S64 size;
+	U64 frames;
+	U8 *data;
+	U8 *samples;
+	S32 result;
+
+	result = RETURN_FAIL;
+	samples = NULL;
+
+	file = Open( name, MODE_OLDFILE );
+
+	if ( ! file )
+	{
+		Printf( "Could not open WAV %s.\n", name );
+
+		return ( result );
 	}
 
-	Printf( "Played %ld bytes\n", ioreq->io_Actual );
+	size = GetFileSize( file );
 
-	return ( RETURN_OK );
+	if ( ( size < 12 ) || ( size > AUDIO_TEST_WAV_LIMIT ) )
+	{
+		Printf( "The WAV must be a readable file of up to 32 MiB.\n" );
+		goto close_file;
+	}
+
+	data = AllocVecTags( (U32) size, TAG_END );
+
+	if ( ! data )
+	{
+		Printf( "Could not allocate the WAV buffer.\n" );
+		goto close_file;
+	}
+
+	if ( ( Read( file, data, (S32) size ) != (S32) size ) ||
+		( ! Audio_Wav_Parse( data, (U32) size, & wav ) ) )
+	{
+		Printf( "Could not read a mono or stereo PCM16 WAV from %s.\n", name );
+		goto free_data;
+	}
+
+	frames = ( (U64) wav.Frames * format->SampleRate + wav.Rate / 2 ) / wav.Rate;
+	frames = MAX( 1, frames );
+
+	if ( frames * format->Channels * 2 > AUDIO_TEST_WAV_LIMIT )
+	{
+		Printf( "The WAV would exceed the 32 MiB playback buffer after conversion.\n" );
+		goto free_data;
+	}
+
+	if ( ( wav.Rate != format->SampleRate ) || ( wav.Channels != format->Channels ) )
+	{
+		samples = AllocVecTags( (U32) frames * format->Channels * 2, TAG_END );
+
+		if ( ! samples )
+		{
+			Printf( "Could not allocate the converted PCM buffer.\n" );
+			goto free_data;
+		}
+
+		Audio_Wav_Convert( & wav, samples, (U32) frames, format->SampleRate, format->Channels );
+	}
+
+	Printf( "Playing %s (%lu Hz, %lu channel(s))...\n", name, wav.Rate, wav.Channels );
+
+	result = Audio_PlaySamples( ioreq, format, samples ? samples : wav.Samples, (U32) frames );
+
+	FreeVec( samples );
+
+free_data:
+	FreeVec( data );
+
+close_file:
+	Close( file );
+
+	return ( result );
 }
 
 // --
@@ -210,15 +414,23 @@ U32 length;
 BPTR file;
 S32 result;
 S32 playback;
+S32 check;
+S32 error;
 
 	result = RETURN_FAIL;
-	playback = ( argc == 2 ) && ( ! strcmp( argv[1], "PLAY" ) );
+	playback = ( ( argc == 2 ) || ( argc == 3 ) ) && ( ! strcmp( argv[1], "PLAY" ) );
+	check = ( argc == 2 ) && ( ! strcmp( argv[1], "CHECK" ) );
 
-	if ( ( argc > 1 ) && ( ! playback ) )
+	if ( ( argc > 1 ) && ( ! playback ) && ( ! check ) )
 	{
-		Printf( "Usage: USB2AudioTest [PLAY]\n" );
+		Printf( "Usage: USB2AudioTest [PLAY [WAV file]|CHECK]\n" );
 
 		return ( result );
+	}
+
+	if ( check )
+	{
+		Audio_CheckSetup();
 	}
 
 	port = AllocSysObjectTags( ASOT_PORT, TAG_END );
@@ -240,10 +452,18 @@ S32 playback;
 		return ( result );
 	}
 
-	if ( OpenDevice( AUDIO_DEVICE_NAME, playback ? AUDIO_PLAYBACK_UNIT_BASE : 0, (PTR) ioreq, 0 ) )
+	error = OpenDevice( AUDIO_DEVICE_NAME, playback ? AUDIO_PLAYBACK_UNIT_BASE : 0, (PTR) ioreq, 0 );
+
+	if ( error )
 	{
-		Printf( "No supported USB audio device is available on unit %ld.\n",
-			(S32) ( playback ? AUDIO_PLAYBACK_UNIT_BASE : 0 ) );
+		Printf( "Could not open %s unit %ld (error %ld).\n", AUDIO_DEVICE_NAME,
+			(S32) ( playback ? AUDIO_PLAYBACK_UNIT_BASE : 0 ), error );
+
+		if ( playback )
+		{
+			Printf( "PLAY requires a supported USB audio output. The webcam microphone is a capture device.\n" );
+		}
+
 		goto cleanup;
 	}
 
@@ -269,6 +489,18 @@ S32 playback;
 		format.VendorID, format.DeviceID, format.SampleRate,
 		format.Channels, format.BitsPerSample );
 
+	if ( check )
+	{
+		result = RETURN_OK;
+		goto close_device;
+	}
+
+	if ( ( playback ) && ( argc == 3 ) )
+	{
+		result = Audio_PlayWav( ioreq, & format, argv[2] );
+		goto close_device;
+	}
+
 	length = format.SampleRate * format.Channels * 2;
 	samples = AllocVecTags( length, TAG_END );
 
@@ -289,7 +521,9 @@ S32 playback;
 	ioreq->io_Data = samples;
 	ioreq->io_Length = length;
 
-	if ( ! Audio_Capture( ioreq ) )
+	Printf( "Recording one second from the USB microphone...\n" );
+
+	if ( ! Audio_Transfer( ioreq, 10 ) )
 	{
 		goto free_samples;
 	}
@@ -298,6 +532,24 @@ S32 playback;
 	{
 		Printf( "Capture failed: %ld, %ld bytes received\n",
 			(S32) ioreq->io_Error, ioreq->io_Actual );
+
+		if ( ioreq->io_Error == USB2Err_Host_NoBandWidth )
+		{
+			Printf( "The USB controller could not schedule the microphone. Close the video preview and retry.\n" );
+		}
+		else if ( ioreq->io_Error == AUDIO_ERR_NO_SAMPLES )
+		{
+			Printf( "The microphone returned no PCM samples in consecutive USB reads.\n" );
+		}
+		else if ( ioreq->io_Error == AUDIO_ERR_RATE_SETUP )
+		{
+			Printf( "The microphone did not accept the sample-rate setup request.\n" );
+		}
+		else if ( ioreq->io_Error == AUDIO_ERR_NO_PACKETS )
+		{
+			Printf( "Every isochronous packet failed in consecutive USB reads.\n" );
+		}
+
 		goto free_samples;
 	}
 

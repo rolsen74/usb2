@@ -37,7 +37,7 @@ $(BINDIR):
 	$(MKDIR) $(BINDIR)
 
 $(OBJDIR)/%.o: src/%.c | $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR):
 	$(MKDIR) $(OBJDIR)

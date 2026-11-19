@@ -50,11 +50,12 @@ were installed before connecting the webcam, then reconnect it.
 ## Compatibility and validation
 
 Isochronous capture requires the current stack. EHCI handles high-speed
-isochronous transfers and OHCI handles full-speed isochronous transfers.
+isochronous transfers and full-speed transfers through a high-speed hub.
+OHCI also handles full-speed isochronous transfers.
 Use the updated `usb2.device` when the webcam has an Interface Association
 Descriptor; older builds may not bind its VideoStreaming interface.
-EHCI split isochronous transfers and SuperSpeed isochronous burst and Mult
-modes are unsupported.
+See the [EHCI guide](EHCI.md) for split-transfer limits. SuperSpeed
+isochronous burst and Mult modes are unsupported.
 
 Video submits three USB reads while capturing. The stack starts queued reads
 in order, and the driver keeps packets from the current USB read for the next

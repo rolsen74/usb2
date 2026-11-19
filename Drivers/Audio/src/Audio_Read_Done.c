@@ -52,6 +52,7 @@ U32 framesize;
 U32 length;
 U32 index;
 U32 packet;
+U32 missed;
 U32 offset;
 U32 byte;
 U8 *buffer;
@@ -76,7 +77,10 @@ S8 error;
 
 		if ( ioreq->io_Error != USB2Err_NoError )
 		{
-			Audio_Read_Reply( unit, IOERR_UNITBUSY );
+			AUDIO_TRACE( "unit %lu endpoint $%02lx read failed, USB error %ld, bytes %lu\n",
+				unit->UnitNr, (U32) unit->EndPoint, (S32) ioreq->io_Error, ioreq->io_Actual );
+
+			Audio_Read_Reply( unit, ioreq->io_Error );
 
 			continue;
 		}
@@ -88,16 +92,10 @@ S8 error;
 			continue;
 		}
 
-		if ( ! ioreq->io_Actual )
-		{
-			Audio_Read_Reply( unit, IOERR_UNITBUSY );
-
-			continue;
-		}
-
 		framesize = unit->Format.Channels * 2;
 		buffer = ioreq->io_Data;
 		length = 0;
+		missed = 0;
 		error = 0;
 
 		for( index = 0; index < unit->PacketCount; index++ )
@@ -106,8 +104,8 @@ S8 error;
 
 			if ( packet == USB2_ISO_PACKET_ERROR )
 			{
-				error = IOERR_UNITBUSY;
-				break;
+				missed++;
+				continue;
 			}
 
 			if ( ( packet > unit->PacketBytes ) || ( packet % framesize ) )
@@ -148,6 +146,26 @@ S8 error;
 			continue;
 		}
 
+		if ( ! length )
+		{
+			unit->EmptyBatches++;
+			unit->EmptyFailedPackets += missed;
+
+			if ( unit->EmptyBatches >= AUDIO_EMPTY_BATCH_LIMIT )
+			{
+				AUDIO_TRACE( "unit %lu endpoint $%02lx no PCM after %lu reads, %lu of %lu USB intervals failed\n",
+					unit->UnitNr, (U32) unit->EndPoint, unit->EmptyBatches,
+					unit->EmptyFailedPackets, unit->EmptyBatches * unit->PacketCount );
+
+				Audio_Read_Reply( unit, unit->EmptyFailedPackets == unit->EmptyBatches * unit->PacketCount ?
+					AUDIO_ERR_NO_PACKETS : AUDIO_ERR_NO_SAMPLES );
+			}
+
+			continue;
+		}
+
+		unit->EmptyBatches = 0;
+		unit->EmptyFailedPackets = 0;
 		unit->BufferOffset = 0;
 		unit->BufferedBytes = length;
 

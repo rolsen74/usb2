@@ -24,36 +24,52 @@ EHCI_Isochronous_Length ( struct USB2_HCDNode *hn, struct RealRequest *req )
 	U32 total;
 	U32 index;
 	U32 actual;
+	U32 residual;
+	U32 split;
+	U32 in;
+	U32 failed;
 
 	usbbase = hn->hn_USBBase;
 	offset = 0;
 	total = 0;
 	index = 0;
+	split = req->req_Function->fkt_Speed == USBSPEED_Full;
+	in = req->req_Public.io_Command == CMD_READ;
 
 	for ( itd = req->req_HCD.EHCI.IsoHead; itd; itd = itd->Next )
 	{
-		word = LE_SWAP32( itd->Transaction[itd->Microframe] );
 		actual = 0;
 
-		if ( ! ( word & ( EHCI_ITD_ACTIVE | EHCI_ITD_ERRORS ) ) )
+		if ( split )
 		{
-			actual = itd->Length;
+			word = LE_SWAP32( itd->Split.Status );
+			residual = ( word >> 16 ) & 0x3ff;
+			failed = ( word & ( EHCI_SITD_ACTIVE | EHCI_SITD_ERRORS ) ) || ( residual > itd->Length );
 
-			if ( req->req_Public.io_Command == CMD_READ )
+			if ( ! failed )
 			{
-				actual = MIN( actual, ( word >> 16 ) & 0xfff );
-
-				if ( actual )
-				{
-					MEM_COPY( (U8 *) itd + EHCI_ITD_DATA, (U8 *) req->req_Public.io_Data + offset, actual );
-				}
+				actual = itd->Length - residual;
 			}
+		}
+		else
+		{
+			word = LE_SWAP32( itd->Transaction[itd->Microframe] );
+			failed = word & ( EHCI_ITD_ACTIVE | EHCI_ITD_ERRORS );
+
+			if ( ! failed )
+			{
+				actual = in ? MIN( itd->Length, ( word >> 16 ) & 0xfff ) : itd->Length;
+			}
+		}
+
+		if ( ( in ) && ( actual ) )
+		{
+			MEM_COPY( (U8 *) itd + EHCI_ITD_DATA, (U8 *) req->req_Public.io_Data + offset, actual );
 		}
 
 		if ( req->req_Public.io_IsoPacketLengths )
 		{
-			req->req_Public.io_IsoPacketLengths[index++] =
-				( word & ( EHCI_ITD_ACTIVE | EHCI_ITD_ERRORS ) ) ? USB2_ISO_PACKET_ERROR : actual;
+			req->req_Public.io_IsoPacketLengths[index++] = failed ? USB2_ISO_PACKET_ERROR : actual;
 			offset += itd->Length;
 		}
 		else

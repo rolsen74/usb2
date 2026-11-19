@@ -213,7 +213,18 @@ S32 retval;
 			itd = itd->Next;
 		}
 
-		retval = ( ! itd ) || ( ! ( LE_SWAP32( itd->Transaction[itd->Microframe] ) & EHCI_ITD_ACTIVE ) );
+		if ( ! itd )
+		{
+			retval = TRUE;
+		}
+		else if ( ioreq->req_Function->fkt_Speed == USBSPEED_Full )
+		{
+			retval = ! ( LE_SWAP32( itd->Split.Status ) & EHCI_SITD_ACTIVE );
+		}
+		else
+		{
+			retval = ! ( LE_SWAP32( itd->Transaction[itd->Microframe] ) & EHCI_ITD_ACTIVE );
+		}
 
 		TASK_NAME_LEAVE();
 

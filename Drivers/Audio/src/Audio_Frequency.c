@@ -19,10 +19,18 @@ struct USB2_SetupData *setup;
 
 U8 rate[3];
 U32 actual;
+S32 fixed;
 
 	if ( ! unit->FrequencyControl )
 	{
 		return ( TRUE );
+	}
+
+	fixed = ( unit->EndPoint & EPADR_Dir_Mask ) && ( unit->RateDescriptor[7] == 1 );
+
+	if ( ( fixed ) && ( ! Audio_Rate_Valid( unit, sample_rate ) ) )
+	{
+		return ( FALSE );
 	}
 
 	ioreq = unit->Register->Res_Control->IORequests[0];
@@ -45,7 +53,19 @@ U32 actual;
 
 	if ( ( ioreq->io_Error != USB2Err_NoError ) || ( ioreq->io_Actual != sizeof( rate ) ) )
 	{
+		AUDIO_TRACE( "endpoint $%02lx SET_CUR %lu Hz failed, USB error %ld, bytes %lu\n",
+			(U32) unit->EndPoint, sample_rate, (S32) ioreq->io_Error, ioreq->io_Actual );
+
 		return ( FALSE );
+	}
+
+	// A fixed capture rate needs no readback once the endpoint accepts SET_CUR.
+	if ( fixed )
+	{
+		AUDIO_TRACE( "endpoint $%02lx accepted fixed capture rate %lu Hz\n",
+			(U32) unit->EndPoint, sample_rate );
+
+		return ( TRUE );
 	}
 
 	setup->RequestType = REQTYPE_Read | REQTYPE_Class | REQTYPE_EndPoint;
@@ -56,10 +76,15 @@ U32 actual;
 
 	if ( ioreq->io_Error == USB2Err_Host_Stall )
 	{
+		AUDIO_TRACE( "endpoint $%02lx GET_CUR stalled after SET_CUR\n", (U32) unit->EndPoint );
+
 		return ( USB2_EPRes_Destall( unit->Register->Res_Control ) );
 	}
 
 	actual = (U32) rate[0] | ( (U32) rate[1] << 8 ) | ( (U32) rate[2] << 16 );
+
+	AUDIO_TRACE( "endpoint $%02lx GET_CUR %lu Hz, USB error %ld, bytes %lu\n",
+		(U32) unit->EndPoint, actual, (S32) ioreq->io_Error, ioreq->io_Actual );
 
 	return ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == sizeof( rate ) ) &&
 		( actual == sample_rate ) );

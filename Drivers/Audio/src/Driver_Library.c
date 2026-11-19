@@ -14,8 +14,6 @@
 #define DRIVER_NAME "Audio.Driver"
 #define DRIVER_VERSION 1
 #define DRIVER_REVISION 0
-#define DRIVER_DATE "17.11.2026"
-#define DRIVER_ID DRIVER_NAME " 1.0 (" DRIVER_DATE ")\r\n"
 
 // --
 
@@ -71,7 +69,7 @@ const PTR DriverInterfaces[] =
 	(PTR) NULL
 };
 
-static USED const char verstag[] = "\0$VER: " DRIVER_ID;
+static USED const char verstag[] = "\0$VER: " AUDIO_DRIVER_LABEL;
 
 static USED const struct Resident driver_res =
 {
@@ -83,7 +81,7 @@ static USED const struct Resident driver_res =
 	NT_LIBRARY,
 	0,
 	(STR) DRIVER_NAME,
-	(STR) DRIVER_ID,
+	(STR) AUDIO_DRIVER_LABEL,
 	(PTR) Driver_Init
 };
 

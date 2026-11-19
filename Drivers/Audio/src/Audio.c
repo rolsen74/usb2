@@ -30,8 +30,13 @@ struct AudioUnit *unit;
 	ctx->IUSB2 = msg->IUSB2;
 	IUSB2 = msg->IUSB2;
 
+	AUDIO_TRACE( "%04lx:%04lx interface %lu selected\n",
+		(U32) msg->VendorID, (U32) msg->DeviceID, (U32) msg->InterfaceDescriptor->InterfaceNumber );
+
 	if ( ! Audio_CreateDevice( ctx ) )
 	{
+		AUDIO_TRACE( "could not register usb2audio.device\n" );
+
 		return ( FALSE );
 	}
 
@@ -41,6 +46,10 @@ struct AudioUnit *unit;
 	{
 		return ( FALSE );
 	}
+
+	AUDIO_TRACE( "interface %lu ready as unit %lu, endpoint $%02lx, %lu Hz, %lu channel(s)\n",
+		(U32) unit->InterfaceNr, unit->UnitNr, (U32) unit->EndPoint,
+		unit->Format.SampleRate, unit->Format.Channels );
 
 	Audio_Main( unit );
 	Audio_Free( unit );

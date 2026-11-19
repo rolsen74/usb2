@@ -107,13 +107,22 @@ struct IOStdReq *ioreq;
 			{
 				ioreq->io_Error = IOERR_BADLENGTH;
 			}
+			else if ( ( ioreq->io_Command == CMD_READ ) && ( unit->RatePending ) &&
+				( ! Audio_Frequency( unit, unit->Format.SampleRate ) ) )
+			{
+				ioreq->io_Error = AUDIO_ERR_RATE_SETUP;
+			}
 			else
 			{
 				unit->ReadActive = ioreq;
 				unit->DataUsed = 0;
+				unit->EmptyBatches = 0;
+				unit->EmptyFailedPackets = 0;
 
 				if ( ioreq->io_Command == CMD_READ )
 				{
+					unit->RatePending = FALSE;
+
 					Audio_Read_Buffered( unit );
 
 					Audio_Read_Start( unit );
