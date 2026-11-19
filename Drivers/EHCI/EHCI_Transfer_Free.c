@@ -49,22 +49,89 @@
 
 // --
 
+static SEC_CODE U32
+EHCI_Isochronous_Time( struct USBBase *usbbase )
+{
+	struct TimeVal now;
+
+	usbbase->usb_ITimer->GetUpTime( & now );
+
+	return ( now.Seconds * 1000000U + now.Microseconds );
+}
+
+// --
+
+SEC_CODE void
+EHCI_Isochronous_Reap( struct USB2_HCDNode *hn, S32 halted )
+{
+	struct EHCI_ITD **link;
+	struct EHCI_ITD *itd;
+	struct USBBase *usbbase;
+
+	U32 now;
+
+	usbbase = hn->hn_USBBase;
+	link = & hn->hn_HCD.EHCI.IsoRetired;
+	now = 0;
+
+	if ( ( *link ) && ( ! halted ) )
+	{
+		now = EHCI_Isochronous_Time( usbbase );
+
+		// Newer descriptors are at the head. Keep cached links valid for two USB frames.
+		while ( ( *link ) && ( (U32) ( now - ( *link )->RetiredAt ) < 2000 ) )
+		{
+			link = & ( *link )->Next;
+		}
+	}
+
+	while ( ( itd = *link ) )
+	{
+		*link = itd->Next;
+
+		MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
+	}
+}
+
+// --
+
 SEC_CODE void EHCI_Transfer_Free( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
 struct EHCI_TD *next;
 struct EHCI_TD *td;
 struct EHCI_QH *qh;
 struct EHCI_ITD *itd;
+U32 retired;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Transfer_Free" );
+
+	EHCI_Isochronous_Reap( hn, FALSE );
+
+	retired = 0;
+
+	if ( ioreq->req_HCD.EHCI.IsoRetire )
+	{
+		retired = EHCI_Isochronous_Time( usbbase );
+	}
 
 	while ( ( itd = ioreq->req_HCD.EHCI.IsoHead ) )
 	{
 		ioreq->req_HCD.EHCI.IsoHead = itd->Next;
 
-		MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
+		if ( ioreq->req_HCD.EHCI.IsoRetire )
+		{
+			itd->RetiredAt = retired;
+			itd->Next = hn->hn_HCD.EHCI.IsoRetired;
+			hn->hn_HCD.EHCI.IsoRetired = itd;
+		}
+		else
+		{
+			MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
+		}
 	}
+
+	ioreq->req_HCD.EHCI.IsoRetire = FALSE;
 
 	qh = ioreq->req_HCD.EHCI.QH_Header;
 

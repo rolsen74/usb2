@@ -7,6 +7,7 @@
 
 // --
 
+#include <stdio.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <exec/errors.h>
@@ -18,6 +19,84 @@
 // --
 
 #define VIDEO_TEST_FRAMES 30
+
+// --
+
+static S32
+QueryCamera( struct IOStdReq *ioreq, struct VideoFormat *format )
+{
+	ioreq->io_Command = VIDEO_CMD_QUERY;
+	ioreq->io_Data = format;
+	ioreq->io_Length = sizeof( *format );
+
+	return ( DoIO( (PTR) ioreq ) );
+}
+
+// --
+
+static void
+FindCameras( struct IOStdReq *ioreq, struct PreviewCameras *cameras, U32 preferred )
+{
+	struct VideoFormat format;
+
+	U32 unit;
+	U32 index;
+
+	for ( unit = 0; unit < VIDEO_MAX_UNITS; unit++ )
+	{
+		if ( OpenDevice( VIDEO_DEVICE_NAME, unit, (PTR) ioreq, 0 ) )
+		{
+			continue;
+		}
+
+		if ( ! QueryCamera( ioreq, & format ) )
+		{
+			index = cameras->Count++;
+			cameras->Units[index] = unit;
+			cameras->Labels[index] = cameras->Names[index];
+
+			snprintf( cameras->Names[index], sizeof( cameras->Names[index] ), "Camera %lu (%04lx:%04lx)",
+				(unsigned long) unit, (unsigned long) format.VendorID, (unsigned long) format.DeviceID );
+
+			if ( unit == preferred )
+			{
+				cameras->Selected = index;
+			}
+		}
+
+		CloseDevice( (PTR) ioreq );
+	}
+}
+
+// --
+
+S32
+VideoTest_OpenCamera( struct IOStdReq *ioreq, struct VideoFormat *format, U32 unit )
+{
+	S32 error;
+
+	error = OpenDevice( VIDEO_DEVICE_NAME, unit, (PTR) ioreq, 0 );
+
+	if ( error )
+	{
+		Printf( "Could not open %s unit %lu (error %ld).\n", VIDEO_DEVICE_NAME, unit, error );
+
+		return ( FALSE );
+	}
+
+	error = QueryCamera( ioreq, format );
+
+	if ( error )
+	{
+		Printf( "Video format query failed for unit %lu (error %ld).\n", unit, error );
+
+		CloseDevice( (PTR) ioreq );
+
+		return ( FALSE );
+	}
+
+	return ( TRUE );
+}
 
 // --
 
@@ -69,6 +148,7 @@ struct MsgPort *timerport;
 struct IOStdReq *ioreq;
 struct TimeRequest *timer;
 struct VideoFormat format;
+struct PreviewCameras cameras;
 
 BPTR file;
 U8 *frame;
@@ -82,21 +162,32 @@ U32 frameindex;
 U32 firstsize;
 U32 minsize;
 U32 maxsize;
-LONG options[3];
+LONG options[6];
 LONG mode;
+LONG unit;
 S32 setmode;
+S32 setunit;
+S32 opened;
+U32 camera;
 
 	(void) argv;
 	options[0] = 0;
 	options[1] = 0;
 	options[2] = 0;
+	options[3] = 0;
+	options[4] = 0;
+	options[5] = 0;
 	mode = 0;
+	unit = 0;
 	setmode = FALSE;
+	setunit = FALSE;
+	opened = FALSE;
 	result = RETURN_FAIL;
+	cameras = (struct PreviewCameras) { 0 };
 
 	if ( argc )
 	{
-		args = ReadArgs( "SAVE/S,MODES/S,MODE/K/N", options, NULL );
+		args = ReadArgs( "SAVE/S,MODES/S,MODE/K/N,UNIT/K/N,CAMERAS/S,TRACE/S", options, NULL );
 
 		if ( ! args )
 		{
@@ -111,12 +202,21 @@ S32 setmode;
 			setmode = TRUE;
 		}
 
+		if ( options[3] )
+		{
+			unit = *(LONG *) options[3];
+			setunit = TRUE;
+		}
+
 		FreeArgs( args );
 	}
 
-	if ( ( mode < 0 ) || ( ( options[1] ) && ( ( options[0] ) || ( setmode ) ) ) )
+	if ( ( mode < 0 ) || ( unit < 0 ) || ( unit >= VIDEO_MAX_UNITS ) ||
+		( ( options[1] ) && ( ( options[0] ) || ( setmode ) ) ) ||
+		( ( options[4] ) && ( ( options[0] ) || ( options[1] ) || ( setmode ) || ( setunit ) ) ) )
 	{
-		Printf( "Use USB2VideoTest MODES, or USB2VideoTest [MODE number] [SAVE].\n" );
+		Printf( "Use USB2VideoTest CAMERAS, USB2VideoTest [UNIT number] MODES,\n"
+			"or USB2VideoTest [UNIT number] [MODE number] [SAVE].\n" );
 
 		return ( result );
 	}
@@ -140,13 +240,54 @@ S32 setmode;
 		return ( result );
 	}
 
-	error = OpenDevice( VIDEO_DEVICE_NAME, 0, (PTR) ioreq, 0 );
+	if ( ( options[4] ) || ( ( ! options[0] ) && ( ! options[1] ) ) )
+	{
+		FindCameras( ioreq, & cameras, unit );
+
+		if ( options[4] )
+		{
+			if ( ! cameras.Count )
+			{
+				Printf( "No available USB video units.\n" );
+			}
+			else
+			{
+				for ( camera = 0; camera < cameras.Count; camera++ )
+				{
+					Printf( "%s\n", cameras.Labels[camera] );
+				}
+
+				result = RETURN_OK;
+			}
+
+			goto cleanup;
+		}
+
+		if ( ( ! setunit ) && ( cameras.Count ) )
+		{
+			unit = cameras.Units[cameras.Selected];
+		}
+		else if ( ( setunit ) && ( cameras.Units[cameras.Selected] != (U32) unit ) )
+		{
+			cameras.Count = 0;
+		}
+
+		if ( ( ! cameras.Count ) && ( ! setunit ) && ( ! setmode ) )
+		{
+			format = (struct VideoFormat) { 0 };
+			goto open_timer;
+		}
+	}
+
+	error = OpenDevice( VIDEO_DEVICE_NAME, unit, (PTR) ioreq, 0 );
 
 	if ( error )
 	{
-		Printf( "Could not open %s unit 0 (error %ld).\n", VIDEO_DEVICE_NAME, error );
+		Printf( "Could not open %s unit %lu (error %ld).\n", VIDEO_DEVICE_NAME, (U32) unit, error );
 		goto cleanup;
 	}
+
+	opened = TRUE;
 
 	if ( options[1] )
 	{
@@ -165,26 +306,23 @@ S32 setmode;
 
 		if ( error )
 		{
-			Printf( "Could not set camera mode %ld (error %ld). Run USB2VideoTest MODES to list modes.\n",
-				mode, error );
+			Printf( "Could not set camera mode %ld (error %ld). Run USB2VideoTest UNIT %ld MODES to list modes.\n",
+				mode, error, unit );
 			goto close_device;
 		}
 	}
 
-	ioreq->io_Command = VIDEO_CMD_QUERY;
-	ioreq->io_Data = & format;
-	ioreq->io_Length = sizeof( format );
-
-	if ( DoIO( (PTR) ioreq ) )
+	if ( QueryCamera( ioreq, & format ) )
 	{
 		Printf( "Video format query failed: %ld\n", (S32) ioreq->io_Error );
 		goto close_device;
 	}
 
-	Printf( "USB %04lx:%04lx, %ld x %ld, format %ld, max frame %ld bytes, interval %ld (100 ns units)\n",
-		format.VendorID, format.DeviceID, format.Width, format.Height,
+	Printf( "Unit %ld USB %04lx:%04lx, %ld x %ld, format %ld, max frame %ld bytes, interval %ld (100 ns units)\n",
+		unit, format.VendorID, format.DeviceID, format.Width, format.Height,
 		format.Format, format.MaxFrameSize, format.FrameInterval );
 
+open_timer:
 	frame = NULL;
 	timerport = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
@@ -215,7 +353,8 @@ S32 setmode;
 
 	if ( ! options[0] )
 	{
-		result = VideoTest_Preview( ioreq, timer, & format );
+		result = VideoTest_Preview( & ioreq, timer, & format, & cameras, options[5] != 0 );
+
 		goto close_timer;
 	}
 
@@ -342,6 +481,11 @@ S32 setmode;
 	Close( file );
 
 close_timer:
+	if ( options[5] )
+	{
+		DebugPrintF( "USB2VideoTest: closing timer.device\n" );
+	}
+
 	CloseDevice( & timer->Request );
 
 free_timer_request:
@@ -354,11 +498,24 @@ free_frame:
 	FreeVec( frame );
 
 close_device:
-	CloseDevice( (PTR) ioreq );
+	if ( opened )
+	{
+		if ( options[5] )
+		{
+			DebugPrintF( "USB2VideoTest: closing usb2video.device\n" );
+		}
+
+		CloseDevice( (PTR) ioreq );
+	}
 
 cleanup:
 	FreeSysObject( ASOT_IOREQUEST, ioreq );
 	FreeSysObject( ASOT_PORT, port );
+
+	if ( options[5] )
+	{
+		DebugPrintF( "USB2VideoTest: cleanup complete\n" );
+	}
 
 	return ( result );
 }

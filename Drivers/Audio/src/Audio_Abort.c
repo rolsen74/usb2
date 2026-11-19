@@ -21,6 +21,8 @@ SEC_CODE void Audio_Abort( struct AudioUnit *unit )
 			unit->ReadPending = FALSE;
 		}
 
+		Audio_Write_Stop( unit );
+
 		Audio_Read_Reply( unit, IOERR_ABORTED );
 		unit->BufferedBytes = 0;
 		unit->BufferOffset = 0;

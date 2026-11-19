@@ -19,6 +19,7 @@ S32 total;
 //S32 max;
 PTR ioreq;
 //PTR next;
+U32 slot;
 
 //	USBDEBUG( "__EP : %p\n", ep );
 
@@ -53,10 +54,15 @@ PTR ioreq;
 
 	// -- 'try' to Abort Active IORequests
 
-	ioreq = ep->ep_Request_Active;
-
-	if ( ioreq )
+	for ( slot = 0; slot < 2; slot++ )
 	{
+		ioreq = slot ? ep->ep_Request_Active : ep->ep_Request_ActiveNext;
+
+		if ( ! ioreq )
+		{
+			continue;
+		}
+
 //		USBDEBUG( "__EP : Abort %p [Active]\n", ioreq );
 
 		if ( IOREQUEST_LOCK( ioreq ) == LSTAT_Okay )

@@ -15,4 +15,14 @@ The driver handles high-speed isochronous transfers and full-speed
 isochronous transfers through a high-speed hub's transaction translator.
 Split transfers use one descriptor per USB frame. Split IN endpoints are
 limited to 752 bytes per packet so their complete-splits fit in one frame.
-Each EHCI controller schedules one isochronous batch at a time.
+Independent isochronous endpoints can share the periodic schedule when
+their transfers fit within the microframe budget. Split isochronous
+transfers on the same high-speed hub are limited to one per USB frame.
+Full-speed isochronous OUT requests with per-packet lengths can queue
+one batch ahead on the same endpoint. When the next slots are available,
+EHCI schedules the second batch immediately after the first.
+Each OUT start-split carries up to 188 bytes. A transfer that misses its
+scheduled slot can report fewer bytes than requested even with a second
+batch queued. See the [Audio guide](Audio.md) for the tested playback rates.
+Canceling a high-speed isochronous read leaves the periodic schedule running
+while the controller finishes using any cached descriptors.

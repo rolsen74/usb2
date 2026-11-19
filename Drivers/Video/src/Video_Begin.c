@@ -30,7 +30,7 @@ struct VideoMode mode;
 			{
 				ioreq->io_Error = IOERR_BADLENGTH;
 			}
-			else if ( ! unit->Stream )
+			else if ( ! unit->StreamConfigured )
 			{
 				ioreq->io_Error = IOERR_OPENFAIL;
 			}
@@ -46,7 +46,7 @@ struct VideoMode mode;
 			{
 				ioreq->io_Error = IOERR_BADLENGTH;
 			}
-			else if ( ( ! ioreq->io_Offset ) || ( ! Video_Parse( unit, ioreq->io_Offset, & mode ) ) )
+			else if ( ! Video_Parse( unit, ioreq->io_Offset, & mode ) )
 			{
 				ioreq->io_Error = IOERR_BADADDRESS;
 			}
@@ -63,7 +63,10 @@ struct VideoMode mode;
 		}
 		else if ( ioreq->io_Command == VIDEO_CMD_STOP )
 		{
-			Video_Read_Stop( unit );
+			if ( ! Video_Stream_Close( unit ) )
+			{
+				ioreq->io_Error = IOERR_OPENFAIL;
+			}
 
 			Video_Read_Reply( unit, IOERR_ABORTED );
 		}
@@ -73,13 +76,13 @@ struct VideoMode mode;
 			{
 				ioreq->io_Error = IOERR_UNITBUSY;
 			}
-			else if ( ! unit->Stream )
-			{
-				ioreq->io_Error = IOERR_OPENFAIL;
-			}
 			else if ( ( ! ioreq->io_Data ) || ( ! ioreq->io_Length ) )
 			{
 				ioreq->io_Error = IOERR_BADLENGTH;
+			}
+			else if ( ! Video_Stream_Start( unit ) )
+			{
+				ioreq->io_Error = IOERR_OPENFAIL;
 			}
 			else
 			{

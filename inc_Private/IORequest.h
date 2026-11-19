@@ -34,6 +34,9 @@ struct __ehci
 	struct EHCI_ITD * IsoHead;
 	struct EHCI_QH * Start_Header;
 	U32				 Start_Slot;
+	U32				 IsoRetire;
+	U32				 IsoNextFrame;
+	U32				 IsoLastFrame;
 };
 
 struct __xhci

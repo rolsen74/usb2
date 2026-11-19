@@ -119,14 +119,12 @@ struct RealRequest *ioreq;
 
 							// --
 
-							ioreq = ep->ep_Request_Active;
-
-							USBDEBUG( "ioreq : %p, Locks %ld", ioreq, (ioreq)?ioreq->req_Locks:0 );
-
-							if ( ioreq )
+							while ( ( ioreq = ep->ep_Request_Active ) )
 							{
+								USBDEBUG( "ioreq : %p, Locks %ld", ioreq, ioreq->req_Locks );
+
 								SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
-								IO_STOP( ep->ep_Request_Active );
+								IO_STOP( ioreq );
 								SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 							}
 

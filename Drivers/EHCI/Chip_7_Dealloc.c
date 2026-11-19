@@ -57,6 +57,16 @@ SEC_CODE void EHCI_Chip_Dealloc( struct USB2_HCDNode *hn )
 
 	// --
 
+	if ( hn->hn_HCD.EHCI.IsoRetired )
+	{
+		if ( ! ( PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) & EHCI_STS_HCH ) )
+		{
+			MISC_MICRODELAY( 2000 );
+		}
+
+		EHCI_Isochronous_Reap( hn, TRUE );
+	}
+
 	if ( hn->hn_HCD.EHCI.IsoOrphan )
 	{
 		if ( ! ( PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) & EHCI_STS_HCH ) )
@@ -72,8 +82,12 @@ SEC_CODE void EHCI_Chip_Dealloc( struct USB2_HCDNode *hn )
 
 			MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
 		}
+	}
 
-		hn->hn_HCD.EHCI.IsoLinked = NULL;
+	if ( hn->hn_HCD.EHCI.IsoFrames )
+	{
+		MEM_FREEVEC( hn->hn_HCD.EHCI.IsoFrames );
+		hn->hn_HCD.EHCI.IsoFrames = NULL;
 	}
 
 	USBDEBUG( "EHCI_Chip_Dealloc : 1 :" );

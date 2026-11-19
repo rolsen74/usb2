@@ -12,12 +12,12 @@
 // --
 
 static void
-Audio_SetRate( struct AudioUnit *unit, struct IOStdReq *ioreq )
+Audio_RateCommand( struct AudioUnit *unit, struct IOStdReq *ioreq )
 {
 	U32 rate;
 	U32 previous;
 
-	if ( unit->ReadActive )
+	if ( ( ioreq->io_Command == AUDIO_CMD_SET_RATE ) && ( unit->ReadActive ) )
 	{
 		ioreq->io_Error = IOERR_UNITBUSY;
 
@@ -36,6 +36,13 @@ Audio_SetRate( struct AudioUnit *unit, struct IOStdReq *ioreq )
 	if ( ! Audio_Rate_Valid( unit, rate ) )
 	{
 		ioreq->io_Error = IOERR_NOCMD;
+
+		return;
+	}
+
+	if ( ioreq->io_Command == AUDIO_CMD_CHECK_RATE )
+	{
+		ioreq->io_Actual = sizeof( rate );
 
 		return;
 	}
@@ -92,9 +99,13 @@ struct IOStdReq *ioreq;
 				ioreq->io_Actual = sizeof( struct AudioFormat );
 			}
 		}
-		else if ( ioreq->io_Command == AUDIO_CMD_SET_RATE )
+		else if ( ( ioreq->io_Command == AUDIO_CMD_SET_RATE ) || ( ioreq->io_Command == AUDIO_CMD_CHECK_RATE ) )
 		{
-			Audio_SetRate( unit, ioreq );
+			Audio_RateCommand( unit, ioreq );
+		}
+		else if ( ( ioreq->io_Command == AUDIO_CMD_GET_GAIN ) || ( ioreq->io_Command == AUDIO_CMD_SET_GAIN ) )
+		{
+			Audio_GainCommand( unit, ioreq );
 		}
 		else if ( ioreq->io_Command == ( ( unit->EndPoint & EPADR_Dir_Mask ) ? CMD_READ : CMD_WRITE ) )
 		{
@@ -116,6 +127,8 @@ struct IOStdReq *ioreq;
 			{
 				unit->ReadActive = ioreq;
 				unit->DataUsed = 0;
+				unit->WriteQueued = 0;
+				unit->WriteLostBytes = 0;
 				unit->EmptyBatches = 0;
 				unit->EmptyFailedPackets = 0;
 

@@ -32,6 +32,13 @@ S32 again;
 
 		// --
 
+		ioreq = ep->ep_Request_Queue.uh_Head;
+
+		if ( ( ! ioreq ) || ( ! __HCD_Request_CanStart( hn, ioreq ) ) )
+		{
+			break;
+		}
+
 		ioreq = NODE_REMHEAD( & ep->ep_Request_Queue );
 
 		if ( ioreq )

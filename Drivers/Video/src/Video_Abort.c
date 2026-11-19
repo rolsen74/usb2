@@ -24,7 +24,7 @@ SEC_CODE void Video_Abort( struct VideoUnit *unit )
 
 	if ( reset )
 	{
-		Video_Read_Stop( unit );
+		Video_Stream_Close( unit );
 
 		Video_Read_Reply( unit, IOERR_ABORTED );
 	}

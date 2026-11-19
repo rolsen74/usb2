@@ -29,13 +29,13 @@ struct VideoBase *base;
 
 	Video_Read_Stop( unit );
 
-	Video_Read_Reply( unit, IOERR_ABORTED );
+	Video_Read_Reply( unit, USB2Err_Device_Detached );
 
 	if ( unit->BeginPort )
 	{
 		while(( ioreq = (PTR) GetMsg( unit->BeginPort ) ))
 		{
-			ioreq->io_Error = IOERR_ABORTED;
+			ioreq->io_Error = USB2Err_Device_Detached;
 			ReplyMsg( (PTR) ioreq );
 		}
 	}

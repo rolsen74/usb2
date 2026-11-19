@@ -78,7 +78,7 @@ EHCI_Reverse_Bits ( U32 c, U32 nbits )
 SEC_CODE S32
 EHCI_Chip_Init ( struct USB2_HCDNode * hn )
 {
-	// struct USBBase *usbbase;
+	struct USBBase * usbbase;
 	struct EHCI_QH * qh;
 	S32				 retval;
 	U32				 slot;
@@ -87,13 +87,9 @@ EHCI_Chip_Init ( struct USB2_HCDNode * hn )
 	U32				 j;
 	U32				 r;
 
-#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase * usbbase = hn->hn_USBBase;
-#endif
+	usbbase = hn->hn_USBBase;
 
 	TASK_NAME_ENTER ( "EHCI : EHCI_Chip_Init" );
-
-	//	usbbase = hn->hn_USBBase;
 
 	retval = FALSE;
 
@@ -170,6 +166,8 @@ EHCI_Chip_Init ( struct USB2_HCDNode * hn )
 
 	USBDEBUG ( "EHCI_Chip_Init           : 3 : Build Periodic Frame List" );
 
+	MEM_SET( hn->hn_HCD.EHCI.IsoFrames, 0, EHCI_FRAME_COUNT * sizeof( *hn->hn_HCD.EHCI.IsoFrames ) );
+
 	for ( i = 0; i < 128; i++ )
 	{
 		r = EHCI_Reverse_Bits ( i, EHCI_IPOLLRATES - 1 );
@@ -178,7 +176,7 @@ EHCI_Chip_Init ( struct USB2_HCDNode * hn )
 
 		qh = hn->hn_HCD.EHCI.FrameList_ISlots[slot];
 
-		for ( j = i; j < 1024; j += 128 )
+		for ( j = i; j < EHCI_FRAME_COUNT; j += 128 )
 		{
 			hn->hn_HCD.EHCI.FrameList[j] = LE_SWAP32 ( qh->pqh_self_phy | EHCI_LINK_QH );
 		}

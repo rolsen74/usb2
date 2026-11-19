@@ -38,6 +38,7 @@ struct USB2_EndPointNode
 	struct USB2_InterfaceNode *		ep_Interface;
 	struct USB2_EndPoint_Desc *		ep_Descriptor;
 	struct RealRequest *			ep_Request_Active;
+	struct RealRequest *			ep_Request_ActiveNext;
 	struct USB2_Header				ep_Request_Queue;
 
 	U32								ep_Type;				// EPATASK_Type_Type_xxx

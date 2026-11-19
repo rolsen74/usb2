@@ -33,6 +33,8 @@ struct AudioBase *base;
 		unit->ReadPending = FALSE;
 	}
 
+	Audio_Write_Stop( unit );
+
 	Audio_Read_Reply( unit, IOERR_ABORTED );
 
 	if ( ( unit->ActiveAlt ) && ( unit->Register ) )

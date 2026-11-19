@@ -126,7 +126,8 @@ usbbase->usb_IExec->DebugPrintF( "HUB_Handle_Interrupt : Destalling failed\n" );
 			{
 				if ( in->ErrorCnt++ >= 20 )
 				{
-					USBDEBUG( "HUB : Int : Too many errors, quitting" );
+					IExec->DebugPrintF( "USB HUB: tier %lu addr %lu stopped after %lu interrupt errors, last error %ld\n",
+						in->Function->fkt_Tier, in->Function->fkt_Address, (U32) in->ErrorCnt, (S32) ioreq->io_Error );
 					in->Running = FALSE;
 				}
 				else

@@ -37,29 +37,11 @@ struct RealFunctionNode *fn;
 		{
 			TASK_NAME_SET( "__IORequest_Active_Add : 3" );
 
-			if ( SEMAPHORE_ATTEMPT( & fn->fkt_Semaphore ))
-			{
-				TASK_NAME_SET( "__IORequest_Active_Add : 4" );
+			SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
-//				usbbase->usb_IExec->DebugPrintF( "__IORequest_Active_Add : Using Sema\n" );
+			fn->fkt_ActiveIOReq++;
 
-				fn->fkt_ActiveIOReq++;
-
-				SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
-			}
-			else
-			{
-				TASK_NAME_SET( "__IORequest_Active_Add : 5" );
-
-				usbbase->usb_IExec->Disable();
-				usbbase->usb_IExec->DebugPrintF( "__IORequest_Active_Add : Using Disable\n" );
-
-				fn->fkt_ActiveIOReq++;
-
-				usbbase->usb_IExec->Enable();
-			}
-
-			TASK_NAME_SET( "__IORequest_Active_Add : 6" );
+			SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 			FUNCTION_UNLOCK( fn );
 		}

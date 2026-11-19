@@ -24,8 +24,9 @@ struct IOStdReq *ioreq;
 
 	unit->ReadActive = NULL;
 	ioreq->io_Error = error;
-	ioreq->io_Actual = unit->DataUsed;
+	ioreq->io_Actual = unit->DataUsed - unit->WriteLostBytes;
 	unit->DataUsed = 0;
+	unit->WriteLostBytes = 0;
 
 	ReplyMsg( (PTR) ioreq );
 }

@@ -800,6 +800,7 @@ enum USB2HCDType
 #define USB2Tag_Attr_ManufacturerStr	( USB2Tag_Dummy + 259 )	 // [G.] Raw USB string descriptor
 #define USB2Tag_Attr_ProductStr		( USB2Tag_Dummy + 260 )	 // [G.] Raw USB string descriptor
 #define USB2Tag_Attr_SerialStr		( USB2Tag_Dummy + 261 )	 // [G.] Raw USB string descriptor
+#define USB2Tag_Attr_HCDType		( USB2Tag_Dummy + 262 )	 // [G.] U32, enum USB2HCDType
 
 
 

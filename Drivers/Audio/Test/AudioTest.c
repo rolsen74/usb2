@@ -103,24 +103,6 @@ Audio_CheckSetup( void )
 
 // --
 
-static void
-Audio_WriteLE16( U8 *data, U32 value )
-{
-	data[0] = value;
-	data[1] = value >> 8;
-}
-
-static void
-Audio_WriteLE32( U8 *data, U32 value )
-{
-	data[0] = value;
-	data[1] = value >> 8;
-	data[2] = value >> 16;
-	data[3] = value >> 24;
-}
-
-// --
-
 static S32
 Audio_Transfer( struct IOStdReq *ioreq, U32 seconds )
 {
@@ -408,7 +390,7 @@ struct MsgPort *port;
 struct IOStdReq *ioreq;
 struct AudioFormat format;
 
-U8 header[44];
+U8 header[AUDIO_WAV_HEADER_SIZE];
 U8 *samples;
 U32 length;
 BPTR file;
@@ -561,31 +543,8 @@ S32 error;
 	}
 
 	length = ioreq->io_Actual;
-	header[0] = 'R';
-	header[1] = 'I';
-	header[2] = 'F';
-	header[3] = 'F';
-	Audio_WriteLE32( & header[4], 36 + length );
-	header[8] = 'W';
-	header[9] = 'A';
-	header[10] = 'V';
-	header[11] = 'E';
-	header[12] = 'f';
-	header[13] = 'm';
-	header[14] = 't';
-	header[15] = ' ';
-	Audio_WriteLE32( & header[16], 16 );
-	Audio_WriteLE16( & header[20], 1 );
-	Audio_WriteLE16( & header[22], format.Channels );
-	Audio_WriteLE32( & header[24], format.SampleRate );
-	Audio_WriteLE32( & header[28], format.SampleRate * format.Channels * 2 );
-	Audio_WriteLE16( & header[32], format.Channels * 2 );
-	Audio_WriteLE16( & header[34], 16 );
-	header[36] = 'd';
-	header[37] = 'a';
-	header[38] = 't';
-	header[39] = 'a';
-	Audio_WriteLE32( & header[40], length );
+
+	Audio_Wav_Header( header, length, format.SampleRate, format.Channels );
 
 	file = Open( "RAM:usb2audio.wav", MODE_NEWFILE );
 

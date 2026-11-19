@@ -26,7 +26,8 @@ Compiling a driver does not establish that it works with hardware.
 | --- | --- |
 | Host controllers | [EHCI](Doc/EHCI.md), [OHCI](Doc/OHCI.md), [UHCI](Doc/UHCI.md), [xHCI](Doc/XHCI.md) |
 | Built-in device drivers | [HUB](Doc/HUB.md), [HID](Doc/HID.md), [MSD](Doc/MSD.md) |
-| External device drivers | [PTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md), [PL2303](Doc/PL2303.md) |
+| Classes | [PTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md) |
+| Serial devices | [PL2303](Doc/PL2303.md) |
 | Networking | [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md) |
 | AHI and AmigaInput | [AHI playback](Doc/AHI.md), [Competition Pro](Doc/CompPro.md), [Xbox 360](Doc/Xbox360.md) |
 
@@ -55,10 +56,10 @@ UVC cameras expose MJPEG and YUY2 capture through `usb2video.device`. See the
 USB Audio Class 1.0 PCM capture and playback use `usb2audio.device`. See the
 [Audio guide](Doc/Audio.md) and [AHI playback guide](Doc/AHI.md).
 
-## PL2303 Serial (Untested)
+## Serial Devices
 
-Compatible USB serial adapters are exposed through `usb2serial.device`. See
-the [PL2303 guide](Doc/PL2303.md).
+Compatible [PL2303](Doc/PL2303.md) USB serial adapters are exposed through
+`usb2serial.device`. Hardware testing is pending.
 
 ## USB Networking (Experimental)
 
@@ -146,17 +147,18 @@ usb2/
   to `DEVS:Networks/`. For RTL8188EU, copy the files from `Devs/Firmware/`
   to `DEVS:Firmware/` and configure a wireless supplicant as described in the
   [RTL8188EU guide](Doc/RTL8188.md).
-- **External class drivers** — Copy each `.Class` file together with its
+- **Classes** — Copy each `.Class` file together with its
   matching `.Driver` file to `LIBS:USB2/`. The stack reads the `.Class`
   files to match USB interfaces and load the corresponding drivers.
   - `Audio` provides PCM capture and playback through `usb2audio.device`.
     Run `Tools/USB2AudioTest` to check microphone capture.
-  - `PL2303` exposes supported USB serial adapters through `usb2serial.device`.
   - [PTP](Doc/PTP.md) lets you browse and download camera files through `PTP:` and upload new files on cameras that support it.
   - `Video` exposes USB webcam capture through `usb2video.device`. Run
     `Tools/USB2VideoTest` for a live preview or run it with `SAVE` to capture
     a still image. See the
     [Video guide](Doc/Video.md).
+- **Serial devices** — Copy `PL2303.Class` and `PL2303.Driver` to
+  `LIBS:USB2/` to use supported PL2303 adapters through `usb2serial.device`.
 - **AHI playback** — Copy `Devs/AHI/usb2.audio` and `Devs/AudioModes/USB2`
   to the corresponding directories under `DEVS:`.
 - **[USB2Analyzer](Doc/USB2Analyzer.md)** — Run it from the extracted

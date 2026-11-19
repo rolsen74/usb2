@@ -82,8 +82,9 @@ S32 stop;
 
 	EHCI_Slot_Free( hn, ioreq->req_HCD.EHCI.Start_Slot );
 
-	// A forced removal may still have a transaction in progress.
-	stop = ioreq->req_Public.io_Error != USB2Err_NoError;
+	// A forced removal may still have a transaction in progress. A halted QH can be unlinked.
+	status = LE_SWAP32( qh->qh_status );
+	stop = ( ioreq->req_Public.io_Error != USB2Err_NoError ) && ( ! ( status & EHCI_TD_HALTED ) );
 
 	if ( stop )
 	{

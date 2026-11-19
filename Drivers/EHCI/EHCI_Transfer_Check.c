@@ -196,6 +196,9 @@ SEC_CODE S32 EHCI_Transfer_Check( struct USB2_HCDNode *hn, struct RealRequest *i
 {
 struct EHCI_QH *qh;
 struct EHCI_ITD *itd;
+
+U32 current;
+U32 elapsed;
 S32 retval;
 
 	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
@@ -206,6 +209,13 @@ S32 retval;
 
 	if ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous )
 	{
+		if ( ioreq->req_EndPoint->ep_Request_Active != ioreq )
+		{
+			TASK_NAME_LEAVE();
+
+			return ( FALSE );
+		}
+
 		itd = ioreq->req_HCD.EHCI.IsoHead;
 
 		while ( ( itd ) && ( itd->Next ) )
@@ -224,6 +234,15 @@ S32 retval;
 		else
 		{
 			retval = ! ( LE_SWAP32( itd->Transaction[itd->Microframe] ) & EHCI_ITD_ACTIVE );
+		}
+
+		if ( ( ! retval ) && ( ioreq->req_Public.io_IsoPacketLengths ) )
+		{
+			current = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_FRINDEX );
+			elapsed = ( current - ioreq->req_HCD.EHCI.IsoLastFrame ) & EHCI_FRINDEX_MASK;
+
+			// A missed slot can stay active. Let the length handler report its packet error.
+			retval = ( elapsed >= EHCI_ISO_COMPLETE_GRACE ) && ( elapsed <= EHCI_FRINDEX_MASK / 2 );
 		}
 
 		TASK_NAME_LEAVE();

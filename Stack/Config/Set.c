@@ -66,7 +66,7 @@ U32 offset;
 							IO_STOP( ioreq );
 						}
 
-						if ( ep->ep_Request_Active )
+						while ( ep->ep_Request_Active )
 						{
 							IO_STOP( ep->ep_Request_Active );
 						}

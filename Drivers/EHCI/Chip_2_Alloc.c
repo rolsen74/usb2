@@ -102,6 +102,13 @@ S32 retval;
 
 	hn->hn_HCD.EHCI.FrameList_Phyaddr = ((struct Mem_FreeNode *)hn->hn_HCD.EHCI.FrameList)->mfn_Addr;
 
+	hn->hn_HCD.EHCI.IsoFrames = MEM_ALLOCVEC( EHCI_FRAME_COUNT * sizeof( struct EHCI_ITD * ), TRUE );
+
+	if ( ! hn->hn_HCD.EHCI.IsoFrames )
+	{
+		goto bailout;
+	}
+
 	// --
 
 	USBDEBUG( "EHCI_Chip_Alloc          : 5 : Alloc Interrupt Frame Slots" );

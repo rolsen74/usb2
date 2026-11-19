@@ -18,6 +18,8 @@ SEC_CODE static void __Release( struct USBBase *usbbase UNUSED, struct USB2_EndP
 struct RealRequest *ioreq;
 struct RealRequest *next;
 
+U32 slot;
+
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 	// --
 
@@ -46,10 +48,15 @@ struct RealRequest *next;
 
 	// --
 
-	ioreq = ep->ep_Request_Active;
-
-	if ( ioreq )
+	for ( slot = 0; slot < 2; slot++ )
 	{
+		ioreq = slot ? ep->ep_Request_Active : ep->ep_Request_ActiveNext;
+
+		if ( ! ioreq )
+		{
+			continue;
+		}
+
 		USBDEBUG( "Sending Abort : EP    : %p : IOReq %p (active)", ep, ioreq );
 
 		if ( IOREQUEST_LOCK( ioreq ) == LSTAT_Okay )

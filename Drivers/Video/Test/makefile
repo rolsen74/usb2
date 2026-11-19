@@ -16,8 +16,11 @@ endif
 
 all: $(TARGET)
 
-$(TARGET): VideoTest.c Preview.c YUY2.c Preview.h ../inc/VideoDevice.h
-	$(CC) $(CFLAGS) -o $@ VideoTest.c Preview.c YUY2.c
+SOURCES := VideoTest.c Preview.c PreviewAudio.c PreviewAvi.c YUY2.c ../../Audio/Test/Wav.c
+HEADERS := Preview.h PreviewAudio.h PreviewAvi.h ../inc/VideoDevice.h ../../Audio/inc/AudioDevice.h ../../Audio/Test/Wav.h
+
+$(TARGET): $(SOURCES) $(HEADERS)
+	$(CC) $(CFLAGS) -o $@ $(SOURCES)
 
 clean:
 	$(RM) $(TARGET)

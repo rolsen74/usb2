@@ -19,6 +19,7 @@ Video_Read_Done( struct VideoUnit *unit )
 	U32 length;
 	U32 count;
 	S32 consumed;
+	S8 error;
 
 	while ( unit->ReadActive )
 	{
@@ -45,12 +46,14 @@ Video_Read_Done( struct VideoUnit *unit )
 
 			if ( ioreq->io_Error )
 			{
+				error = ioreq->io_Error;
+
 				Video_Read_Stop( unit );
 
-				if ( ( unit->StreamAlt ) || ( ioreq->io_Error != USB2Err_Host_Stall ) ||
+				if ( ( unit->StreamAlt ) || ( error != USB2Err_Host_Stall ) ||
 					( ! USB2_EPRes_Destall( unit->Stream ) ) )
 				{
-					Video_Read_Reply( unit, IOERR_UNITBUSY );
+					Video_Read_Reply( unit, error );
 				}
 
 				break;
@@ -59,6 +62,9 @@ Video_Read_Done( struct VideoUnit *unit )
 			if ( ( ! ioreq->io_Data ) || ( ioreq->io_Actual > ioreq->io_Length ) ||
 				( ( unit->StreamAlt ) && ( ioreq->io_Length < unit->StreamPacketSize * unit->IsoPacketCount ) ) )
 			{
+				DebugPrintF( "USB Video: unit %lu invalid USB read, %lu/%lu bytes, packet size %lu\n",
+					unit->UnitNr, ioreq->io_Actual, ioreq->io_Length, unit->StreamPacketSize );
+
 				Video_Read_Stop( unit );
 
 				Video_Read_Reply( unit, IOERR_BADLENGTH );
@@ -80,6 +86,9 @@ Video_Read_Done( struct VideoUnit *unit )
 			}
 			else if ( length > unit->StreamPacketSize )
 			{
+				DebugPrintF( "USB Video: unit %lu USB packet %lu, %lu bytes, slot %lu bytes\n",
+					unit->UnitNr, unit->ReadPacket, length, unit->StreamPacketSize );
+
 				Video_Read_Stop( unit );
 
 				Video_Read_Reply( unit, IOERR_BADLENGTH );

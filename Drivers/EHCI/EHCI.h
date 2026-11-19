@@ -39,7 +39,9 @@ SEC_CODE S32 EHCI_Isochronous_Build( struct USB2_HCDNode *hn, struct RealRequest
 SEC_CODE void EHCI_Isochronous_Add( struct USB2_HCDNode *hn, struct RealRequest *req );
 SEC_CODE void EHCI_Isochronous_Remove( struct USB2_HCDNode *hn, struct RealRequest *req );
 SEC_CODE U32 EHCI_Isochronous_Length( struct USB2_HCDNode *hn, struct RealRequest *req );
+SEC_CODE void EHCI_Isochronous_Reap( struct USB2_HCDNode *hn, S32 halted );
 SEC_CODE S32 EHCI_Get_TT( struct RealFunctionNode *fn, U32 *hub, U32 *port );
+SEC_CODE U32 EHCI_Reverse_Bits( U32 c, U32 nbits );
 
 #if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 

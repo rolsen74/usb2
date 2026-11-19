@@ -10,9 +10,10 @@
 
 #include "AudioDevice.h"
 
-#define AUDIO_MAX_UNITS 32
-#define AUDIO_PACKET_COUNT 32
+#define AUDIO_PACKET_COUNT 256
 #define AUDIO_BATCH_US 32000U
+#define AUDIO_WRITE_BATCH_US 16000U
+#define AUDIO_WRITE_REQUESTS 2
 #define AUDIO_READ_TIMEOUT ( 5U * 1000000U )
 #define AUDIO_EMPTY_BATCH_LIMIT 4
 #define AUDIO_IO_ABORT 0x80
@@ -55,19 +56,24 @@ struct AudioUnit
 	struct IOStdReq *ReadActive;
 	const U8 *RateDescriptor;
 	struct AudioFormat Format;
+	struct AudioGain Gain;
 	U32 UnitNr;
 	U32 OpenCount;
 	U32 DataUsed;
 	U32 PacketBytes;
 	U32 PacketCount;
 	U32 IntervalUS;
+	U32 SingleSplitRate;
 	U32 BufferedBytes;
 	U32 EmptyBatches;
 	U32 EmptyFailedPackets;
 	U32 BufferOffset;
-	U32 WriteBytes;
+	U32 WriteQueued;
+	U32 WriteBytes[AUDIO_WRITE_REQUESTS];
+	U32 WriteLostBytes;
 	U32 WritePhase;
 	U16 IsoPacketLengths[AUDIO_PACKET_COUNT];
+	U16 WritePacketLengths[AUDIO_WRITE_REQUESTS][AUDIO_PACKET_COUNT];
 	U8 InterfaceNr;
 	U8 AltNr;
 	U8 EndPoint;
@@ -78,6 +84,11 @@ struct AudioUnit
 	U8 FrequencyControl;
 	U8 RatePending;
 	U8 RateValid;
+	U8 TerminalLink;
+	U8 GainInterface;
+	U8 GainEntity;
+	U8 GainChannel;
+	U8 GainValid;
 };
 
 SEC_CODE U32 Audio_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg );
@@ -88,12 +99,15 @@ SEC_CODE void Audio_Main( struct AudioUnit *unit );
 SEC_CODE S32 Audio_Parse( struct AudioUnit *unit );
 SEC_CODE S32 Audio_Frequency( struct AudioUnit *unit, U32 sample_rate );
 SEC_CODE S32 Audio_Rate_Valid( struct AudioUnit *unit, U32 sample_rate );
+SEC_CODE void Audio_FindGain( struct AudioUnit *unit, U32 configSize );
+SEC_CODE void Audio_GainCommand( struct AudioUnit *unit, struct IOStdReq *ioreq );
 SEC_CODE void Audio_Read_Start( struct AudioUnit *unit );
 SEC_CODE void Audio_Read_Done( struct AudioUnit *unit );
 SEC_CODE void Audio_Read_Reply( struct AudioUnit *unit, S8 error );
 SEC_CODE void Audio_Read_Buffered( struct AudioUnit *unit );
 SEC_CODE void Audio_Write_Start( struct AudioUnit *unit );
 SEC_CODE void Audio_Write_Done( struct AudioUnit *unit );
+SEC_CODE void Audio_Write_Stop( struct AudioUnit *unit );
 SEC_CODE void Audio_Begin( struct AudioUnit *unit );
 SEC_CODE void Audio_Abort( struct AudioUnit *unit );
 SEC_CODE void Audio_IO_Stop( struct USB2_IORequest *ioreq );

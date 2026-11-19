@@ -91,7 +91,11 @@ U32 limit;
 	unit->RatePending = ( unit->FrequencyControl ) && ( unit->EndPoint & EPADR_Dir_Mask ) &&
 		( unit->RateDescriptor[7] == 1 );
 
-	if ( ( ! unit->RatePending ) && ( ! Audio_Frequency( unit, unit->Format.SampleRate ) ) )
+	if ( ( unit->SingleSplitRate ) && ( Audio_Frequency( unit, unit->SingleSplitRate ) ) )
+	{
+		unit->Format.SampleRate = unit->SingleSplitRate;
+	}
+	else if ( ( ! unit->RatePending ) && ( ! Audio_Frequency( unit, unit->Format.SampleRate ) ) )
 	{
 		AUDIO_TRACE( "interface %lu sample rate setup failed\n", (U32) unit->InterfaceNr );
 
@@ -104,6 +108,7 @@ U32 limit;
 		USB2Tag_EPRes_InterfaceNr, unit->InterfaceNr,
 		USB2Tag_EPRes_EndPointNr, unit->EndPoint,
 		USB2Tag_EPRes_BufferSize, unit->PacketBytes * unit->PacketCount,
+		USB2Tag_EPRes_NrOfIORequest, ( unit->EndPoint & EPADR_Dir_Mask ) ? 1 : AUDIO_WRITE_REQUESTS,
 		USB2Tag_EPRes_AllowShortPackets, TRUE,
 		TAG_END
 	);

@@ -114,6 +114,19 @@ PTR mem;
 			break;
 		}
 
+		case USB2Tag_Attr_HCDType:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( ( fn ) && ( fn->fkt_HCD ) )
+			{
+				value = fn->fkt_HCD->hn_HCDType;
+				len = sizeof( value );
+				mem = &value;
+			}
+			break;
+		}
+
 		case USB2Tag_Attr_ConfigSize:
 		{
 			fn = Find_Function( usbbase, id );

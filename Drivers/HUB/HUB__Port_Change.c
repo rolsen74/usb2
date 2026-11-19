@@ -44,10 +44,62 @@
 
 // --
 
+static SEC_CODE S32
+WaitForReconnectedPort( struct USBBase *usbbase, struct intern *in, U32 port )
+{
+	struct USB2_PortStatus stat;
+
+	U32 waited;
+	U32 stable;
+
+	stable = 0;
+
+	// A disconnect and reconnect can both occur before the hub is polled.
+	for ( waited = 0; waited < 500; waited += 25 )
+	{
+		HUB_DELAY_MS( 25 );
+
+		if ( HUB__Port_Status_Get( usbbase, in, port, & stat ) != USB2Err_NoError )
+		{
+			return ( FALSE );
+		}
+
+		if ( stat.wPortChange & PORTCHGF_Connection )
+		{
+			if ( HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_CONNECTION ) != USB2Err_NoError )
+			{
+				return ( FALSE );
+			}
+
+			stable = 0;
+		}
+		else if ( stat.wPortStatus & PORTSTATF_Connection )
+		{
+			stable += 25;
+
+			if ( stable >= 100 )
+			{
+				return ( TRUE );
+			}
+		}
+		else
+		{
+			stable = 0;
+		}
+	}
+
+	return ( FALSE );
+}
+
+// --
+
 SEC_CODE void HUB__Port_Chg( struct USBBase *usbbase, struct intern *in, U32 port )
 {
+struct RealFunctionNode *fn;
 struct USB2_PortStatus stat;
+
 S32 err;
+S32 reconnect;
 
 	// --
 
@@ -105,23 +157,32 @@ S32 err;
 			goto bailout;
 		}
 
-		if ( in->PortFunctions[port] )
-		{
-			#ifdef DO_INFO
-			usbbase->usb_IExec->Disable();
-			usbbase->usb_IExec->DebugPrintF( "\nRemoving Device\n" );
-			usbbase->usb_IExec->DebugPrintF( "HUB Tier    : %lu\n", in->Function->fkt_Tier );
-			usbbase->usb_IExec->DebugPrintF( "Port        : %lu\n", port );
-			usbbase->usb_IExec->Enable();
-			#endif
+		fn = in->PortFunctions[port];
+		reconnect = ( fn ) && ( stat.wPortStatus & PORTSTATF_Connection ) &&
+			( in->Function->fkt_Speed < USBSPEED_Super );
 
-//			usbbase->usb_IExec->DebugPrintF( "HUB : Removing Device : FN    %p : Port #%ld : Class %ld\n", fn, port, fn->fkt_Class );
+		if ( fn )
+		{
+			usbbase->usb_IExec->DebugPrintF(
+				"USB HUB: tier %lu addr %lu port %lu removing addr %lu (%04lx:%04lx), status $%04lx change $%04lx\n",
+				in->Function->fkt_Tier, in->Function->fkt_Address, port, fn->fkt_Address,
+				(U32) ( fn->fkt_DeviceDescriptor ? LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ) : 0 ),
+				(U32) ( fn->fkt_DeviceDescriptor ? LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ) : 0 ),
+				(U32) stat.wPortStatus, (U32) stat.wPortChange );
 
 			HUB__Port_Function_Rem( usbbase, in, port );
 		}
 
 		if ( stat.wPortStatus & PORTSTATF_Connection )
 		{
+			if ( ( reconnect ) && ( ! WaitForReconnectedPort( usbbase, in, port ) ) )
+			{
+				usbbase->usb_IExec->DebugPrintF( "USB HUB: tier %lu addr %lu port %lu reconnect did not stabilize\n",
+					in->Function->fkt_Tier, in->Function->fkt_Address, port );
+
+				goto bailout;
+			}
+
 			#ifdef DO_INFO
 			usbbase->usb_IExec->Disable();
 			usbbase->usb_IExec->DebugPrintF( "\nHUB : Adding Device\n" );
@@ -130,13 +191,20 @@ S32 err;
 			usbbase->usb_IExec->Enable();
 			#endif
 
-			if ( ! HUB__Port_Function_Add( usbbase, in, port ))
+			if ( ! HUB__Port_Function_Add( usbbase, in, port ) )
 			{
 				USBERROR( "HUB__Port_Chg : HUB__Port_Function_Add() failed" );
+
+				if ( reconnect )
+				{
+					usbbase->usb_IExec->DebugPrintF( "USB HUB: tier %lu addr %lu port %lu re-enumeration failed\n",
+						in->Function->fkt_Tier, in->Function->fkt_Address, port );
+				}
 			}
-			else
+			else if ( reconnect )
 			{
-//				usbbase->usb_IExec->DebugPrintF( "HUB : Added Device : FN    %p : Port #%ld : Class %ld\n", fn, port, fn->fkt_Class );
+				usbbase->usb_IExec->DebugPrintF( "USB HUB: tier %lu addr %lu port %lu re-enumerated as addr %lu\n",
+					in->Function->fkt_Tier, in->Function->fkt_Address, port, in->PortFunctions[port]->fkt_Address );
 			}
 		}
 	}

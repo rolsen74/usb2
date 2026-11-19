@@ -11,6 +11,8 @@
 
 // --
 
+#define AUDIO_SPLIT_PAYLOAD 188U
+
 static U32
 Audio_Rate24( const U8 *data )
 {
@@ -18,7 +20,7 @@ Audio_Rate24( const U8 *data )
 }
 
 static U32
-Audio_SelectRate( const U8 *format, U32 capacity, U32 interval, U8 frequency )
+Audio_SelectRate( const U8 *format, U32 capacity, U32 interval, U8 frequency, S32 highest )
 {
 	U32 limit;
 	U32 rate;
@@ -26,6 +28,7 @@ Audio_SelectRate( const U8 *format, U32 capacity, U32 interval, U8 frequency )
 	U32 high;
 	U32 count;
 	U32 index;
+	U32 selected;
 
 	count = format[7];
 	limit = (U64) ( capacity / ( format[4] * 2 ) ) * 1000000U / interval;
@@ -53,17 +56,24 @@ Audio_SelectRate( const U8 *format, U32 capacity, U32 interval, U8 frequency )
 		return ( 0 );
 	}
 
+	selected = 0;
+
 	for( index = 0; index < count; index++ )
 	{
 		rate = Audio_Rate24( format + 8 + 3 * index );
 
 		if ( ( rate ) && ( rate <= limit ) && ( (U64) rate * interval >= 1000000U ) )
 		{
-			return ( rate );
+			if ( ! highest )
+			{
+				return ( rate );
+			}
+
+			selected = MAX( selected, rate );
 		}
 	}
 
-	return ( 0 );
+	return ( selected );
 }
 
 // --
@@ -119,6 +129,7 @@ U32 length;
 U32 rate;
 U32 packet;
 U32 speed;
+U32 hcd;
 U32 interval;
 U32 transactions;
 U8 endpoint;
@@ -126,6 +137,7 @@ U8 alt;
 U8 active;
 U8 pcm;
 U8 frequency;
+U8 terminal;
 
 
 	config = (PTR) unit->StartMsg->ConfigDescriptors;
@@ -172,6 +184,7 @@ U8 frequency;
 	active = FALSE;
 	pcm = FALSE;
 	frequency = FALSE;
+	terminal = 0;
 
 	while( remaining )
 	{
@@ -191,7 +204,7 @@ U8 frequency;
 		{
 			if ( ( active ) && ( pcm ) && ( format ) && ( endpoint ) )
 			{
-				rate = Audio_SelectRate( format, packet, interval, frequency );
+				rate = Audio_SelectRate( format, packet, interval, frequency, FALSE );
 
 				if ( rate )
 				{
@@ -215,12 +228,14 @@ U8 frequency;
 			endpoint = 0;
 			pcm = FALSE;
 			frequency = FALSE;
+			terminal = 0;
 		}
 		else if ( ( active ) && ( data[1] == 0x24 ) && ( length >= 4 ) )
 		{
 			if ( ( data[2] == 0x01 ) && ( length >= 7 ) )
 			{
 				pcm = ( data[5] == 1 ) && ( data[6] == 0 );
+				terminal = data[3];
 			}
 			else if ( ( data[2] == 0x02 ) && ( length >= 11 ) &&
 				( data[3] == 1 ) && ( data[4] >= 1 ) && ( data[4] <= 2 ) &&
@@ -270,7 +285,7 @@ U8 frequency;
 
 	if ( ! rate )
 	{
-		rate = Audio_SelectRate( format, packet, interval, frequency );
+		rate = Audio_SelectRate( format, packet, interval, frequency, FALSE );
 	}
 
 	if ( ! rate )
@@ -282,7 +297,8 @@ U8 frequency;
 	unit->EndPoint = endpoint;
 	unit->PacketBytes = packet;
 	unit->IntervalUS = interval;
-	unit->PacketCount = MAX( 1U, MIN( AUDIO_PACKET_COUNT, AUDIO_BATCH_US / interval ) );
+	unit->PacketCount = MAX( 1U, MIN( AUDIO_PACKET_COUNT,
+		( ( endpoint & EPADR_Dir_Mask ) ? AUDIO_BATCH_US : AUDIO_WRITE_BATCH_US ) / interval ) );
 	unit->FrequencyControl = frequency;
 	unit->RateDescriptor = format;
 	unit->Format.Encoding = AUDIO_ENCODING_PCM_S16LE;
@@ -292,6 +308,25 @@ U8 frequency;
 	unit->Format.PacketBytes = packet;
 	unit->Format.VendorID = unit->StartMsg->VendorID;
 	unit->Format.DeviceID = unit->StartMsg->DeviceID;
+
+	unit->TerminalLink = terminal;
+
+	if ( endpoint & EPADR_Dir_Mask )
+	{
+		Audio_FindGain( unit, config_size );
+	}
+	else if ( ( speed == USBSPEED_Full ) && ( frequency ) &&
+		( (U64) rate * interval > (U64) ( AUDIO_SPLIT_PAYLOAD / ( format[4] * 2 ) ) * 1000000U ) )
+	{
+		if ( ( USB2_Attr_Get( unit->StartMsg->Function->FKT_ID, USB2Tag_Attr_HCDType,
+			& hcd, sizeof( hcd ) ) == sizeof( hcd ) ) &&
+			( ( hcd == HCDTYPE_EHCI ) || ( hcd == HCDTYPE_P5020 ) || ( hcd == HCDTYPE_P5040 ) ) )
+		{
+			// A single start-split avoids needing a second microframe to deliver the packet.
+			unit->SingleSplitRate = Audio_SelectRate( format, MIN( packet, AUDIO_SPLIT_PAYLOAD ),
+				interval, frequency, TRUE );
+		}
+	}
 
 	return ( TRUE );
 }

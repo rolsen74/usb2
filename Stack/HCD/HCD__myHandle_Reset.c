@@ -38,6 +38,7 @@ struct RealRequest *ioreq;
 		usbbase->usb_IExec->DebugPrintF( "__myHandle_Reset         : 1.2B - ep %p (Active)\n", ep->ep_Request_Active );
 
 		ep->ep_Request_Active = NULL;
+		ep->ep_Request_ActiveNext = NULL;
 
 		// --
 		

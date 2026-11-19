@@ -51,13 +51,14 @@
 
 SEC_CODE void EHCI_Periodic_Stop( struct USB2_HCDNode *hn )
 {
-U32 timeout;
+U32 waited;
 U32 val;
+U32 delay;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Periodic_Stop" );
 
-	timeout = 1000;
+	waited = 0;
 
 	val = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );
 	val &= ~EHCI_CMD_PSE;
@@ -65,7 +66,7 @@ U32 val;
 
 	while( TRUE )
 	{
-		if ( ! timeout )
+		if ( waited == 10000000 )
 		{
 			break;
 		}
@@ -78,8 +79,12 @@ U32 val;
 			break;
 		}
 
-		MISC_MICRODELAY( 10 * 1000 );
-		timeout--;
+		// A normal stop takes effect at a frame boundary.
+		delay = ( waited < 2000 ) ? 50 : MIN( 10000, 10000000 - waited );
+
+		MISC_MICRODELAY( delay );
+
+		waited += delay;
 	}
 
 	TASK_NAME_LEAVE();

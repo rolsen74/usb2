@@ -95,6 +95,7 @@
 #define EHCI_USBSTS					0x04U			// RW : USB Status
 #define EHCI_USBINTR				0x08U			// RW : USB Interrupt Enable
 #define EHCI_FRINDEX				0x0CU			// RW : USB Frame Index
+#define EHCI_FRINDEX_MASK			0x3fffU
 #define EHCI_PERIOD					0x14U			// RW : Frame List Base Address
 #define EHCI_ASYNC					0x18U			// RW : Next Asynchronous List Address
 #define EHCI_CONFIGFLAG				0x40U			// RW : Configured Flag Register
@@ -309,13 +310,22 @@ struct EHCI_ITD
 	};
 
 	struct EHCI_ITD *Next;
-	struct EHCI_ITD *LinkedNext;
+	struct EHCI_ITD *FrameNext;
 	U32 Physical;
 	U32 Frame;
 	U32 Microframe;
 	U32 Length;
+	U32 RetiredAt;
+	U8 Mask;
+	U8 Usecs;
+	U8 Hub;
 };
 
+#define EHCI_FRAME_COUNT	1024
+#define EHCI_ISO_USECS		80
+#define EHCI_ISO_MAX_PACKETS	256U
+#define EHCI_ISO_RETRY_LEAD	32U
+#define EHCI_ISO_COMPLETE_GRACE	16U
 #define EHCI_ITD_ACTIVE		0x80000000U
 #define EHCI_ITD_ERRORS		0x70000000U
 #define EHCI_ITD_IOC		0x00008000U
@@ -350,8 +360,10 @@ struct _EHCI
 	U32								FrameList_Size;
 	U32								FrameList_Phyaddr;
 	struct EHCI_QH **				FrameList_ISlots;
-	struct EHCI_ITD *				IsoLinked;
+	struct EHCI_ITD **				IsoFrames;
 	struct EHCI_ITD *				IsoOrphan;
+	struct EHCI_ITD *				IsoRetired;
+	U32								IsoOutReports;
 	S32								BandWidth[ 256 ];		// hmm alloc mem instead? like ISlots
 
 	#if 0

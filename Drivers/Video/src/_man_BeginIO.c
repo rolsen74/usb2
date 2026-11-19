@@ -27,7 +27,7 @@ struct VideoUnit *unit;
 
 	if ( ( ! unit ) || ( unit->Detached ) )
 	{
-		ioreq->io_Error = IOERR_UNITBUSY;
+		ioreq->io_Error = unit ? USB2Err_Device_Detached : IOERR_UNITBUSY;
 		ReleaseSemaphore( & base->Semaphore );
 		ReplyMsg( (PTR) ioreq );
 

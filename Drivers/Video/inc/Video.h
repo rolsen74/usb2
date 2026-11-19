@@ -10,12 +10,11 @@
 
 #include "VideoDevice.h"
 
-#define VIDEO_MAX_UNITS 16
 #define VIDEO_MAX_FRAME_SIZE ( 64U * 1024U * 1024U )
 #define VIDEO_READ_SIZE 65536
 #define VIDEO_ISO_PACKETS 16
 #define VIDEO_ISO_MAX_PACKETS 256
-#define VIDEO_USB_READS 3
+#define VIDEO_USB_READS 2
 #define VIDEO_IO_ABORT 0x80
 #define VIDEO_PAYLOAD_FID 0x01
 #define VIDEO_PAYLOAD_EOF 0x02
@@ -83,17 +82,21 @@ struct VideoUnit
 	U32 IsoPacketCount;
 	U32 ReadPacket;
 	U16 IsoPacketLengths[VIDEO_USB_READS][VIDEO_ISO_MAX_PACKETS];
+	U8 Commit[48];
 	U8 InterfaceNr;
 	U8 EndPoint;
 	U8 BulkEndPoint;
 	U8 StreamAlt;
 	U8 StreamAltActive;
+	U8 StreamConfigured;
 	U8 StreamInterval;
 	U8 FormatIndex;
 	U8 FrameIndex;
 	U8 FrameID;
 	U8 FrameStarted;
 	U8 FrameDiscard;
+	U8 FrameReports;
+	U8 ProbeLength;
 	U8 ReadPending;
 	U8 ReadReset;
 	U8 Detached;
@@ -107,10 +110,12 @@ SEC_CODE void Video_Free( struct VideoUnit *unit );
 SEC_CODE void Video_Main( struct VideoUnit *unit );
 SEC_CODE S32 Video_Parse( struct VideoUnit *unit, U32 number, struct VideoMode *mode );
 SEC_CODE S32 Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode );
+SEC_CODE S32 Video_Stream_Start( struct VideoUnit *unit );
 SEC_CODE S32 Video_Stream_Close( struct VideoUnit *unit );
 SEC_CODE S8 Video_Set_Mode( struct VideoUnit *unit, U32 number );
 SEC_CODE S32 Video_Select_Stream( struct VideoUnit *unit, U32 payloadsize );
 SEC_CODE S32 Video_Probe( struct VideoUnit *unit );
+SEC_CODE S32 Video_Stream_SetAlt( struct VideoUnit *unit, U32 alt );
 SEC_CODE S32 Video_Control( struct VideoUnit *unit, U8 type, U8 code, U16 value, PTR data, U16 length );
 SEC_CODE void Video_Read_Start( struct VideoUnit *unit );
 SEC_CODE void Video_Read_Done( struct VideoUnit *unit );

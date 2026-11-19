@@ -26,7 +26,7 @@ Video_Stream_Close( struct VideoUnit *unit )
 
 	if ( unit->StreamAltActive )
 	{
-		if ( ! USB2_Ifc_SetAlt( unit->Register, unit->StartMsg->Interface, 0 ) )
+		if ( ! Video_Stream_SetAlt( unit, 0 ) )
 		{
 			return ( FALSE );
 		}

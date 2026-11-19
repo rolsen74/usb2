@@ -181,7 +181,13 @@ U32 index;
 		// so clear those or should I ??
 		// They are after all still active
 		ioreq->req_PublicStat = IORS_HCD;
-		ep->ep_Request_Active = NULL;
+
+		if ( ep->ep_Request_Active == ioreq )
+		{
+			ep->ep_Request_Active = ep->ep_Request_ActiveNext;
+		}
+
+		ep->ep_Request_ActiveNext = NULL;
 	}
 
 	// --

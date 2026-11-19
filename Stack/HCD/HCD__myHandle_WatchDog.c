@@ -49,6 +49,18 @@ struct Node *n;
 
 		SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
 
+		// The timer message was already taken from its reply port.
+		ioreq->req_TimerAdded = FALSE;
+
+		if ( ( hn->hn_HCDType == HCDTYPE_EHCI ) &&
+			( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous ) &&
+			( HCD_TRANSFER_CHECK( hn, ioreq, FALSE ) ) )
+		{
+			SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
+
+			continue;
+		}
+
 		USBERROR( "1345 timeout : timeout val %lu", ioreq->req_Public.io_TimeOut );
 		ioreq->req_Public.io_Error = USB2Err_Host_Timeout;
 

@@ -140,6 +140,17 @@ S32 err;
 		return;
 	}
 
+	if ( parent->fkt_Speed < USBSPEED_Super )
+	{
+		if ( ( ! ( stat->wPortStatus & PORTSTATF_Enable ) ) || ( stat->wPortStatus & PORTSTATF_Reset ) )
+		{
+			return;
+		}
+
+		// USB 2.0 reset recovery before the first transaction at address zero.
+		HUB_DELAY_MS( 10 );
+	}
+
 	// --
 
 	/*

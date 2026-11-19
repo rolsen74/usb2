@@ -17,7 +17,9 @@ struct USB2_NotifyMessage *msg;
 
 U32 waitmask;
 U32 mask;
+S32 notified;
 
+	notified = FALSE;
 	waitmask = unit->Register->Stack_MsgPortBit;
 	waitmask |= 1UL << unit->BeginPort->mp_SigBit;
 	waitmask |= 1UL << unit->StreamPort->mp_SigBit;
@@ -33,14 +35,14 @@ U32 mask;
 			{
 				if ( msg->nm_Command == USBNC_Detached )
 				{
-					unit->Detached = TRUE;
+					notified = TRUE;
 				}
 
 				ReplyMsg( (PTR) msg );
 			}
 		}
 
-		if ( unit->Detached )
+		if ( ( notified ) || ( mask & SIGBREAKF_CTRL_C ) )
 		{
 			break;
 		}
@@ -55,12 +57,17 @@ U32 mask;
 		{
 			Video_Read_Done( unit );
 		}
-
-		if ( mask & SIGBREAKF_CTRL_C )
-		{
-			unit->Detached = TRUE;
-		}
 	}
+
+	ObtainSemaphore( & unit->Base->Semaphore );
+
+	unit->Detached = TRUE;
+
+	ReleaseSemaphore( & unit->Base->Semaphore );
+
+	DebugPrintF( "USB Video: %04lx:%04lx unit %lu stopped (%s)\n",
+		unit->Format.VendorID, unit->Format.DeviceID, unit->UnitNr,
+		notified ? "USB detach notification" : "stack stop signal" );
 }
 
 // --

@@ -212,4 +212,6 @@ struct USB2_HCDNode
 
 /***************************************************************************/
 
+S32 __HCD_Request_CanStart( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
+
 #endif // INC_PRIVATE_HCD_H

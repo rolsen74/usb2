@@ -37,43 +37,18 @@ struct RealFunctionNode *fn;
 		{
 			TASK_NAME_SET( "__IORequest_Active_Sub : 2" );
 
-			if ( SEMAPHORE_ATTEMPT( & fn->fkt_Semaphore ))
+			SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+			if ( fn->fkt_ActiveIOReq > 0 )
 			{
-//				usbbase->usb_IExec->DebugPrintF( "__IORequest_Active_Sub : Using Sema\n" );
-
-				TASK_NAME_SET( "__IORequest_Active_Sub : 3" );
-
-				if ( fn->fkt_ActiveIOReq > 0 )
-				{
-					fn->fkt_ActiveIOReq--;
-				}
-				else
-				{
-					USBPANIC( "__IORequest_Active_Sub   :  1 : IOReq %p : IORequest NOT Active (%ld) : (%s)", ioreq, fn->fkt_ActiveIOReq, (file)?file:"<NULL>" );
-				}
-
-				SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
+				fn->fkt_ActiveIOReq--;
 			}
 			else
 			{
-				TASK_NAME_SET( "__IORequest_Active_Sub : 4" );
-
-				usbbase->usb_IExec->Disable();
-				usbbase->usb_IExec->DebugPrintF( "__IORequest_Active_Sub : Using Disable\n" );
-
-				if ( fn->fkt_ActiveIOReq > 0 )
-				{
-					fn->fkt_ActiveIOReq--;
-				}
-				else
-				{
-					USBPANIC( "__IORequest_Active_Sub   :  2 : IOReq %p : IORequest NOT Active (%ld) : (%s)", ioreq, fn->fkt_ActiveIOReq, (file)?file:"<NULL>" );
-				}
-
-				usbbase->usb_IExec->Enable();
+				USBPANIC( "__IORequest_Active_Sub : IOReq %p : IORequest NOT Active (%ld) : (%s)", ioreq, fn->fkt_ActiveIOReq, (file)?file:"<NULL>" );
 			}
 
-			TASK_NAME_SET( "__IORequest_Active_Sub : 5" );
+			SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 			FUNCTION_UNLOCK( fn );
 		}

@@ -28,6 +28,9 @@ S32 reply;
 		// -- Setup Exit Info and Signal Subtask
 		tn->tn_Parent	= TASK_FIND();
 		tn->tn_Mask		= in->Task_Shutdown_Signal.sig_Signal_Mask;
+
+		usbbase->usb_IExec->DebugPrintF( "USB stack: stopping process '%s'\n", tn->tn_TaskAdr->tc_Node.ln_Name );
+
 		TASK_SIGNAL( tn->tn_TaskAdr, SIGBREAKF_CTRL_C );
 
 		// -- Setup Timer Request, and start Timer
