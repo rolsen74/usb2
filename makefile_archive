@@ -8,7 +8,8 @@ BINDIR				:= $(ROOTDIR)/_Data
 all: build_all
 
 .PHONY: all build_all build_dir_tree build_stack build_printer build_video \
-	build_ptp build_serial build_audio build_rtl8152 build_rtl8188 build_analyzer build_archive
+	build_ptp build_serial build_audio build_rtl8152 build_rtl8188 build_analyzer \
+	build_wpa2 build_wireless_manager build_archive
 
 ###########################################################################
 
@@ -22,6 +23,7 @@ build_dir_tree:
 	mkdir -p $(BINDIR)/usb2/Devs
 	mkdir -p $(BINDIR)/usb2/Devs/AHI
 	mkdir -p $(BINDIR)/usb2/Devs/AudioModes
+	mkdir -p $(BINDIR)/usb2/Devs/Firmware
 	mkdir -p $(BINDIR)/usb2/Devs/Networks
 	mkdir -p $(BINDIR)/usb2/Libs/USB2
 	mkdir -p $(BINDIR)/usb2/Kickstart
@@ -113,7 +115,8 @@ build_rtl8188: | build_dir_tree
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
 	$(MAKE) -f makefile strip && \
-	cp bin/usb2rtl8188.device $(BINDIR)/usb2/Devs/Networks
+	cp bin/usb2rtl8188.device $(BINDIR)/usb2/Devs/Networks && \
+	cp Firmware/rtl8188eufw.bin Firmware/rtl8188eufw.licence $(BINDIR)/usb2/Devs/Firmware
 	@echo "RTL8188EU Wi-Fi done"
 
 ###########################################################################
@@ -129,8 +132,30 @@ build_analyzer: | build_dir_tree
 
 ###########################################################################
 
+build_wpa2: | build_dir_tree
+	@echo "Building WPA2 Library"
+	cd $(ROOTDIR)/Libraries/WPA2 && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	$(MAKE) -f makefile strip && \
+	cp bin/usb2wpa2.library $(BINDIR)/usb2/Libs
+	@echo "WPA2 Library done"
+
+###########################################################################
+
+build_wireless_manager: | build_dir_tree
+	@echo "Building USB2WirelessManager"
+	cd $(ROOTDIR)/Programs/USB2WirelessManager && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	$(MAKE) -f makefile strip && \
+	cp bin/USB2WirelessManager $(BINDIR)/usb2/Tools
+	@echo "USB2WirelessManager done"
+
+###########################################################################
+
 build_archive: build_stack build_printer build_video build_ptp build_serial build_audio \
-	build_rtl8152 build_rtl8188 build_analyzer
+	build_rtl8152 build_rtl8188 build_analyzer build_wpa2 build_wireless_manager
 	@echo "Building Archive"
 	@rm -f usb2.lha
 	cd "$(BINDIR)" && lha a "$(ROOTDIR)/usb2.lha" usb2

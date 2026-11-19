@@ -797,6 +797,9 @@ enum USB2HCDType
 #define USB2Tag_Attr_ConfigDesc			( USB2Tag_Dummy + 256 )	 // v1.1  - [G.] struct USB2_Config_Desc
 #define USB2Tag_Attr_HUBPorts			( USB2Tag_Dummy + 257 )	 // v1.1  - [G.] U32
 #define USB2Tag_Attr_Speed			( USB2Tag_Dummy + 258 )	 // [G.] U32, enum USBSPEED
+#define USB2Tag_Attr_ManufacturerStr	( USB2Tag_Dummy + 259 )	 // [G.] Raw USB string descriptor
+#define USB2Tag_Attr_ProductStr		( USB2Tag_Dummy + 260 )	 // [G.] Raw USB string descriptor
+#define USB2Tag_Attr_SerialStr		( USB2Tag_Dummy + 261 )	 // [G.] Raw USB string descriptor
 
 
 

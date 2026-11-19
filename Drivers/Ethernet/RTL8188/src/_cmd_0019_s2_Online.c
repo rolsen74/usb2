@@ -36,6 +36,10 @@ Cmd_Online( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 
 		SignalSana2Event( unit, S2EVENT_ONLINE );
 	}
+
+	USBINFO( "RTL8188EU: S2_ONLINE error %ld, wire error %lu, configured %lu, TX %lu, AID %lu, online %lu",
+		(S32) ioreq->ios2_Req.io_Error, ioreq->ios2_WireError, (U32) unit->unit_Configured,
+		(U32) unit->unit_TxReady, (U32) unit->unit_AssocID, (U32) unit->unit_Online );
 }
 
 // --

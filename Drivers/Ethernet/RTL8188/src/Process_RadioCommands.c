@@ -51,6 +51,10 @@ Process_RadioCommands( struct EthernetUnit *unit )
 		if ( ioreq->ios2_Req.io_Command == S2_SETOPTIONS )
 		{
 			Cmd_SetOptions( unit, ioreq );
+
+			USBINFO( "RTL8188EU: S2_SETOPTIONS error %ld, wire error %lu, channel %lu, AID %lu, TX %lu, online %lu",
+				(S32) ioreq->ios2_Req.io_Error, ioreq->ios2_WireError, (U32) unit->unit_Channel,
+				(U32) unit->unit_AssocID, (U32) unit->unit_TxReady, (U32) unit->unit_Online );
 		}
 		else if ( ioreq->ios2_Req.io_Command == S2_SETKEY )
 		{

@@ -39,6 +39,8 @@ RTL8188EU_CompleteRX( struct EthernetUnit *unit )
 		}
 		else
 		{
+			USBERROR( "RTL8188EU: RX failed, error %ld, actual %lu", (S32) usbio->io_Error, usbio->io_Actual );
+
 			unit->unit_RadioReady = FALSE;
 			unit->unit_TxReady = FALSE;
 

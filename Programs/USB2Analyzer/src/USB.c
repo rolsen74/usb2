@@ -327,6 +327,50 @@ S32 rebuild;
 
 // --
 
+static void
+Read_Device_String( USB2_ID id, U32 tag, STR text, U32 size )
+{
+	U8 descriptor[255];
+	U32 actual;
+	U32 length;
+	U32 index;
+	U32 used;
+	U16 code;
+
+	text[0] = 0;
+	used = 0;
+
+	actual = USB2_Attr_Get( id, tag, descriptor, sizeof( descriptor ) );
+
+	if ( actual < 4 )
+	{
+		return;
+	}
+
+	length = descriptor[0];
+
+	if ( ( length < 4 ) || ( length > actual ) || ( length & 1 ) || ( descriptor[1] != DSCTYPE_String ) )
+	{
+		return;
+	}
+
+	for( index = 2; ( index < length ) && ( used + 1 < size ); index += 2 )
+	{
+		code = descriptor[index] | ( (U16) descriptor[index + 1] << 8 );
+
+		if ( ! code )
+		{
+			break;
+		}
+
+		text[used++] = ( ( code >= 32 && code < 127 ) || ( code >= 160 && code <= 255 ) ) ? code : '?';
+	}
+
+	text[used] = 0;
+}
+
+// --
+
 static S32 Handle_Notify_Function( struct USB2_NotifyMessage *msg )
 {
 struct USB2_HUB_Desc HUBDsc;
@@ -335,9 +379,6 @@ struct USB2_FktNode *node;
 struct USB2_FktNode *child;
 U32 ports;
 S32 rebuild;
-// U32 max;
-// U32 cnt;
-// U16 Buffer[128];
 
 	rebuild = FALSE;
 
@@ -450,66 +491,15 @@ S32 rebuild;
 
 			// --
 
-			// Buffer[0] = 0;
+			node->Speed = ~0U;
 
-			// IUSB2->Stack_GetAttribute( msg->nm_ID, USB2Tag_FKT_ManufacturerStr, &Buffer, 34 );
+			USB2_Attr_Get( node->ID, USB2Tag_Attr_Speed, & node->Speed, sizeof( node->Speed ) );
 
-			// if ( Buffer[0] )
-			// {
-			// 	max = MIN(( Buffer[0] >> 9 ), 32 ) + 1;
+			Read_Device_String( node->ID, USB2Tag_Attr_ManufacturerStr, node->ManufacturerStr, sizeof( node->ManufacturerStr ) );
 
-			// 	node->Data.Function.ManufacturerStr[0] = '\"';
+			Read_Device_String( node->ID, USB2Tag_Attr_ProductStr, node->ProductStr, sizeof( node->ProductStr ) );
 
-			// 	for( cnt=1 ; cnt<max ; cnt++ )
-			// 	{
-			// 		node->Data.Function.ManufacturerStr[cnt] = ( Buffer[cnt] ) >> 8;
-			// 	}
-
-			// 	node->Data.Function.ManufacturerStr[cnt++] = '\"';
-			// 	node->Data.Function.ManufacturerStr[cnt] = 0;
-			// }
-
-			// --
-
-			// Buffer[0] = 0;
-
-			// IUSB2->Stack_GetAttribute( msg->nm_ID, USB2Tag_FKT_ProductStr, &Buffer, 256 );
-
-			// if ( Buffer[0] )
-			// {
-			// 	max = MIN(( Buffer[0] >> 9 ), 32 ) + 1;
-
-			// 	node->Data.Function.ProductStr[0] = '\"';
-
-			// 	for( cnt=1 ; cnt<max ; cnt++ )
-			// 	{
-			// 		node->Data.Function.ProductStr[cnt] = ( Buffer[cnt] >> 8 );
-			// 	}
-
-			// 	node->Data.Function.ProductStr[cnt++] = '\"';
-			// 	node->Data.Function.ProductStr[cnt] = 0;
-			// }
-
-			// --
-
-			// Buffer[0] = 0;
-
-			// IUSB2->Stack_GetAttribute( msg->nm_ID, USB2Tag_FKT_SerialStr, &Buffer, 256 );
-
-			// if ( Buffer[0] )
-			// {
-			// 	max = MIN(( Buffer[0] >> 9 ), 32 ) + 1;
-
-			// 	node->Data.Function.SerialStr[0] = '\"';
-
-			// 	for( cnt=1 ; cnt<max ; cnt++ )
-			// 	{
-			// 		node->Data.Function.SerialStr[cnt] = ( Buffer[cnt] >> 8 );
-			// 	}
-
-			// 	node->Data.Function.SerialStr[cnt++] = '\"';
-			// 	node->Data.Function.SerialStr[cnt] = 0;
-			// }
+			Read_Device_String( node->ID, USB2Tag_Attr_SerialStr, node->SerialStr, sizeof( node->SerialStr ) );
 
 			// --
 
@@ -705,6 +695,7 @@ S32 rebuild;
 
 						node->IfcDesc = ifcdsc;
 						node->IfcSize = len;
+						node->Config = cfgnr;
 						break;
 					}
 				}

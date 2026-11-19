@@ -40,6 +40,9 @@ Process_Find_Device( struct EthernetUnit *unit )
 		{
 			unit->unit_USB_Interface = ifc;
 
+			USBINFO( "RTL8188EU: unit %lu found USB adapter %04lx:%04lx, interface %lu",
+				unit->unit_UnitNr, (U32) RTL8188EU_Devices[index][0], (U32) RTL8188EU_Devices[index][1], (U32) ifc->IFC_Num );
+
 			return ( TRUE );
 		}
 	}

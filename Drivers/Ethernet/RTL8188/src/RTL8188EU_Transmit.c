@@ -11,6 +11,7 @@
 #include "All.h"
 #include "Firmware.h"
 #include "Radio.h"
+#include <devices/usb2rtl8188.h>
 
 // --
 
@@ -33,8 +34,11 @@ RTL8188EU_Transmit( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	U32 i;
 	U16 checksum;
 	S32 management;
+	S32 clear_eapol;
 
 	management = ioreq->ios2_Req.io_Command == S2_WRITEMGMT;
+	type = 0;
+	clear_eapol = FALSE;
 
 	if ( ( ! unit->unit_TxReady ) || ( ! management && ! unit->unit_Online ) )
 	{
@@ -107,7 +111,15 @@ RTL8188EU_Transmit( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		frame[31] = type;
 		ethernet_size = length - 32 + 14;
 
-		if ( ! RTL8188EU_ProtectData( unit, frame, & length, type ) )
+		// The access point may still be waiting for message 4 before activating its PTK.
+		clear_eapol = ( ioreq->ios2_Req.io_Command == CMD_WRITE ) &&
+			( ! ( ioreq->ios2_Req.io_Flags & SANA2IOF_RAW ) ) &&
+			( unit->unit_Encryption == S2ENC_CCMP ) && ( type == RTL8188EU_EAPOL ) &&
+			( length == 32 + 99 ) && ( frame[33] == 3 ) && ( frame[34] == 0 ) &&
+			( frame[35] == 95 ) && ( frame[36] == 2 ) && ( frame[37] == 3 ) &&
+			( frame[38] == 0x0a ) && ( frame[129] == 0 ) && ( frame[130] == 0 );
+
+		if ( ( ! clear_eapol ) && ( ! RTL8188EU_ProtectData( unit, frame, & length, type ) ) )
 		{
 			ioreq->ios2_Req.io_Error = S2ERR_TX_FAILURE;
 
@@ -155,6 +167,15 @@ RTL8188EU_Transmit( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	usbio->io_TimeOut = 500000;
 
 	DoIO( (PTR) usbio );
+
+	if ( ( ! management ) && ( type == RTL8188EU_EAPOL ) )
+	{
+		USBINFO( "RTL8188EU: EAPOL TX length %lu, flags %02lx, key info %02lx%02lx, clear %lu, USB error %ld, actual %lu",
+			(U32) ioreq->ios2_DataLength, (U32) ioreq->ios2_Req.io_Flags,
+			(U32) ( ioreq->ios2_DataLength >= 7 ? ( (U8 *) ioreq->ios2_Data )[5] : 0 ),
+			(U32) ( ioreq->ios2_DataLength >= 7 ? ( (U8 *) ioreq->ios2_Data )[6] : 0 ),
+			(U32) clear_eapol, (S32) usbio->io_Error, usbio->io_Actual );
+	}
 
 	if ( ( usbio->io_Error != USB2Err_NoError ) || ( usbio->io_Actual != size ) )
 	{

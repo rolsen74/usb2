@@ -47,7 +47,16 @@ RTL8188EU_RegisterIO( struct USB2_EPResource *control, U32 command, U16 address,
 
 	ioreq->io_Data = NULL;
 
-	return ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == length ) );
+	if ( ( ioreq->io_Error ) || ( ioreq->io_Actual != length ) )
+	{
+		USBERROR( "RTL8188EU: USB register %s 0x%04lx failed, error %ld, transferred %lu/%lu bytes",
+			command == CMD_READ ? "read" : "write", (U32) address, (S32) ioreq->io_Error,
+			ioreq->io_Actual, (U32) length );
+
+		return ( FALSE );
+	}
+
+	return ( TRUE );
 }
 
 // --

@@ -23,6 +23,7 @@ RTL8188EU_LoadFirmware( struct EthernetUnit *unit )
 	U8 *image;
 	S64 length;
 	S32 succeeded;
+	S32 error;
 	U32 signature;
 	U32 payload;
 	U32 endpoints;
@@ -33,8 +34,19 @@ RTL8188EU_LoadFirmware( struct EthernetUnit *unit )
 
 	if ( ! file )
 	{
+		error = IoErr();
+
 		// Keep USB probing available when no firmware has been installed.
-		return ( IoErr() == ERROR_OBJECT_NOT_FOUND || IoErr() == ERROR_DIR_NOT_FOUND );
+		if ( ( error == ERROR_OBJECT_NOT_FOUND ) || ( error == ERROR_DIR_NOT_FOUND ) )
+		{
+			USBERROR( "RTL8188EU: firmware missing at %s, unit will stay offline", RTL8188EU_FIRMWARE_PATH );
+
+			return ( TRUE );
+		}
+
+		USBERROR( "RTL8188EU: could not open firmware %s, DOS error %ld", RTL8188EU_FIRMWARE_PATH, error );
+
+		return ( FALSE );
 	}
 
 	image = NULL;
@@ -45,6 +57,8 @@ RTL8188EU_LoadFirmware( struct EthernetUnit *unit )
 	if ( ( length <= RTL8188EU_FW_HEADER_SIZE ) ||
 		( length > RTL8188EU_FW_HEADER_SIZE + RTL8188EU_FW_MAX_SIZE ) )
 	{
+		USBERROR( "RTL8188EU: invalid firmware file size" );
+
 		goto done;
 	}
 
@@ -52,11 +66,15 @@ RTL8188EU_LoadFirmware( struct EthernetUnit *unit )
 
 	if ( ! image )
 	{
+		USBERROR( "RTL8188EU: could not allocate %lu bytes for firmware", (U32) length );
+
 		goto done;
 	}
 
 	if ( Read( file, image, (S32) length ) != length )
 	{
+		USBERROR( "RTL8188EU: could not read the complete firmware file" );
+
 		goto done;
 	}
 
@@ -65,20 +83,57 @@ RTL8188EU_LoadFirmware( struct EthernetUnit *unit )
 
 	if ( ( signature >> 4 != 0x88e ) || ( payload != length - RTL8188EU_FW_HEADER_SIZE ) )
 	{
+		USBERROR( "RTL8188EU: invalid firmware header, signature 0x%04lx, payload %lu, file size %lu",
+			signature, payload, (U32) length );
+
 		goto done;
 	}
 
 	endpoints = RTL8188EU_CountTXEndpoints( unit );
 
-	if ( ( endpoints ) && ( unit->unit_StationAddressValid ) &&
-		( RTL8188EU_PowerOn( control ) ) && ( RTL8188EU_InitDMA( control, endpoints ) ) &&
-		( RTL8188EU_UploadFirmware( control, image + RTL8188EU_FW_HEADER_SIZE, payload ) ) )
+	USBINFO( "RTL8188EU: firmware payload %lu bytes, TX endpoints %lu, valid station address %lu",
+		payload, endpoints, (U32) unit->unit_StationAddressValid );
+
+	if ( ( ! endpoints ) || ( ! unit->unit_StationAddressValid ) )
 	{
-		unit->unit_FirmwareRunning = TRUE;
+		goto done;
+	}
 
-		succeeded = RTL8188EU_StartRadio( unit );
+	if ( ! RTL8188EU_PowerOn( control ) )
+	{
+		USBERROR( "RTL8188EU: chip power-on failed" );
 
-		unit->unit_RadioReady = succeeded;
+		goto done;
+	}
+
+	if ( ! RTL8188EU_InitDMA( control, endpoints ) )
+	{
+		USBERROR( "RTL8188EU: DMA initialization failed" );
+
+		goto done;
+	}
+
+	if ( ! RTL8188EU_UploadFirmware( control, image + RTL8188EU_FW_HEADER_SIZE, payload ) )
+	{
+		USBERROR( "RTL8188EU: firmware upload or startup handshake failed" );
+
+		goto done;
+	}
+
+	unit->unit_FirmwareRunning = TRUE;
+
+	succeeded = RTL8188EU_StartRadio( unit );
+
+	unit->unit_RadioReady = succeeded;
+
+	if ( succeeded )
+	{
+		USBINFO( "RTL8188EU: firmware running, radio ready on channel %lu, TX ready %lu",
+			(U32) unit->unit_Channel, (U32) unit->unit_TxReady );
+	}
+	else
+	{
+		USBERROR( "RTL8188EU: firmware started but radio initialization failed" );
 	}
 
 done:
@@ -92,7 +147,7 @@ done:
 
 	if ( ! succeeded )
 	{
-		DebugPrintF( "RTL8188EU: could not initialize firmware from %s\n", RTL8188EU_FIRMWARE_PATH );
+		USBERROR( "RTL8188EU: could not initialize adapter using %s", RTL8188EU_FIRMWARE_PATH );
 	}
 
 	return ( succeeded );

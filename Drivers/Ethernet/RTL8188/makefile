@@ -31,7 +31,6 @@ CFLAGS		+= -D__USE_INLINE__
 CFLAGS		+= -mcrt=newlib
 CFLAGS		+= -MMD
 CFLAGS		+= -MP
-CFLAGS		+= -g
 
 # Linker flags and libraries
 LDFLAGS		:= -nostartfiles

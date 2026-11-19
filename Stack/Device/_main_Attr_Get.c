@@ -139,6 +139,33 @@ PTR mem;
 			break;
 		}
 
+		case USB2Tag_Attr_ManufacturerStr:
+		case USB2Tag_Attr_ProductStr:
+		case USB2Tag_Attr_SerialStr:
+		{
+			fn = Find_Function( usbbase, id );
+
+			if ( fn )
+			{
+				if ( tag == USB2Tag_Attr_ManufacturerStr )
+				{
+					len = fn->fkt_ManufacturerStrLen;
+					mem = fn->fkt_ManufacturerStr;
+				}
+				else if ( tag == USB2Tag_Attr_ProductStr )
+				{
+					len = fn->fkt_DeviceStrLen;
+					mem = fn->fkt_DeviceStr;
+				}
+				else
+				{
+					len = fn->fkt_SerialStrLen;
+					mem = fn->fkt_SerialStr;
+				}
+			}
+			break;
+		}
+
 		default:
 		{
 			break;

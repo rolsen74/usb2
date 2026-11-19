@@ -60,7 +60,7 @@ struct EthernetBase *ethBase;
 
 		AddDevice( (PTR) ethBase );
 
-		DebugPrintF( "RTL8188 : Rock'n Roll\n" );
+		USBINFO( "RTL8188EU: device registered, radio starts when the unit is opened" );
 	}
 	else
 	{

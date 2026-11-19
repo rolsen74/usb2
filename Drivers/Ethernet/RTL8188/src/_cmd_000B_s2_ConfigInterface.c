@@ -46,6 +46,10 @@ Cmd_ConfigInterface( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 			SignalSana2Event( unit, S2EVENT_ONLINE );
 		}
 	}
+
+	USBINFO( "RTL8188EU: S2_CONFIGINTERFACE error %ld, wire error %lu, firmware %lu, radio %lu, TX %lu, AID %lu, online %lu",
+		(S32) ioreq->ios2_Req.io_Error, ioreq->ios2_WireError, (U32) unit->unit_FirmwareRunning,
+		(U32) unit->unit_RadioReady, (U32) unit->unit_TxReady, (U32) unit->unit_AssocID, (U32) unit->unit_Online );
 }
 
 // --

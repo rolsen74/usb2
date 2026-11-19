@@ -56,6 +56,8 @@ void Resources_Free( struct EthernetBase *ethBase UNUSED )
 	if ( IUtility )
 	{	
 		DropInterface( (PTR) IUtility );
+
+		IUtility = NULL;
 	}
 
 	if ( UtilityBase )

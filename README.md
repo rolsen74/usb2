@@ -112,22 +112,27 @@ usb2/
 │   │   └── usb2.audio
 │   ├── AudioModes/
 │   │   └── USB2
+│   ├── Firmware/
+│   │   ├── rtl8188eufw.licence
+│   │   └── rtl8188eufw.bin
 │   ├── Networks/
 │   │   ├── usb2rtl8152.device
 │   │   └── usb2rtl8188.device
 │   └── usb2printer.device
 ├── Libs/
-│   └── USB2/
-│       ├── Audio.Class
-│       ├── Audio.Driver
-│       ├── PL2303.Class
-│       ├── PL2303.Driver
-│       ├── PTP.Class
-│       ├── PTP.Driver
-│       ├── Video.Class
-│       └── Video.Driver
+│   ├── USB2/
+│   │   ├── Audio.Class
+│   │   ├── Audio.Driver
+│   │   ├── PL2303.Class
+│   │   ├── PL2303.Driver
+│   │   ├── PTP.Class
+│   │   ├── PTP.Driver
+│   │   ├── Video.Class
+│   │   └── Video.Driver
+│   └── usb2wpa2.library
 └── Tools/
-    └── USB2Analyzer
+    ├── USB2Analyzer
+    └── USB2WirelessManager
 ```
 
 - **Core stack** — Copy `usb2.device` to `SYS:Kickstart/` and reference the
@@ -136,8 +141,9 @@ usb2/
 - **Printer** — Copy `usb2printer.device` to `DEVS:` and select that device in
   your printer preferences.
 - **Networking** — Copy the RTL8152 or RTL8188EU device from `Devs/Networks/`
-  to `DEVS:Networks/`. Supply the RTL8188EU firmware and wireless supplicant
-  separately as described in the [RTL8188EU guide](Doc/RTL8188.md).
+  to `DEVS:Networks/`. For RTL8188EU, copy the files from `Devs/Firmware/`
+  to `DEVS:Firmware/` and configure a wireless supplicant as described in the
+  [RTL8188EU guide](Doc/RTL8188.md).
 - **External class drivers** — Copy each `.Class` file together with its
   matching `.Driver` file to `LIBS:USB2/`. The stack reads the `.Class`
   files to match USB interfaces and load the corresponding drivers.
@@ -148,9 +154,15 @@ usb2/
     `VideoTest` separately using the commands in the [Video guide](Doc/Video.md).
 - **AHI playback** — Copy `Devs/AHI/usb2.audio` and `Devs/AudioModes/USB2`
   to the corresponding directories under `DEVS:`.
-- **USB2Analyzer** — Run it from the extracted `Tools/` directory after
-  booting with the USB2 stack. It displays host controllers, attached
-  devices, and their interfaces.
+- **[USB2Analyzer](Doc/USB2Analyzer.md)** — Run it from the extracted
+  `Tools/` directory after booting with the USB2 stack. It displays host
+  controllers, attached devices, and their interfaces.
+- **[USB2WirelessManager](Doc/USB2WirelessManager.md)** — Run it from
+  `Tools/` to find a named Wi-Fi network or join an open or WPA2-Personal
+  network with the RTL8188EU
+  adapter. It is specific to `usb2rtl8188.device`; `UNIT` selects a unit
+  of that driver. For WPA2, copy `Libs/usb2wpa2.library` to `LIBS:` and install
+  AmiSSL v5 (5.16+) or v6 (6.1+).
 
 ## Project Goals (Original)
 

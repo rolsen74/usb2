@@ -35,6 +35,7 @@ S32		Main_BuildWindow( void );
 void	Main_DestoryWindow( void );
 void	Main_HandleWindow( void );
 void	Build_Device_Tree( void );
+void	Build_Device_Properties( struct List *list, const struct USB2_FktNode *node );
 
 // --
 // Notify.c

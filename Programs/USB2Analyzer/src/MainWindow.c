@@ -47,6 +47,7 @@ struct ColumnInfo *	DeviceTreeColInfo	= NULL;
 
 struct List			PropertiesGUIList;
 struct ColumnInfo *	PropertiesColInfo	= NULL;
+static USB2_ID		SelectedDeviceID	= 0;
 
 struct List			CaptureGUIList;
 struct ColumnInfo *	CaptureColInfo		= NULL;
@@ -142,6 +143,21 @@ S32 retval;
 		goto bailout;
 	}
 
+	PropertiesColInfo = AllocLBColumnInfo( 2,
+		LBCIA_Column, 0,
+		 LBCIA_Title, "Property",
+		 LBCIA_Weight, 38,
+		LBCIA_Column, 1,
+		 LBCIA_Title, "Value",
+		 LBCIA_Weight, 62,
+		TAG_END
+	);
+
+	if ( ! PropertiesColInfo )
+	{
+		goto bailout;
+	}
+
 	Main_WinObject = NO(WindowClass),
 		WA_Activate,								TRUE,
 //		WA_Top,										MainScreen->WBorTop + MainScreen->Font->ta_YSize,
@@ -188,14 +204,13 @@ S32 retval;
 					// Properties List
 					LAYOUT_AddChild,				NO2(ListBrowserClass,GADMAINID_PropertiesList),
 						GA_ID,						GADMAINID_PropertiesList,
-						GA_RelVerify,				TRUE,
-//						GA_ReadOnly,				TRUE,
+						GA_ReadOnly,				TRUE,
 						LISTBROWSER_AutoFit,		TRUE,
-						LISTBROWSER_Hierarchical,	TRUE,
 						LISTBROWSER_VertSeparators,	FALSE,
 						LISTBROWSER_ColumnTitles,	TRUE,
-//						LISTBROWSER_ColumnInfo,		PropertiesColInfo,
+						LISTBROWSER_ColumnInfo,		PropertiesColInfo,
 						LISTBROWSER_Labels,			& PropertiesGUIList,
+						LISTBROWSER_HorizontalProp,	TRUE,
 					End,
 				End,
 
@@ -316,11 +331,18 @@ PTR node;
 	}
 
 	FreeListBrowserList( & DeviceTreeGUIList );
+	FreeListBrowserList( & PropertiesGUIList );
 
 	if ( DeviceTreeColInfo )
 	{
 		FreeLBColumnInfo( DeviceTreeColInfo );
 		DeviceTreeColInfo = NULL;
+	}
+
+	if ( PropertiesColInfo )
+	{
+		FreeLBColumnInfo( PropertiesColInfo );
+		PropertiesColInfo = NULL;
 	}
 
 //	if ( DeviceTreeUSBList )
@@ -334,13 +356,38 @@ PTR node;
 
 // --
 
+static void
+Show_Device_Properties( struct USB2_FktNode *node )
+{
+	SelectedDeviceID = node ? node->ID : 0;
+
+	SetAttrs( Main_Objects[GADMAINID_PropertiesList],
+		LISTBROWSER_Labels, NULL,
+		TAG_END
+	);
+
+	FreeListBrowserList( & PropertiesGUIList );
+
+	Build_Device_Properties( & PropertiesGUIList, node );
+
+	RefreshSetGadgetAttrs( (PTR) Main_Objects[GADMAINID_PropertiesList], Main_WindowAdr, NULL,
+		LISTBROWSER_Labels, & PropertiesGUIList,
+		LISTBROWSER_AutoFit, TRUE,
+		LISTBROWSER_Top, 0,
+		LISTBROWSER_Left, 0,
+		TAG_END
+	);
+}
+
+// --
+
 void Main_HandleWindow( void )
 {
-//struct lvNode *node1;
+struct USB2_FktNode *node;
+struct Node *selected;
+
 U32 result;
 U16 code;
-
-//	node1 = NULL;
 
 	while(( result = IDoMethod( Main_WinObject, WM_HANDLEINPUT, & code )) != WMHI_LASTMSG )
 	{
@@ -350,14 +397,25 @@ U16 code;
 			{
 				switch( result & WMHI_GADGETMASK )
 				{
-//					case GADMAINID_DeviceTree:
-//					{
-//						GetAttrs( MainObjects[ GADMAINID_DeviceTree ],
-//							LISTBROWSER_SelectedNode, &node1,
-//							TAG_END
-//						);
-//						break;
-//					}
+					case GADMAINID_DeviceTree:
+					{
+						selected = NULL;
+						node = NULL;
+
+						GetAttrs( Main_Objects[GADMAINID_DeviceTree],
+							LISTBROWSER_SelectedNode, & selected,
+							TAG_END
+						);
+
+						if ( selected )
+						{
+							GetListBrowserNodeAttrs( selected, LBNA_UserData, & node, TAG_END );
+						}
+
+						Show_Device_Properties( node );
+
+						break;
+					}
 
 //					case GADMAINID_CaptureList:
 //					{
@@ -401,11 +459,6 @@ U16 code;
 		}
 	}
 
-//	if ( node1 )
-//	{
-//		BuildPropertiesList( node1 );
-//	}
-
 //	if (( node2 != NULL ) && ( node2->ln_Name != NULL ))
 //	{
 //		BuildIORequestList( (struct CaptureNode *)node2->ln_Name );
@@ -418,8 +471,15 @@ void Build_Device_Tree( void )
 {
 struct USB2_FktNode *node;
 struct USB2_FktNode *n;
+struct USB2_FktNode *selected;
 struct Node *guinode;
+
+S32 index;
+S32 selectedindex;
 char namebuf[256];
+
+	selected = NULL;
+	selectedindex = -1;
 
 	SetAttrs( Main_Objects[GADMAINID_DeviceTree],
 		LISTBROWSER_Labels, NULL,
@@ -435,8 +495,9 @@ char namebuf[256];
 		// --
 
 		guinode = AllocListBrowserNode( 2,
+			LBNA_UserData,		node,
 			LBNA_Column,		0,
-				LBNCA_CopyText,	FALSE,
+				LBNCA_CopyText,	TRUE,
 				LBNCA_Text,		( node->Name ) ? node->Name : "",
 			LBNA_Generation,	1,
 			LBNA_Flags,			IsListEmpty( &node->Header ) ? 0 : LBFLG_HASCHILDREN,
@@ -450,8 +511,6 @@ char namebuf[256];
 		{
 			break;
 		}
-
-		guinode->ln_Name = (PTR) node;
 
 		AddTail( & DeviceTreeGUIList, guinode );
 
@@ -477,10 +536,35 @@ char namebuf[256];
 
 	ShowAllListBrowserChildren( & DeviceTreeGUIList );
 
+	if ( SelectedDeviceID )
+	{
+		index = 0;
+
+		for( guinode = GetHead( & DeviceTreeGUIList ); guinode; guinode = GetSucc( guinode ), index++ )
+		{
+			n = NULL;
+
+			GetListBrowserNodeAttrs( guinode, LBNA_UserData, & n, TAG_END );
+
+			if ( ( n ) && ( n->ID == SelectedDeviceID ) )
+			{
+				selected = n;
+				selectedindex = index;
+				break;
+			}
+		}
+	}
+
 	RefreshSetGadgetAttrs( (PTR) Main_Objects[ GADMAINID_DeviceTree ], Main_WindowAdr, NULL,
 		LISTBROWSER_Labels, & DeviceTreeGUIList,
+		LISTBROWSER_Selected, selectedindex,
 		TAG_END
 	);
+
+	if ( SelectedDeviceID )
+	{
+		Show_Device_Properties( selected );
+	}
 }
 
 // --
@@ -509,6 +593,7 @@ U32 cnt;
 		}
 
 		guinode = AllocListBrowserNode( 2,
+			LBNA_UserData,		n,
 			LBNA_Column,			0,
 				LBNCA_CopyText,		TRUE,
 				LBNCA_Text,			namebuf,
@@ -524,8 +609,6 @@ U32 cnt;
 		{
 			goto bailout;
 		}
-
-		guinode->ln_Name = (PTR) n;
 
 		AddTail( l, guinode );
 
@@ -569,8 +652,6 @@ U32 cnt;
 					goto bailout;
 				}
 
-				guinode->ln_Name = NULL;
-
 				AddTail( l, guinode );
 			}
 		}
@@ -579,9 +660,10 @@ U32 cnt;
 	{
 		pos = strlen( namebuf );
 
-		sprintf( & namebuf[pos], "Multi Class" );
+		snprintf( & namebuf[pos], 256 - pos, "%s", n->ProductStr[0] ? n->ProductStr : "USB Device" );
 
 		guinode = AllocListBrowserNode( 2,
+			LBNA_UserData,		n,
 			LBNA_Column,			0,
 				LBNCA_CopyText,		TRUE,
 				LBNCA_Text,			namebuf,
@@ -597,8 +679,6 @@ U32 cnt;
 		{
 			goto bailout;
 		}
-
-		guinode->ln_Name = (PTR) n;
 
 		AddTail( l, guinode );
 
@@ -637,6 +717,7 @@ U32 cnt;
 		}
 
 		guinode = AllocListBrowserNode( 2,
+			LBNA_UserData,		n,
 			LBNA_Column,			0,
 				LBNCA_CopyText,		FALSE,
 				LBNCA_Text,			( clsstring ) ? clsstring : "",
@@ -651,8 +732,6 @@ U32 cnt;
 		{
 			goto bailout;
 		}
-
-		guinode->ln_Name = (PTR) n;
 
 		AddTail( l, guinode );
 

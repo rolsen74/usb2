@@ -22,6 +22,8 @@ Process_Setup_Device( struct EthernetUnit *unit )
 
 	if ( ! unit->unit_USB_Register )
 	{
+		USBERROR( "RTL8188EU: USB interface registration failed" );
+
 		return ( FALSE );
 	}
 
@@ -43,6 +45,8 @@ Process_Setup_Device( struct EthernetUnit *unit )
 
 	if ( ! unit->unit_Bulk_Rx_Resource )
 	{
+		USBERROR( "RTL8188EU: could not obtain the bulk IN endpoint" );
+
 		return ( FALSE );
 	}
 
@@ -56,6 +60,8 @@ Process_Setup_Device( struct EthernetUnit *unit )
 
 	if ( ! unit->unit_Bulk_Tx_Resource )
 	{
+		USBERROR( "RTL8188EU: could not obtain the bulk OUT endpoint" );
+
 		return ( FALSE );
 	}
 

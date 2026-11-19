@@ -40,6 +40,8 @@ RTL8188EU_TuneRadio( struct EthernetUnit *unit, U32 channel )
 	if ( power > 0x3f )
 	{
 		// A board without a valid eFuse power index stays receive-only.
+		USBINFO( "RTL8188EU: channel %lu is receive-only, invalid eFuse CCK power 0x%02lx", channel, power );
+
 		return ( TRUE );
 	}
 
