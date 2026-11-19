@@ -9,24 +9,148 @@
 
 #include <proto/exec.h>
 #include <proto/dos.h>
+#include <devices/timer.h>
 #include <devices/usb2.h>
 #include <string.h>
 #include "../inc/AudioDevice.h"
 
 // --
 
-static void Audio_WriteLE16( U8 *data, U32 value )
+static void
+Audio_WriteLE16( U8 *data, U32 value )
 {
 	data[0] = value;
 	data[1] = value >> 8;
 }
 
-static void Audio_WriteLE32( U8 *data, U32 value )
+static void
+Audio_WriteLE32( U8 *data, U32 value )
 {
 	data[0] = value;
 	data[1] = value >> 8;
 	data[2] = value >> 16;
 	data[3] = value >> 24;
+}
+
+// --
+
+static S32
+Audio_Capture( struct IOStdReq *ioreq )
+{
+	struct MsgPort *port;
+	struct TimeRequest *timer;
+
+	U32 mask;
+	U32 signals;
+	S32 result;
+
+	result = FALSE;
+
+	port = AllocSysObjectTags( ASOT_PORT, TAG_END );
+
+	if ( ! port )
+	{
+		Printf( "Could not allocate timer port.\n" );
+
+		return ( FALSE );
+	}
+
+	timer = AllocSysObjectTags( ASOT_IOREQUEST, ASOIOR_Size, sizeof( *timer ),
+		ASOIOR_ReplyPort, port, TAG_END );
+
+	if ( ! timer )
+	{
+		Printf( "Could not allocate timer request.\n" );
+		goto free_port;
+	}
+
+	if ( OpenDevice( TIMERNAME, UNIT_MICROHZ, & timer->Request, 0 ) )
+	{
+		Printf( "Could not open timer.device.\n" );
+		goto free_timer;
+	}
+
+	timer->Request.io_Command = TR_ADDREQUEST;
+	timer->Time.Seconds = 10;
+	timer->Time.Microseconds = 0;
+	mask = ( 1UL << port->mp_SigBit ) |
+		( 1UL << ioreq->io_Message.mn_ReplyPort->mp_SigBit ) | SIGBREAKF_CTRL_C;
+	signals = 0;
+
+	Printf( "Recording one second from the USB microphone...\n" );
+
+	SendIO( & timer->Request );
+
+	SendIO( (PTR) ioreq );
+
+	while ( ( ! CheckIO( (PTR) ioreq ) ) && ( ! CheckIO( & timer->Request ) ) &&
+		( ! ( signals & SIGBREAKF_CTRL_C ) ) )
+	{
+		signals = Wait( mask );
+	}
+
+	if ( signals & SIGBREAKF_CTRL_C )
+	{
+		Printf( "Capture interrupted.\n" );
+	}
+	else if ( ! CheckIO( (PTR) ioreq ) )
+	{
+		Printf( "Audio capture timed out.\n" );
+	}
+	else
+	{
+		result = TRUE;
+	}
+
+	if ( ! CheckIO( (PTR) ioreq ) )
+	{
+		AbortIO( (PTR) ioreq );
+	}
+
+	WaitIO( (PTR) ioreq );
+
+	if ( ! CheckIO( & timer->Request ) )
+	{
+		AbortIO( & timer->Request );
+	}
+
+	WaitIO( & timer->Request );
+
+	CloseDevice( & timer->Request );
+
+free_timer:
+	FreeSysObject( ASOT_IOREQUEST, timer );
+
+free_port:
+	FreeSysObject( ASOT_PORT, port );
+
+	return ( result );
+}
+
+// --
+
+static U32
+Audio_Peak( const U8 *samples, U32 length )
+{
+	U32 index;
+	U32 peak;
+	S32 sample;
+
+	peak = 0;
+
+	for ( index = 0; index + 1 < length; index += 2 )
+	{
+		sample = (S16) ( samples[index] | ( (U16) samples[index + 1] << 8 ) );
+
+		if ( sample < 0 )
+		{
+			sample = -sample;
+		}
+
+		peak = MAX( peak, (U32) sample );
+	}
+
+	return ( peak );
 }
 
 // --
@@ -92,7 +216,7 @@ S32 playback;
 
 	if ( ( argc > 1 ) && ( ! playback ) )
 	{
-		Printf( "Usage: AudioTest [PLAY]\n" );
+		Printf( "Usage: USB2AudioTest [PLAY]\n" );
 
 		return ( result );
 	}
@@ -133,6 +257,14 @@ S32 playback;
 		goto close_device;
 	}
 
+	if ( ( format.Encoding != AUDIO_ENCODING_PCM_S16LE ) || ( format.BitsPerSample != 16 ) ||
+		( ! format.SampleRate ) || ( format.SampleRate > 0x00ffffff ) ||
+		( ( format.Channels != 1 ) && ( format.Channels != 2 ) ) )
+	{
+		Printf( "The device did not report a supported PCM format.\n" );
+		goto close_device;
+	}
+
 	Printf( "USB %04lx:%04lx, %ld Hz, %ld channel(s), %ld-bit PCM\n",
 		format.VendorID, format.DeviceID, format.SampleRate,
 		format.Channels, format.BitsPerSample );
@@ -157,10 +289,22 @@ S32 playback;
 	ioreq->io_Data = samples;
 	ioreq->io_Length = length;
 
-	if ( DoIO( (PTR) ioreq ) )
+	if ( ! Audio_Capture( ioreq ) )
+	{
+		goto free_samples;
+	}
+
+	if ( ioreq->io_Error )
 	{
 		Printf( "Capture failed: %ld, %ld bytes received\n",
 			(S32) ioreq->io_Error, ioreq->io_Actual );
+		goto free_samples;
+	}
+
+	if ( ( ! ioreq->io_Actual ) || ( ioreq->io_Actual > length ) ||
+		( ioreq->io_Actual % ( format.Channels * 2 ) ) )
+	{
+		Printf( "Capture returned an invalid PCM length (%lu bytes).\n", ioreq->io_Actual );
 		goto free_samples;
 	}
 
@@ -202,7 +346,8 @@ S32 playback;
 	if ( ( Write( file, header, sizeof( header ) ) == sizeof( header ) ) &&
 		( Write( file, samples, length ) == (S32) length ) )
 	{
-		Printf( "Saved %ld bytes to RAM:usb2audio.wav\n", length );
+		Printf( "Saved %ld bytes to RAM:usb2audio.wav, peak %lu/32768\n",
+			length, Audio_Peak( samples, length ) );
 		result = RETURN_OK;
 	}
 	else

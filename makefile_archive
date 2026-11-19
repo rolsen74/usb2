@@ -98,6 +98,10 @@ build_audio: | build_dir_tree
 	cp bin/Audio.Driver Audio.Class $(BINDIR)/usb2/Libs/USB2 && \
 	cp AHI/bin/usb2.audio $(BINDIR)/usb2/Devs/AHI && \
 	cp AHI/bin/USB2 $(BINDIR)/usb2/Devs/AudioModes
+	cd $(ROOTDIR)/Drivers/Audio/Test && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	cp USB2AudioTest $(BINDIR)/usb2/Tools
 	@echo "Audio done"
 
 ###########################################################################

@@ -10,7 +10,7 @@ compatible third-party controllers bind through the same interface match.
 Run the build from the repository root with the AmigaOS 4 cross-compiler.
 
 ```sh
-make -C Drivers/AmigaInput/Xbox360 -j4
+make -C Drivers/AmigaInput/Xbox360
 ```
 
 Copy `Drivers/AmigaInput/Xbox360/Xbox360.Class` and

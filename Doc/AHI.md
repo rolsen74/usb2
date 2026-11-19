@@ -7,7 +7,7 @@ unit's sample rate and uses the **USB2: 16-bit stereo playback** mode.
 ## Build and install
 
 ```sh
-make -C Drivers/Audio/AHI -j4
+make -C Drivers/Audio/AHI
 ```
 
 1. Install the current USB2 stack and the [USB Audio driver](Audio.md).

@@ -22,7 +22,7 @@ U32 index;
 U32 limit;
 
 	base = ctx->Device;
-	unit = AllocVecTags( sizeof( struct AudioUnit ), AVT_Clear, TRUE, TAG_END );
+	unit = AllocVecTags( sizeof( struct AudioUnit ), AVT_ClearWithValue, 0, TAG_END );
 
 	if ( ! unit )
 	{

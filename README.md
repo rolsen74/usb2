@@ -87,9 +87,9 @@ setup.
 
 ## Building
 
-With the AmigaOS 4 cross-compiler installed, run `make -j4`. The default
+With the AmigaOS 4 cross-compiler installed, run `make`. The default
 build enables UHCI, OHCI, EHCI, xHCI, HUB, HID, and MSD. To exclude xHCI,
-use `make DRV_XHCI=0 -j4`; its hardware validation is still pending.
+use `make DRV_XHCI=0`; its hardware validation is still pending.
 
 ### Building the distribution archive
 
@@ -97,7 +97,7 @@ With the AmigaOS 4 cross-compiler and `lha` installed, run the following
 from the repository root.
 
 ```sh
-make -f makefile_archive -j4
+make -f makefile_archive
 ```
 
 The archive is written to `usb2.lha` in the repository root. Extracting it
@@ -132,6 +132,7 @@ usb2/
 │   └── usb2wpa2.library
 └── Tools/
     ├── USB2Analyzer
+    ├── USB2AudioTest
     ├── USB2WirelessManager
     └── USB2VideoTest
 ```
@@ -149,6 +150,7 @@ usb2/
   matching `.Driver` file to `LIBS:USB2/`. The stack reads the `.Class`
   files to match USB interfaces and load the corresponding drivers.
   - `Audio` provides PCM capture and playback through `usb2audio.device`.
+    Run `Tools/USB2AudioTest` to check microphone capture.
   - `PL2303` exposes supported USB serial adapters through `usb2serial.device`.
   - [PTP](Doc/PTP.md) lets you browse and download camera files through `PTP:` and upload new files on cameras that support it.
   - `Video` exposes USB webcam capture through `usb2video.device`. Run

@@ -11,8 +11,8 @@ and security limitations.
 Build from the repository root with the AmigaOS 4 cross-compiler:
 
 ```sh
-make -C Libraries/WPA2 -j4
-make -C Programs/USB2WirelessManager -j4
+make -C Libraries/WPA2
+make -C Programs/USB2WirelessManager
 ```
 
 Start AmigaOS 4 with `usb2.device` loaded and install `usb2rtl8188.device`

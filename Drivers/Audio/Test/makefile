@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-TARGET := AudioTest
+TARGET := USB2AudioTest
 HOSTOS := $(shell uname)
 CFLAGS := -O2 -I../../../inc_Public -W -Wall -D__USE_INLINE__ -mcrt=newlib
 

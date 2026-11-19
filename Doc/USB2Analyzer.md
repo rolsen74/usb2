@@ -10,7 +10,7 @@ The tree updates when the USB stack reports connection changes.
 Build from the repository root with the AmigaOS 4 cross-compiler:
 
 ```sh
-make -C Programs/USB2Analyzer -j4
+make -C Programs/USB2Analyzer
 ```
 
 Start AmigaOS 4 with `usb2.device` loaded, then run

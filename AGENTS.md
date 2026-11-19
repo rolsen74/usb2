@@ -65,4 +65,4 @@ while( ( xx ) && ( yy ) || ( zz ) )
 
 - Follow the established allocation and cleanup pattern: check each allocation, release owned resources on failure, and use the local `bailout:` pattern where appropriate. Preserve lock, semaphore, message, and request lifecycle ordering.
 - For controller code, keep hardware descriptor fields, physical addresses, endian conversions (`LE_SWAP16`/`LE_SWAP32`), and DMA buffer ownership explicit. Use OHCI/EHCI and the relevant `Stack/HCD/` code as references, while respecting controller-specific hardware rules.
-- Build with `make -j4` after C changes when the AmigaOS cross compiler is available. Report build results separately from runtime validation; a successful link does not establish hardware behavior.
+- Build with `make` after C changes when the AmigaOS cross compiler is available. Report build results separately from runtime validation; a successful link does not establish hardware behavior.

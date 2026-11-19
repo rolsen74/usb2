@@ -8,7 +8,7 @@ depending on the hardware.
 ## Build and use
 
 The default `usb2.device` build includes EHCI through `DRV_EHCI=1`.
-Run `make -j4` from the repository root, then follow the
+Run `make` from the repository root, then follow the
 [stack installation steps](../README.md#building-the-distribution-archive).
 
 The driver includes high-speed isochronous transfers for applicable audio

@@ -12,7 +12,7 @@ driver still looks for per-unit settings under `usb2_printer.device/unitN`.
 ## Build and install
 
 ```sh
-make -C Drivers/Printer USBTYPE=USB2 -j4
+make -C Drivers/Printer USBTYPE=USB2
 ```
 
 Copy `Drivers/Printer/bin/usb2printer.device` to `DEVS:`. The archive

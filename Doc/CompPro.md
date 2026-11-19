@@ -8,7 +8,7 @@ headers are in [`Drivers/AmigaInput/CompPro/inc/`](../Drivers/AmigaInput/CompPro
 ## Build and status
 
 ```sh
-make -C Drivers/AmigaInput/CompPro -j4
+make -C Drivers/AmigaInput/CompPro
 ```
 
 The build produces the startup stub at `Drivers/AmigaInput/CompPro/bin/CompPro.Driver`.

@@ -7,5 +7,5 @@ control, bulk, interrupt, and full-speed isochronous transfers.
 ## Build and use
 
 The default `usb2.device` build includes OHCI through `DRV_OHCI=1`.
-Run `make -j4` from the repository root, then follow the
+Run `make` from the repository root, then follow the
 [stack installation steps](../README.md#building-the-distribution-archive).

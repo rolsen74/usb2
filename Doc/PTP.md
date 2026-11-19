@@ -8,7 +8,7 @@ It can read files and upload new files on cameras that support PTP uploads.
 ## Build and install
 
 ```sh
-make -C Drivers/PTP -j4
+make -C Drivers/PTP
 ```
 
 Copy `Drivers/PTP/bin/PTP.Driver` and `Drivers/PTP/PTP.Class` to

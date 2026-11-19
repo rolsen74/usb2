@@ -15,5 +15,5 @@ on AmigaOS hardware is pending.
 ## Build and install
 
 This driver is enabled in the default `usb2.device` build by
-`DRV_HID=1`. Build with `make -j4` from the repository root and follow the
+`DRV_HID=1`. Build with `make` from the repository root and follow the
 [stack installation steps](../README.md#building-the-distribution-archive).
