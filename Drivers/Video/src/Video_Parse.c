@@ -11,14 +11,70 @@
 
 // --
 
-static U16 Video_LE16( const U8 *data )
+static U16
+Video_LE16( const U8 *data )
 {
 	return ( (U16) data[0] | ( (U16) data[1] << 8 ) );
 }
 
 // --
 
-SEC_CODE S32 Video_Parse( struct VideoUnit *unit )
+static U32
+Video_FrameInterval( const U8 *data, U32 length, U32 *number )
+{
+	U32 interval;
+	U32 preferred;
+	U32 index;
+	U32 count;
+
+	preferred = Video_LE32( & data[21] );
+	count = data[25];
+
+	if ( count )
+	{
+		if ( length < 26 + 4 * count )
+		{
+			return ( 0 );
+		}
+
+		for ( index = 0; index < count; index++ )
+		{
+			interval = Video_LE32( & data[26 + 4 * index] );
+
+			if ( ( interval ) && ( --*number == 0 ) )
+			{
+				return ( interval );
+			}
+		}
+	}
+	else if ( length >= 38 )
+	{
+		if ( ( preferred ) && ( --*number == 0 ) )
+		{
+			return ( preferred );
+		}
+
+		// Offer the bounds and the default for a continuous interval range.
+		for ( index = 26; index <= 30; index += 4 )
+		{
+			interval = Video_LE32( & data[index] );
+
+			if ( ( interval ) && ( interval != preferred ) &&
+				( ( index == 26 ) || ( interval != Video_LE32( & data[26] ) ) ) &&
+				( --*number == 0 ) )
+			{
+				return ( interval );
+			}
+		}
+	}
+
+	return ( 0 );
+}
+
+// --
+
+SEC_CODE S32
+Video_Parse( struct VideoUnit *unit, U32 number, struct VideoMode *mode )
 {
 struct USB2_Config_Desc *config;
 
@@ -26,6 +82,8 @@ const U8 *data;
 U32 remaining;
 U32 length;
 U32 format;
+U32 interval;
+U32 wanted;
 U8 active;
 U8 alt;
 U8 index;
@@ -41,6 +99,9 @@ U8 index;
 	remaining = LE_SWAP16( config->TotalLength );
 	data = (PTR) config;
 	format = 0;
+	wanted = number;
+	mode->Format.Width = 0;
+	mode->Format.Format = 0;
 	index = 0;
 	active = FALSE;
 	alt = 0;
@@ -78,17 +139,40 @@ U8 index;
 				format = 0;
 			}
 
-			if ( ( ! unit->Format.Width ) && ( format ) && ( length >= 26 ) &&
+			if ( ( index ) && ( length >= 26 ) && ( data[3] ) &&
 				( ( ( format == VIDEO_FORMAT_MJPEG ) && ( data[2] == 0x07 ) ) ||
-				( ( format == VIDEO_FORMAT_YUY2 ) && ( data[2] == 0x05 ) ) ) )
+				( ( format == VIDEO_FORMAT_YUY2 ) && ( data[2] == 0x05 ) ) ) &&
+				( Video_LE16( & data[5] ) ) && ( Video_LE16( & data[7] ) ) )
 			{
-				unit->Format.Width = Video_LE16( & data[5] );
-				unit->Format.Height = Video_LE16( & data[7] );
-				unit->Format.MaxFrameSize = Video_LE32( & data[17] );
-				unit->Format.FrameInterval = Video_LE32( & data[21] );
-				unit->Format.Format = format;
-				unit->FormatIndex = index;
-				unit->FrameIndex = data[3];
+				interval = 0;
+
+				if ( number )
+				{
+					interval = Video_FrameInterval( data, length, & wanted );
+				}
+				else if ( ( ! mode->Format.Width ) ||
+					( ( format == VIDEO_FORMAT_MJPEG ) && ( mode->Format.Format != VIDEO_FORMAT_MJPEG ) ) )
+				{
+					interval = Video_LE32( & data[21] );
+				}
+
+				if ( interval )
+				{
+					mode->Format.Width = Video_LE16( & data[5] );
+					mode->Format.Height = Video_LE16( & data[7] );
+					mode->Format.MaxFrameSize = Video_LE32( & data[17] );
+					mode->Format.FrameInterval = interval;
+					mode->Format.Format = format;
+					mode->Format.VendorID = unit->StartMsg->VendorID;
+					mode->Format.DeviceID = unit->StartMsg->DeviceID;
+					mode->FormatIndex = index;
+					mode->FrameIndex = data[3];
+
+					if ( number )
+					{
+						return ( TRUE );
+					}
+				}
 			}
 		}
 		else if ( ( active ) && ( ! alt ) && ( data[1] == DSCTYPE_EndPoint ) &&
@@ -96,19 +180,17 @@ U8 index;
 			( ( data[2] & EPADR_Dir_Mask ) == EPADR_Dir_In ) &&
 			( ( data[3] & EPATT_Type_Mask ) == EPATT_Type_Bulk ) )
 		{
-			unit->EndPoint = data[2];
+			if ( ! number )
+			{
+				unit->BulkEndPoint = data[2];
+			}
 		}
 
 		data += length;
 		remaining -= length;
 	}
 
-	unit->Format.VendorID = unit->StartMsg->VendorID;
-	unit->Format.DeviceID = unit->StartMsg->DeviceID;
-
-	return ( ( ( unit->EndPoint ) || ( Video_Select_Stream( unit, 2 ) ) ) && ( unit->Format.Width ) &&
-		( unit->Format.Height ) &&
-		( unit->Format.FrameInterval ) && ( unit->FormatIndex ) && ( unit->FrameIndex ) );
+	return ( ( ! number ) && ( mode->Format.Width ) );
 }
 
 // --

@@ -15,33 +15,46 @@ SEC_CODE void Video_Read_Start( struct VideoUnit *unit )
 {
 struct USB2_IORequest *ioreq;
 
-	if ( ( unit->Detached ) || ( unit->ReadPending ) || ( ! unit->ReadActive ) )
+U32 index;
+U32 slot;
+
+	if ( ( unit->Detached ) || ( ! unit->ReadActive ) )
 	{
 		return;
 	}
 
-	ioreq = unit->Stream->IORequests[0];
-	ioreq->io_Command = CMD_READ;
-	ioreq->io_Data = unit->Stream->Buffers[0];
-	ioreq->io_Length = unit->PayloadSize;
-	ioreq->io_AllowShortPackets = TRUE;
-
-	if ( unit->StreamAlt )
+	for ( slot = 0; slot < VIDEO_USB_READS; slot++ )
 	{
-		ioreq->io_Length = unit->StreamPacketSize * VIDEO_ISO_PACKETS;
-		ioreq->io_IsoPacketLengths = unit->IsoPacketLengths;
-		ioreq->io_IsoPacketCount = VIDEO_ISO_PACKETS;
-		ioreq->io_TimeOut = 5 * 1000000;
+		ioreq = unit->Stream->IORequests[slot];
 
-		for ( U32 index = 0; index < VIDEO_ISO_PACKETS; index++ )
+		if ( ( unit->ReadPending & ( 1U << slot ) ) || ( ioreq == unit->ReadReady ) )
 		{
-			unit->IsoPacketLengths[index] = 0;
+			continue;
 		}
+
+		ioreq->io_Command = CMD_READ;
+		ioreq->io_Data = unit->Stream->Buffers[slot];
+		ioreq->io_Length = unit->PayloadSize;
+		ioreq->io_AllowShortPackets = TRUE;
+		ioreq->io_TimeOut = 5 * 1000000;
+		ioreq->io_UserValue = slot;
+
+		if ( unit->StreamAlt )
+		{
+			ioreq->io_Length = unit->StreamPacketSize * unit->IsoPacketCount;
+			ioreq->io_IsoPacketLengths = unit->IsoPacketLengths[slot];
+			ioreq->io_IsoPacketCount = unit->IsoPacketCount;
+
+			for ( index = 0; index < unit->IsoPacketCount; index++ )
+			{
+				unit->IsoPacketLengths[slot][index] = USB2_ISO_PACKET_ERROR;
+			}
+		}
+
+		unit->ReadPending |= 1U << slot;
+
+		SendIO( (PTR) ioreq );
 	}
-
-	unit->ReadPending = TRUE;
-
-	SendIO( (PTR) ioreq );
 }
 
 // --

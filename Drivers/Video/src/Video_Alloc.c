@@ -15,6 +15,7 @@ SEC_CODE struct VideoUnit *Video_Alloc( struct VideoContext *ctx, struct USB2_Dr
 {
 struct VideoUnit *unit;
 struct VideoBase *base;
+struct VideoMode mode;
 
 U32 index;
 
@@ -32,7 +33,7 @@ U32 index;
 	unit->UnitNr = VIDEO_MAX_UNITS;
 	unit->InterfaceNr = msg->InterfaceDescriptor->InterfaceNumber;
 
-	if ( ! Video_Parse( unit ) )
+	if ( ! Video_Parse( unit, 0, & mode ) )
 	{
 		goto bailout;
 	}
@@ -40,6 +41,13 @@ U32 index;
 	unit->BeginPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
 	if ( ! unit->BeginPort )
+	{
+		goto bailout;
+	}
+
+	unit->StreamPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
+
+	if ( ! unit->StreamPort )
 	{
 		goto bailout;
 	}
@@ -57,33 +65,7 @@ U32 index;
 
 	unit->Control = unit->Register->Res_Control;
 
-	if ( ! Video_Probe( unit ) )
-	{
-		goto bailout;
-	}
-
-	if ( unit->StreamAlt )
-	{
-		// Older stacks allocate shorter requests without isochronous results.
-		if ( ( unit->Control->IORequests[0]->io_Message.mn_Length < sizeof( struct USB2_IORequest ) ) ||
-			( ! Video_Select_Stream( unit, unit->PayloadSize ) ) ||
-			( ! USB2_Ifc_SetAlt( unit->Register, msg->Interface, unit->StreamAlt ) ) )
-		{
-			goto bailout;
-		}
-
-		unit->StreamAltActive = TRUE;
-	}
-
-	unit->Stream = USB2_EPRes_ObtainTags( unit->Register,
-		USB2Tag_EPRes_InterfaceNr, unit->InterfaceNr,
-		USB2Tag_EPRes_EndPointNr, unit->EndPoint,
-		USB2Tag_EPRes_BufferSize, unit->StreamAlt ? unit->StreamPacketSize * VIDEO_ISO_PACKETS : unit->PayloadSize,
-		USB2Tag_EPRes_AllowShortPackets, TRUE,
-		TAG_END
-	);
-
-	if ( ! unit->Stream )
+	if ( ! Video_Stream_Open( unit, & mode ) )
 	{
 		goto bailout;
 	}

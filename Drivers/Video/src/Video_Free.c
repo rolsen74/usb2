@@ -27,11 +27,7 @@ struct VideoBase *base;
 	unit->Detached = TRUE;
 	ReleaseSemaphore( & base->Semaphore );
 
-	if ( unit->ReadPending )
-	{
-		Video_IO_Stop( unit->Stream->IORequests[0] );
-		unit->ReadPending = FALSE;
-	}
+	Video_Read_Stop( unit );
 
 	Video_Read_Reply( unit, IOERR_ABORTED );
 
@@ -46,18 +42,15 @@ struct VideoBase *base;
 
 	if ( unit->Register )
 	{
-		if ( unit->StreamAltActive )
-		{
-			if ( unit->Stream )
-			{
-				USB2_EPRes_Release( unit->Stream );
-			}
-
-			USB2_Ifc_SetAlt( unit->Register, unit->StartMsg->Interface, 0 );
-		}
+		Video_Stream_Close( unit );
 
 		USB2_Reg_Unregister( unit->Register );
 		unit->Register = NULL;
+	}
+
+	if ( unit->StreamPort )
+	{
+		FreeSysObject( ASOT_PORT, unit->StreamPort );
 	}
 
 	if ( unit->BeginPort )

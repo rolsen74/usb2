@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-TARGET := VideoTest
+TARGET := USB2VideoTest
 HOSTOS := $(shell uname)
 CFLAGS := -O2 -I../../../inc_Public -W -Wall -D__USE_INLINE__ -mcrt=newlib
 
@@ -16,8 +16,8 @@ endif
 
 all: $(TARGET)
 
-$(TARGET): VideoTest.c ../inc/VideoDevice.h
-	$(CC) $(CFLAGS) -o $@ VideoTest.c
+$(TARGET): VideoTest.c Preview.c YUY2.c Preview.h ../inc/VideoDevice.h
+	$(CC) $(CFLAGS) -o $@ VideoTest.c Preview.c YUY2.c
 
 clean:
 	$(RM) $(TARGET)

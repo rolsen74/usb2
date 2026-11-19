@@ -93,10 +93,9 @@ SEC_CODE static S32 _Start_Interface(
 	struct USBBase *usbbase, 
 	struct RealFunctionNode *fn,
 	struct USB2_FktDriverNode *fdn,
-	struct USB2_InterfaceGroup *ig, 
+	struct USB2_InterfaceHeader *ih,
 	struct USB2_ASync *as )
 {
-struct USB2_InterfaceHeader *ih;
 struct USB2_DriverNode *dn;
 struct USB2_TaskNode *tn;
 enum TaskReturn stat;
@@ -136,14 +135,6 @@ U32 retval;
 	
 	// --
 
-	if ( INTERFACE_VALIDGROUP(ig) != VSTAT_Okay )
-	{
-		USBERROR( "_Start_Interface : Interface Group Valid error (%p)", ig );
-		goto bailout;
-	}
-
-	ih = ig->ig_Group.uh_Head;
-
 	if ( INTERFACE_VALIDHEADER(ih) != VSTAT_Okay )
 	{
 		USBERROR( "_Start_Interface : Interface Header Valid error (%p)", ih );
@@ -162,11 +153,11 @@ U32 retval;
 	if ( ih->ih_Owner )
 	{
 		// Allready claimed
-//		USBERROR( "Skipping Interface (claimed) : FN    %p : Class %ld", ig->ig_Function, ig->ig_Class );
+//		USBERROR( "Skipping Interface (claimed) : IH    %p", ih );
 		goto bailout;
 	}
 
-//	USBERROR( "Found Interface (possible) : FN    %p : Class %ld", ig->ig_Function, ig->ig_Class );
+//	USBERROR( "Found Interface (possible) : IH    %p", ih );
 
 	dn->dn_Message.rdm_Public.Interface = (PTR) & ih->ih_Public ;
 	dn->dn_Message.rdm_Public.InterfaceDescriptor = (PTR) ih->ih_Active->in_Descriptor;
@@ -257,20 +248,23 @@ bailout:
 SEC_CODE static S32 _Check_Interface( 
 	struct USBBase *usbbase, 
 	struct RealFunctionNode *fn, 
-	struct USB2_InterfaceGroup *ig, 
+	struct USB2_InterfaceHeader *ih,
 	struct USB2_ASync *as )
 {
 struct USB2_FktDriverNode *fdn;
+struct USB2_Interface_Desc *ifcdsc;
 S32 retval;
 S32 stat;
 
 //	USBERROR( "_Check_Interface" );
 
 	retval = FALSE;
+	ifcdsc = ( ih->ih_Active ) ? ih->ih_Active->in_Descriptor : NULL;
 
-	// todo should there be a IfcGroup Ower??
-	// and check here?
-	// ih_Owner .. there is a IfcHeader owner
+	if ( ! ifcdsc )
+	{
+		return ( FALSE );
+	}
 
 	fdn = Header_Head( & usbbase->usb_FDriver_Header );
 
@@ -298,28 +292,28 @@ S32 stat;
 				break;
 			}
 
-			if (( fdn->fdn_Class != ig->ig_Class ) && ( fdn->fdn_Class != FDCLASS_Any ))
+			if (( fdn->fdn_Class != ifcdsc->InterfaceClass ) && ( fdn->fdn_Class != FDCLASS_Any ))
 			{
-//				USBERROR( "IFC : fdn_Class : %ld : %ld :", fdn->fdn_Class, ig->ig_Class );
+//				USBERROR( "IFC : fdn_Class : %ld : %ld :", fdn->fdn_Class, ifcdsc->InterfaceClass );
 				break;
 			}
 
-			if (( fdn->fdn_SubClass != ig->ig_SubClass ) && ( fdn->fdn_SubClass != FDSUBCLASS_Any ))
+			if (( fdn->fdn_SubClass != ifcdsc->InterfaceSubClass ) && ( fdn->fdn_SubClass != FDSUBCLASS_Any ))
 			{
-//				USBERROR( "IFC : fdn_SubClass : %ld : %ld :", fdn->fdn_SubClass, ig->ig_SubClass );
+//				USBERROR( "IFC : fdn_SubClass : %ld : %ld :", fdn->fdn_SubClass, ifcdsc->InterfaceSubClass );
 				break;
 			}
 
-			if (( fdn->fdn_Protocol	!= ig->ig_Protocol ) && ( fdn->fdn_Protocol != FDPROTOCOL_Any ))
+			if (( fdn->fdn_Protocol != ifcdsc->InterfaceProtocol ) && ( fdn->fdn_Protocol != FDPROTOCOL_Any ))
 			{
-//				USBERROR( "IFC : fdn_Protocol : %ld : %ld :", fdn->fdn_Protocol, ig->ig_Protocol );
+//				USBERROR( "IFC : fdn_Protocol : %ld : %ld :", fdn->fdn_Protocol, ifcdsc->InterfaceProtocol );
 				break;
 			}
 
 //			USBDEBUG( "Found Interface [ possible : '%s' ]", (fdn->fdn_Title)?fdn->fdn_Title:"" );
 //			USBERROR( "Found Interface [ possible : '%s' ]", (fdn->fdn_Title)?fdn->fdn_Title:"" );
 
-			stat = _Start_Interface( usbbase, fn, fdn, ig, as );
+			stat = _Start_Interface( usbbase, fn, fdn, ih, as );
 
 			if ( myIS_TASKRETURN_ERR( stat ))
 			{
@@ -349,7 +343,7 @@ S32 stat;
 
 static enum FDSTAT _Check_for_Interfaces( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as )
 {
-//struct USB2_InterfaceHeader *ih;
+struct USB2_InterfaceHeader *ih;
 struct USB2_InterfaceGroup *ig;
 struct USB2_ConfigNode *cn;
 enum FDSTAT stat;
@@ -366,11 +360,17 @@ enum FDSTAT stat;
 
 		while( ig )
 		{
-			if ( _Check_Interface( usbbase, fn, ig, as ))
+			// An association group can contain interfaces with different classes.
+			ih = ig->ig_Group.uh_Head;
+
+			while( INTERFACE_VALIDHEADER(ih) == VSTAT_Okay )
 			{
-				stat = FDSTAT_Found;
-				// We have to check all Interfaces
-				// so no exit on found
+				if ( _Check_Interface( usbbase, fn, ih, as ))
+				{
+					stat = FDSTAT_Found;
+				}
+
+				ih = Node_Next( ih );
 			}
 
 			ig = Node_Next( ig );

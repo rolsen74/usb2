@@ -132,7 +132,8 @@ usb2/
 │   └── usb2wpa2.library
 └── Tools/
     ├── USB2Analyzer
-    └── USB2WirelessManager
+    ├── USB2WirelessManager
+    └── USB2VideoTest
 ```
 
 - **Core stack** — Copy `usb2.device` to `SYS:Kickstart/` and reference the
@@ -150,8 +151,10 @@ usb2/
   - `Audio` provides PCM capture and playback through `usb2audio.device`.
   - `PL2303` exposes supported USB serial adapters through `usb2serial.device`.
   - [PTP](Doc/PTP.md) lets you browse and download camera files through `PTP:` and upload new files on cameras that support it.
-  - `Video` exposes USB webcam capture through `usb2video.device`. Build
-    `VideoTest` separately using the commands in the [Video guide](Doc/Video.md).
+  - `Video` exposes USB webcam capture through `usb2video.device`. Run
+    `Tools/USB2VideoTest` for a live preview or run it with `SAVE` to capture
+    a still image. See the
+    [Video guide](Doc/Video.md).
 - **AHI playback** — Copy `Devs/AHI/usb2.audio` and `Devs/AudioModes/USB2`
   to the corresponding directories under `DEVS:`.
 - **[USB2Analyzer](Doc/USB2Analyzer.md)** — Run it from the extracted

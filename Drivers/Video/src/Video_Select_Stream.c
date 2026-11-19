@@ -74,6 +74,7 @@ Video_Select_Stream ( struct VideoUnit *unit, U32 payloadsize )
 				best = capacity;
 				unit->StreamAlt = alt;
 				unit->EndPoint = desc[2];
+				unit->StreamInterval = desc[6];
 			}
 		}
 

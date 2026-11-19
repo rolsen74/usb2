@@ -61,3 +61,4 @@ usb2.lha
 _Data/
 bin/
 obj/
+Drivers/Video/Test/USB2VideoTest

@@ -14,6 +14,8 @@
 #define VIDEO_MAX_FRAME_SIZE ( 64U * 1024U * 1024U )
 #define VIDEO_READ_SIZE 65536
 #define VIDEO_ISO_PACKETS 16
+#define VIDEO_ISO_MAX_PACKETS 256
+#define VIDEO_USB_READS 3
 #define VIDEO_IO_ABORT 0x80
 #define VIDEO_PAYLOAD_FID 0x01
 #define VIDEO_PAYLOAD_EOF 0x02
@@ -21,6 +23,13 @@
 
 struct VideoUnit;
 struct VideoBase;
+
+struct VideoMode
+{
+	struct VideoFormat Format;
+	U8 FormatIndex;
+	U8 FrameIndex;
+};
 
 static inline U32
 Video_LE32( const U8 *data )
@@ -62,24 +71,31 @@ struct VideoUnit
 	struct USB2_EPResource *Control;
 	struct USB2_EPResource *Stream;
 	struct MsgPort *BeginPort;
+	struct MsgPort *StreamPort;
 	struct IOStdReq *ReadActive;
+	struct USB2_IORequest *ReadReady;
 	struct VideoFormat Format;
 	U32 UnitNr;
 	U32 OpenCount;
 	U32 FrameUsed;
 	U32 PayloadSize;
 	U32 StreamPacketSize;
-	U16 IsoPacketLengths[VIDEO_ISO_PACKETS];
+	U32 IsoPacketCount;
+	U32 ReadPacket;
+	U16 IsoPacketLengths[VIDEO_USB_READS][VIDEO_ISO_MAX_PACKETS];
 	U8 InterfaceNr;
 	U8 EndPoint;
+	U8 BulkEndPoint;
 	U8 StreamAlt;
 	U8 StreamAltActive;
+	U8 StreamInterval;
 	U8 FormatIndex;
 	U8 FrameIndex;
 	U8 FrameID;
 	U8 FrameStarted;
 	U8 FrameDiscard;
 	U8 ReadPending;
+	U8 ReadReset;
 	U8 Detached;
 	U8 Released;
 };
@@ -89,17 +105,20 @@ SEC_CODE S32 Video_CreateDevice( struct VideoContext *ctx );
 SEC_CODE struct VideoUnit *Video_Alloc( struct VideoContext *ctx, struct USB2_DriverMessage *msg );
 SEC_CODE void Video_Free( struct VideoUnit *unit );
 SEC_CODE void Video_Main( struct VideoUnit *unit );
-SEC_CODE S32 Video_Parse( struct VideoUnit *unit );
+SEC_CODE S32 Video_Parse( struct VideoUnit *unit, U32 number, struct VideoMode *mode );
+SEC_CODE S32 Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode );
+SEC_CODE S32 Video_Stream_Close( struct VideoUnit *unit );
+SEC_CODE S8 Video_Set_Mode( struct VideoUnit *unit, U32 number );
 SEC_CODE S32 Video_Select_Stream( struct VideoUnit *unit, U32 payloadsize );
 SEC_CODE S32 Video_Probe( struct VideoUnit *unit );
 SEC_CODE S32 Video_Control( struct VideoUnit *unit, U8 type, U8 code, U16 value, PTR data, U16 length );
 SEC_CODE void Video_Read_Start( struct VideoUnit *unit );
 SEC_CODE void Video_Read_Done( struct VideoUnit *unit );
-SEC_CODE void Video_Read_Payload( struct VideoUnit *unit, U8 *data, U32 length );
+SEC_CODE S32 Video_Read_Payload( struct VideoUnit *unit, U8 *data, U32 length );
 SEC_CODE void Video_Read_Reply( struct VideoUnit *unit, S8 error );
+SEC_CODE void Video_Read_Stop( struct VideoUnit *unit );
 SEC_CODE void Video_Begin( struct VideoUnit *unit );
 SEC_CODE void Video_Abort( struct VideoUnit *unit );
-SEC_CODE void Video_IO_Stop( struct USB2_IORequest *ioreq );
 
 SEC_CODE struct VideoBase *Video_Manager_Init( struct VideoBase *base, PTR seglist, struct ExecIFace *IExec );
 SEC_CODE U32 Video_Manager_Obtain( struct DeviceManagerInterface *Self );

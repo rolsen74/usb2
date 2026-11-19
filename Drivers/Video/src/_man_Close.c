@@ -23,6 +23,13 @@ struct VideoUnit *unit;
 
 	if ( unit )
 	{
+		if ( ! unit->Detached )
+		{
+			unit->ReadReset = TRUE;
+
+			Signal( unit->BeginPort->mp_SigTask, 1UL << unit->BeginPort->mp_SigBit );
+		}
+
 		unit->OpenCount--;
 		base->Library.lib_OpenCnt--;
 		ioreq->io_Unit = NULL;

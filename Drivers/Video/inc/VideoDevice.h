@@ -10,6 +10,12 @@
 
 #define VIDEO_DEVICE_NAME "usb2video.device"
 #define VIDEO_CMD_QUERY 0x8000
+// io_Offset selects a mode. GET_MODE returns a VideoFormat for modes 1 and up.
+// SET_MODE takes no buffer. Mode 0 restores the default camera mode.
+#define VIDEO_CMD_GET_MODE 0x8001
+#define VIDEO_CMD_SET_MODE 0x8002
+// Discard buffered packets and stop USB reads. Takes no buffer.
+#define VIDEO_CMD_STOP 0x8003
 #define VIDEO_FORMAT_MJPEG 1
 #define VIDEO_FORMAT_YUY2 2
 

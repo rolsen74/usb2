@@ -12,7 +12,7 @@
 
 // --
 
-SEC_CODE void
+SEC_CODE S32
 Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 {
 	struct IOStdReq *read;
@@ -27,7 +27,7 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 	// A zero-length USB completion can terminate a bulk payload.
 	if ( ( ! read ) || ( ! length ) )
 	{
-		return;
+		return ( TRUE );
 	}
 
 	if ( ( ! data ) || ( length < 2 ) ||
@@ -37,7 +37,7 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 		unit->FrameDiscard = TRUE;
 		unit->FrameUsed = 0;
 
-		return;
+		return ( TRUE );
 	}
 
 	header = data[0];
@@ -50,7 +50,9 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 		if ( ( ! unit->FrameDiscard ) && ( unit->FrameUsed ) )
 		{
 			Video_Read_Reply( unit, 0 );
-			return;
+
+			// The same packet starts the next frame.
+			return ( FALSE );
 		}
 
 		unit->FrameDiscard = FALSE;
@@ -73,7 +75,7 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 			unit->FrameDiscard = FALSE;
 		}
 
-		return;
+		return ( TRUE );
 	}
 
 	payload = length - header;
@@ -81,7 +83,8 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 	if ( payload > read->io_Length - unit->FrameUsed )
 	{
 		Video_Read_Reply( unit, IOERR_BADLENGTH );
-		return;
+
+		return ( TRUE );
 	}
 
 	CopyMem( data + header, (U8 *) read->io_Data + unit->FrameUsed, payload );
@@ -96,6 +99,8 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 			Video_Read_Reply( unit, 0 );
 		}
 	}
+
+	return ( TRUE );
 }
 
 // --

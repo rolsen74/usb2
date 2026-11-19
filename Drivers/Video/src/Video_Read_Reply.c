@@ -32,6 +32,7 @@ struct IOStdReq *ioreq;
 	unit->ReadActive = NULL;
 	ioreq->io_Error = error;
 	ioreq->io_Actual = unit->FrameUsed;
+
 	unit->FrameUsed = 0;
 	unit->FrameStarted = FALSE;
 

@@ -20,7 +20,7 @@ U32 mask;
 
 	waitmask = unit->Register->Stack_MsgPortBit;
 	waitmask |= 1UL << unit->BeginPort->mp_SigBit;
-	waitmask |= unit->Stream->MsgPortBit;
+	waitmask |= 1UL << unit->StreamPort->mp_SigBit;
 	waitmask |= SIGBREAKF_CTRL_C;
 
 	while( ! unit->Detached )
@@ -51,7 +51,7 @@ U32 mask;
 			Video_Begin( unit );
 		}
 
-		if ( mask & unit->Stream->MsgPortBit )
+		if ( ( unit->Stream ) && ( mask & ( 1UL << unit->StreamPort->mp_SigBit ) ) )
 		{
 			Video_Read_Done( unit );
 		}

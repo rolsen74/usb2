@@ -59,6 +59,10 @@ build_video: | build_dir_tree
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
 	cp bin/Video.Driver Video.Class $(BINDIR)/usb2/Libs/USB2
+	cd $(ROOTDIR)/Drivers/Video/Test && \
+	$(MAKE) -f makefile clean && \
+	$(MAKE) -f makefile && \
+	cp USB2VideoTest $(BINDIR)/usb2/Tools
 	@echo "Video done"
 
 ###########################################################################
