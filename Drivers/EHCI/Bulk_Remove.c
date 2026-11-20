@@ -51,6 +51,9 @@
 
 SEC_CODE void EHCI_Bulk_Remove( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
+#ifdef SIS163U_RX_TRACE
+struct USB2_Device_Desc *desc;
+#endif
 struct USB2_EndPointNode *epn;
 struct EHCI_QH *last;
 struct EHCI_QH *qh;
@@ -116,6 +119,34 @@ U32 status;
 	epn	= ioreq->req_EndPoint;
 	epn->ep_DataToggle	= EHCI_TD_GET_TOGGLE( status );
 	epn->ep_PingState	= EHCI_TD_GET_STATUS( status ) & EHCI_TD_PINGSTATE;
+
+	#ifdef SIS163U_RX_TRACE
+
+	// Read the final DMA state after the controller has retired the queue head.
+	desc = ioreq->req_Function->fkt_DeviceDescriptor;
+
+	if ( ( ioreq->req_Public.io_Command == CMD_READ ) &&
+		( desc ) && ( LE_SWAP16( desc->VendorID ) == 0x0d8e ) &&
+		( LE_SWAP16( desc->DeviceID ) == 0x0163 ) && ( qh->pqh_first_td ) )
+	{
+		struct EHCI_TD *td;
+
+		U32 token;
+		U32 current;
+
+		td = qh->pqh_first_td;
+		token = LE_SWAP32( td->td_status );
+		current = LE_SWAP32( qh->qh_td_cur );
+
+		hn->hn_USBBase->usb_IExec->DebugPrintF(
+			"SiS163U EHCI RX retired: addr %lu ep $%02lx speed %lu, request %lu, error %ld, QH $%08lx remaining %lu, "
+			"qTD $%08lx remaining %lu, current $%08lx first $%08lx next $%08lx\n",
+			ioreq->req_Function->fkt_Address, epn->ep_Number | EPADR_Dir_In, ioreq->req_Function->fkt_Speed,
+			ioreq->req_Public.io_Length, (S32) ioreq->req_Public.io_Error, status, EHCI_TD_GET_BYTES( status ), token,
+			EHCI_TD_GET_BYTES( token ), current, td->ptd_self_phy, LE_SWAP32( qh->qh_td_next ) );
+	}
+
+	#endif
 
 	// --
 	// its no longer active, but still controlled by HCD

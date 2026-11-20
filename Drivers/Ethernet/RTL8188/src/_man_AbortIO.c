@@ -11,6 +11,7 @@
 #include "All.h"
 #include "Manager.h"
 #include "Radio.h"
+#include "WiFiCommand.h"
 
 // --
 
@@ -19,7 +20,7 @@ _manager_AbortIO( struct DeviceManagerInterface *Self UNUSED, struct IORequest *
 {
 	struct EthernetUnit *unit;
 
-	if ( ( ioreq->io_Command != S2_ONEVENT ) && ( ioreq->io_Command != S2_SAMPLE_THROUGHPUT ) &&
+	if ( ( ioreq->io_Command != USB2WIRELESS_CMD_PROMPT ) && ( ioreq->io_Command != S2_ONEVENT ) && ( ioreq->io_Command != S2_SAMPLE_THROUGHPUT ) &&
 		( ioreq->io_Command != S2_SETKEY ) && ( ioreq->io_Command != S2_READMGMT ) && ( ioreq->io_Command != S2_SETOPTIONS ) &&
 		( ioreq->io_Command != S2_WRITEMGMT ) && ( ioreq->io_Command != CMD_READ ) &&
 		( ioreq->io_Command != S2_READORPHAN ) && ( ioreq->io_Command != CMD_WRITE ) &&

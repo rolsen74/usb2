@@ -12,7 +12,7 @@
 
 // --
 
-static void
+void
 Clear_Secret( void *memory, U32 length )
 {
 	volatile U8 *data;
@@ -28,7 +28,7 @@ Clear_Secret( void *memory, U32 length )
 // --
 
 static enum WirelessResult
-Read_Password( char *password, U32 *length )
+Read_Password( char *password, U32 *length, const char *prompt, S32 sae )
 {
 	enum WirelessResult result;
 
@@ -43,12 +43,12 @@ Read_Password( char *password, U32 *length )
 
 	if ( ( ! IsInteractive( input ) ) || ( ! SetMode( input, 1 ) ) )
 	{
-		fprintf( stderr, "WPA2 requires an interactive Shell for password entry.\n" );
+		fprintf( stderr, "Passphrase entry requires an interactive Shell.\n" );
 
 		return ( WIRELESS_IO_ERROR );
 	}
 
-	fputs( "WPA2 passphrase: ", stdout );
+	fputs( prompt, stdout );
 
 	fflush( stdout );
 
@@ -95,9 +95,9 @@ Read_Password( char *password, U32 *length )
 
 	puts( "" );
 
-	if ( ( result == WIRELESS_MATCH ) && ( ( used < 8 ) || ( excess ) ) )
+	if ( ( result == WIRELESS_MATCH ) && ( ( used < ( sae ? 1U : 8U ) ) || ( excess ) ) )
 	{
-		fprintf( stderr, "Enter a WPA2 passphrase of 8 to 63 printable characters.\n" );
+		fprintf( stderr, "Enter a passphrase of %u to 63 printable characters.\n", sae ? 1U : 8U );
 
 		return ( WIRELESS_IO_ERROR );
 	}
@@ -109,21 +109,14 @@ Read_Password( char *password, U32 *length )
 
 // --
 
-enum WirelessResult
-WPA2_Open( struct Wireless *wireless )
+static S32
+WPA2_OpenInterface( struct Wireless *wireless )
 {
-	struct USB2WPA2Network network;
-	enum WirelessResult result;
-
-	char password[63];
-	U32 length;
-	S32 error;
-
 	if ( ! wireless->AP.RSNLength )
 	{
 		fprintf( stderr, "This access point does not advertise WPA2.\n" );
 
-		return ( WIRELESS_IO_ERROR );
+		return ( FALSE );
 	}
 
 	wireless->WPA2Base = OpenLibrary( USB2WPA2_NAME, USB2WPA2_VERSION );
@@ -132,7 +125,7 @@ WPA2_Open( struct Wireless *wireless )
 	{
 		fprintf( stderr, "Could not open LIBS:%s.\n", USB2WPA2_NAME );
 
-		return ( WIRELESS_IO_ERROR );
+		return ( FALSE );
 	}
 
 	wireless->IWPA2 = (struct USB2WPA2IFace *) GetInterface( wireless->WPA2Base, "main", 1, NULL );
@@ -141,32 +134,200 @@ WPA2_Open( struct Wireless *wireless )
 	{
 		fprintf( stderr, "Could not open the WPA2 library interface.\n" );
 
+		return ( FALSE );
+	}
+
+	return ( TRUE );
+}
+
+// --
+
+static S32
+Match_FirstKey( struct Wireless *wireless, const U8 *frame, U32 length )
+{
+	U32 bodyLength;
+	U16 info;
+
+	(void) wireless;
+
+	// EAPOL-Key for RSN, with pairwise and ACK set and without a MIC.
+	if ( ( length < 99 ) || ( frame[1] != 3 ) || ( frame[4] != 2 ) )
+	{
+		return ( FALSE );
+	}
+
+	bodyLength = ( (U32) frame[2] << 8 ) | frame[3];
+	info = ( (U16) frame[5] << 8 ) | frame[6];
+
+	return ( ( bodyLength == length - 4 ) && ( ( info & 0x03c8 ) == 0x0088 ) );
+}
+
+// --
+
+enum WirelessResult
+WPA2_Test_Association( struct Wireless *wireless )
+{
+	enum WirelessResult result;
+
+	const U8 *associationIE;
+
+	if ( ! WPA2_OpenInterface( wireless ) )
+	{
 		return ( WIRELESS_IO_ERROR );
 	}
 
-	result = Read_Password( password, & length );
+	result = Wireless_Authenticate( wireless );
 
 	if ( result != WIRELESS_MATCH )
 	{
-		Clear_Secret( password, sizeof( password ) );
+		return ( result );
+	}
+
+	associationIE = wireless->IWPA2->AssociationIE();
+
+	result = Wireless_Associate( wireless, associationIE, USB2WPA2_ASSOC_IE_SIZE );
+
+	if ( result != WIRELESS_MATCH )
+	{
+		return ( result );
+	}
+
+	printf( "802.11 association accepted on channel %u (AID %u).\n",
+		(unsigned) wireless->AP.Channel, (unsigned) wireless->AssocID );
+
+	result = Wireless_Wait_Frame( wireless, 2500000, NULL, 0, Match_FirstKey, TRUE );
+
+	if ( result == WIRELESS_MATCH )
+	{
+		puts( "Received WPA2 handshake message 1." );
+	}
+	else if ( result == WIRELESS_TIMEOUT )
+	{
+		fprintf( stderr, "WPA2 handshake message 1 timed out.\n" );
+	}
+
+	return ( result );
+}
+
+// --
+
+enum WirelessResult
+WPA_Read_Passphrase( struct Wireless *wireless, char *input, char **password, U32 *length )
+{
+	if ( wireless->Auto )
+	{
+		return ( WiFi_Passphrase( wireless, input, password, length ) );
+	}
+
+	*password = wireless->Password;
+
+	if ( *password )
+	{
+		*length = strlen( *password );
+		wireless->Password = NULL;
+
+		return ( WIRELESS_MATCH );
+	}
+
+	*password = input;
+
+	return ( Read_Password( input, length, wireless->UseSAE ? "WPA3 passphrase: " :
+		( wireless->UseWPA ? "WPA passphrase: " : "WPA2 passphrase: " ), wireless->UseSAE ) );
+}
+
+// --
+
+static S32
+WPA_OpenInterface( struct Wireless *wireless )
+{
+	wireless->WPA2Base = OpenLibrary( USB2WPA_NAME, USB2WPA_VERSION );
+
+	if ( ! wireless->WPA2Base )
+	{
+		fprintf( stderr, "Could not open LIBS:%s.\n", USB2WPA_NAME );
+
+		return ( FALSE );
+	}
+
+	wireless->IWPA = (struct USB2WPAIFace *) GetInterface( wireless->WPA2Base, "main", 1, NULL );
+
+	if ( ! wireless->IWPA )
+	{
+		fprintf( stderr, "Could not open the WPA library interface.\n" );
+
+		return ( FALSE );
+	}
+
+	return ( TRUE );
+}
+
+// --
+
+enum WirelessResult
+PSK_Open( struct Wireless *wireless )
+{
+	struct USB2WPA2Network network;
+	struct USB2WPANetwork legacy;
+	enum WirelessResult result;
+
+	char input[63];
+	char *password;
+	U32 length;
+	S32 error;
+
+	if ( ! ( wireless->UseWPA ? WPA_OpenInterface( wireless ) : WPA2_OpenInterface( wireless ) ) )
+	{
+		return ( WIRELESS_IO_ERROR );
+	}
+
+	result = WPA_Read_Passphrase( wireless, input, & password, & length );
+
+	if ( result != WIRELESS_MATCH )
+	{
+		Clear_Secret( input, sizeof( input ) );
 
 		return ( result );
 	}
 
-	network.SSID = (const U8 *) wireless->SSID;
-	network.SSIDLength = wireless->SSIDLength;
-	network.RSN = wireless->AP.RSN;
-	network.RSNLength = wireless->AP.RSNLength;
+	if ( wireless->UseWPA )
+	{
+		legacy.SSID = (const U8 *) wireless->SSID;
+		legacy.SSIDLength = wireless->SSIDLength;
+		legacy.WPAIE = wireless->AP.WPAIE;
+		legacy.WPAIELength = wireless->AP.WPAIELength;
 
-	memcpy( network.BSSID, wireless->AP.BSSID, sizeof( network.BSSID ) );
+		memcpy( legacy.BSSID, wireless->AP.BSSID, sizeof( legacy.BSSID ) );
 
-	memcpy( network.Station, wireless->Station, sizeof( network.Station ) );
+		memcpy( legacy.Station, wireless->Station, sizeof( legacy.Station ) );
 
-	wireless->WPA2 = wireless->IWPA2->Create( & network, password, length, & error );
+		wireless->WPA = wireless->IWPA->Create( & legacy, password, length, & error );
 
-	Clear_Secret( password, sizeof( password ) );
+	}
+	else
+	{
+		network.SSID = (const U8 *) wireless->SSID;
+		network.SSIDLength = wireless->SSIDLength;
+		network.RSN = wireless->AP.RSN;
+		network.RSNLength = wireless->AP.RSNLength;
 
-	if ( ! wireless->WPA2 )
+		memcpy( network.BSSID, wireless->AP.BSSID, sizeof( network.BSSID ) );
+
+		memcpy( network.Station, wireless->Station, sizeof( network.Station ) );
+
+		wireless->WPA2 = wireless->IWPA2->Create( & network, password, length, & error );
+
+	}
+
+	Clear_Secret( password, password == input ? sizeof( input ) : length );
+
+	if ( wireless->UseWPA && ! wireless->WPA )
+	{
+		fprintf( stderr, "Could not create a WPA/TKIP session (%ld).\n", (long) error );
+
+		return ( WIRELESS_IO_ERROR );
+	}
+
+	if ( ( ! wireless->UseWPA ) && ( ! wireless->WPA2 ) )
 	{
 		if ( error == USB2WPA2_ERR_NETWORK )
 		{
@@ -184,14 +345,21 @@ WPA2_Open( struct Wireless *wireless )
 		return ( WIRELESS_IO_ERROR );
 	}
 
-	return ( Wireless_Set_Copy_Hook( wireless ) ? WIRELESS_MATCH : WIRELESS_IO_ERROR );
+	return ( WIRELESS_MATCH );
 }
 
 // --
 
 void
-WPA2_Close( struct Wireless *wireless )
+PSK_Close( struct Wireless *wireless )
 {
+	if ( wireless->Password )
+	{
+		Clear_Secret( wireless->Password, strlen( wireless->Password ) );
+
+		wireless->Password = NULL;
+	}
+
 	if ( wireless->WPA2 )
 	{
 		wireless->IWPA2->Destroy( wireless->WPA2 );
@@ -200,6 +368,16 @@ WPA2_Close( struct Wireless *wireless )
 	if ( wireless->IWPA2 )
 	{
 		DropInterface( (struct Interface *) wireless->IWPA2 );
+	}
+
+	if ( wireless->WPA )
+	{
+		wireless->IWPA->Destroy( wireless->WPA );
+	}
+
+	if ( wireless->IWPA )
+	{
+		DropInterface( (struct Interface *) wireless->IWPA );
 	}
 
 	if ( wireless->WPA2Base )
@@ -213,7 +391,14 @@ WPA2_Close( struct Wireless *wireless )
 static S32
 Process_EAPOL( struct Wireless *wireless, const U8 *frame, U32 length )
 {
-	wireless->WPA2Result = wireless->IWPA2->Process( wireless->WPA2, frame, length, & wireless->WPA2Reply );
+	if ( wireless->UseWPA )
+	{
+		wireless->WPA2Result = wireless->IWPA->Process( wireless->WPA, frame, length, & wireless->PSKReply.WPA );
+	}
+	else
+	{
+		wireless->WPA2Result = wireless->IWPA2->Process( wireless->WPA2, frame, length, & wireless->PSKReply.WPA2 );
+	}
 
 	return ( wireless->WPA2Result != 0 );
 }
@@ -223,12 +408,23 @@ Process_EAPOL( struct Wireless *wireless, const U8 *frame, U32 length )
 static enum WirelessResult
 Exchange_EAPOL( struct Wireless *wireless, U32 micros, S32 *authorized )
 {
-	struct USB2WPA2Reply *reply;
+	struct USB2WPA2Reply *wpa2;
+	struct USB2WPAReply *wpa;
 	enum WirelessResult result;
 
+	const U8 *frame;
+	const U8 *groupKey;
+	const U8 *pairwiseKey;
+	const U8 *rsc;
 	U32 flags;
+	U32 groupIndex;
+	U32 cipher;
+	U32 keyLength;
+	U32 frameLength;
 
-	reply = & wireless->WPA2Reply;
+	wpa2 = & wireless->PSKReply.WPA2;
+	wpa = & wireless->PSKReply.WPA;
+
 	result = Wireless_Wait_Frame( wireless, micros, NULL, 0, Process_EAPOL, TRUE );
 
 	if ( result != WIRELESS_MATCH )
@@ -236,35 +432,59 @@ Exchange_EAPOL( struct Wireless *wireless, U32 micros, S32 *authorized )
 		goto done;
 	}
 
-	flags = reply->Flags;
 	result = WIRELESS_IO_ERROR;
+
+	if ( wireless->UseWPA )
+	{
+		flags = wpa->Flags;
+		frame = wpa->Frame;
+		frameLength = wpa->Length;
+		groupIndex = wpa->GroupIndex ? wpa->GroupIndex : USB2WIRELESS_TKIP_GROUP_ZERO;
+		groupKey = wpa->GroupKey;
+		pairwiseKey = wpa->PairwiseKey;
+		rsc = wpa->GroupRSC;
+		cipher = S2ENC_TKIP;
+		keyLength = sizeof( wpa->GroupKey );
+	}
+	else
+	{
+		flags = wpa2->Flags;
+		frame = wpa2->Frame;
+		frameLength = wpa2->Length;
+		groupIndex = wpa2->GroupIndex;
+		groupKey = wpa2->GroupKey;
+		pairwiseKey = wpa2->PairwiseKey;
+		rsc = wpa2->GroupRSC;
+		cipher = S2ENC_CCMP;
+		keyLength = sizeof( wpa2->GroupKey );
+	}
 
 	if ( wireless->WPA2Result < 0 )
 	{
-		fprintf( stderr, "WPA2 cryptography failed.\n" );
+		fprintf( stderr, "%s cryptography failed.\n", wireless->UseWPA ? "WPA" : "WPA2" );
 
 		goto done;
 	}
 
 	if ( ( flags & USB2WPA2_INSTALL_GROUP ) &&
-		( ! Wireless_Set_Key( wireless, reply->GroupIndex, reply->GroupKey, reply->GroupRSC ) ) )
+		( ! Wireless_Set_Key( wireless, groupIndex, groupKey, rsc, cipher, keyLength ) ) )
 	{
 		goto done;
 	}
 
-	if ( ( flags & USB2WPA2_INSTALL_PAIRWISE ) && ( ! Wireless_Set_Key( wireless, 0, reply->PairwiseKey, NULL ) ) )
+	if ( ( flags & USB2WPA2_INSTALL_PAIRWISE ) && ( ! Wireless_Set_Key( wireless, 0, pairwiseKey, NULL, cipher, keyLength ) ) )
 	{
 		goto done;
 	}
 
-	if ( ! Wireless_Send_EAPOL( wireless, reply ) )
+	if ( ! Wireless_Send_EAPOL( wireless, frame, frameLength, flags ) )
 	{
 		goto done;
 	}
 
 	if ( flags & USB2WPA2_AUTHORIZE )
 	{
-		if ( ! Wireless_Set_Options( wireless, 0, wireless->AP.BSSID, wireless->AssocID, S2ENC_CCMP, TRUE ) )
+		if ( ! Wireless_Set_Options( wireless, 0, wireless->AP.BSSID, wireless->AssocID, cipher, TRUE ) )
 		{
 			goto done;
 		}
@@ -276,7 +496,7 @@ Exchange_EAPOL( struct Wireless *wireless, U32 micros, S32 *authorized )
 
 done:
 
-	Clear_Secret( reply, sizeof( *reply ) );
+	Clear_Secret( & wireless->PSKReply, sizeof( wireless->PSKReply ) );
 
 	return ( result );
 }
@@ -284,7 +504,7 @@ done:
 // --
 
 enum WirelessResult
-WPA2_Handshake( struct Wireless *wireless )
+PSK_Handshake( struct Wireless *wireless )
 {
 	enum WirelessResult result;
 
@@ -305,7 +525,8 @@ WPA2_Handshake( struct Wireless *wireless )
 
 	if ( ( ! authorized ) && ( ( result == WIRELESS_TIMEOUT ) || ( result == WIRELESS_MATCH ) ) )
 	{
-		fprintf( stderr, "WPA2 key exchange timed out. Check the passphrase and access point settings.\n" );
+		fprintf( stderr, "%s key exchange timed out. Check the passphrase and access point settings.\n",
+			wireless->UseWPA ? "WPA" : "WPA2" );
 
 		result = WIRELESS_TIMEOUT;
 	}
@@ -316,7 +537,7 @@ WPA2_Handshake( struct Wireless *wireless )
 // --
 
 S32
-WPA2_Wait_Link( struct Wireless *wireless )
+PSK_Wait_Link( struct Wireless *wireless )
 {
 	enum WirelessResult result;
 
@@ -329,6 +550,11 @@ WPA2_Wait_Link( struct Wireless *wireless )
 		result = Exchange_EAPOL( wireless, 0, & authorized );
 	}
 	while( result == WIRELESS_MATCH );
+
+	if ( result == WIRELESS_DISCONNECTED )
+	{
+		fprintf( stderr, "Wi-Fi link disconnected.\n" );
+	}
 
 	return ( result == WIRELESS_STOPPED );
 }

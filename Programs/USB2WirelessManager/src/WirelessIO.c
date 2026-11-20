@@ -15,7 +15,10 @@
 S32
 Wireless_Open( struct Wireless *wireless )
 {
+	char devicePath[64];
 	S32 error;
+
+	snprintf( devicePath, sizeof( devicePath ), "DEVS:Networks/%s", wireless->DeviceName );
 
 	wireless->CommandPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
@@ -58,11 +61,11 @@ Wireless_Open( struct Wireless *wireless )
 	wireless->TimerOpen = TRUE;
 	wireless->Command->ios2_BufferManagement = NULL;
 
-	error = OpenDevice( WIRELESS_DEVICE_PATH, wireless->UnitNumber, & wireless->Command->ios2_Req, 0 );
+	error = OpenDevice( devicePath, wireless->UnitNumber, & wireless->Command->ios2_Req, 0 );
 
 	if ( error )
 	{
-		fprintf( stderr, "Could not open %s unit %lu (%ld).\n", WIRELESS_DEVICE_PATH,
+		fprintf( stderr, "Could not open %s unit %lu (%ld).\n", devicePath,
 			(unsigned long) wireless->UnitNumber, (long) error );
 
 		return ( FALSE );
@@ -147,7 +150,7 @@ Wireless_Command( struct Wireless *wireless, U16 command )
 	io->ios2_Req.io_Command = command;
 	if ( command != CMD_WRITE )
 	{
-		io->ios2_Req.io_Flags = 0;
+		io->ios2_Req.io_Flags = command == S2_CONFIGINTERFACE ? USB2WIRELESS_IOF_MANAGER_CONFIG : 0;
 	}
 	if ( command != S2_SETKEY )
 	{
@@ -179,7 +182,7 @@ S32
 Wireless_Set_Options( struct Wireless *wireless, U32 channel, const U8 *bssid, U16 aid,
 	U32 encryption, S32 operational )
 {
-	struct TagItem tags[7];
+	struct TagItem tags[8];
 
 	S32 result;
 
@@ -195,8 +198,10 @@ Wireless_Set_Options( struct Wireless *wireless, U32 channel, const U8 *bssid, U
 	tags[4].ti_Data = encryption;
 	tags[5].ti_Tag = S2INFO_OperState;
 	tags[5].ti_Data = operational;
-	tags[6].ti_Tag = TAG_END;
-	tags[6].ti_Data = 0;
+	tags[6].ti_Tag = ( wireless->UseSAE && encryption == S2ENC_CCMP ) ? USB2WIRELESSINFO_SAE : TAG_IGNORE;
+	tags[6].ti_Data = TRUE;
+	tags[7].ti_Tag = TAG_END;
+	tags[7].ti_Data = 0;
 	wireless->Command->ios2_Data = tags;
 
 	result = Wireless_Command( wireless, S2_SETOPTIONS );
@@ -210,7 +215,7 @@ Wireless_Set_Options( struct Wireless *wireless, U32 channel, const U8 *bssid, U
 // --
 
 S32
-Wireless_Set_Key( struct Wireless *wireless, U32 index, const U8 *key, const U8 *rsc )
+Wireless_Set_Key( struct Wireless *wireless, U32 index, const U8 *key, const U8 *rsc, U32 cipher, U32 length )
 {
 	struct IOSana2Req *io;
 
@@ -218,9 +223,9 @@ Wireless_Set_Key( struct Wireless *wireless, U32 index, const U8 *key, const U8 
 
 	io = wireless->Command;
 	io->ios2_WireError = index;
-	io->ios2_PacketType = S2ENC_CCMP;
+	io->ios2_PacketType = cipher;
 	io->ios2_Data = (void *) key;
-	io->ios2_DataLength = 16;
+	io->ios2_DataLength = length;
 	io->ios2_StatData = (void *) rsc;
 
 	result = Wireless_Command( wireless, S2_SETKEY );

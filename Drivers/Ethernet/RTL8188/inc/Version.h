@@ -16,11 +16,11 @@
 #define DEVNAME		"usb2rtl8188.device"
 
 #define VERSION		1
-#define REVISION	1
-#define DATE		"27.8.2025"
-#define VERS		DEVNAME " 1.1"
-#define VSTRING		DEVNAME " 1.1 (" DATE ")\r\n"
-#define VERSTAG		"\0$VER: " DEVNAME " 1.1 (" DATE ")"
+#define REVISION	7
+#define DATE		"20.11.2026"
+#define VERS		DEVNAME " 1.7"
+#define VSTRING		VERS " (" DATE ")\r\n"
+#define VERSTAG		"\0$VER: " VERS " (" DATE ")"
 
 // --
 

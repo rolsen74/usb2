@@ -12,26 +12,11 @@
 
 // --
 
-void
-Clear_Secret( void *memory, U32 length )
-{
-	volatile U8 *data;
-
-	data = memory;
-
-	while( length-- )
-	{
-		*data++ = 0;
-	}
-}
-
-// --
-
 struct USB2WPA2Session *
-WPA2_Create( struct USB2WPA2IFace *self, const struct USB2WPA2Network *network,
+WPA2_Create( struct USB2WPA2IFace *self __attribute__((unused)), const struct USB2WPA2Network *network,
 	const char *password, U32 length, S32 *error )
 {
-	struct USB2WPA2Session *session;
+	struct WirelessKeySession *session;
 
 	U32 index;
 
@@ -75,7 +60,7 @@ WPA2_Create( struct USB2WPA2IFace *self, const struct USB2WPA2Network *network,
 	if ( ( ! Crypto_Open( & session->Crypto ) ) ||
 		( ! Crypto_PMK( & session->Crypto, password, length, network->SSID, network->SSIDLength, session->PMK ) ) )
 	{
-		WPA2_Destroy( self, session );
+		Destroy_KeySession( session );
 
 		return ( NULL );
 	}
@@ -89,7 +74,7 @@ WPA2_Create( struct USB2WPA2IFace *self, const struct USB2WPA2Network *network,
 	session->RSNLength = network->RSNLength;
 	*error = 0;
 
-	return ( session );
+	return ( (struct USB2WPA2Session *) session );
 }
 
 // --
@@ -97,9 +82,7 @@ WPA2_Create( struct USB2WPA2IFace *self, const struct USB2WPA2Network *network,
 void
 WPA2_Destroy( struct USB2WPA2IFace *self __attribute__((unused)), struct USB2WPA2Session *session )
 {
-	Crypto_Close( & session->Crypto );
-
-	Clear_Secret( session, sizeof( *session ) );
-
-	FreeVec( session );
+	Destroy_KeySession( (struct WirelessKeySession *) session );
 }
+
+// --

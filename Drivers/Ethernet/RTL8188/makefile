@@ -25,6 +25,7 @@ CFLAGS		+= -I.
 CFLAGS		+= -I../../../inc_Public
 CFLAGS		+= -Iinc
 CFLAGS		+= -Isrc
+CFLAGS		+= -I../Common
 CFLAGS		+= -W
 CFLAGS		+= -Wall
 CFLAGS		+= -D__USE_INLINE__
@@ -108,6 +109,10 @@ SRCS		:= $(sort $(SRCS))
 OBJS		:= $(patsubst %.c,$(OBJDIR)/%.o,$(SRCS))
 DEPS		:= $(patsubst %.c,$(OBJDIR)/%.d,$(SRCS))
 
+COMMON_SRCS	:= $(wildcard ../Common/Wireless_*.c)
+OBJS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(COMMON_SRCS))
+DEPS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.d,$(COMMON_SRCS))
+
 all: $(BINDIR)/$(TARGET)
 
 ###########################################################################
@@ -125,7 +130,7 @@ $(BINDIR):
 
 ###########################################################################
 
-CLEANFILES	:= $(wildcard $(OBJDIR)/src/*.o $(OBJDIR)/src/*.d $(BINDIR)/$(TARGET) $(MAPFILE) usb2.map)
+CLEANFILES	:= $(wildcard $(OBJDIR)/src/*.o $(OBJDIR)/src/*.d $(OBJDIR)/common/*.o $(OBJDIR)/common/*.d $(BINDIR)/$(TARGET) $(MAPFILE) usb2.map)
 
 clean:
 	$(if $(CLEANFILES),$(RM) $(CLEANFILES))
@@ -154,3 +159,6 @@ $(OBJDIR)/%.o: %.c makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 ###########################################################################
+$(OBJDIR)/common/%.o: ../Common/%.c makefile
+	@$(MKDIR) $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@

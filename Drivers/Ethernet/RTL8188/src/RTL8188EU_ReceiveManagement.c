@@ -19,15 +19,18 @@ RTL8188EU_ReceiveManagement( struct EthernetUnit *unit, U8 *frame, U32 length )
 {
 	struct IOSana2Req *request;
 
-	if ( ( ( frame[0] == 0xa0 ) || ( frame[0] == 0xc0 ) ) && ( length >= 26 ) &&
-		( ! memcmp( frame + 4, unit->unit_StationAddress, 6 ) ) &&
-		( ! memcmp( frame + 10, unit->unit_BSSID, 6 ) ) &&
-		( ! memcmp( frame + 16, unit->unit_BSSID, 6 ) ) )
-	{
-		USBINFO( "RTL8188EU: AP %s, reason %lu", frame[0] == 0xa0 ? "disassociated" : "deauthenticated",
-			(U32) frame[24] | ( (U32) frame[25] << 8 ) );
+	S32 sae;
 
-		RTL8188EU_DropLink( unit );
+	sae = unit->unit_SAE;
+
+	if ( ( frame[0] == 0xa0 ) || ( frame[0] == 0xc0 ) || ( frame[0] == 0xd0 ) )
+	{
+		RTL8188EU_ReceiveRobustMgmt( unit, frame, length );
+
+		if ( sae )
+		{
+			return;
+		}
 	}
 
 	request = (PTR) GetHead( & unit->unit_Pending );

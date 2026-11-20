@@ -25,7 +25,9 @@ Cmd_Write( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	opener = ioreq->ios2_BufferManagement;
 	raw = ioreq->ios2_Req.io_Flags & SANA2IOF_RAW;
 
-	if ( ! unit->unit_Online )
+	if ( ( ! unit->unit_Online ) &&
+		( ! ( RTL8188EU_DeferredLink( unit ) && unit->unit_AssocID && ioreq->ios2_PacketType == RTL8188EU_EAPOL &&
+			! ( ioreq->ios2_Req.io_Flags & SANA2IOF_RAW ) && ioreq->ios2_Req.io_Command == CMD_WRITE ) ) )
 	{
 		ioreq->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
 		ioreq->ios2_WireError = S2WERR_UNIT_OFFLINE;

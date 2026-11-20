@@ -24,6 +24,13 @@ RTL8188EU_ClearKeys( struct EthernetUnit *unit )
 	{
 		data[i] = 0;
 	}
+
+	data = (volatile U8 *) unit->unit_IGTK;
+
+	for( i = 0; i < sizeof( unit->unit_IGTK ); i++ )
+	{
+		data[i] = 0;
+	}
 }
 
 // --

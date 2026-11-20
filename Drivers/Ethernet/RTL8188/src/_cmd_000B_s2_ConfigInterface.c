@@ -11,6 +11,7 @@
 #include "All.h"
 #include "Firmware.h"
 #include "Commands.h"
+#include "WiFiCommand.h"
 #include "Radio.h"
 
 // --
@@ -37,7 +38,7 @@ Cmd_ConfigInterface( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	{
 		unit->unit_Configured = TRUE;
 
-		if ( ( unit->unit_AssocID ) && ( unit->unit_TxReady ) )
+		if ( ( unit->unit_AssocID ) && ( unit->unit_TxReady ) && ( ! RTL8188EU_DeferredLink( unit ) || unit->unit_Operational ) )
 		{
 			unit->unit_Online = TRUE;
 
@@ -45,6 +46,15 @@ Cmd_ConfigInterface( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 
 			SignalSana2Event( unit, S2EVENT_ONLINE );
 		}
+	}
+
+	if ( ( ! unit->unit_AssocID ) &&
+		( ! ( ioreq->ios2_Req.io_Flags & USB2WIRELESS_IOF_MANAGER_CONFIG ) ) &&
+		( ( ! ioreq->ios2_Req.io_Error ) || ( ioreq->ios2_WireError == S2WERR_IS_CONFIGURED ) ) )
+	{
+		unit->unit_WiFiStartPending = TRUE;
+
+		Signal( unit->unit_TaskAdr, SIGBREAKF_CTRL_E );
 	}
 
 	USBINFO( "RTL8188EU: S2_CONFIGINTERFACE error %ld, wire error %lu, firmware %lu, radio %lu, TX %lu, AID %lu, online %lu",

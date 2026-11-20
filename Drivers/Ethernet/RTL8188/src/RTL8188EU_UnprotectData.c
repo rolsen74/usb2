@@ -10,6 +10,7 @@
 
 #include "All.h"
 #include "Radio.h"
+#include <devices/usb2rtl8188.h>
 
 // --
 
@@ -21,6 +22,8 @@ RTL8188EU_UnprotectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 
 	U8 *iv;
 	U8 *payload;
 	U32 index;
+	U32 minimum;
+	S32 management;
 	U32 trailer;
 	S32 status;
 	U32 size;
@@ -28,14 +31,22 @@ RTL8188EU_UnprotectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 
 	U32 i;
 	U64 number;
 
+	management = ( frame[0] & 0x0c ) == 0;
+	minimum = management ? 2 : 8;
+
 	if ( ( unit->unit_Encryption == S2ENC_NONE ) ||
-		( *length < *header + RTL8188EU_EXT_IV_SIZE + RTL8188EU_CCMP_MIC + 8 ) )
+		( *length < *header + RTL8188EU_EXT_IV_SIZE + RTL8188EU_CCMP_MIC + minimum ) )
 	{
 		return( FALSE );
 	}
 
 	iv = frame + *header;
 	index = iv[3] >> 6;
+
+	if ( ( frame[4] & 1 ) && ( ! index ) && ( unit->unit_Encryption == S2ENC_TKIP ) )
+	{
+		index = USB2RTL8188_TKIP_GROUP_ZERO;
+	}
 
 	if ( ( ( iv[3] & 0x3f ) != 0x20 ) ||
 		( ( index != 0 ) != ( ( frame[4] & 1 ) != 0 ) ) )
@@ -45,12 +56,21 @@ RTL8188EU_UnprotectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 
 
 	key = & unit->unit_Keys[index];
 
-	if ( ! key->active )
+	if ( ( ! key->active ) || ( management && key->type != S2ENC_CCMP ) )
 	{
 		return( FALSE );
 	}
 
-	tid = ( frame[0] & 0x80 ) ? frame[24] & 15 : RTL8188EU_NONQOS;
+	tid = RTL8188EU_NONQOS;
+
+	if ( management )
+	{
+		tid = WIRELESS_MGMT;
+	}
+	else if ( frame[0] & 0x80 )
+	{
+		tid = frame[24] & 15;
+	}
 	trailer = RTL8188EU_CCMP_MIC;
 
 	if ( key->type == S2ENC_TKIP )
@@ -96,7 +116,7 @@ RTL8188EU_UnprotectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 
 
 	if ( key->type == S2ENC_TKIP )
 	{
-		status = RTL8188EU_TKIP( key, frame, tid, number, payload, size, FALSE );
+		status = Wireless_TKIP( key->tkip_key, frame, tid, number, payload, size, FALSE );
 
 		if ( status < 0 )
 		{
@@ -105,7 +125,7 @@ RTL8188EU_UnprotectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 
 	}
 	else
 	{
-		status = RTL8188EU_CCMP( key, frame, tid, number, payload, size, payload + size, FALSE );
+		status = Wireless_CCMP( key->round_keys, frame, tid, number, payload, size, payload + size, FALSE );
 	}
 
 	if ( status <= 0 )

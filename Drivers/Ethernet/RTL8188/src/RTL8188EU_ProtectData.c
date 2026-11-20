@@ -21,6 +21,7 @@ RTL8188EU_ProtectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 ty
 	U8 *iv;
 	U8 *payload;
 	U32 size;
+	U32 tid;
 	U32 i;
 	U64 number;
 
@@ -48,6 +49,7 @@ RTL8188EU_ProtectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 ty
 		return( FALSE );
 	}
 
+	tid = ( frame[0] & 0x0c ) ? RTL8188EU_NONQOS : WIRELESS_MGMT;
 	number = ++key->tx_number;
 	size = *length - 24;
 	iv = frame + 24;
@@ -72,13 +74,13 @@ RTL8188EU_ProtectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 ty
 		iv[0] = iv[1];
 		iv[1] = ( iv[0] | 0x20 ) & 0x7f;
 
-		RTL8188EU_TKIP( key, frame, RTL8188EU_NONQOS, number, payload, size, TRUE );
+		Wireless_TKIP( key->tkip_key, frame, RTL8188EU_NONQOS, number, payload, size, TRUE );
 
 		*length += RTL8188EU_EXT_IV_SIZE + RTL8188EU_TKIP_MIC + RTL8188EU_TKIP_ICV;
 	}
 	else
 	{
-		RTL8188EU_CCMP( key, frame, RTL8188EU_NONQOS, number, payload, size, payload + size, TRUE );
+		Wireless_CCMP( key->round_keys, frame, tid, number, payload, size, payload + size, TRUE );
 
 		*length += RTL8188EU_EXT_IV_SIZE + RTL8188EU_CCMP_MIC;
 	}

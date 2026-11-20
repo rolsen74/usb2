@@ -11,6 +11,7 @@
 ###########################################################################
 
 TARGET		:= usb2.device
+MAPFILE		:= usb2.map
 VERSION		:= 1
 REVISION	:= 9
 
@@ -48,9 +49,6 @@ LDFLAGS		:= -nostartfiles
 # Use Linker script
 #LDFLAGS		+= -T usb2.ld
 
-# Put link data into this file
-LDFLAGS		+= -Wl,--cref,-M,-Map=usb2.map
-
 # Remove unused data .. super strip
 #LDFLAGS		+= -Wl,--gc-sections
 
@@ -78,6 +76,16 @@ SRCS		:=
 OBJDIR		:= obj
 
 BINDIR		:= bin
+
+ifeq ($(SIS163U_RX_TRACE),1)
+TARGET		:= usb2-sis163u-rxtrace.kmod
+MAPFILE		:= $(BINDIR)/usb2-sis163u-rxtrace.map
+OBJDIR		:= $(BINDIR)/sis163u-rxtrace-obj
+CFLAGS		+= -DSIS163U_RX_TRACE
+endif
+
+# Put link data into its own file
+LDFLAGS		+= -Wl,--cref,-M,-Map=$(MAPFILE)
 
 ###########################################################################
 # Change these as required
@@ -434,7 +442,7 @@ info:
 ###########################################################################
 
 clean:
-	$(RM) $(OBJDIR) $(DEPS) $(BINDIR)/$(TARGET) usb2.map
+	$(RM) $(OBJDIR) $(DEPS) $(BINDIR)/$(TARGET) $(MAPFILE)
 
 ###########################################################################
 

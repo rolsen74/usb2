@@ -7,9 +7,9 @@ BINDIR				:= $(ROOTDIR)/_Data
 
 all: build_all
 
-.PHONY: all build_all build_dir_tree build_stack build_printer build_video \
-	build_ptp build_serial build_audio build_rtl8152 build_rtl8188 build_analyzer \
-	build_wpa2 build_wireless_manager build_archive
+.PHONY: all build_all build_dir_tree build_stack build_printer build_video build_sdr_test \
+	build_ptp build_serial build_audio build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_analyzer \
+	build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_archive
 
 ###########################################################################
 
@@ -67,6 +67,14 @@ build_video: | build_dir_tree
 
 ###########################################################################
 
+build_sdr_test: | build_dir_tree
+	@echo "Building USB2SDRTest"
+	$(MAKE) -C Programs/USB2SDRTest clean
+	$(MAKE) -C Programs/USB2SDRTest
+	cp Programs/USB2SDRTest/bin/USB2SDRTest $(BINDIR)/usb2/Tools
+
+###########################################################################
+
 build_ptp: | build_dir_tree
 	@echo "Building PTP Driver"
 	cd $(ROOTDIR)/Drivers/PTP && \
@@ -120,12 +128,31 @@ build_rtl8152: | build_dir_tree
 build_rtl8188: | build_dir_tree
 	@echo "Building RTL8188EU Wi-Fi Driver"
 	cd $(ROOTDIR)/Drivers/Ethernet/RTL8188 && \
-	$(MAKE) -f makefile clean && \
-	$(MAKE) -f makefile && \
-	$(MAKE) -f makefile strip && \
+	$(MAKE) -f makefile BINDIR=bin clean && \
+	$(MAKE) -f makefile BINDIR=bin && \
+	$(MAKE) -f makefile BINDIR=bin strip && \
 	cp bin/usb2rtl8188.device $(BINDIR)/usb2/Devs/Networks && \
 	cp Firmware/rtl8188eufw.bin Firmware/rtl8188eufw.licence $(BINDIR)/usb2/Devs/Firmware
 	@echo "RTL8188EU Wi-Fi done"
+
+###########################################################################
+
+build_sis163u: | build_dir_tree
+	@echo "Building SiS163U Wi-Fi Driver"
+	$(MAKE) -C Drivers/Ethernet/SiS163U clean
+	$(MAKE) -C Drivers/Ethernet/SiS163U
+	$(MAKE) -C Drivers/Ethernet/SiS163U strip
+	cp Drivers/Ethernet/SiS163U/bin/usb2sis163u.device $(BINDIR)/usb2/Devs/Networks
+
+###########################################################################
+
+build_rt2870: | build_dir_tree
+	@echo "Building RT2870 Wi-Fi Driver"
+	$(MAKE) -C Drivers/Ethernet/RT2870 BINDIR=bin clean
+	$(MAKE) -C Drivers/Ethernet/RT2870 BINDIR=bin
+	$(MAKE) -C Drivers/Ethernet/RT2870 BINDIR=bin strip
+	cp Drivers/Ethernet/RT2870/bin/usb2rt2870.device $(BINDIR)/usb2/Devs/Networks
+	cp Drivers/Ethernet/RT2870/Firmware/rt2870.bin Drivers/Ethernet/RT2870/Firmware/rt2870.licence $(BINDIR)/usb2/Devs/Firmware
 
 ###########################################################################
 
@@ -140,30 +167,57 @@ build_analyzer: | build_dir_tree
 
 ###########################################################################
 
+build_wifi: | build_dir_tree
+	$(MAKE) -C Libraries/WiFi BINDIR=bin clean
+	$(MAKE) -C Libraries/WiFi BINDIR=bin
+	$(MAKE) -C Libraries/WiFi BINDIR=bin strip
+	cp Libraries/WiFi/bin/usb2wifi.library $(BINDIR)/usb2/Libs
+
+###########################################################################
+
+build_wpa: | build_dir_tree
+	$(MAKE) -C Libraries/WPA BINDIR=bin clean
+	$(MAKE) -C Libraries/WPA BINDIR=bin
+	$(MAKE) -C Libraries/WPA BINDIR=bin strip
+	cp Libraries/WPA/bin/usb2wpa.library $(BINDIR)/usb2/Libs
+
+###########################################################################
+
 build_wpa2: | build_dir_tree
 	@echo "Building WPA2 Library"
 	cd $(ROOTDIR)/Libraries/WPA2 && \
-	$(MAKE) -f makefile clean && \
-	$(MAKE) -f makefile && \
-	$(MAKE) -f makefile strip && \
+	$(MAKE) -f makefile BINDIR=bin clean && \
+	$(MAKE) -f makefile BINDIR=bin && \
+	$(MAKE) -f makefile BINDIR=bin strip && \
 	cp bin/usb2wpa2.library $(BINDIR)/usb2/Libs
 	@echo "WPA2 Library done"
+
+###########################################################################
+
+build_wpa3: | build_dir_tree
+	@echo "Building WPA3 Library"
+	cd $(ROOTDIR)/Libraries/WPA3 && \
+	$(MAKE) -f makefile BINDIR=bin clean && \
+	$(MAKE) -f makefile BINDIR=bin && \
+	$(MAKE) -f makefile BINDIR=bin strip && \
+	cp bin/usb2wpa3.library $(BINDIR)/usb2/Libs
+	@echo "WPA3 Library done"
 
 ###########################################################################
 
 build_wireless_manager: | build_dir_tree
 	@echo "Building USB2WirelessManager"
 	cd $(ROOTDIR)/Programs/USB2WirelessManager && \
-	$(MAKE) -f makefile clean && \
-	$(MAKE) -f makefile && \
-	$(MAKE) -f makefile strip && \
+	$(MAKE) -f makefile BINDIR=bin clean && \
+	$(MAKE) -f makefile BINDIR=bin && \
+	$(MAKE) -f makefile BINDIR=bin strip && \
 	cp bin/USB2WirelessManager $(BINDIR)/usb2/Tools
 	@echo "USB2WirelessManager done"
 
 ###########################################################################
 
-build_archive: build_stack build_printer build_video build_ptp build_serial build_audio \
-	build_rtl8152 build_rtl8188 build_analyzer build_wpa2 build_wireless_manager
+build_archive: build_stack build_printer build_video build_sdr_test build_ptp build_serial build_audio \
+	build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
 	@echo "Building Archive"
 	@rm -f usb2.lha
 	cd "$(BINDIR)" && lha a "$(ROOTDIR)/usb2.lha" usb2

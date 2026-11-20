@@ -37,7 +37,7 @@ RTL8188EU_SubmitRX( struct EthernetUnit *unit )
 		request = (PTR) GetSucc( (PTR) request );
 	}
 
-	if ( ( ! request ) && ( ! unit->unit_Online ) )
+	if ( ( ! request ) && ( ! unit->unit_Online ) && ( ! ( RTL8188EU_DeferredLink( unit ) && unit->unit_AssocID ) ) )
 	{
 		return;
 	}

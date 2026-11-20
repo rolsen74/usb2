@@ -31,6 +31,8 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	S32 wpa;
 	S32 association_changed;
 	S32 encryption_set;
+	S32 sae;
+	S32 reconfigure;
 
 	tags = ioreq->ios2_Data;
 	channel = 0;
@@ -40,6 +42,7 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	operational = -1;
 	wpa = -1;
 	encryption_set = FALSE;
+	sae = FALSE;
 
 	if ( ! tags )
 	{
@@ -98,6 +101,10 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 
 				encryption = tag->ti_Data;
 				encryption_set = TRUE;
+				break;
+
+			case USB2WIRELESSINFO_SAE:
+				sae = !! tag->ti_Data;
 				break;
 
 			case S2INFO_WPAInfo:
@@ -171,6 +178,21 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		goto invalid;
 	}
 
+	if ( ( sae && encryption != S2ENC_CCMP ) ||
+		( aid && sae != unit->unit_SAE ) )
+	{
+		goto invalid;
+	}
+
+	if ( ( sae ) && ( operational == TRUE ) &&
+		( ( ! aid ) || ( association_changed ) || ( ! unit->unit_Keys[0].active ) ||
+			( unit->unit_Keys[0].type != S2ENC_CCMP ) ||
+			( ! ( unit->unit_Keys[1].active || unit->unit_Keys[2].active || unit->unit_Keys[3].active ) ) ||
+			( ! ( unit->unit_IGTK[0].active || unit->unit_IGTK[1].active ) ) ) )
+	{
+		goto invalid;
+	}
+
 	if ( ( aid ) && ( ! memcmp( bssid, zero, sizeof( bssid ) ) ) )
 	{
 		goto invalid;
@@ -190,7 +212,9 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		return;
 	}
 
-	if ( ( association_changed ) || ( encryption != unit->unit_Encryption ) )
+	reconfigure = association_changed || ( encryption != unit->unit_Encryption ) || ( sae != unit->unit_SAE );
+
+	if ( reconfigure )
 	{
 		RTL8188EU_StopRX( unit );
 
@@ -212,15 +236,7 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		}
 
 		unit->unit_Encryption = encryption;
-
-		if ( ( aid ) && ( unit->unit_Configured ) && ( unit->unit_TxReady ) )
-		{
-			unit->unit_Online = TRUE;
-
-			SignalSana2Event( unit, S2EVENT_ONLINE );
-		}
-
-		RTL8188EU_SubmitRX( unit );
+		unit->unit_SAE = sae;
 	}
 
 	if ( operational >= 0 )
@@ -228,6 +244,16 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		unit->unit_RequireOperState = TRUE;
 		unit->unit_Operational = operational && unit->unit_AssocID;
 	}
+
+	if ( ( ! unit->unit_Online ) && ( unit->unit_AssocID ) && ( unit->unit_Configured ) &&
+		( unit->unit_TxReady ) && ( RTL8188EU_DeferredLink( unit ) ? unit->unit_Operational : reconfigure ) )
+	{
+		unit->unit_Online = TRUE;
+
+		SignalSana2Event( unit, S2EVENT_ONLINE );
+	}
+
+	RTL8188EU_SubmitRX( unit );
 
 	return;
 

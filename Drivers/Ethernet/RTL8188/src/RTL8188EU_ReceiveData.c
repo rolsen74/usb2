@@ -30,7 +30,7 @@ RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 	U8 flags;
 	S32 eapol_only;
 
-	if ( ( ! unit->unit_Online ) || ( length < 32 ) ||
+	if ( ( ! unit->unit_Online && ! ( RTL8188EU_DeferredLink( unit ) && unit->unit_AssocID ) ) || ( length < 32 ) ||
 		( ( frame[0] & 0x4f ) != 0x08 ) || ( ( frame[1] & 7 ) != 2 ) ||
 		( frame[22] & 15 ) || ( memcmp( frame + 10, unit->unit_BSSID, 6 ) ) )
 	{
@@ -84,7 +84,7 @@ RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 	}
 
 	type = ( (U32) frame[header + 6] << 8 ) | frame[header + 7];
-	eapol_only = ( unit->unit_RequireOperState && ! unit->unit_Operational ) ||
+	eapol_only = ( ! unit->unit_Online ) || ( unit->unit_RequireOperState && ! unit->unit_Operational ) ||
 		( unit->unit_Encryption != S2ENC_NONE &&
 			( ! ( frame[1] & 0x40 ) || ! unit->unit_Keys[0].active ) );
 

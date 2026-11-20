@@ -21,6 +21,7 @@
 
 #include <devices/newstyle.h>
 #include <devices/sana2.h>
+#include <devices/usb2wireless.h>
 #include <exec/emulation.h>
 #include <dos/dostags.h>
 
@@ -81,6 +82,7 @@ struct EthernetUnit
 	U8								unit_BSSID[6];
 	U8								unit_CCKPower[4];
 	struct RTL8188EUKey				unit_Keys[RTL8188EU_KEY_COUNT];
+	struct WirelessIGTK				unit_IGTK[WIRELESS_IGTK_COUNT];
 	U64								unit_TKIPLastFailure;
 	U64								unit_TKIPBlockedUntil;
 	U16								unit_AssocID;
@@ -88,7 +90,9 @@ struct EthernetUnit
 	U8								unit_Channel;
 	U8								unit_RequireOperState;
 	U8								unit_Operational;
+	U8								unit_SAE;
 	U8								unit_Configured;
+	U8 unit_WiFiStartPending;
 	U8								unit_Exclusive;
 	U8								unit_Online;
 	U8								unit_TxReady;

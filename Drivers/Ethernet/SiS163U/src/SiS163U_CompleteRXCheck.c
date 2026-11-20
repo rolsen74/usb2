@@ -1,0 +1,163 @@
+
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+// --
+
+#include "All.h"
+
+// --
+
+#define SIS163U_RX_TRAILER_SIZE 12
+#define SIS163U_RX_MAX_TRANSFER 1600
+#define SIS163U_RX_LENGTH_MASK 0x0fff
+#define SIS163U_RX_FRAME_OK 0x08000000
+#define IEEE80211_BEACON_MIN_SIZE 36
+
+static U32
+ReadBeaconLength( const U8 *data, U32 actual )
+{
+	const U8 *trailer;
+	U32 payload;
+	U32 status;
+	U32 length;
+
+	if ( ( actual < IEEE80211_BEACON_MIN_SIZE + SIS163U_RX_TRAILER_SIZE ) ||
+		( actual >= SIS163U_RX_MAX_TRANSFER ) )
+	{
+		return ( 0 );
+	}
+
+	payload = actual - SIS163U_RX_TRAILER_SIZE;
+	trailer = data + payload;
+	status = (U32) trailer[0] | ( (U32) trailer[1] << 8 ) |
+		( (U32) trailer[2] << 16 ) | ( (U32) trailer[3] << 24 );
+	length = status & SIS163U_RX_LENGTH_MASK;
+
+	// The frame starts at byte zero. Up to three padding bytes precede the trailer.
+	if ( ( length < IEEE80211_BEACON_MIN_SIZE ) || ( length > payload ) ||
+		( payload - length > 3 ) || ( ! ( status & SIS163U_RX_FRAME_OK ) ) ||
+		( data[0] != 0x80 ) )
+	{
+		return ( 0 );
+	}
+
+	return ( length );
+}
+
+// --
+
+static void
+AdvanceRXCheck( struct EthernetUnit *unit )
+{
+	U32 channel;
+	S32 error;
+
+	channel = unit->unit_Channel;
+
+	if ( channel == SIS163U_CHANNEL_MAX )
+	{
+		USBINFO( "SiS163U: passive receive check finished without a beacon" );
+
+		error = SiS163U_SetChannel( unit, 1 );
+
+		if ( error )
+		{
+			USBERROR( "SiS163U: could not restore channel 1, USB error %ld", error );
+		}
+
+		return;
+	}
+
+	error = SiS163U_SetChannel( unit, channel + 1 );
+
+	if ( error )
+	{
+		USBERROR( "SiS163U: passive receive check could not tune channel %lu, USB error %ld", channel + 1, error );
+
+		return;
+	}
+
+	unit->unit_RxCheckReads = 0;
+
+	SiS163U_SubmitRXCheck( unit );
+}
+
+// --
+
+void
+SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
+{
+	struct USB2_EPResource *resource;
+	struct USB2_IORequest *usbio;
+
+	U32 length;
+
+	resource = unit->unit_Bulk_Rx_Resource;
+
+	usbio = (PTR) GetMsg( resource->MsgPort );
+
+	if ( ! usbio )
+	{
+		return;
+	}
+
+	unit->unit_RxActive = FALSE;
+
+	if ( ( usbio->io_Error == USB2Err_Host_Timeout ) && ( ! usbio->io_Actual ) )
+	{
+		USBINFO( "SiS163U: channel %lu receive timed out after %lu completed reads",
+			(U32) unit->unit_Channel, unit->unit_RxCheckReads );
+
+		if ( unit->unit_Channel == 1 )
+		{
+			SiS163U_LogRXState( unit, "after channel 1 timeout" );
+		}
+
+		AdvanceRXCheck( unit );
+
+		return;
+	}
+
+	if ( ( usbio->io_Error ) || ( usbio->io_Actual > resource->BufferSize ) )
+	{
+		USBINFO( "SiS163U: receive check ended, USB error %ld, %lu bytes after %lu completed reads",
+			(S32) usbio->io_Error, usbio->io_Actual, unit->unit_RxCheckReads );
+
+		return;
+	}
+
+	unit->unit_RxCheckReads++;
+
+	if ( unit->unit_RxCheckReads == 1 )
+	{
+		USBINFO( "SiS163U: first bulk IN transfer, %lu bytes", usbio->io_Actual );
+	}
+
+	length = ReadBeaconLength( usbio->io_Data, usbio->io_Actual );
+
+	if ( length )
+	{
+		USBINFO( "SiS163U: received beacon on channel %lu, %lu bytes", (U32) unit->unit_Channel, length );
+
+		return;
+	}
+
+	if ( unit->unit_RxCheckReads == SIS163U_RX_CHECK_READS )
+	{
+		USBINFO( "SiS163U: channel %lu had no beacon in %lu reads",
+			(U32) unit->unit_Channel, unit->unit_RxCheckReads );
+
+		AdvanceRXCheck( unit );
+
+		return;
+	}
+
+	SiS163U_SubmitRXCheck( unit );
+}
+
+// --

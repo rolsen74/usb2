@@ -10,6 +10,8 @@
 
 #include "All.h"
 #include "Commands.h"
+#include "WiFiCommand.h"
+#include <usb2wifi.h>
 #include "Radio.h"
 
 // --
@@ -18,6 +20,20 @@ void
 Process_RadioCommands( struct EthernetUnit *unit )
 {
 	struct IOSana2Req *ioreq;
+
+	S32 startWiFi;
+
+	ObtainSemaphore( & unit->unit_CommandLock );
+
+	startWiFi = unit->unit_WiFiStartPending && ! unit->unit_Detached;
+	unit->unit_WiFiStartPending = FALSE;
+
+	ReleaseSemaphore( & unit->unit_CommandLock );
+
+	if ( startWiFi )
+	{
+		Wireless_StartAuto( USB2WIFI_RTL8188, unit->unit_UnitNr );
+	}
 
 	ObtainSemaphore( & unit->unit_CommandLock );
 
@@ -28,6 +44,7 @@ Process_RadioCommands( struct EthernetUnit *unit )
 		while( ioreq )
 		{
 			if ( ( ioreq->ios2_Req.io_Command == S2_SETOPTIONS ) ||
+				( ioreq->ios2_Req.io_Command == USB2WIRELESS_CMD_PROMPT ) ||
 				( ioreq->ios2_Req.io_Command == S2_SETKEY ) ||
 				( ioreq->ios2_Req.io_Command == S2_WRITEMGMT ) ||
 				( ioreq->ios2_Req.io_Command == CMD_WRITE ) ||
@@ -55,6 +72,10 @@ Process_RadioCommands( struct EthernetUnit *unit )
 			USBINFO( "RTL8188EU: S2_SETOPTIONS error %ld, wire error %lu, channel %lu, AID %lu, TX %lu, online %lu",
 				(S32) ioreq->ios2_Req.io_Error, ioreq->ios2_WireError, (U32) unit->unit_Channel,
 				(U32) unit->unit_AssocID, (U32) unit->unit_TxReady, (U32) unit->unit_Online );
+		}
+		else if ( ioreq->ios2_Req.io_Command == USB2WIRELESS_CMD_PROMPT )
+		{
+			Wireless_StartPassword( ioreq );
 		}
 		else if ( ioreq->ios2_Req.io_Command == S2_SETKEY )
 		{

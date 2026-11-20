@@ -51,17 +51,17 @@ Wireless_Set_Copy_Hook( struct Wireless *wireless )
 // --
 
 S32
-Wireless_Send_EAPOL( struct Wireless *wireless, const struct USB2WPA2Reply *reply )
+Wireless_Send_EAPOL( struct Wireless *wireless, const U8 *frame, U32 length, U32 flags )
 {
 	struct IOSana2Req *io;
 
 	S32 result;
 
 	io = wireless->Command;
-	io->ios2_Req.io_Flags = reply->Flags & USB2WPA2_CLEAR_REPLY ? USB2RTL8188IOF_CLEAR_EAPOL : 0;
+	io->ios2_Req.io_Flags = flags & USB2WPA2_CLEAR_REPLY ? USB2RTL8188IOF_CLEAR_EAPOL : 0;
 	io->ios2_PacketType = WIRELESS_EAPOL;
-	io->ios2_DataLength = reply->Length;
-	io->ios2_Data = (void *) reply->Frame;
+	io->ios2_DataLength = length;
+	io->ios2_Data = (void *) frame;
 
 	memcpy( io->ios2_DstAddr, wireless->AP.BSSID, WIRELESS_ADDR_SIZE );
 

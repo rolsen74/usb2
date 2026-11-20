@@ -1,0 +1,99 @@
+
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+// --
+
+#include "All.h"
+
+// --
+
+S32
+Unit_Startup( struct EthernetUnit *unit )
+{
+	struct TaskStartMsg msg;
+
+	S32 retval;
+	U32 mask;
+	S32 sig;
+
+	retval = FALSE;
+
+	if ( ! unit )
+	{
+		USBERROR( "RT2870 : Unit_Startup : NULL Pointer" );
+		goto bailout;
+	}
+
+	USBDEBUG( "RT2870 : Unit_Startup : UnitNr #%lu", unit->unit_UnitNr );
+
+	// --
+
+	if ( ! Unit_Startup_USB( unit ))
+	{
+		USBERROR( "RT2870 : Failed to open usb2.device" );
+		goto bailout;
+	}
+
+	// --
+	// Try and alloc signal
+	sig = AllocSignal( -1 );
+
+	if ( sig < 0 )
+	{
+		goto bailout;
+	}
+
+	msg.Result	= 0;
+	msg.Parent	= FindTask( NULL );
+	msg.Mask	= 1UL << sig;
+	msg.Unit	= unit;
+
+	// Clear signal
+	SetSignal( 0, msg.Mask );
+
+	if ( CreateNewProcTags(
+		NP_Name,		"RT2870",
+		NP_Child,		FALSE,
+		NP_Priority,	5,
+		NP_StackSize,	1024 * 32,
+		NP_Entry,		Ethernet_Process_Entry,
+		NP_UserData,	& msg,
+		TAG_END ))
+	{
+		while( TRUE )
+		{
+			mask = Wait( msg.Mask );
+
+			if (( mask & msg.Mask ) == msg.Mask )
+			{
+				break;
+			}
+		}
+	}
+
+	FreeSignal( sig );
+
+	if ( ! msg.Result )
+	{
+		USBERROR( "RT2870 : Device process startup failed" );
+		goto bailout;
+	}
+
+	// --
+
+	// All okay
+	retval = TRUE;
+
+bailout:
+
+	USBDEBUG( "RT2870 : Unit_Startup : Leave : Retval %ld", retval );
+
+	return ( retval );
+}
+
+// --

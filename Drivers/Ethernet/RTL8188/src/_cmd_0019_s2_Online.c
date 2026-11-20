@@ -23,7 +23,7 @@ Cmd_Online( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		ioreq->ios2_Req.io_Error = S2ERR_BAD_STATE;
 		ioreq->ios2_WireError = S2WERR_NOT_CONFIGURED;
 	}
-	else if ( ( ! unit->unit_TxReady ) || ( ! unit->unit_AssocID ) )
+	else if ( ( ! unit->unit_TxReady ) || ( ! unit->unit_AssocID ) || ( RTL8188EU_DeferredLink( unit ) && ! unit->unit_Operational ) )
 	{
 		ioreq->ios2_Req.io_Error = S2ERR_BAD_STATE;
 		ioreq->ios2_WireError = S2WERR_UNIT_DISCONNECTED;

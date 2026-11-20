@@ -67,7 +67,14 @@ S32 RTL8188EU_CopyPacket( struct EthernetUnit *unit, struct IOSana2Req *ioreq,
 U32 RTL8188EU_CountTXEndpoints( struct EthernetUnit *unit );
 void Process_RadioCommands( struct EthernetUnit *unit );
 void RTL8188EU_StopRX( struct EthernetUnit *unit );
+void RTL8188EU_ReceiveRobustMgmt( struct EthernetUnit *unit, U8 *frame, U32 length );
 void RTL8188EU_ReceiveManagement( struct EthernetUnit *unit, U8 *frame, U32 length );
 void RTL8188EU_DecodeRX( struct EthernetUnit *unit, U8 *data, U32 length );
+
+static inline S32
+RTL8188EU_DeferredLink( const struct EthernetUnit *unit )
+{
+	return ( ( unit->unit_SAE ) || ( unit->unit_RequireOperState && unit->unit_Encryption != S2ENC_NONE ) );
+}
 
 #endif

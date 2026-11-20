@@ -35,12 +35,17 @@ RTL8188EU_Transmit( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	U16 checksum;
 	S32 management;
 	S32 clear_eapol;
+	S32 handshake;
 
 	management = ioreq->ios2_Req.io_Command == S2_WRITEMGMT;
 	type = 0;
 	clear_eapol = FALSE;
 
-	if ( ( ! unit->unit_TxReady ) || ( ! management && ! unit->unit_Online ) )
+	handshake = RTL8188EU_DeferredLink( unit ) && unit->unit_AssocID &&
+		ioreq->ios2_Req.io_Command == CMD_WRITE && ioreq->ios2_PacketType == RTL8188EU_EAPOL &&
+		! ( ioreq->ios2_Req.io_Flags & SANA2IOF_RAW );
+
+	if ( ( ! unit->unit_TxReady ) || ( ! management && ! unit->unit_Online && ! handshake ) )
 	{
 		ioreq->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
 		ioreq->ios2_WireError = S2WERR_UNIT_OFFLINE;
@@ -114,10 +119,12 @@ RTL8188EU_Transmit( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		// The access point may still be waiting for message 4 before activating its PTK.
 		clear_eapol = ( ioreq->ios2_Req.io_Command == CMD_WRITE ) &&
 			( ! ( ioreq->ios2_Req.io_Flags & SANA2IOF_RAW ) ) &&
-			( unit->unit_Encryption == S2ENC_CCMP ) && ( type == RTL8188EU_EAPOL ) &&
-			( length == 32 + 99 ) && ( frame[33] == 3 ) && ( frame[34] == 0 ) &&
-			( frame[35] == 95 ) && ( frame[36] == 2 ) && ( frame[37] == 3 ) &&
-			( frame[38] == 0x0a ) && ( frame[129] == 0 ) && ( frame[130] == 0 );
+			( type == RTL8188EU_EAPOL ) && ( length == 32 + 99 ) && ( frame[33] == 3 ) &&
+			( frame[34] == 0 ) && ( frame[35] == 95 ) && ( frame[129] == 0 ) && ( frame[130] == 0 ) &&
+			( ( unit->unit_Encryption == S2ENC_CCMP && frame[36] == 2 && frame[37] == 3 &&
+				frame[38] == ( unit->unit_SAE ? 0x08 : 0x0a ) ) ||
+			  ( unit->unit_Encryption == S2ENC_TKIP && frame[36] == 254 &&
+				( frame[37] & ~2 ) == 1 && frame[38] == 0x09 && frame[39] == 0 && frame[40] == 32 ) );
 
 		if ( ( ! clear_eapol ) && ( ! RTL8188EU_ProtectData( unit, frame, & length, type ) ) )
 		{

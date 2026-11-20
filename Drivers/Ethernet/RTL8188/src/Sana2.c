@@ -10,6 +10,7 @@
 
 #include "All.h"
 #include "Commands.h"
+#include "WiFiCommand.h"
 #include "Radio.h"
 
 // --
@@ -139,6 +140,7 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 				break;
 
 			case S2_SETOPTIONS:
+			case USB2WIRELESS_CMD_PROMPT:
 			case S2_SETKEY:
 				RTL8188EU_QueueControl( unit, ioreq );
 

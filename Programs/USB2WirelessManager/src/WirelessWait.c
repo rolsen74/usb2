@@ -31,6 +31,7 @@ Wireless_Wait_Frame( struct Wireless *wireless, U32 micros,
 {
 	struct IOSana2Req *rx;
 	struct TimeRequest *timer;
+	struct WiFiScan *scan;
 	enum WirelessResult result;
 
 	U32 mask;
@@ -40,9 +41,15 @@ Wireless_Wait_Frame( struct Wireless *wireless, U32 micros,
 
 	rx = wireless->Receive;
 	timer = wireless->Timer;
+	scan = wireless->ScanNetworks;
 	mask = ( 1UL << wireless->ReceivePort->mp_SigBit ) | SIGBREAKF_CTRL_C;
 	pending = FALSE;
 	result = WIRELESS_TIMEOUT;
+
+	if ( scan )
+	{
+		mask |= scan->InputMask;
+	}
 
 	if ( micros )
 	{
@@ -57,6 +64,12 @@ Wireless_Wait_Frame( struct Wireless *wireless, U32 micros,
 
 	for( ;; )
 	{
+		if ( ( scan ) && ( scan->Update ) && ( ! scan->Update( scan->Context ) ) )
+		{
+			result = WIRELESS_STOPPED;
+			break;
+		}
+
 		rx->ios2_Req.io_Command = eapol ? CMD_READ : S2_READMGMT;
 		rx->ios2_Req.io_Flags = 0;
 		rx->ios2_PacketType = WIRELESS_EAPOL;
@@ -90,6 +103,12 @@ Wireless_Wait_Frame( struct Wireless *wireless, U32 micros,
 				result = WIRELESS_STOPPED;
 				goto done;
 			}
+
+			if ( ( scan ) && ( scan->Update ) && ( signals & scan->InputMask ) && ( ! scan->Update( scan->Context ) ) )
+			{
+				result = WIRELESS_STOPPED;
+				goto done;
+			}
 		}
 
 		if ( ( micros ) && ( CheckIO( & timer->Request ) ) )
@@ -103,6 +122,15 @@ Wireless_Wait_Frame( struct Wireless *wireless, U32 micros,
 
 		if ( rx->ios2_Req.io_Error )
 		{
+			if ( ( eapol ) && ( ! micros ) && ( rx->ios2_Req.io_Error == S2ERR_OUTOFSERVICE ) &&
+				( ( rx->ios2_WireError == S2WERR_UNIT_OFFLINE ) ||
+				( rx->ios2_WireError == S2WERR_UNIT_DISCONNECTED ) ) )
+			{
+				result = WIRELESS_DISCONNECTED;
+
+				break;
+			}
+
 			fprintf( stderr, "%s receive failed (%d, wire error %lu).\n", eapol ? "EAPOL" : "Management",
 				(int) rx->ios2_Req.io_Error, (unsigned long) rx->ios2_WireError );
 

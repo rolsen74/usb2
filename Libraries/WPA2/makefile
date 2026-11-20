@@ -13,11 +13,13 @@ CC		:= ppc-amigaos-gcc
 STRIP		:= ppc-amigaos-strip
 endif
 
-CFLAGS		:= -O2 -Wall -Wextra -ffreestanding -MMD -MP -mcrt=newlib -D__USE_INLINE__ -I../../inc_Public
+CFLAGS		:= -O2 -Wall -Wextra -ffreestanding -MMD -MP -mcrt=newlib -D__USE_INLINE__ -I../../inc_Public -Isrc -I../Wireless
 LDFLAGS		:= -nostartfiles -mcrt=newlib
 
 SRCS		:= $(sort $(wildcard src/*.c))
+COMMON_SRCS	:= $(sort $(wildcard ../Wireless/*.c))
 OBJS		:= $(patsubst src/%.c,$(OBJDIR)/%.o,$(SRCS))
+OBJS		+= $(patsubst ../Wireless/%.c,$(OBJDIR)/wireless/%.o,$(COMMON_SRCS))
 
 .PHONY: all clean strip
 
@@ -28,6 +30,10 @@ $(BINDIR)/$(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)
 
 $(OBJDIR)/%.o: src/%.c makefile
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/wireless/%.o: ../Wireless/%.c makefile
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 

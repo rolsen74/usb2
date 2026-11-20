@@ -114,11 +114,15 @@ usb2/
 │   ├── AudioModes/
 │   │   └── USB2
 │   ├── Firmware/
+│   │   ├── rt2870.bin
+│   │   ├── rt2870.licence
 │   │   ├── rtl8188eufw.licence
 │   │   └── rtl8188eufw.bin
 │   ├── Networks/
 │   │   ├── usb2rtl8152.device
-│   │   └── usb2rtl8188.device
+│   │   ├── usb2rtl8188.device
+│   │   ├── usb2rt2870.device
+│   │   └── usb2sis163u.device
 │   └── usb2printer.device
 ├── Libs/
 │   ├── USB2/
@@ -130,10 +134,14 @@ usb2/
 │   │   ├── PTP.Driver
 │   │   ├── Video.Class
 │   │   └── Video.Driver
-│   └── usb2wpa2.library
+│   ├── usb2wifi.library
+│   ├── usb2wpa.library
+│   ├── usb2wpa2.library
+│   └── usb2wpa3.library
 └── Tools/
     ├── USB2Analyzer
     ├── USB2AudioTest
+    ├── USB2SDRTest
     ├── USB2WirelessManager
     └── USB2VideoTest
 ```
@@ -161,14 +169,63 @@ usb2/
   `LIBS:USB2/` to use supported PL2303 adapters through `usb2serial.device`.
 - **AHI playback** — Copy `Devs/AHI/usb2.audio` and `Devs/AudioModes/USB2`
   to the corresponding directories under `DEVS:`.
+- **RTL-SDR test** — Run `Tools/USB2SDRTest` from a Shell with an
+  `0BDA:2838` receiver attached. It reports the Bulk IN endpoint and
+  probes the tuner ID. To build just the tool, run
+  `make -C Programs/USB2SDRTest`.
+  With an R820T-family tuner and a high-speed USB connection, run
+  `USB2SDRTest CAPTURE 99500000` to tune to 99.5 MHz and save one second
+  of unsigned 8-bit interleaved I/Q at 1,024,000 samples per second.
+  Use a local FM frequency in Hz. The file is 2,048,000 bytes.
+  `FILE path` overrides `RAM:usb2sdr.iq`. A successful capture replaces
+  an existing file at the selected path.
+  To capture FM audio directly, run
+  `USB2SDRTest CAPTURE 99500000 SECONDS 5 WAV RAM:fm.wav`. This saves a
+  48 kHz mono PCM16 WAV. Omit `WAV` to save raw I/Q. `SECONDS` accepts
+  1 to 5 and defaults to 1 for either output.
+  Run `USB2SDRTest DECODE RAM:usb2sdr.iq` to demodulate the saved capture
+  into a 48 kHz mono PCM16 WAV using 50 µs FM deemphasis. The default
+  output is `RAM:usb2sdr.wav`. Use `WAV path` to choose another file.
+  Decoding runs without the USB receiver attached.
+  For live mono FM, run `USB2SDRTest LISTEN 99500000` with a USB audio
+  output attached and `usb2audio.device` available. The tool uses the
+  first compatible playback unit. Specify `OUTPUT 16` to select a unit,
+  and press Ctrl+C to stop.
+- **SiS163U Wi-Fi (development)** — `Devs/Networks/usb2sis163u.device`
+  matches the Topcom 54 Mbps Wi-Fi stick (`0D8E:0163`). Opening the unit
+  checks register access and endpoint setup, then reads the station address
+  from the adapter EEPROM. SANA-II queries, events,
+  multicast bookkeeping, and buffer hooks are available. RF type `$08`
+  supports baseband initialization, RF calibration, and channel selection
+  from 1 to 13 through `S2_SETOPTIONS`. The unit stays offline pending
+  association and packet transfer. Build it with `make -C Drivers/Ethernet/SiS163U`.
+- **RT2870 Wi-Fi (development)** — `Devs/Networks/usb2rt2870.device`
+  matches the D-Link adapter with USB ID `07D1:3C09`. Install it in
+  `DEVS:Networks/` and copy `rt2870.bin` and `rt2870.licence` from
+  `Devs/Firmware/` to `DEVS:Firmware/`. Open unit 0 and check the serial
+  log for the MAC/BBP revision, EEPROM station address, MCU readiness,
+  and the baseband revision from BBP register 0. Use
+  `USB2WirelessManager "My Network" DEVICE=usb2rt2870.device` to scan
+  channels 1 through 13 on the two-chain RF2820 configuration. Add `AUTH`
+  to test 802.11 authentication or `ASSOCIATE` to test association and
+  reception of the first WPA2 handshake message. Add `WPA2` to connect to
+  a WPA2-Personal network with CCMP. Start TCP/IP after the manager
+  reports `WPA2 connected`.
+  Build it with `make -C Drivers/Ethernet/RT2870`. The firmware comes from
+  the [Linux firmware repository](https://kernel.googlesource.com/pub/scm/linux/kernel/git/firmware/linux-firmware/+/refs/heads/main/rt2870.bin).
 - **[USB2Analyzer](Doc/USB2Analyzer.md)** — Run it from the extracted
   `Tools/` directory after booting with the USB2 stack. It displays host
   controllers, attached devices, and their interfaces.
+- **WPA library** — `Libs/usb2wpa.library` handles legacy WPA-Personal
+  with TKIP on RTL8188EU and RT2870. Build it with `make -C Libraries/WPA`.
+- **WPA3 library** — `Libs/usb2wpa3.library` provides SAE group 19 with
+  Hash-to-Element and Hunting-and-Pecking, plus the WPA3 four-way handshake
+  for RTL8188EU and RT2870. Build it with `make -C Libraries/WPA3`.
 - **[USB2WirelessManager](Doc/USB2WirelessManager.md)** — Run it from
-  `Tools/` to find a named Wi-Fi network or join an open or WPA2-Personal
-  network with the RTL8188EU
-  adapter. It is specific to `usb2rtl8188.device`; `UNIT` selects a unit
-  of that driver. For WPA2, copy `Libs/usb2wpa2.library` to `LIBS:` and install
+  `Tools/` to find a named Wi-Fi network with RTL8188EU or RT2870.
+  Use `SETUP` or `AUTO` to open the network picker.
+  Both drivers support WPA2-Personal. RTL8188EU also supports open networks.
+  For WPA2, copy `Libs/usb2wpa2.library` to `LIBS:` and install
   AmiSSL v5 (5.16+) or v6 (6.1+).
 
 ## Project Goals (Original)

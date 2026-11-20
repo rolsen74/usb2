@@ -45,6 +45,10 @@ struct Library *DOSBase;
 	IExec = USB2_GetExecIFace();
 	IExec->DebugPrintF( "USB : Full Boot\n" );
 
+	#ifdef SIS163U_RX_TRACE
+	IExec->DebugPrintF( "USB : SiS163U EHCI RX trace active\n" );
+	#endif
+
 	IDOS = NULL;
 
 	DOSBase = IExec->OpenLibrary( "dos.library", 50 );
