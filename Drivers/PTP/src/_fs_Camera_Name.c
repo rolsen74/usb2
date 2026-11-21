@@ -27,7 +27,8 @@ _fs_Camera_Name( struct FS_Struct *fs, struct CameraInfoNode *camera )
 	}
 	else
 	{
-		base = ASPrintf( "Camera-%08lx%08lx", (U32) ( camera->cin_ID >> 32 ), (U32) camera->cin_ID );
+		base = ASPrintf( "%s-%08lx%08lx", camera->cin_MTP ? "Device" : "Camera",
+			(U32) ( camera->cin_ID >> 32 ), (U32) camera->cin_ID );
 	}
 
 	return ( _fs_Unique_Name( fs->fs_RootNode, base ) );

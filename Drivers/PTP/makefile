@@ -146,12 +146,14 @@ clean:
 
 ###########################################################################
 
-install:
+install: all
 ifeq ($(HOSTOS),AmigaOS)
 	$(COPY) $(BINDIR)/$(TARGET) $(INSTALLDIR)
+	$(COPY) PTP.Class $(INSTALLDIR)
+	$(COPY) MTP.Class $(INSTALLDIR)
 else
 	@echo "Install is AmigaOS-oriented. On Linux, copy manually to target media:"
-	@echo "  $(COPY) $(BINDIR)/$(TARGET) <your-amiga-volume>/devs/"
+	@echo "  $(COPY) $(BINDIR)/$(TARGET) PTP.Class MTP.Class <your-amiga-volume>/Libs/USB2/"
 endif
 
 ###########################################################################

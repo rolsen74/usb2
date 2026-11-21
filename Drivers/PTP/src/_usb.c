@@ -16,6 +16,7 @@ U32
 _usb_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg )
 {
 	struct USB_Struct us;
+	struct USB2_Interface_Desc *descriptor;
 
 	S32 stat;
 
@@ -24,9 +25,14 @@ _usb_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg 
 		return ( FALSE );
 	}
 
-	// PTP and MTP cameras use the Still Image Capture interface.
-	if ( ( msg->InterfaceDescriptor->InterfaceSubClass != 1 ) ||
-		( msg->InterfaceDescriptor->InterfaceProtocol != 1 ) )
+	descriptor = msg->InterfaceDescriptor;
+
+	// Android can expose MTP on a vendor-specific interface.
+	if ( ! ( ( ( descriptor->InterfaceClass == USBCLASS_Image ) &&
+		( descriptor->InterfaceSubClass == 1 ) && ( descriptor->InterfaceProtocol == 1 ) ) ||
+		( ( descriptor->InterfaceClass == 0xff ) && ( descriptor->InterfaceSubClass == 0xff ) &&
+		  ( ! descriptor->InterfaceProtocol ) && ( descriptor->InterfaceStrNr ) &&
+		  ( descriptor->NumEndPoints == 3 ) ) ) )
 	{
 		return ( FALSE );
 	}

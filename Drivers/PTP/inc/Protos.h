@@ -103,6 +103,7 @@ void	_usb_Loop(			struct USB_Struct *us );
 void _usb_Loop_Stack( struct USB_Struct *us );
 S32 _usb_Read_Events( struct USB_Struct *us, struct USB2_IORequest *io );
 void _usb_Query_Device_Info( struct USB_Struct *us );
+S32 _usb_MTP_Interface( struct USB_Struct *us );
 S32 _usb_SendData( struct USB_Struct *us, struct CommandMessage *request, U32 transaction );
 S32 _usb_WriteBulk( struct USB_Struct *us, U32 length, S32 final );
 void _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request );

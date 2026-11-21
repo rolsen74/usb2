@@ -1,9 +1,15 @@
-# USB Picture Transfer Protocol
+# USB PTP and MTP
 
-The PTP driver mounts a `PTP:` filesystem for compatible digital cameras.
-It can read files and upload new files on cameras that support PTP uploads.
-`PTP.Class` matches the USB Still Image Capture interface
-(`06/01/01`). The filesystem requires DOS 53.95 or later on AmigaOS 4.
+PTP.Driver uses one `PTP:` volume for compatible PTP cameras, MTP phones,
+and media players. Browse and download files from each device's directory.
+Uploads require the device to advertise the standard
+`SendObjectInfo` and `SendObject` operations.
+
+`PTP.Class` matches the USB Still Image Capture interface (`06/01/01`).
+The driver reads the DeviceInfo vendor extension ID to identify MTP on that
+interface. `MTP.Class` also recognizes Android-style vendor interfaces
+(`FF/FF/00`) that identify themselves with the USB interface name `MTP`.
+The filesystem requires DOS 53.95 or later on AmigaOS 4.
 
 ## Build and install
 
@@ -11,19 +17,20 @@ It can read files and upload new files on cameras that support PTP uploads.
 make -C Drivers/PTP
 ```
 
-Copy `Drivers/PTP/bin/PTP.Driver` and `Drivers/PTP/PTP.Class` to
-`LIBS:USB2/`. The distribution archive includes both files under
-`usb2/Libs/USB2/`. Start AmigaOS 4 with `usb2.device` loaded, connect the
-camera in PTP mode, and open `PTP:` in Workbench or list it from the Shell.
+Copy `PTP.Driver`, `PTP.Class`, and `MTP.Class` from the archive's
+`usb2/Libs/USB2/` directory to `LIBS:USB2/` and reboot. Connect a camera
+in PTP mode or unlock an MTP-capable phone and select **File transfer** in
+its USB settings. Open `PTP:` in Workbench or use `List PTP:` in Shell.
 
 ## Browse and copy
 
-Each camera appears under the model name reported by PTP DeviceInfo.
+Each device appears under the model name reported by DeviceInfo.
 `Apple iPhone` appears as `iPhone`. If a name is already in use, the driver
-appends a suffix such as `-2`. Cameras without a model name appear as
-`Camera-<USB ID>`. Storage directories use the volume label or storage
-description reported by the camera, with suffixes for duplicates within each
-camera. Unnamed storage appears as `Storage-<PTP storage ID>`. Use the names
+appends a suffix such as `-2`. A device without a model name appears as
+`Camera-<USB ID>` for PTP or `Device-<USB ID>` for MTP. Storage directories
+use the volume label or storage description reported by the device, with
+suffixes for duplicates within each device. Unnamed storage appears as
+`Storage-<PTP storage ID>`. Use the names
 shown by `List PTP:` and `List PTP:iPhone/` in your paths.
 
 ```text
@@ -57,4 +64,5 @@ it accepts. Use a new filename for each upload. The driver protects existing
 files and folders against replacement, renaming, and deletion.
 
 Directory browsing, downloads, and uploads have been tested with a mocked
-camera. Testing on AmigaOS 4 with a physical camera is pending.
+camera. MTP identification and shared-volume browsing and transfers have
+been tested with mocked devices. Testing on physical hardware is pending.

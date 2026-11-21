@@ -34,12 +34,22 @@ _usb_Init( struct USB_Struct *us )
 
 	us->us_Register = usb->USB2_Reg_RegisterTags(
 		USB2Tag_Reg_DriverMessage, us->us_StartMsg,
-		USB2Tag_Reg_Title, "Picture Transfer Protocol",
+		USB2Tag_Reg_Title, "PTP / MTP",
 		TAG_END );
 
 	if ( ! us->us_Register )
 	{
 		return ( FALSE );
+	}
+
+	if ( us->us_StartMsg->InterfaceDescriptor->InterfaceClass != USBCLASS_Image )
+	{
+		if ( ! _usb_MTP_Interface( us ) )
+		{
+			return ( FALSE );
+		}
+
+		us->us_CameraNode.cin_MTP = TRUE;
 	}
 
 	us->us_Res_BulkIn = usb->USB2_EPRes_ObtainTags( us->us_Register,

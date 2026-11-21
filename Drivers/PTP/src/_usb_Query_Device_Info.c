@@ -57,6 +57,8 @@ _usb_Query_Device_Info( struct USB_Struct *us )
 		goto done;
 	}
 
+	us->us_CameraNode.cin_MTP |= ( data[2] == 6 ) && ( ! data[3] ) && ( ! data[4] ) && ( ! data[5] );
+
 	data += bytes;
 	remaining -= bytes;
 

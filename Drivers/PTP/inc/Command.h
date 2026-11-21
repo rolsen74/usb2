@@ -25,6 +25,7 @@ struct CameraInfoNode
 	USB2_ID					cin_ID;
 	U32						cin_StorageGeneration;
 	S32						cin_Apple;
+	S32						cin_MTP;
 	S32						cin_Online;
 	S32						cin_NoPartial;
 	S32						cin_CanUpload;
