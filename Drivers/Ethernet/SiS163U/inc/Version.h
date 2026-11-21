@@ -16,9 +16,9 @@
 #define DEVNAME		"usb2sis163u.device"
 
 #define VERSION		1
-#define REVISION	10
-#define DATE		"20.11.2026"
-#define VERS		DEVNAME " 1.10"
+#define REVISION	12
+#define DATE		"21.11.2026"
+#define VERS		DEVNAME " 1.12"
 #define VSTRING		VERS " (" DATE ")\r\n"
 #define VERSTAG		"\0$VER: " VERS " (" DATE ")"
 

@@ -20,7 +20,7 @@ _manager_AbortIO( struct DeviceManagerInterface *Self UNUSED, struct IORequest *
 	struct EthernetUnit *unit;
 
 	if ( ( ioreq->io_Command != S2_ONEVENT ) && ( ioreq->io_Command != S2_SAMPLE_THROUGHPUT ) &&
-		( ioreq->io_Command != S2_SETOPTIONS ) )
+		( ioreq->io_Command != S2_SETOPTIONS ) && ( ioreq->io_Command != S2_READMGMT ) )
 	{
 		return;
 	}

@@ -97,6 +97,23 @@ driver reports `S2_CONFIGINTERFACE error 4, wire error 15`, another client has
 already configured that unit; the manager accepts this state. A driver log
 with `AID 0, online 0` means association has not completed yet.
 
+## SiS163U passive scan
+
+SiS163U support is experimental. The passive scan found zero SSIDs on the
+tested Topcom adapter.
+
+Use USB2WirelessManager 0.35 or later and `usb2sis163u.device` 1.12 or later.
+Run the scan from a Shell with the Topcom `0D8E:0163` attached.
+
+```text
+USB2WirelessManager SCAN DEVICE=usb2sis163u.device
+USB2WirelessManager SCAN DEVICE=usb2sis163u.device CHANNEL=9
+```
+
+The scan listens on channels 1 through 13 unless you select one channel.
+It lists the SSIDs heard and works without a configured TCP/IP interface.
+Unit 0 is the default. Association and data transfer are still in development.
+
 ## Saved profiles and startup
 
 Install `usb2wifi.library` 1.26 or later in `LIBS:`.

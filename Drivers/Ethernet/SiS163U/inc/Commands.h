@@ -48,7 +48,7 @@ S32 Cmd_SampleThroughput( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 void Cmd_Sana2Hook( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 
 void Cmd_WriteMgmt( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
-void Cmd_ReadMgmt( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
+S32 Cmd_ReadMgmt( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 void Cmd_GetCryptTypes( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 void Cmd_SetKey( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 void Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq );

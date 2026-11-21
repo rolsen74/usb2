@@ -14,6 +14,8 @@
 
 #define SIS163U_RF_CTRL		0x00fc
 #define SIS163U_RF_CONFIG	0x005c
+#define SIS163U_USB_RX_CONTROL	0x002c
+#define SIS163U_USB_RX_RESET	0x80
 
 struct MACSetting
 {
@@ -218,6 +220,25 @@ SiS163U_StartRadio( struct EthernetUnit *unit )
 	{
 		goto failed;
 	}
+
+	stage = "USB packet queue setup";
+
+	// Prepare the queues before calibrating the receiver and enabling the filter.
+	if ( ( SiS163U_WriteRegister( control, SIS163U_USB_RX_CONTROL, SIS163U_USB_RX_RESET ) ) ||
+		( SiS163U_ReadRegister( control, 0x00c8, & value ) ) ||
+		( SiS163U_WriteRegister( control, 0x00c8, value & 0x7fffffff ) ) ||
+		( SiS163U_WriteRegister( control, 0x0030, 0x10 ) ) ||
+		( SiS163U_WriteRegister( control, 0x0034, 0 ) ) ||
+		( SiS163U_WriteRegister( control, 0x0040, 0x10 ) ) ||
+		( SiS163U_WriteRegister( control, 0x0044, 0 ) ) ||
+		( SiS163U_WriteRegister( control, SIS163U_USB_RX_CONTROL, 0x80021033 ) ) ||
+		( SiS163U_WriteRegister( control, 0x0054, 0x10 ) ) ||
+		( SiS163U_WriteRegister( control, 0x0050, 0x3e ) ) )
+	{
+		goto failed;
+	}
+
+	USBINFO( "SiS163U: USB packet queues initialized before RF calibration" );
 
 	stage = "baseband setup";
 

@@ -64,6 +64,7 @@ typedef char *STR;
 
 #define WIRELESS_DEVICE "usb2rtl8188.device"
 #define WIRELESS_RT2870_DEVICE "usb2rt2870.device"
+#define WIRELESS_SIS163U_DEVICE "usb2sis163u.device"
 #define WIRELESS_MAX_CHANNEL 11
 #define WIRELESS_MAX_SSID 32
 #define WIRELESS_ADDR_SIZE 6
@@ -193,6 +194,8 @@ enum WirelessResult Wireless_Wait_Frame( struct Wireless *wireless, U32 micros,
 U32 Wireless_ProbeRequest( struct Wireless *wireless, U8 *frame );
 S32 Wireless_Match_Beacon( struct Wireless *wireless, const U8 *frame, U32 length );
 void Wireless_Report_Scan( const struct Wireless *wireless );
+void Wireless_Report_Networks( const struct WiFiScan *scan );
+S32 Wireless_ScanSiS163U( U32 unit, U32 channel );
 void Wireless_Report_Security( const struct Wireless *wireless );
 enum WirelessResult Wireless_Authenticate( struct Wireless *wireless );
 enum WirelessResult Wireless_Associate( struct Wireless *wireless, const U8 *associationIE, U32 associationLength );

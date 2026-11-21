@@ -77,6 +77,7 @@ reconnect with a saved bond.
 | [RTL8152 wired Ethernet](Doc/RTL8152.md) | `0bda:8152` | `usb2rtl8152.device` | Experimental |
 | [RTL8188EU 2.4 GHz Wi-Fi](Doc/RTL8188.md) | `0bda:8179`, `07b8:8179`, `2357:010c` | `usb2rtl8188.device` | Working on `0bda:8179` |
 | [RT2870 2.4 GHz Wi-Fi](Doc/RT2870.md) | `07d1:3c09` | `usb2rt2870.device` | Working on `07d1:3c09` |
+| [SiS163U 2.4 GHz Wi-Fi](Doc/USB2WirelessManager.md#sis163u-passive-scan) | `0d8e:0163` | `usb2sis163u.device` | Experimental |
 
 Install the devices in `DEVS:Networks/`. See the adapter guides for
 firmware, setup, and hardware validation.
@@ -203,14 +204,16 @@ usb2/
   output attached and `usb2audio.device` available. The tool uses the
   first compatible playback unit. Specify `OUTPUT 16` to select a unit,
   and press Ctrl+C to stop.
-- **SiS163U Wi-Fi (development)** — `Devs/Networks/usb2sis163u.device`
+- **SiS163U Wi-Fi (experimental)** — `Devs/Networks/usb2sis163u.device`
   matches the Topcom 54 Mbps Wi-Fi stick (`0D8E:0163`). Opening the unit
   checks register access and endpoint setup, then reads the station address
   from the adapter EEPROM. SANA-II queries, events,
   multicast bookkeeping, and buffer hooks are available. RF type `$08`
   supports baseband initialization, RF calibration, and channel selection
-  from 1 to 13 through `S2_SETOPTIONS`. The unit stays offline pending
-  association and packet transfer. Build it with `make -C Drivers/Ethernet/SiS163U`.
+  from 1 to 13 through `S2_SETOPTIONS`. The Topcom test found zero SSIDs
+  in a [passive scan](Doc/USB2WirelessManager.md#sis163u-passive-scan).
+  Association and packet transfer remain in development.
+  Build it with `make -C Drivers/Ethernet/SiS163U`.
 - **[RT2870 Wi-Fi](Doc/RT2870.md)** — Install
   `Devs/Networks/usb2rt2870.device` in `DEVS:Networks/` and copy
   `rt2870.bin` and `rt2870.licence` from `Devs/Firmware/` to

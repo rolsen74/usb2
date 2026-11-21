@@ -42,6 +42,11 @@ Process_RadioCommands( struct EthernetUnit *unit )
 		ioreq = next;
 	}
 
+	if ( ( unit->unit_ManualScan ) && ( ! unit->unit_RxActive ) && ( SiS163U_FindMgmtRead( unit ) ) )
+	{
+		SiS163U_SubmitRXCheck( unit );
+	}
+
 	ReleaseSemaphore( & unit->unit_CommandLock );
 }
 

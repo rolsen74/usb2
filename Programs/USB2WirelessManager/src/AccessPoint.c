@@ -80,6 +80,31 @@ ReportBeacon( struct Wireless *wireless, const U8 *bssid, const U8 *ssid, U32 le
 
 // --
 
+#ifndef USB2WIFI_EMBEDDED
+
+void
+Wireless_Report_Networks( const struct WiFiScan *scan )
+{
+	const struct WiFiNetwork *network;
+
+	U32 index;
+
+	for( index = 0; index < scan->Count; index++ )
+	{
+		network = & scan->Network[index];
+
+		fprintf( stderr, "Channel %u, SSID ", (unsigned) network->Channel );
+
+		PrintSSID( (const U8 *) network->SSID, strlen( network->SSID ) );
+
+		fputc( '\n', stderr );
+	}
+}
+
+#endif
+
+// --
+
 void
 Wireless_Report_Scan( const struct Wireless *wireless )
 {

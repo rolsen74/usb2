@@ -54,7 +54,7 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		return;
 	}
 
-	if ( ! unit->unit_RadioInitialized )
+	if ( ( ! unit->unit_RadioInitialized ) || ( ! unit->unit_RxReady ) )
 	{
 		ioreq->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
 		ioreq->ios2_WireError = S2WERR_UNIT_OFFLINE;
@@ -74,6 +74,11 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		USBERROR( "SiS163U: could not tune channel %lu (USB error %ld)", channel, error );
 
 		SignalSana2Event( unit, S2EVENT_ERROR | S2EVENT_HARDWARE );
+	}
+	else
+	{
+		unit->unit_ManualScan = TRUE;
+		unit->unit_RxCheckReads = 0;
 	}
 }
 

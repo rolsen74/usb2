@@ -51,6 +51,8 @@ struct EthernetUnit
 	struct USB2_EPResource *unit_Bulk_Tx_Resource;
 	U32 unit_RxCheckReads;
 	S32 unit_RxActive;
+	S32 unit_RxReady;
+	S32 unit_ManualScan;
 	struct SignalSemaphore unit_CommandLock;
 	struct List unit_Pending;
 	struct List unit_Multicast;
@@ -106,6 +108,7 @@ S32 SiS163U_ReadRegister( struct USB2_EPResource *control, U16 address, U32 *val
 void Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 void AbortPendingCommands( struct EthernetUnit *unit, struct IORequest *request, struct BufferManagement *opener );
 void SignalSana2Event( struct EthernetUnit *unit, U32 events );
+struct IOSana2Req *SiS163U_FindMgmtRead( struct EthernetUnit *unit );
 void _cmd_4000_NSCmd_DeviceQuery( struct IOStdReq *ioreq );
 
 extern struct IORequest *USB2IOReq;

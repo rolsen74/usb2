@@ -160,7 +160,7 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 				break;
 
 			case S2_READMGMT:
-				Cmd_ReadMgmt( unit, ioreq );
+				pending = Cmd_ReadMgmt( unit, ioreq );
 
 				break;
 

@@ -89,6 +89,79 @@ AdvanceRXCheck( struct EthernetUnit *unit )
 
 // --
 
+static void
+CompleteMgmtRead( struct EthernetUnit *unit, struct USB2_IORequest *usbio )
+{
+	struct IOSana2Req *ioreq;
+
+	U32 length;
+	S32 error;
+
+	error = usbio->io_Error;
+	length = 0;
+
+	if ( usbio->io_Actual > unit->unit_Bulk_Rx_Resource->BufferSize )
+	{
+		error = USB2Err_Host_Overflow;
+	}
+	else if ( ( ! error ) && ( usbio->io_Actual ) )
+	{
+		if ( ! unit->unit_RxCheckReads++ )
+		{
+			USBINFO( "SiS163U: first scan bulk IN on channel %lu, %lu bytes",
+				(U32) unit->unit_Channel, usbio->io_Actual );
+		}
+
+		length = ReadBeaconLength( usbio->io_Data, usbio->io_Actual );
+	}
+
+	if ( ( error == USB2Err_Host_Timeout ) && ( ! usbio->io_Actual ) )
+	{
+		error = 0;
+	}
+
+	ObtainSemaphore( & unit->unit_CommandLock );
+
+	ioreq = SiS163U_FindMgmtRead( unit );
+
+	if ( ioreq )
+	{
+		if ( ( error ) || ( length ) )
+		{
+			Remove( (PTR) ioreq );
+
+			if ( error )
+			{
+				ioreq->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
+				ioreq->ios2_WireError = S2WERR_RCVREL_HDW_ERR;
+			}
+			else if ( length > ioreq->ios2_DataLength )
+			{
+				ioreq->ios2_Req.io_Error = IOERR_BADLENGTH;
+			}
+			else
+			{
+				memcpy( ioreq->ios2_Data, usbio->io_Data, length );
+
+				ioreq->ios2_DataLength = length;
+			}
+
+			ReplyMsg( (PTR) ioreq );
+
+			ioreq = SiS163U_FindMgmtRead( unit );
+		}
+
+		if ( ioreq )
+		{
+			SiS163U_SubmitRXCheck( unit );
+		}
+	}
+
+	ReleaseSemaphore( & unit->unit_CommandLock );
+}
+
+// --
+
 void
 SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
 {
@@ -107,6 +180,13 @@ SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
 	}
 
 	unit->unit_RxActive = FALSE;
+
+	if ( unit->unit_ManualScan )
+	{
+		CompleteMgmtRead( unit, usbio );
+
+		return;
+	}
 
 	if ( ( usbio->io_Error == USB2Err_Host_Timeout ) && ( ! usbio->io_Actual ) )
 	{

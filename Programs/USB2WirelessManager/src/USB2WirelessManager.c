@@ -14,7 +14,7 @@
 
 #ifndef USB2WIFI_EMBEDDED
 static const char version[] __attribute__((used)) =
-	"\0$VER: USB2WirelessManager 0.34 (21.11.2026)";
+	"\0$VER: USB2WirelessManager 0.35 (21.11.2026)";
 #endif
 
 // --
@@ -296,7 +296,7 @@ main( int argc, char **argv __attribute__((unused)) )
 	struct Wireless wireless;
 
 	const char *device;
-	LONG values[13];
+	LONG values[14];
 	LONG maxChannel;
 	LONG channel;
 	LONG unit;
@@ -310,13 +310,38 @@ main( int argc, char **argv __attribute__((unused)) )
 
 	memset( values, 0, sizeof( values ) );
 
-	args = ReadArgs( "SSID,OPEN/S,WPA2/S,CHANNEL/K/N,UNIT/K/N,DEVICE/K,AUTH/S,ASSOCIATE/S,PASSWORD/K,WPA3/S,WPA/S,AUTO/S,SETUP/S", values, NULL );
+	args = ReadArgs( "SSID,OPEN/S,WPA2/S,CHANNEL/K/N,UNIT/K/N,DEVICE/K,AUTH/S,ASSOCIATE/S,PASSWORD/K,WPA3/S,WPA/S,AUTO/S,SETUP/S,SCAN/S", values, NULL );
 
 	if ( ! args )
 	{
 		PrintFault( IoErr(), "USB2WirelessManager" );
 
 		return ( RETURN_FAIL );
+	}
+
+	if ( values[13] )
+	{
+		device = values[5] ? (const char *) values[5] : WIRELESS_DEVICE;
+		unit = values[4] ? *(const LONG *) values[4] : 0;
+		channel = values[3] ? *(const LONG *) values[3] : 0;
+
+		if ( ( strcmp( device, WIRELESS_SIS163U_DEVICE ) ) ||
+			( unit < 0 ) || ( unit > 31 ) || ( channel < 0 ) || ( channel > 13 ) ||
+			( values[0] ) || ( values[1] ) || ( values[2] ) || ( values[6] ) || ( values[7] ) ||
+			( values[8] ) || ( values[9] ) || ( values[10] ) || ( values[11] ) || ( values[12] ) )
+		{
+			fprintf( stderr, "Use SCAN DEVICE=%s with optional UNIT and CHANNEL.\n", WIRELESS_SIS163U_DEVICE );
+
+			result = RETURN_FAIL;
+		}
+		else
+		{
+			result = Wireless_ScanSiS163U( unit, channel );
+		}
+
+		FreeArgs( args );
+
+		return ( result );
 	}
 
 	if ( ( values[11] ) || ( values[12] ) )
@@ -345,7 +370,7 @@ main( int argc, char **argv __attribute__((unused)) )
 
 	if ( ! values[0] )
 	{
-		fprintf( stderr, "Specify an SSID, AUTO or SETUP.\n" );
+		fprintf( stderr, "Specify an SSID, AUTO, SETUP or SCAN.\n" );
 
 		FreeArgs( args );
 

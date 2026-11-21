@@ -13,8 +13,6 @@
 // --
 
 #define SIS163U_RX_FILTER	0xc04b6da0
-#define SIS163U_USB_RX_CONTROL	0x002c
-#define SIS163U_USB_RX_RESET	0x80
 
 // --
 
@@ -31,18 +29,7 @@ SiS163U_StartRXCheck( struct EthernetUnit *unit )
 
 	control = unit->unit_USB_Register->Res_Control;
 
-	// Initialize the packet queues between the reset and enable writes.
-	if ( ( error = SiS163U_WriteRegister( control, SIS163U_USB_RX_CONTROL, SIS163U_USB_RX_RESET ) ) ||
-		( error = SiS163U_ReadRegister( control, 0x00c8, & value ) ) ||
-		( error = SiS163U_WriteRegister( control, 0x00c8, value & 0x7fffffff ) ) ||
-		( error = SiS163U_WriteRegister( control, 0x0030, 0x10 ) ) ||
-		( error = SiS163U_WriteRegister( control, 0x0034, 0 ) ) ||
-		( error = SiS163U_WriteRegister( control, 0x0040, 0x10 ) ) ||
-		( error = SiS163U_WriteRegister( control, 0x0044, 0 ) ) ||
-		( error = SiS163U_WriteRegister( control, SIS163U_USB_RX_CONTROL, 0x80021033 ) ) ||
-		( error = SiS163U_WriteRegister( control, 0x0054, 0x10 ) ) ||
-		( error = SiS163U_WriteRegister( control, 0x0050, 0x3e ) ) ||
-		( error = SiS163U_ReadRegister( control, 0x00f8, & value ) ) ||
+	if ( ( error = SiS163U_ReadRegister( control, 0x00f8, & value ) ) ||
 		( error = SiS163U_WriteRegister( control, 0x00f8, value | 0x00004000 ) ) ||
 		( error = SiS163U_ReadRegister( control, 0x00f8, & value ) ) ||
 		( error = SiS163U_WriteRegister( control, 0x00f8, ( value & 0x00007fff ) | 0x030d8000 ) ) ||
@@ -60,8 +47,6 @@ SiS163U_StartRXCheck( struct EthernetUnit *unit )
 		return;
 	}
 
-	USBINFO( "SiS163U: packet queues initialized before bulk IN" );
-
 	SiS163U_LogRXState( unit, "before bulk IN" );
 
 	SiS163U_SubmitRXCheck( unit );
@@ -76,6 +61,8 @@ SiS163U_StartRXCheck( struct EthernetUnit *unit )
 
 		return;
 	}
+
+	unit->unit_RxReady = TRUE;
 
 	if ( ( error = SiS163U_ReadRegister( control, 0x0000, & macMode ) ) ||
 		( error = SiS163U_ReadRegister( control, 0x0014, & filter ) ) ||
