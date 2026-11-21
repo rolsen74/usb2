@@ -15,6 +15,8 @@
 S32
 BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint )
 {
+	struct USB2_EPResource *control;
+
 	usb->USB2 = message->IUSB2;
 	usb->InterfaceNumber = message->Interface->IFC_Num;
 	usb->EventPending = BTUSB_EVENT_IDLE;
@@ -27,6 +29,13 @@ BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint )
 		USB2Tag_Reg_Title, "Bluetooth USB HCI", TAG_END );
 
 	if ( ! usb->Registration )
+	{
+		return ( FALSE );
+	}
+
+	control = usb->Registration->Res_Control;
+
+	if ( ( ! control ) || ( ! control->SetupData ) || ( ! control->IORequests ) || ( ! control->IORequests[0] ) )
 	{
 		return ( FALSE );
 	}

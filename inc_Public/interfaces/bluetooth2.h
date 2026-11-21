@@ -37,6 +37,7 @@ struct BTControllerProbe
 	struct BTLERequest *LE;
 	struct BTAudioPlayback *Audio;
 	struct BTAudioPCM *PCM;
+	struct BTHIDMonitor *HID;
 };
 
 struct Bluetooth2IFace
@@ -344,6 +345,46 @@ struct Bluetooth2PCMIFace
 	enum BTHCIResult APICALL (*Play)( struct Bluetooth2PCMIFace *Self, const struct BTACLTransport *transport,
 		struct BTAudioPCM *pcm, struct BTHCIError *error );
 	int32_t APICALL (*AddController)( struct Bluetooth2PCMIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_HID_INTERFACE "hid"
+#define BLUETOOTH2_HID_VERSION 1
+
+struct Bluetooth2HIDIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2HIDIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2HIDIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2HIDIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2HIDIFace *Self );
+
+	enum BTHCIResult APICALL (*MonitorController)( struct Bluetooth2HIDIFace *Self, uint32_t unit,
+		struct BTHIDMonitor *monitor, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Monitor)( struct Bluetooth2HIDIFace *Self, const struct BTACLTransport *transport,
+		struct BTHIDMonitor *monitor, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2HIDIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_HID_INPUT_INTERFACE "hid-input"
+#define BLUETOOTH2_HID_INPUT_VERSION 1
+
+struct Bluetooth2HIDInputIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2HIDInputIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2HIDInputIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2HIDInputIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2HIDInputIFace *Self );
+
+	enum BTHCIResult APICALL (*ConnectController)( struct Bluetooth2HIDInputIFace *Self, uint32_t unit,
+		struct BTHIDInput *input, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Connect)( struct Bluetooth2HIDInputIFace *Self, const struct BTACLTransport *transport,
+		struct BTHIDInput *input, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2HIDInputIFace *Self, struct MsgPort *port,
 		const struct BTControllerLocation *location );
 };
 

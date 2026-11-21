@@ -45,7 +45,8 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 	struct Bluetooth2SerialIFace *serial, struct Bluetooth2SerialFileIFace *serialFile,
 	struct Bluetooth2SerialCaptureIFace *serialCapture, struct Bluetooth2ObjectPushIFace *objectPush,
 	struct Bluetooth2LEIFace *le, struct Bluetooth2A2DPIFace *a2dp,
-	struct Bluetooth2PCMIFace *pcm, struct BTUSB *usb, struct MsgPort *requests )
+	struct Bluetooth2PCMIFace *pcm, struct Bluetooth2HIDIFace *hid,
+	struct Bluetooth2HIDInputIFace *hidInput, struct BTUSB *usb, struct MsgPort *requests )
 {
 	struct BTControllerProbe *probe;
 	struct BTACLTransport transport;
@@ -85,7 +86,23 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 
 		if ( probe->Result == BT_HCI_OK )
 		{
-			if ( ( pcm ) && ( probe->Message.mn_Length >= sizeof( *probe ) ) && ( probe->PCM ) )
+			if ( ( hid ) && ( probe->Message.mn_Length >= sizeof( *probe ) ) && ( probe->HID ) )
+			{
+				if ( probe->HID->Seconds )
+				{
+					probe->Result = hid->Monitor( & transport, probe->HID, probe->Error );
+				}
+				else if ( hidInput )
+				{
+					probe->Result = hidInput->Connect( & transport, (struct BTHIDInput *) probe->HID, probe->Error );
+				}
+				else
+				{
+					probe->Result = BT_HCI_UNSUPPORTED;
+				}
+			}
+			else if ( ( pcm ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, HID ) ) &&
+				( probe->PCM ) )
 			{
 				usb->PrefetchEvents = TRUE;
 
@@ -204,6 +221,8 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 	struct Bluetooth2LEIFace *le;
 	struct Bluetooth2A2DPIFace *a2dp;
 	struct Bluetooth2PCMIFace *pcm;
+	struct Bluetooth2HIDIFace *hid;
+	struct Bluetooth2HIDInputIFace *hidInput;
 	struct MsgPort *port;
 	struct MsgPort *requests;
 	struct BTUSB usb;
@@ -299,6 +318,11 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 
 	pcm = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_PCM_INTERFACE, BLUETOOTH2_PCM_VERSION, NULL );
 
+	hid = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_HID_INTERFACE, BLUETOOTH2_HID_VERSION, NULL );
+
+	hidInput = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_HID_INPUT_INTERFACE,
+		BLUETOOTH2_HID_INPUT_VERSION, NULL );
+
 	requests = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
 	if ( ! requests )
@@ -308,6 +332,11 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 
 	if ( BTUSB_Open( & usb, message, endpoint ) )
 	{
+		if ( ! BTUSB_InitializeRealtek( & usb, message->VendorID, message->DeviceID ) )
+		{
+			goto close_transport;
+		}
+
 		location.VendorID = message->VendorID;
 		location.ProductID = message->DeviceID;
 		location.EventEndpoint = endpoint;
@@ -316,7 +345,11 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 		{
 			acl = BTUSB_OpenACL( & usb );
 
-			if ( ( pcm ) && ( a2dp ) && ( acl ) )
+			if ( ( hid ) && ( pcm ) && ( a2dp ) && ( acl ) )
+			{
+				unit = hidInput ? hidInput->AddController( requests, & location ) : hid->AddController( requests, & location );
+			}
+			else if ( ( pcm ) && ( a2dp ) && ( acl ) )
 			{
 				unit = pcm->AddController( requests, & location );
 			}
@@ -386,7 +419,7 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 				unit, (U32) location.VendorID, (U32) location.ProductID );
 
 			RunController( bt2, pairing, bonding, names, visibility, l2cap, sdp, rfcomm, serial,
-				serialFile, serialCapture, objectPush, le, a2dp, pcm, & usb, requests );
+				serialFile, serialCapture, objectPush, le, a2dp, pcm, hid, hidInput, & usb, requests );
 
 			bt2->RemoveController( unit, requests );
 
@@ -402,11 +435,22 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 			(U32) message->VendorID, (U32) message->DeviceID );
 	}
 
+close_transport:
 	BTUSB_Close( & usb );
 
 	FreeSysObject( ASOT_PORT, requests );
 
 drop_interface:
+	if ( hidInput )
+	{
+		DropInterface( (PTR) hidInput );
+	}
+
+	if ( hid )
+	{
+		DropInterface( (PTR) hid );
+	}
+
 	if ( pcm )
 	{
 		DropInterface( (PTR) pcm );

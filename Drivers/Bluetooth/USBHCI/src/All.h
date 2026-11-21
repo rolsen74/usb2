@@ -29,6 +29,7 @@ struct BTUSB
 
 U8 BTUSB_FindEventEndpoint( struct USB2IFace *usb2, struct USB2_Interface *ifc );
 S32 BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint );
+S32 BTUSB_InitializeRealtek( struct BTUSB *usb, U16 vendor, U16 product );
 S32 BTUSB_OpenACL( struct BTUSB *usb );
 S32 BTUSB_ReadACLChunk( PTR context, const U8 **data, U32 *length );
 S32 BTUSB_WriteACL( PTR context, const U8 *data, U32 length );

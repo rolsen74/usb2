@@ -54,6 +54,9 @@ enum BTHCIResult
 	BT_A2DP_INVALID_WAVE,
 	BT_A2DP_NO_SINK,
 	BT_A2DP_REJECTED,
+	BT_HID_REJECTED,
+	BT_HID_DISCONNECTED,
+	BT_HID_INPUT_ERROR,
 };
 
 struct BTHCIError
@@ -258,6 +261,39 @@ struct BTAudioPCM
 	void *Context;
 	// Pulls interleaved stereo S16LE from the controller task until cancelled.
 	int32_t (*Read)( void *context, uint8_t *data, uint32_t length );
+};
+
+#define BT_HID_BOOT_KEYBOARD 1
+#define BT_HID_BOOT_MOUSE 2
+#define BT_HID_BOOT_PAYLOAD_MAX 45
+#define BT_HID_MAX_SECONDS 120
+
+struct BTHIDReport
+{
+	uint8_t ID;
+	uint8_t Length;
+	uint8_t Data[BT_HID_BOOT_PAYLOAD_MAX];
+};
+
+struct BTHIDMonitor
+{
+	struct BTHIDReport *Reports;
+	uint8_t Address[6];
+	uint8_t Handshake;
+	uint32_t Seconds;
+	uint32_t Capacity;
+	uint32_t Count;
+	uint32_t Cancel;
+};
+
+// The callbacks run on the controller task. Stop follows each successful Start.
+struct BTHIDInput
+{
+	struct BTHIDMonitor Monitor;
+	void *Context;
+	int32_t (*Start)( void *context );
+	int32_t (*Report)( void *context, const struct BTHIDReport *report );
+	void (*Stop)( void *context );
 };
 
 enum BTHCIResult BT_ExchangeRFCOMM( const struct BTACLTransport *transport, struct BTRFCOMMTransfer *transfer,

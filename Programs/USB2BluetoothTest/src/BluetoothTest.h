@@ -32,4 +32,8 @@ LONG RunBluetoothWindow( ULONG unit );
 
 LONG PlayBluetoothAudio( struct IORequest *request, ULONG unit, const char *address, const char *path );
 
+LONG MonitorBluetoothHID( struct IORequest *request, ULONG unit, const char *address, LONG seconds );
+
+LONG ConnectBluetoothInput( struct IORequest *request, ULONG unit, const char *address );
+
 #endif

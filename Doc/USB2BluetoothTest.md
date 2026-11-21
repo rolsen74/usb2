@@ -19,6 +19,20 @@ version, manufacturer ID, and Bluetooth address.
    then reports that the controller is unavailable. Plug it back in and
    use the unit shown in the new attach message.
 
+### Realtek RTL8761BU adapters
+
+Bluetooth.Driver 1.19 can load firmware for the ASUS USB-BT500
+(`0B05:190E`), TP-Link UB500 (`2357:0604`), and Realtek reference
+adapter (`0BDA:8771`). The USB IDs identify the revisions covered here.
+Copy `rtl8761bu_fw.bin` and, if available, `rtl8761bu_config.bin` from
+the [linux-firmware Realtek directory](https://kernel.googlesource.com/pub/scm/linux/kernel/git/firmware/linux-firmware/+/refs/tags/20260221/rtl_bt/)
+to `DEVS:Firmware/`. The firmware files are distributed by linux-firmware.
+
+After plugging in the adapter, look for `RTL8761BU firmware ready` and the
+controller's assigned unit. Run `USB2BluetoothTest UNIT=<unit>` and then
+`USB2BluetoothTest UNIT=<unit> LESCAN SECONDS=10`. The firmware loader has
+passed simulated tests and awaits testing on these physical adapters.
+
 ## Discover devices
 
 Make a nearby Classic Bluetooth device discoverable, then run:
@@ -198,6 +212,39 @@ late packets and peak lag in milliseconds.
 
 For application audio, select a speaker and click **Use for AHI**, then
 follow the [Bluetooth AHI setup](AHI.md#bluetooth-speaker-playback).
+
+## Monitor a Classic Bluetooth keyboard or mouse
+
+Monitoring requires Bluetooth2 1.21, Bluetooth.Driver 1.17, and
+USB2BluetoothTest 0.21 or later.
+Use `DISCOVER` to find the address of a Classic Bluetooth keyboard or mouse
+that supports Boot Protocol. If needed, use `BOND` first to save a link key
+for the same adapter and peripheral.
+
+```text
+USB2BluetoothTest UNIT=0 HID=AA:BB:CC:DD:EE:FF SECONDS=15
+```
+
+Press a few keys or move and click the mouse while the command runs. The
+Shell prints keyboard usage codes or mouse movement and buttons when the
+capture finishes. It stops after 32 input reports, after the selected
+duration, or when you press Ctrl-C.
+
+### Use a Classic keyboard or mouse in Workbench
+
+With Bluetooth2 1.22, Bluetooth.Driver 1.18, and USB2BluetoothTest 0.22,
+save a bond using the same adapter and peripheral, then start input.
+
+```text
+USB2BluetoothTest UNIT=0 BOND=AA:BB:CC:DD:EE:FF
+USB2BluetoothTest UNIT=0 HID=AA:BB:CC:DD:EE:FF INPUT
+```
+
+The session sends Boot Protocol keys, modifiers, relative movement and
+three mouse buttons to `input.device`. Ctrl-C or disconnect ends the
+session and releases any keys or buttons that are still held. The adapter
+is reserved for input while the command runs. Physical validation, key
+repeat, keyboard LEDs, and BLE HID over GATT are pending.
 
 ## Scan and advertise over Bluetooth LE
 

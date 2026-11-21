@@ -15,7 +15,7 @@
 // --
 
 static const char version[] __attribute__((used)) =
-	"\0$VER: USB2BluetoothTest 0.20 (21.11.2026)";
+	"\0$VER: USB2BluetoothTest 0.22 (21.11.2026)";
 
 // --
 
@@ -76,6 +76,9 @@ ReportHCIError( enum BTHCIResult result, const struct BTHCIError *error )
 		case BT_LE_CANCELLED:
 		case BT_A2DP_INVALID_WAVE:
 		case BT_A2DP_NO_SINK:
+		case BT_HID_REJECTED:
+		case BT_HID_INPUT_ERROR:
+		case BT_HID_DISCONNECTED:
 		case BT_A2DP_REJECTED:
 		case BT_OBEX_NO_SERVICE:
 		case BT_OBEX_REJECTED:
@@ -231,9 +234,10 @@ main( void )
 	const char *file;
 	const char *save;
 	const char *push;
+	const char *hidAddress;
 	const char *speaker;
 	const char *wave;
-	LONG options[25];
+	LONG options[27];
 	LONG leScan;
 	LONG leAdvertise;
 	LONG bytes;
@@ -270,8 +274,10 @@ main( void )
 	options[22] = 0;
 	options[23] = 0;
 	options[24] = 0;
+	options[25] = 0;
+	options[26] = 0;
 
-	args = ReadArgs( "UNIT/K/N,DISCOVER/S,PAIR/K,BOND/K,RECONNECT/K,NAME/K,VISIBLE/S,AS/K,SECONDS/K/N,ECHO/K,SERVICES/K,RFCOMM/K,CHANNEL/K/N,TEXT/K,REPLY/S,FILE/K,SAVE/K,BYTES/K/N,PUSH/K,LESCAN/S,LEADVERTISE/S,PASSIVE/S,GUI/S,SPEAKER/K,PLAY/K", options, NULL );
+	args = ReadArgs( "UNIT/K/N,DISCOVER/S,PAIR/K,BOND/K,RECONNECT/K,NAME/K,VISIBLE/S,AS/K,SECONDS/K/N,ECHO/K,SERVICES/K,RFCOMM/K,CHANNEL/K/N,TEXT/K,REPLY/S,FILE/K,SAVE/K,BYTES/K/N,PUSH/K,LESCAN/S,LEADVERTISE/S,PASSIVE/S,GUI/S,SPEAKER/K,PLAY/K,HID/K,INPUT/S", options, NULL );
 
 	if ( ! args )
 	{
@@ -302,6 +308,7 @@ main( void )
 	leAdvertise = options[20];
 	speaker = (const char *) options[23];
 	wave = (const char *) options[24];
+	hidAddress = (const char *) options[25];
 	operation = BT_TEST_PAIR;
 
 	if ( options[3] )
@@ -324,9 +331,9 @@ main( void )
 		return ( RETURN_FAIL );
 	}
 
-	if ( !!discovery + !!options[2] + !!options[3] + !!options[4] + !!nameAddress + !!visible + !!echoAddress + !!servicesAddress + !!rfcommAddress + !!leScan + !!leAdvertise + !!options[22] + !!speaker > 1 )
+	if ( !!discovery + !!options[2] + !!options[3] + !!options[4] + !!nameAddress + !!visible + !!echoAddress + !!servicesAddress + !!rfcommAddress + !!leScan + !!leAdvertise + !!options[22] + !!speaker + !!hidAddress > 1 )
 	{
-		Printf( "Choose one of DISCOVER, NAME, PAIR, BOND, RECONNECT, VISIBLE, ECHO, SERVICES, RFCOMM, LESCAN, LEADVERTISE, GUI, or SPEAKER.\n" );
+		Printf( "Choose one of DISCOVER, NAME, PAIR, BOND, RECONNECT, VISIBLE, ECHO, SERVICES, RFCOMM, LESCAN, LEADVERTISE, GUI, SPEAKER, or HID.\n" );
 
 		FreeArgs( args );
 
@@ -334,10 +341,10 @@ main( void )
 	}
 
 	if ( ( ( options[7] ) && ( ! visible ) && ( ! leAdvertise ) ) ||
-		( ( options[8] ) && ( ! visible ) && ( ! leAdvertise ) && ( ! leScan ) ) ||
+		( ( options[8] ) && ( ! visible ) && ( ! leAdvertise ) && ( ! leScan ) && ( ! hidAddress ) ) ||
 		( ( options[21] ) && ( ! leScan ) ) )
 	{
-		Printf( "AS is for VISIBLE or LEADVERTISE. SECONDS also works with LESCAN. PASSIVE requires LESCAN.\n" );
+		Printf( "AS is for VISIBLE or LEADVERTISE. SECONDS also works with LESCAN and HID. PASSIVE requires LESCAN.\n" );
 
 		FreeArgs( args );
 
@@ -365,6 +372,15 @@ main( void )
 	if ( ( options[17] ) && ( ! save ) )
 	{
 		Printf( "BYTES requires SAVE.\n" );
+
+		FreeArgs( args );
+
+		return ( RETURN_FAIL );
+	}
+
+	if ( ( options[26] ) && ( ( ! hidAddress ) || ( options[8] ) ) )
+	{
+		Printf( "INPUT requires HID and runs until Ctrl-C or disconnect.\n" );
 
 		FreeArgs( args );
 
@@ -424,6 +440,13 @@ main( void )
 			{
 				result = TestRFCOMM( request, unit, rfcommAddress, channel, text, reply );
 			}
+
+			CloseDevice( request );
+		}
+		else if ( hidAddress )
+		{
+			result = options[26] ? ConnectBluetoothInput( request, unit, hidAddress ) :
+				MonitorBluetoothHID( request, unit, hidAddress, seconds );
 
 			CloseDevice( request );
 		}
