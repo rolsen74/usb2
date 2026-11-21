@@ -16,6 +16,15 @@ SEC_CODE void Serial_Cmd_Break( struct SerialContext *ctx, struct SerialUnit *un
 U32 ticks;
 U16 ifcnr;
 
+	if ( ( unit->ACM ) && ( ! ( unit->ACMCapabilities & SERIAL_ACM_BREAK ) ) )
+	{
+		ioreq->IOSer.io_Error = IOERR_NOCMD;
+
+		Serial_Reply( ctx, ioreq );
+
+		return;
+	}
+
 	ifcnr = unit->StartMsg->InterfaceDescriptor->InterfaceNumber;
 	ticks = ioreq->io_BrkTime / 20000;
 

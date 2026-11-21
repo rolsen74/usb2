@@ -15,7 +15,7 @@ SEC_CODE void Serial_Interrupt_Start( struct SerialContext *ctx UNUSED, struct S
 {
 struct USB2_IORequest *ioreq;
 
-	if ( ( unit->Detached ) || ( unit->InterruptPending ) )
+	if ( ( ! unit->Interrupt ) || ( unit->Detached ) || ( unit->InterruptPending ) )
 	{
 		return;
 	}

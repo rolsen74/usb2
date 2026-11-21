@@ -17,20 +17,22 @@ struct SerialDriverBase *driver;
 struct SerialContext *ctx;
 struct SerialUnit *unit;
 
+	if ( ( ! msg ) || ( ! msg->IUSB2 ) || ( ! msg->Interface ) || ( ! msg->InterfaceDescriptor ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( ! ( ( ( msg->VendorID == SERIAL_PL2303_VENDOR ) && ( msg->DeviceID == SERIAL_PL2303_PRODUCT ) ) ||
+		( ( msg->InterfaceDescriptor->InterfaceClass == USBCLASS_CDC_Control ) &&
+		  ( msg->InterfaceDescriptor->InterfaceSubClass == SERIAL_ACM_SUBCLASS ) ) ) )
+	{
+		return ( FALSE );
+	}
+
 	driver = (PTR) Self->Data.LibBase;
 	ctx = & driver->Context;
 	ctx->IUSB2 = msg->IUSB2;
 	IUSB2 = msg->IUSB2;
-
-	if ( ( msg->VendorID != 0x067b ) || ( msg->DeviceID != 0x2303 ) )
-	{
-		return ( FALSE );
-	}
-
-	if ( ! Serial_CreateDevice( ctx ) )
-	{
-		return ( FALSE );
-	}
 
 	unit = Serial_Alloc( ctx, msg );
 

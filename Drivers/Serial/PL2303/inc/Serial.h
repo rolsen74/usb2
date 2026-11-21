@@ -14,11 +14,20 @@
 
 #define DEVICES_SERIAL_H_OBSOLETE
 #include <devices/serial.h>
+#include <interfaces/usb2port.h>
 
-#define SERIAL_DEVICE_NAME "usb2serial.device"
-#define SERIAL_MAX_UNITS 16
+#define SERIAL_DRIVER_NAME "PL2303.Driver"
+#define SERIAL_DRIVER_VERSION 1
+#define SERIAL_DRIVER_REVISION 2
+#define SERIAL_DRIVER_ID SERIAL_DRIVER_NAME " 1.2 (21.11.2026)\r\n"
+
 #define SERIAL_RX_SIZE 4096
 #define SERIAL_UART_INDEX 8
+#define SERIAL_PL2303_VENDOR 0x067b
+#define SERIAL_PL2303_PRODUCT 0x2303
+#define SERIAL_ACM_SUBCLASS 0x02
+#define SERIAL_ACM_LINE 0x02
+#define SERIAL_ACM_BREAK 0x04
 
 #define SERIAL_UART_DCD 0x01
 #define SERIAL_UART_DSR 0x02
@@ -30,15 +39,12 @@
 #define SERIAL_UART_CTS 0x80
 
 struct SerialUnit;
-struct SerialBase;
 
 struct SerialContext
 {
 	struct ExecIFace *IExec;
 	struct DOSIFace *IDOS;
 	struct USB2IFace *IUSB2;
-	struct SignalSemaphore Lock;
-	struct SerialBase *Device;
 };
 
 struct SerialDriverBase
@@ -49,20 +55,20 @@ struct SerialDriverBase
 	struct SerialContext Context;
 };
 
-struct SerialBase
-{
-	struct Library					Library;
-	U16								Pad;
-	PTR								SegList;
-	struct SerialContext *		Context;
-	struct SignalSemaphore		Semaphore;
-	struct SerialUnit *			Units[SERIAL_MAX_UNITS];
-};
-
 struct SerialUnit
 {
-	struct SerialContext *		Context;
-	struct SerialBase *			Base;
+	struct IORequest				PortRequest;
+	struct USB2PortIFace *		PortInterface;
+	struct USB2PortUnit *		PortUnit;
+
+	struct USB2_Interface *		DataInterface;
+	U32							ACMNotificationUsed;
+	U32							ACMNotificationSize;
+	U8							ACMNotification[10];
+	U8							ACM;
+	U8							ACMCapabilities;
+	U8							DataAlt;
+
 	struct USB2_DriverMessage *		StartMsg;
 	struct USB2_Register *		Register;
 	struct USB2_EPResource *		Control;
@@ -79,26 +85,23 @@ struct SerialUnit
 	U8								UartState;
 	U8								Stopped;
 	U8								Detached;
-	U8								Released;
-	U8								Shared;
 	U8								ReadPending;
 	U8								WritePending;
 	U8								InterruptPending;
 	U8								Overrun;
 	U32								RxHead;
 	U32								RxTail;
-	U32								UnitNr;
-	U32								OpenCount;
 };
 
 // --
 
 SEC_CODE U32 Serial_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg );
-SEC_CODE S32 Serial_CreateDevice( struct SerialContext *ctx );
 SEC_CODE struct SerialUnit *Serial_Alloc( struct SerialContext *ctx, struct USB2_DriverMessage *msg );
 SEC_CODE void Serial_Free( struct SerialContext *ctx, struct SerialUnit *unit );
 SEC_CODE void Serial_Main( struct SerialContext *ctx, struct SerialUnit *unit );
 SEC_CODE S32 Serial_Startup( struct SerialContext *ctx, struct SerialUnit *unit );
+SEC_CODE S32 Serial_ACM_Parse( struct SerialUnit *unit, U32 *interface, U32 *alt );
+SEC_CODE void Serial_ACM_Notification( struct SerialContext *ctx, struct SerialUnit *unit, const U8 *data, U32 length );
 SEC_CODE S32 Serial_Control( struct SerialContext *ctx, struct SerialUnit *unit, U8 type, U8 code, U16 value, U16 index, PTR data, U16 length );
 SEC_CODE S32 Serial_Vendor_Read( struct SerialContext *ctx, struct SerialUnit *unit, U16 value, U8 *result );
 SEC_CODE S32 Serial_Vendor_Write( struct SerialContext *ctx, struct SerialUnit *unit, U16 value, U16 index );
@@ -127,14 +130,6 @@ SEC_CODE void Serial_Cmd_Query( struct SerialContext *ctx, struct SerialUnit *un
 SEC_CODE void Serial_Cmd_Break( struct SerialContext *ctx, struct SerialUnit *unit, struct IOExtSer *ioreq );
 SEC_CODE void Serial_Cmd_DeviceQuery( struct SerialContext *ctx, struct SerialUnit *unit, struct IOStdReq *ioreq );
 
-SEC_CODE struct SerialBase *Serial_Manager_Init( struct SerialBase *base, PTR seglist, struct ExecIFace *IExec );
-SEC_CODE U32 Serial_Manager_Obtain( struct DeviceManagerInterface *Self );
-SEC_CODE U32 Serial_Manager_Release( struct DeviceManagerInterface *Self );
-SEC_CODE S32 Serial_Manager_Open( struct DeviceManagerInterface *Self, struct IORequest *ioreq, U32 unitnr, U32 flags );
-SEC_CODE PTR Serial_Manager_Close( struct DeviceManagerInterface *Self, struct IORequest *ioreq );
-SEC_CODE PTR Serial_Manager_Expunge( struct DeviceManagerInterface *Self );
-SEC_CODE void Serial_Manager_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq );
-SEC_CODE void Serial_Manager_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq );
 
 SEC_CODE struct SerialDriverBase *Driver_Init( PTR dummy, PTR seglist, struct ExecBase *sysbase );
 SEC_CODE U32 Driver_Obtain( struct LibraryManagerInterface *Self );

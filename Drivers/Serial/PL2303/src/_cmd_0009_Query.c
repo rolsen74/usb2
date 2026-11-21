@@ -29,7 +29,8 @@ U8 state;
 		status |= ( 1 << 3 );
 	}
 
-	if ( ! ( state & SERIAL_UART_CTS ) )
+	// CDC ACM SERIAL_STATE has no CTS bit.
+	if ( ( ! unit->ACM ) && ( ! ( state & SERIAL_UART_CTS ) ) )
 	{
 		status |= ( 1 << 4 );
 	}

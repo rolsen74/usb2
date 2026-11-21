@@ -11,14 +11,6 @@
 
 // --
 
-#define DRIVER_NAME "PL2303.Driver"
-#define DRIVER_VERSION 1
-#define DRIVER_REVISION 0
-#define DRIVER_DATE "17.11.2026"
-#define DRIVER_ID DRIVER_NAME " 1.0 (" DRIVER_DATE ")\r\n"
-
-// --
-
 struct Library *SysBase = NULL;
 struct ExecIFace *IExec = NULL;
 struct Library *DOSBase = NULL;
@@ -73,7 +65,7 @@ const PTR DriverInterfaces[] =
 	(PTR) NULL
 };
 
-static USED const char verstag[] = "\0$VER: " DRIVER_ID;
+static USED const char verstag[] = "\0$VER: " SERIAL_DRIVER_ID;
 
 static USED const struct Resident driver_res =
 {
@@ -81,11 +73,11 @@ static USED const struct Resident driver_res =
 	(PTR) & driver_res,
 	(PTR) ( & driver_res + 1 ),
 	RTF_NATIVE | RTF_COLDSTART,
-	DRIVER_VERSION,
+	SERIAL_DRIVER_VERSION,
 	NT_LIBRARY,
 	0,
-	(STR) DRIVER_NAME,
-	(STR) DRIVER_ID,
+	(STR) SERIAL_DRIVER_NAME,
+	(STR) SERIAL_DRIVER_ID,
 	(PTR) Driver_Init
 };
 

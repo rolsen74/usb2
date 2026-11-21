@@ -35,14 +35,13 @@ struct SerialDriverBase *driver;
 	}
 
 	driver->Library.lib_Node.ln_Type = NT_LIBRARY;
-	driver->Library.lib_Node.ln_Name = (STR) "PL2303.Driver";
+	driver->Library.lib_Node.ln_Name = (STR) SERIAL_DRIVER_NAME;
 	driver->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
-	driver->Library.lib_Version = 1;
-	driver->Library.lib_Revision = 0;
-	driver->Library.lib_IdString = (STR) "PL2303.Driver 1.0 (17.11.2026)\r\n";
+	driver->Library.lib_Version = SERIAL_DRIVER_VERSION;
+	driver->Library.lib_Revision = SERIAL_DRIVER_REVISION;
+	driver->Library.lib_IdString = (STR) SERIAL_DRIVER_ID;
 	driver->SegList = seglist;
 	driver->Context.IExec = IExec;
-	InitSemaphore( & driver->Context.Lock );
 
 	DOSBase = OpenLibrary( "dos.library", 50 );
 

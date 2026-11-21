@@ -22,7 +22,13 @@ U8 previous;
 	{
 		unit->InterruptPending = FALSE;
 
-		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual > SERIAL_UART_INDEX ) )
+		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( unit->ACM ) &&
+			( ioreq->io_Actual <= ioreq->io_Length ) )
+		{
+			Serial_ACM_Notification( ctx, unit, ioreq->io_Data, ioreq->io_Actual );
+		}
+		else if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ! unit->ACM ) &&
+			( ioreq->io_Actual > SERIAL_UART_INDEX ) )
 		{
 			data = ioreq->io_Data;
 			previous = unit->UartState;
@@ -35,6 +41,9 @@ U8 previous;
 		}
 		else if ( ioreq->io_Error == USB2Err_Host_Stall )
 		{
+			unit->ACMNotificationUsed = 0;
+			unit->ACMNotificationSize = 0;
+
 			USB2_EPRes_Destall( unit->Interrupt );
 		}
 		else if ( ioreq->io_Error != USB2Err_NoError )

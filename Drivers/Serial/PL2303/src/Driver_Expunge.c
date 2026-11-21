@@ -13,7 +13,7 @@
 
 SEC_CODE PTR Driver_Expunge( struct LibraryManagerInterface *Self UNUSED )
 {
-	// The registered serial device calls into this library after the USB task exits.
+	// Keep the external USB driver resident across hotplug.
 	return ( NULL );
 }
 

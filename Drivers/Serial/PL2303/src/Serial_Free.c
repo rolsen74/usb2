@@ -13,7 +13,6 @@
 
 SEC_CODE void Serial_Free( struct SerialContext *ctx, struct SerialUnit *unit )
 {
-struct SerialBase *base;
 struct IOExtSer *ioreq;
 
 	if ( ! unit )
@@ -21,10 +20,20 @@ struct IOExtSer *ioreq;
 		return;
 	}
 
-	base = unit->Base;
-	ObtainSemaphore( & base->Semaphore );
-	unit->Detached = TRUE;
-	ReleaseSemaphore( & base->Semaphore );
+	if ( unit->PortUnit )
+	{
+		unit->PortInterface->Unregister( unit->PortUnit );
+	}
+
+	if ( unit->PortInterface )
+	{
+		DropInterface( (PTR) unit->PortInterface );
+	}
+
+	if ( unit->PortRequest.io_Device )
+	{
+		CloseDevice( & unit->PortRequest );
+	}
 
 	if ( unit->ReadPending )
 	{
@@ -64,6 +73,11 @@ struct IOExtSer *ioreq;
 
 	if ( unit->Register )
 	{
+		if ( unit->DataAlt )
+		{
+			USB2_Ifc_SetAlt( unit->Register, unit->DataInterface, 0 );
+		}
+
 		USB2_Reg_Unregister( unit->Register );
 		unit->Register = NULL;
 	}
@@ -80,20 +94,7 @@ struct IOExtSer *ioreq;
 		unit->BeginPort = NULL;
 	}
 
-	ObtainSemaphore( & base->Semaphore );
-	unit->Released = TRUE;
-
-	if ( unit->UnitNr < SERIAL_MAX_UNITS )
-	{
-		base->Units[unit->UnitNr] = NULL;
-	}
-
-	if ( ! unit->OpenCount )
-	{
-		FreeVec( unit );
-	}
-
-	ReleaseSemaphore( & base->Semaphore );
+	FreeVec( unit );
 }
 
 // --

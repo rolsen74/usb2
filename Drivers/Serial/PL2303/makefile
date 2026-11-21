@@ -1,5 +1,5 @@
 #
-# PL2303 external USB2 serial driver for AmigaOS 4
+# PL2303 and CDC ACM external USB2 serial driver for AmigaOS 4
 #
 
 .PHONY: all clean install
@@ -51,6 +51,7 @@ install: all
 ifeq ($(HOSTOS),AmigaOS)
 	copy $(BINDIR)/$(TARGET) Libs:USB2
 	copy PL2303.Class Libs:USB2
+	copy CDCACM.Class Libs:USB2
 else
-	@echo "Copy $(BINDIR)/$(TARGET) and PL2303.Class to Libs:USB2 on AmigaOS."
+	@echo "Copy $(BINDIR)/$(TARGET), PL2303.Class, and CDCACM.Class to Libs:USB2 on AmigaOS."
 endif

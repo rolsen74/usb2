@@ -1,0 +1,5 @@
+TYPE Interface
+TITLE "CDC ACM Serial"
+DRIVER "PL2303.Driver"
+CLASS 0x02
+SUBCLASS 0x02
