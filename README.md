@@ -69,16 +69,15 @@ The Bluetooth USB class driver registers compatible HCI controllers with
 nearby Classic Bluetooth devices, and exercises legacy PIN pairing and
 reconnect with a saved bond.
 
-## USB Networking (Experimental)
+## USB Networking
 
 | Adapter | USB vendor:product IDs | SANA-II device | Status |
 | --- | --- | --- | --- |
 | [RTL8152 wired Ethernet](Doc/RTL8152.md) | `0bda:8152` | `usb2rtl8152.device` | Experimental |
-| [RTL8188EU 2.4 GHz Wi-Fi](Doc/RTL8188.md) | `0bda:8179`, `07b8:8179`, `2357:010c` | `usb2rtl8188.device` | Experimental |
+| [RTL8188EU 2.4 GHz Wi-Fi](Doc/RTL8188.md) | `0bda:8179`, `07b8:8179`, `2357:010c` | `usb2rtl8188.device` | Working on `0bda:8179` |
 
-Install the devices in `DEVS:Networks/`. Physical adapter testing on
-AmigaOS 4 remains pending. The RTL8188EU guide covers firmware and supplicant
-setup.
+Install the devices in `DEVS:Networks/`. See the adapter guides for
+firmware, setup, and hardware validation.
 
 ## General Limitations
 
