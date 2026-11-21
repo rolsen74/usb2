@@ -17,7 +17,8 @@ BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint )
 {
 	usb->USB2 = message->IUSB2;
 	usb->InterfaceNumber = message->Interface->IFC_Num;
-	usb->EventPending = FALSE;
+	usb->EventPending = BTUSB_EVENT_IDLE;
+	usb->PrefetchEvents = FALSE;
 	usb->Events = NULL;
 	usb->ACLIn = NULL;
 	usb->ACLOut = NULL;

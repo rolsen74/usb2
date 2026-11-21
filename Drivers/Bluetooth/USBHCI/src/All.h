@@ -8,6 +8,13 @@
 
 #define HCI_USB_TIMEOUT 1500000
 
+enum BTUSBEventRead
+{
+	BTUSB_EVENT_IDLE,
+	BTUSB_EVENT_ON_DEMAND,
+	BTUSB_EVENT_PREFETCH,
+};
+
 struct BTUSB
 {
 	struct USB2IFace *USB2;
@@ -16,7 +23,8 @@ struct BTUSB
 	struct USB2_EPResource *ACLIn;
 	struct USB2_EPResource *ACLOut;
 	U32 InterfaceNumber;
-	S32 EventPending;
+	enum BTUSBEventRead EventPending;
+	S32 PrefetchEvents;
 };
 
 U8 BTUSB_FindEventEndpoint( struct USB2IFace *usb2, struct USB2_Interface *ifc );
@@ -28,6 +36,7 @@ void BTUSB_Close( struct BTUSB *usb );
 U32 BTUSB_Entry( struct USB2DriverIFace *self, struct USB2_DriverMessage *message );
 S32 BTUSB_StartCommand( PTR context, const U8 *command, U32 length );
 S32 BTUSB_ReadEventChunk( PTR context, const U8 **data, U32 *length );
+void BTUSB_QueueEvent( struct BTUSB *usb, enum BTUSBEventRead kind );
 void BTUSB_CancelEvent( struct BTUSB *handle );
 
 #endif

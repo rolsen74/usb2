@@ -8,7 +8,6 @@
 
 // --
 
-#include <string.h>
 #include "BluetoothTest.h"
 
 // --
@@ -40,7 +39,11 @@ ParseAddress( const char *text, uint8_t *address )
 	LONG high;
 	LONG low;
 
-	if ( strlen( text ) != 17 )
+	for( byte = 0; ( byte < 17 ) && ( text[byte] ); byte++ )
+	{
+	}
+
+	if ( ( byte != 17 ) || ( text[byte] ) )
 	{
 		return ( FALSE );
 	}

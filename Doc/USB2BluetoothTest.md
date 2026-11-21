@@ -145,19 +145,59 @@ and Ctrl-C cancels the capture.
 
 ### Send with Bluetooth Object Push
 
-With Bluetooth2 1.14, Bluetooth.Driver 1.12, and USB2BluetoothTest 0.16,
-start the peer's Bluetooth file receiver. Run `SERVICES=<address>` and
-use the RFCOMM channel advertised by Object Push (service class `$1105`).
+With Bluetooth2 1.16, Bluetooth.Driver 1.12 or later, and USB2BluetoothTest
+0.18, start the peer's Bluetooth file receiver. The sender looks up the
+Object Push service (class `$1105`) directly.
 
 ```text
-USB2BluetoothTest UNIT=0 RFCOMM=AA:BB:CC:DD:EE:FF CHANNEL=3 PUSH="RAM:sample.bin"
+USB2BluetoothTest UNIT=0 RFCOMM=AA:BB:CC:DD:EE:FF PUSH="RAM:sample.bin"
 ```
+
+You can specify `CHANNEL=3` if the receiver's Object Push channel is 3.
+Bluetooth2 1.14 and 1.15 require the explicit channel.
 
 The peer receives the source filename and can ask whether to accept the
 file. The command reports success after the receiver accepts the entire
 file. It supports files up to 4 GiB minus one byte. Press Ctrl-C to cancel.
 
 An Amiga successfully sent a file to Windows using the `07D1:F101` dongle.
+
+### Use the ReAction window
+
+```text
+USB2BluetoothTest GUI UNIT=0
+```
+
+Click **Scan Classic**, then select an address or enter it manually.
+Open the peer's Bluetooth file receiver. Choose a local file and click
+**Send file**. Leave the channel at `0` to look it up automatically.
+The window stays responsive during scanning and sending. **Stop** requests
+cancellation, and the window title shows the result.
+
+## Play a WAV on a Bluetooth speaker
+
+Install Bluetooth2 1.17, Bluetooth.Driver 1.14, and USB2BluetoothTest 0.19.
+Put the speaker in pairing mode and use **Scan Classic** or `DISCOVER` to
+find its address. The speaker must support Classic A2DP and the SBC codec.
+If it requires authentication, playback can reuse a bond saved with `BOND`.
+
+```text
+USB2BluetoothTest UNIT=0 SPEAKER=AA:BB:CC:DD:EE:FF PLAY="RAM:music.wav"
+```
+
+Use a 16-bit PCM WAV at 44.1 or 48 kHz, with one or two channels. The tool
+streams the file and encodes SBC during playback. Press Ctrl-C to stop.
+In the ReAction window, select the speaker and WAV file, then click
+**Play WAV**. Playback on a physical speaker is awaiting validation.
+
+Bluetooth2 1.20 lets audio connections negotiate faster BR/EDR packet
+types. Bluetooth.Driver 1.16 queues controller events ahead of audio writes.
+Look for the `Bluetooth2 A2DP:` line in serial output after playback.
+It compares the audio duration with the controller send time and reports
+late packets and peak lag in milliseconds.
+
+For application audio, select a speaker and click **Use for AHI**, then
+follow the [Bluetooth AHI setup](AHI.md#bluetooth-speaker-playback).
 
 ## Scan and advertise over Bluetooth LE
 

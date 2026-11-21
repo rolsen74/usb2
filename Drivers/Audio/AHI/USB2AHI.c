@@ -20,8 +20,21 @@
 
 // --
 
+#ifdef BLUETOOTH_AHI
+#include <interfaces/bluetooth2.h>
+
+#define DRIVER_NAME "bluetooth2.audio"
+#define DRIVER_ID DRIVER_NAME " 6.0 (21.11.2026)\r\n"
+#define WORKER_NAME "Bluetooth2 AHI playback"
+#define OUTPUT_NAME "Bluetooth A2DP"
+#define DEFAULT_RATE 48000
+#else
 #define DRIVER_NAME "usb2.audio"
 #define DRIVER_ID DRIVER_NAME " 6.0 (18.11.2026)\r\n"
+#define WORKER_NAME "USB2 AHI playback"
+#define OUTPUT_NAME "USB audio"
+#define DEFAULT_RATE 48000
+#endif
 #define UNUSED __attribute__((unused))
 #define USED __attribute__((used))
 
@@ -40,6 +53,13 @@ struct Playback
 	struct UtilityIFace *Utility;
 	struct AHIAudioCtrlDrv *Audio;
 	struct AudioFormat Format;
+#ifdef BLUETOOTH_AHI
+	struct Bluetooth2PCMIFace *Bluetooth;
+	struct BTAudioPCM Stream;
+	ULONG Unit;
+	ULONG PCMOffset;
+	ULONG PCMLength;
+#endif
 	U8 *Mix;
 	U8 *PCM;
 	ULONG StartMask;
@@ -48,16 +68,14 @@ struct Playback
 
 // --
 
-static void
-Playback_Run( struct Playback *play )
+static ULONG
+MixPlayback( struct Playback *play )
 {
 	struct AHIAudioCtrlDrv *audio;
-	struct IOStdReq *io;
 
 	ULONG frames;
 	ULONG index;
 	ULONG step;
-	ULONG signals;
 	int32 left;
 	int32 right;
 	WORD *mix;
@@ -65,61 +83,84 @@ Playback_Run( struct Playback *play )
 	BOOL stereo;
 
 	audio = play->Audio;
+
+	Forbid();
+
+	if ( audio->ahiac_PlayerFunc )
+	{
+		play->Utility->CallHookPkt( audio->ahiac_PlayerFunc, audio, NULL );
+	}
+
+	frames = audio->ahiac_BuffSamples;
+	stereo = audio->ahiac_BuffType == AHIST_S16S;
+	step = stereo ? 2 : 1;
+
+	if ( ( ! frames ) || ( ( audio->ahiac_BuffType != AHIST_M16S ) && ( ! stereo ) ) ||
+		( frames > audio->ahiac_MaxBuffSamples ) || ( frames > audio->ahiac_BuffSize / ( step * 2 ) ) )
+	{
+		Permit();
+
+		return ( 0 );
+	}
+
+	play->Utility->CallHookPkt( audio->ahiac_MixerFunc, audio, play->Mix );
+
+	Permit();
+
+	mix = (APTR) play->Mix;
+	pcm = play->PCM;
+
+	for( index = 0; index < frames; index++ )
+	{
+		left = mix[0];
+		right = stereo ? mix[1] : left;
+		mix += step;
+
+		if ( play->Format.Channels == 1 )
+		{
+			left = ( left + right ) / 2;
+		}
+
+		*pcm++ = (U8) left;
+		*pcm++ = (U16) left >> 8;
+
+		if ( play->Format.Channels == 2 )
+		{
+			*pcm++ = (U8) right;
+			*pcm++ = (U16) right >> 8;
+		}
+	}
+
+	return ( frames * play->Format.Channels * 2 );
+}
+
+// --
+
+#ifdef BLUETOOTH_AHI
+#include "BluetoothPlayback.c"
+#else
+static void
+Playback_Run( struct Playback *play )
+{
+	struct IOStdReq *io;
+
+	ULONG length;
+	ULONG signals;
+
 	io = play->Request;
 
 	while( ! ( SetSignal( 0, 0 ) & SIGBREAKF_CTRL_C ) )
 	{
-		Forbid();
+		length = MixPlayback( play );
 
-		if ( audio->ahiac_PlayerFunc )
+		if ( ! length )
 		{
-			play->Utility->CallHookPkt( audio->ahiac_PlayerFunc, audio, NULL );
-		}
-
-		frames = audio->ahiac_BuffSamples;
-		stereo = audio->ahiac_BuffType == AHIST_S16S;
-		step = stereo ? 2 : 1;
-
-		if ( ( ! frames ) || ( ( audio->ahiac_BuffType != AHIST_M16S ) && ( ! stereo ) ) ||
-			( frames > audio->ahiac_MaxBuffSamples ) ||
-			( frames > audio->ahiac_BuffSize / ( step * 2 ) ) )
-		{
-			Permit();
-
 			break;
-		}
-
-		play->Utility->CallHookPkt( audio->ahiac_MixerFunc, audio, play->Mix );
-
-		Permit();
-
-		mix = (APTR) play->Mix;
-		pcm = play->PCM;
-
-		for( index = 0; index < frames; index++ )
-		{
-			left = mix[0];
-			right = stereo ? mix[1] : left;
-			mix += step;
-
-			if ( play->Format.Channels == 1 )
-			{
-				left = ( left + right ) / 2;
-			}
-
-			*pcm++ = (U8) left;
-			*pcm++ = (U16) left >> 8;
-
-			if ( play->Format.Channels == 2 )
-			{
-				*pcm++ = (U8) right;
-				*pcm++ = (U16) right >> 8;
-			}
 		}
 
 		io->io_Command = CMD_WRITE;
 		io->io_Data = play->PCM;
-		io->io_Length = frames * play->Format.Channels * 2;
+		io->io_Length = length;
 
 		SendIO( (APTR) io );
 
@@ -138,6 +179,7 @@ Playback_Run( struct Playback *play )
 		}
 	}
 }
+#endif
 
 // --
 
@@ -146,13 +188,23 @@ Playback_Entry( void )
 {
 	struct Task *task;
 	struct Playback *play;
+#ifndef BLUETOOTH_AHI
 	struct MsgPort *port;
+#endif
 
 	task = FindTask( NULL );
 	play = task->tc_UserData;
 
 	ObtainSemaphore( & play->Lifetime );
 
+#ifdef BLUETOOTH_AHI
+	play->Worker = task;
+	play->Started = TRUE;
+
+	Signal( play->Parent, play->StartMask );
+
+	Playback_Run( play );
+#else
 	port = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
 	if ( port )
@@ -172,6 +224,8 @@ Playback_Entry( void )
 
 		FreeSysObject( ASOT_PORT, port );
 	}
+
+#endif
 
 	Forbid();
 
@@ -270,7 +324,7 @@ AHI_Start( struct AHIsubIFace *self, ULONG flags, struct AHIAudioCtrlDrv *audio 
 	{
 		process = play->DOS->CreateNewProcTags(
 			NP_Entry, Playback_Entry,
-			NP_Name, "USB2 AHI playback",
+			NP_Name, WORKER_NAME,
 			NP_UserData, play,
 			TAG_END );
 	}
@@ -307,6 +361,10 @@ AHI_Free( struct AHIsubIFace *self, struct AHIAudioCtrlDrv *audio )
 	}
 
 	AHI_Stop( self, AHISF_PLAY, audio );
+
+#ifdef BLUETOOTH_AHI
+	CloseBluetoothPlayback( play );
+#endif
 
 	if ( play->Request )
 	{
@@ -397,6 +455,12 @@ AHI_Alloc( struct AHIsubIFace *self, struct TagItem *tags UNUSED, struct AHIAudi
 		goto failed;
 	}
 
+#ifdef BLUETOOTH_AHI
+	if ( ! OpenBluetoothPlayback( play ) )
+	{
+		goto failed;
+	}
+#else
 	if ( OpenDevice( AUDIO_DEVICE_NAME, AUDIO_PLAYBACK_UNIT_BASE, (APTR) play->Request, 0 ) )
 	{
 		play->Request->io_Device = NULL;
@@ -414,6 +478,8 @@ AHI_Alloc( struct AHIsubIFace *self, struct TagItem *tags UNUSED, struct AHIAudi
 	{
 		goto failed;
 	}
+
+#endif
 
 	audio->ahiac_MixFreq = play->Format.SampleRate;
 
@@ -435,7 +501,7 @@ AHI_GetAttr( struct AHIsubIFace *self UNUSED, ULONG attribute, LONG argument,
 	ULONG rate;
 
 	play = audio ? audio->ahiac_DriverData : NULL;
-	rate = play ? play->Format.SampleRate : 48000;
+	rate = play ? play->Format.SampleRate : DEFAULT_RATE;
 
 	switch( attribute )
 	{
@@ -450,7 +516,7 @@ AHI_GetAttr( struct AHIsubIFace *self UNUSED, ULONG attribute, LONG argument,
 		case AHIDB_FullDuplex:
 		case AHIDB_Realtime: return FALSE;
 		case AHIDB_Outputs: return 1;
-		case AHIDB_Output: return argument == 0 ? (LONG) "USB audio" : fallback;
+		case AHIDB_Output: return argument == 0 ? (LONG) OUTPUT_NAME : fallback;
 		case AHIDB_Version: return (LONG) DRIVER_ID;
 	}
 

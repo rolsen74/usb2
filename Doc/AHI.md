@@ -21,3 +21,32 @@ with `make -C Drivers/Audio/AHI MODE_ID=...` using a free mode ID.
 
 AHI recording is unsupported. Mode loading and playback on physical AmigaOS 4
 hardware remain unverified.
+
+## Bluetooth speaker playback
+
+`bluetooth2.audio` exposes a Classic Bluetooth A2DP speaker as a 48 kHz,
+16-bit stereo AHI output. Bluetooth2 encodes the AHI mixer output as SBC
+while the application is playing.
+
+1. Install Bluetooth2 1.18 and Bluetooth.Driver 1.15. Copy
+   `Devs/AHI/bluetooth2.audio` and `Devs/AudioModes/Bluetooth2` from the
+   USB2 archive to the corresponding directories under `DEVS:`, then reboot.
+2. Run `USB2BluetoothTest GUI UNIT=0` with version 0.20 or later,
+   select the speaker, and click
+   **Use for AHI**. You can also set the controller unit and speaker address
+   from the Shell.
+
+   ```text
+   SetEnv Bluetooth2-AHI 0 AA:BB:CC:DD:EE:FF
+   ```
+
+3. In AHI preferences, select **Bluetooth2: A2DP stereo playback** for the
+   unit your application uses. Play a short sample. If the speaker requires
+   authentication, Bluetooth2 can reuse a bond saved by
+   [USB2BluetoothTest](USB2BluetoothTest.md#save-and-reuse-a-bond).
+
+The speaker setting applies the next time the AHI mode opens. To keep it
+across reboots, copy `ENV:Bluetooth2-AHI` to `ENVARC:Bluetooth2-AHI`.
+The mode uses local ID `0x7f000002`. Use `make -C Drivers/Audio/AHI
+BT_MODE_ID=...` to choose a different ID. Bluetooth AHI playback awaits
+testing with a physical speaker.

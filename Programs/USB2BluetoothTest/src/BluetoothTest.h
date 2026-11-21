@@ -28,4 +28,8 @@ LONG PairController( struct IORequest *request, ULONG unit, const char *address,
 
 LONG RunLE( struct IORequest *request, ULONG unit, enum BTLEMode mode, const char *name, LONG seconds );
 
+LONG RunBluetoothWindow( ULONG unit );
+
+LONG PlayBluetoothAudio( struct IORequest *request, ULONG unit, const char *address, const char *path );
+
 #endif

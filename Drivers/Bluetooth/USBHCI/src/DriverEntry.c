@@ -44,7 +44,8 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 	struct Bluetooth2SDPIFace *sdp, struct Bluetooth2RFCOMMIFace *rfcomm,
 	struct Bluetooth2SerialIFace *serial, struct Bluetooth2SerialFileIFace *serialFile,
 	struct Bluetooth2SerialCaptureIFace *serialCapture, struct Bluetooth2ObjectPushIFace *objectPush,
-	struct Bluetooth2LEIFace *le, struct BTUSB *usb, struct MsgPort *requests )
+	struct Bluetooth2LEIFace *le, struct Bluetooth2A2DPIFace *a2dp,
+	struct Bluetooth2PCMIFace *pcm, struct BTUSB *usb, struct MsgPort *requests )
 {
 	struct BTControllerProbe *probe;
 	struct BTACLTransport transport;
@@ -84,7 +85,21 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 
 		if ( probe->Result == BT_HCI_OK )
 		{
-			if ( ( le ) && ( probe->Message.mn_Length >= sizeof( *probe ) ) && ( probe->LE ) )
+			if ( ( pcm ) && ( probe->Message.mn_Length >= sizeof( *probe ) ) && ( probe->PCM ) )
+			{
+				usb->PrefetchEvents = TRUE;
+
+				probe->Result = pcm->Play( & transport, probe->PCM, probe->Error );
+			}
+			else if ( ( a2dp ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, PCM ) ) &&
+				( probe->Audio ) )
+			{
+				usb->PrefetchEvents = TRUE;
+
+				probe->Result = a2dp->Play( & transport, probe->Audio, probe->Error );
+			}
+			else if ( ( le ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Audio ) ) &&
+				( probe->LE ) )
 			{
 				probe->Result = le->Run( & transport.HCI, probe->LE, probe->Error );
 			}
@@ -157,6 +172,13 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 			}
 		}
 
+		if ( usb->PrefetchEvents )
+		{
+			usb->PrefetchEvents = FALSE;
+
+			BTUSB_CancelEvent( usb );
+		}
+
 		ReplyMsg( & probe->Message );
 	}
 }
@@ -180,6 +202,8 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 	struct Bluetooth2SerialCaptureIFace *serialCapture;
 	struct Bluetooth2ObjectPushIFace *objectPush;
 	struct Bluetooth2LEIFace *le;
+	struct Bluetooth2A2DPIFace *a2dp;
+	struct Bluetooth2PCMIFace *pcm;
 	struct MsgPort *port;
 	struct MsgPort *requests;
 	struct BTUSB usb;
@@ -189,6 +213,7 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 	U32 result;
 	S32 unit;
 	S32 discovery;
+	S32 acl;
 
 	if ( ( ! message ) || ( ! message->Interface ) || ( ! message->InterfaceDescriptor ) ||
 		( message->InterfaceDescriptor->InterfaceProtocol != 1 ) )
@@ -270,6 +295,10 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 
 	le = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_LE_INTERFACE, BLUETOOTH2_LE_VERSION, NULL );
 
+	a2dp = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_A2DP_INTERFACE, BLUETOOTH2_A2DP_VERSION, NULL );
+
+	pcm = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_PCM_INTERFACE, BLUETOOTH2_PCM_VERSION, NULL );
+
 	requests = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
 	if ( ! requests )
@@ -285,7 +314,20 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 
 		if ( le )
 		{
-			unit = le->AddController( requests, & location, BTUSB_OpenACL( & usb ) );
+			acl = BTUSB_OpenACL( & usb );
+
+			if ( ( pcm ) && ( a2dp ) && ( acl ) )
+			{
+				unit = pcm->AddController( requests, & location );
+			}
+			else if ( ( a2dp ) && ( acl ) )
+			{
+				unit = a2dp->AddController( requests, & location );
+			}
+			else
+			{
+				unit = le->AddController( requests, & location, acl );
+			}
 		}
 		else if ( ( l2cap ) && ( visibility ) && ( names ) && ( bonding ) && ( pairing ) && ( BTUSB_OpenACL( & usb ) ) )
 		{
@@ -344,7 +386,7 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 				unit, (U32) location.VendorID, (U32) location.ProductID );
 
 			RunController( bt2, pairing, bonding, names, visibility, l2cap, sdp, rfcomm, serial,
-				serialFile, serialCapture, objectPush, le, & usb, requests );
+				serialFile, serialCapture, objectPush, le, a2dp, pcm, & usb, requests );
 
 			bt2->RemoveController( unit, requests );
 
@@ -365,6 +407,16 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 	FreeSysObject( ASOT_PORT, requests );
 
 drop_interface:
+	if ( pcm )
+	{
+		DropInterface( (PTR) pcm );
+	}
+
+	if ( a2dp )
+	{
+		DropInterface( (PTR) a2dp );
+	}
+
 	if ( le )
 	{
 		DropInterface( (PTR) le );

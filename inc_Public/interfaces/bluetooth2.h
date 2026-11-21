@@ -35,6 +35,8 @@ struct BTControllerProbe
 	struct BTRFCOMMCapture *SerialCapture;
 	struct BTObjectPush *ObjectPush;
 	struct BTLERequest *LE;
+	struct BTAudioPlayback *Audio;
+	struct BTAudioPCM *PCM;
 };
 
 struct Bluetooth2IFace
@@ -303,6 +305,46 @@ struct Bluetooth2LEIFace
 		const struct BTHCITransport *transport, struct BTLERequest *request, struct BTHCIError *error );
 	int32_t APICALL (*AddController)( struct Bluetooth2LEIFace *Self, struct MsgPort *port,
 		const struct BTControllerLocation *location, uint32_t acl );
+};
+
+#define BLUETOOTH2_A2DP_INTERFACE "a2dp"
+#define BLUETOOTH2_A2DP_VERSION 1
+
+struct Bluetooth2A2DPIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2A2DPIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2A2DPIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2A2DPIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2A2DPIFace *Self );
+
+	enum BTHCIResult APICALL (*PlayController)( struct Bluetooth2A2DPIFace *Self, uint32_t unit,
+		struct BTAudioPlayback *audio, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Play)( struct Bluetooth2A2DPIFace *Self, const struct BTACLTransport *transport,
+		struct BTAudioPlayback *audio, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2A2DPIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_PCM_INTERFACE "a2dp-pcm"
+#define BLUETOOTH2_PCM_VERSION 1
+
+struct Bluetooth2PCMIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2PCMIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2PCMIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2PCMIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2PCMIFace *Self );
+
+	enum BTHCIResult APICALL (*PlayController)( struct Bluetooth2PCMIFace *Self, uint32_t unit,
+		struct BTAudioPCM *pcm, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Play)( struct Bluetooth2PCMIFace *Self, const struct BTACLTransport *transport,
+		struct BTAudioPCM *pcm, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2PCMIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
 };
 
 #endif

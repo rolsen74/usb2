@@ -15,7 +15,7 @@
 // --
 
 static const char version[] __attribute__((used)) =
-	"\0$VER: USB2BluetoothTest 0.17 (21.11.2026)";
+	"\0$VER: USB2BluetoothTest 0.20 (21.11.2026)";
 
 // --
 
@@ -74,6 +74,10 @@ ReportHCIError( enum BTHCIResult result, const struct BTHCIError *error )
 
 		case BT_LE_NOT_SUPPORTED:
 		case BT_LE_CANCELLED:
+		case BT_A2DP_INVALID_WAVE:
+		case BT_A2DP_NO_SINK:
+		case BT_A2DP_REJECTED:
+		case BT_OBEX_NO_SERVICE:
 		case BT_OBEX_REJECTED:
 		case BT_OBEX_NAME_TOO_LONG:
 		case BT_OBEX_SIZE_LIMIT:
@@ -227,7 +231,9 @@ main( void )
 	const char *file;
 	const char *save;
 	const char *push;
-	LONG options[22];
+	const char *speaker;
+	const char *wave;
+	LONG options[25];
 	LONG leScan;
 	LONG leAdvertise;
 	LONG bytes;
@@ -261,8 +267,11 @@ main( void )
 	options[19] = 0;
 	options[20] = 0;
 	options[21] = 0;
+	options[22] = 0;
+	options[23] = 0;
+	options[24] = 0;
 
-	args = ReadArgs( "UNIT/K/N,DISCOVER/S,PAIR/K,BOND/K,RECONNECT/K,NAME/K,VISIBLE/S,AS/K,SECONDS/K/N,ECHO/K,SERVICES/K,RFCOMM/K,CHANNEL/K/N,TEXT/K,REPLY/S,FILE/K,SAVE/K,BYTES/K/N,PUSH/K,LESCAN/S,LEADVERTISE/S,PASSIVE/S", options, NULL );
+	args = ReadArgs( "UNIT/K/N,DISCOVER/S,PAIR/K,BOND/K,RECONNECT/K,NAME/K,VISIBLE/S,AS/K,SECONDS/K/N,ECHO/K,SERVICES/K,RFCOMM/K,CHANNEL/K/N,TEXT/K,REPLY/S,FILE/K,SAVE/K,BYTES/K/N,PUSH/K,LESCAN/S,LEADVERTISE/S,PASSIVE/S,GUI/S,SPEAKER/K,PLAY/K", options, NULL );
 
 	if ( ! args )
 	{
@@ -291,6 +300,8 @@ main( void )
 	push = (const char *) options[18];
 	leScan = options[19];
 	leAdvertise = options[20];
+	speaker = (const char *) options[23];
+	wave = (const char *) options[24];
 	operation = BT_TEST_PAIR;
 
 	if ( options[3] )
@@ -313,9 +324,9 @@ main( void )
 		return ( RETURN_FAIL );
 	}
 
-	if ( !!discovery + !!options[2] + !!options[3] + !!options[4] + !!nameAddress + !!visible + !!echoAddress + !!servicesAddress + !!rfcommAddress + !!leScan + !!leAdvertise > 1 )
+	if ( !!discovery + !!options[2] + !!options[3] + !!options[4] + !!nameAddress + !!visible + !!echoAddress + !!servicesAddress + !!rfcommAddress + !!leScan + !!leAdvertise + !!options[22] + !!speaker > 1 )
 	{
-		Printf( "Choose one of DISCOVER, NAME, PAIR, BOND, RECONNECT, VISIBLE, ECHO, SERVICES, RFCOMM, LESCAN, or LEADVERTISE.\n" );
+		Printf( "Choose one of DISCOVER, NAME, PAIR, BOND, RECONNECT, VISIBLE, ECHO, SERVICES, RFCOMM, LESCAN, LEADVERTISE, GUI, or SPEAKER.\n" );
 
 		FreeArgs( args );
 
@@ -360,6 +371,22 @@ main( void )
 		return ( RETURN_FAIL );
 	}
 
+	if ( !!speaker != !!wave )
+	{
+		Printf( "SPEAKER and PLAY must be used together.\n" );
+
+		FreeArgs( args );
+
+		return ( RETURN_FAIL );
+	}
+
+	if ( options[22] )
+	{
+		FreeArgs( args );
+
+		return ( RunBluetoothWindow( unit ) );
+	}
+
 	result = RETURN_FAIL;
 
 	port = AllocSysObjectTags( ASOT_PORT, TAG_END );
@@ -397,6 +424,12 @@ main( void )
 			{
 				result = TestRFCOMM( request, unit, rfcommAddress, channel, text, reply );
 			}
+
+			CloseDevice( request );
+		}
+		else if ( speaker )
+		{
+			result = PlayBluetoothAudio( request, unit, speaker, wave );
 
 			CloseDevice( request );
 		}

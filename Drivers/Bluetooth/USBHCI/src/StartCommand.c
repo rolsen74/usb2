@@ -18,7 +18,6 @@ BTUSB_StartCommand( PTR context, const U8 *command, U32 length )
 	struct BTUSB *usb;
 	struct USB2_EPResource *control;
 	struct USB2_IORequest *request;
-	struct USB2_IORequest *event;
 	struct USB2_SetupData *setup;
 
 	S32 error;
@@ -27,7 +26,6 @@ BTUSB_StartCommand( PTR context, const U8 *command, U32 length )
 	control = usb->Registration->Res_Control;
 	request = control->IORequests[0];
 	setup = control->SetupData;
-	event = usb->Events->IORequests[0];
 
 	setup->RequestType = REQTYPE_Write | REQTYPE_Class |
 		( usb->InterfaceNumber ? REQTYPE_Interface : REQTYPE_Device );
@@ -42,13 +40,10 @@ BTUSB_StartCommand( PTR context, const U8 *command, U32 length )
 	request->io_Length = length;
 	request->io_TimeOut = HCI_USB_TIMEOUT;
 
-	event->io_Command = CMD_READ;
-	event->io_Data = usb->Events->Buffers[0];
-	event->io_Length = usb->Events->BufferSize;
-	usb->EventPending = TRUE;
+	// A prefetched ACL completion must not stand in for a command response.
+	BTUSB_CancelEvent( usb );
 
-	// Queue the interrupt read before the controller can reply.
-	SendIO( (PTR) event );
+	BTUSB_QueueEvent( usb, BTUSB_EVENT_ON_DEMAND );
 
 	error = DoIO( (PTR) request );
 

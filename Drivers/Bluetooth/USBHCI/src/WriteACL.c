@@ -41,6 +41,11 @@ BTUSB_WriteACL( PTR context, const U8 *data, U32 length )
 	request->io_Data = buffer;
 	request->io_Length = length;
 
+	if ( usb->PrefetchEvents )
+	{
+		BTUSB_QueueEvent( usb, BTUSB_EVENT_PREFETCH );
+	}
+
 	error = DoIO( (PTR) request );
 
 	if ( ( ! error ) && ( request->io_Actual != length ) )

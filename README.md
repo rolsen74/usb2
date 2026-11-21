@@ -15,12 +15,15 @@ The following functionality has been reported working:
 - USB Printer Class (Printer Protocol)
 - USB Audio Class 1.0 PCM microphone capture and playback on tested devices
 - USB Video Class (UVC) webcam capture and live preview on tested cameras
+- USB Bluetooth Classic discovery, legacy PIN pairing, saved-bond reconnect, and Object Push file transfer to Windows on tested hardware
 - 2.4 GHz Wi-Fi on the tested RTL8188EU and RT2870 adapters
 - UHCI (USB 1.1 Host Controller; tested on Pegasus2 under QEMU)
 - OHCI (USB 1.1 Host Controller)
 - EHCI (USB 2.0 Host Controller)
 
 The xHCI driver is still experimental and is enabled in the default build.
+Bluetooth LE scanning and advertising are implemented and awaiting hardware
+validation with an LE-capable adapter.
 Compiling a driver does not establish that it works with hardware.
 
 ## Driver Guides
@@ -29,7 +32,7 @@ Compiling a driver does not establish that it works with hardware.
 | --- | --- |
 | Host controllers | [EHCI](Doc/EHCI.md), [OHCI](Doc/OHCI.md), [UHCI](Doc/UHCI.md), [xHCI](Doc/XHCI.md) |
 | Built-in device drivers | [HUB](Doc/HUB.md), [HID](Doc/HID.md), [MSD](Doc/MSD.md) |
-| Classes | [PTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md) |
+| Classes | [PTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md), [Bluetooth](Doc/USB2BluetoothTest.md) |
 | Serial devices | [PL2303](Doc/PL2303.md) |
 | Networking | [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md), [RT2870](Doc/RT2870.md) |
 | AHI and AmigaInput | [AHI playback](Doc/AHI.md), [Competition Pro](Doc/CompPro.md), [Xbox 360](Doc/Xbox360.md) |
@@ -68,9 +71,20 @@ Compatible [PL2303](Doc/PL2303.md) USB serial adapters are exposed through
 
 The Bluetooth USB class driver registers compatible HCI controllers with
 `bluetooth2.device` when they are connected and removes them on detach.
-[USB2BluetoothTest](Doc/USB2BluetoothTest.md) probes controllers, discovers
-nearby Classic Bluetooth devices, and exercises legacy PIN pairing and
-reconnect with a saved bond.
+Install `Bluetooth.Class` and `Bluetooth.Driver` in `LIBS:USB2/` and load
+`bluetooth2.kmod` at boot. The module comes from the companion
+[Bluetooth2 repository](https://github.com/rolsen74/bt2).
+
+[USB2BluetoothTest](Doc/USB2BluetoothTest.md) covers Classic discovery,
+remote names, service browsing, legacy PIN pairing, saved bonds, RFCOMM,
+and outgoing Object Push. Run `USB2BluetoothTest GUI` to scan and send files
+from a ReAction window. The `07D1:F101` dongle sent a file from an Amiga
+to Windows. Both `07D1:F101` and `1131:1001` passed controller probes.
+LE scanning and advertising require a controller that supports Bluetooth LE.
+Experimental A2DP Source playback streams a PCM WAV file to a Classic
+Bluetooth speaker using SBC. See the [speaker playback guide](Doc/USB2BluetoothTest.md#play-a-wav-on-a-bluetooth-speaker).
+The [Bluetooth2 AHI mode](Doc/AHI.md#bluetooth-speaker-playback) streams the
+AHI mixer output to a selected speaker.
 
 ## USB Networking
 
@@ -122,8 +136,10 @@ usb2/
 │   └── usb2.kmod
 ├── Devs/
 │   ├── AHI/
+│   │   ├── bluetooth2.audio
 │   │   └── usb2.audio
 │   ├── AudioModes/
+│   │   ├── Bluetooth2
 │   │   └── USB2
 │   ├── Firmware/
 │   │   ├── rt2870.bin
@@ -184,7 +200,9 @@ usb2/
 - **Serial devices** — Copy `PL2303.Class` and `PL2303.Driver` to
   `LIBS:USB2/` to use supported PL2303 adapters through `usb2serial.device`.
 - **AHI playback** — Copy `Devs/AHI/usb2.audio` and `Devs/AudioModes/USB2`
-  to the corresponding directories under `DEVS:`.
+  to the corresponding directories under `DEVS:`. For Bluetooth speakers,
+  install the `bluetooth2.audio` driver and `Bluetooth2` mode from the same
+  directories. See the [AHI guide](Doc/AHI.md).
 - **RTL-SDR test** — Run `Tools/USB2SDRTest` from a Shell with an
   `0BDA:2838` receiver attached. It reports the Bulk IN endpoint and
   probes the tuner ID. To build just the tool, run

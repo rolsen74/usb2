@@ -31,6 +31,11 @@ ReportPushResult( const struct BTObjectPush *push, enum BTHCIResult result, cons
 
 			return ( RETURN_WARN );
 
+		case BT_OBEX_NO_SERVICE:
+			Printf( "No Object Push receiver was found. Open the receiving device's Bluetooth file receiver.\n" );
+
+			break;
+
 		case BT_OBEX_REJECTED:
 			Printf( "The peer rejected the OBEX request with response $%02lx.\n", (ULONG) push->Response );
 
@@ -115,9 +120,17 @@ PushObjectFile( struct IORequest *request, ULONG unit, const char *address, LONG
 		return ( RETURN_FAIL );
 	}
 
-	if ( ( channel < 1 ) || ( channel > 30 ) )
+	if ( ( channel < 0 ) || ( channel > 30 ) )
 	{
-		Printf( "Enter the Object Push CHANNEL from SERVICES (UUID $1105).\n" );
+		Printf( "CHANNEL must be 1 to 30, or omit it for automatic service discovery.\n" );
+
+		return ( RETURN_FAIL );
+	}
+
+	if ( ( ! channel ) && ( request->io_Device->dd_Library.lib_Version == 1 ) &&
+		( request->io_Device->dd_Library.lib_Revision < 16 ) )
+	{
+		Printf( "Automatic Object Push discovery requires Bluetooth2 1.16. For earlier versions, specify CHANNEL.\n" );
 
 		return ( RETURN_FAIL );
 	}
@@ -157,7 +170,14 @@ PushObjectFile( struct IORequest *request, ULONG unit, const char *address, LONG
 		push.Peer.Channel = channel;
 		push.Path = resolved;
 
-		Printf( "Pushing %s to %s on RFCOMM channel %ld. Ctrl-C cancels.\n", resolved, address, channel );
+		if ( channel )
+		{
+			Printf( "Pushing %s to %s on RFCOMM channel %ld. Ctrl-C cancels.\n", resolved, address, channel );
+		}
+		else
+		{
+			Printf( "Finding the Object Push receiver on %s. Ctrl-C cancels.\n", address );
+		}
 
 		result = interface->PushController( unit, & push, & error );
 

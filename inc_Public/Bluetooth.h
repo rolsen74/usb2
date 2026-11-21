@@ -50,6 +50,10 @@ enum BTHCIResult
 	BT_OBEX_SIZE_LIMIT,
 	BT_LE_NOT_SUPPORTED,
 	BT_LE_CANCELLED,
+	BT_OBEX_NO_SERVICE,
+	BT_A2DP_INVALID_WAVE,
+	BT_A2DP_NO_SINK,
+	BT_A2DP_REJECTED,
 };
 
 struct BTHCIError
@@ -234,6 +238,26 @@ struct BTLERequest
 	uint32_t Cancel;
 	uint8_t Truncated;
 	char Name[BT_LE_NAME_MAX + 1];
+};
+
+struct BTAudioPlayback
+{
+	const char *Path;
+	uint8_t Address[6];
+	uint8_t Signal;
+	uint8_t Status;
+	uint32_t Cancel;
+	uint32_t Rate;
+	uint32_t FramesSent;
+	int32_t FileError;
+};
+
+struct BTAudioPCM
+{
+	struct BTAudioPlayback Audio;
+	void *Context;
+	// Pulls interleaved stereo S16LE from the controller task until cancelled.
+	int32_t (*Read)( void *context, uint8_t *data, uint32_t length );
 };
 
 enum BTHCIResult BT_ExchangeRFCOMM( const struct BTACLTransport *transport, struct BTRFCOMMTransfer *transfer,
