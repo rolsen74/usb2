@@ -13,12 +13,17 @@ struct BTUSB
 	struct USB2IFace *USB2;
 	struct USB2_Register *Registration;
 	struct USB2_EPResource *Events;
+	struct USB2_EPResource *ACLIn;
+	struct USB2_EPResource *ACLOut;
 	U32 InterfaceNumber;
 	S32 EventPending;
 };
 
 U8 BTUSB_FindEventEndpoint( struct USB2IFace *usb2, struct USB2_Interface *ifc );
 S32 BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint );
+S32 BTUSB_OpenACL( struct BTUSB *usb );
+S32 BTUSB_ReadACLChunk( PTR context, const U8 **data, U32 *length );
+S32 BTUSB_WriteACL( PTR context, const U8 *data, U32 length );
 void BTUSB_Close( struct BTUSB *usb );
 U32 BTUSB_Entry( struct USB2DriverIFace *self, struct USB2_DriverMessage *message );
 S32 BTUSB_StartCommand( PTR context, const U8 *command, U32 length );

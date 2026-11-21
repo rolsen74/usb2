@@ -31,9 +31,150 @@ USB2BluetoothTest DISCOVER UNIT=1
 Bluetooth2 scans for about five seconds and reports each address and device
 class once. Discovery requires Bluetooth.Driver 1.1 or later.
 
+### Look up a device name
+
+Use Bluetooth2 1.6, Bluetooth.Driver 1.4, and USB2BluetoothTest 0.8. Copy an
+address from discovery and keep the peer within range.
+
+```text
+USB2BluetoothTest UNIT=1 NAME=AA:BB:CC:DD:EE:FF
+```
+
+Name lookup can run before pairing. It may take several seconds for the
+controller to reach the peer. The Shell replaces non-ASCII bytes with `?`.
+
+### Make the Amiga discoverable
+
+With Bluetooth2 1.7, Bluetooth.Driver 1.5, and USB2BluetoothTest 0.9, run:
+
+```text
+USB2BluetoothTest UNIT=0 VISIBLE AS="Amiga X5000" SECONDS=60
+```
+
+Start a Classic Bluetooth scan on a nearby PC while the command runs.
+`VISIBLE` defaults to the name `Amiga` and a 30-second window. It accepts
+`SECONDS` from 1 to 120 and ends discoverability automatically. The test
+answers name lookups and declines incoming connection requests.
+
 The test resets the selected controller. Run it before starting any other
 Bluetooth activity on that adapter. Classic discovery was tested on AmigaOS
 with the KY-BT100 (`1131:1001`) and D-Link DBT-122 (`07d1:f101`).
+
+## Test Bluetooth data with L2CAP echo
+
+With Bluetooth2 1.8, Bluetooth.Driver 1.6, and USB2BluetoothTest 0.10, substitute
+the address of a nearby Classic Bluetooth peer:
+
+```text
+USB2BluetoothTest UNIT=0 ECHO=AA:BB:CC:DD:EE:FF
+```
+
+The test opens a temporary Classic ACL link, sends a single L2CAP echo
+request, and disconnects. The test reports separately when the link fails
+to open, when the peer rejects the request, or when an open link gets no
+echo response.
+
+## Browse Classic Bluetooth services
+
+With Bluetooth2 1.9, Bluetooth.Driver 1.7, and USB2BluetoothTest 0.11, run:
+
+```text
+USB2BluetoothTest UNIT=0 SERVICES=AA:BB:CC:DD:EE:FF
+```
+
+The test queries the peer's public SDP records over a Basic Mode L2CAP
+channel. Each row shows the record handle, its first service-class UUID,
+and the name when the peer supplies one. Bluetooth2 1.10 and later also
+show the RFCOMM channel when it is published. The test lists up to 32 records.
+
+## Test an RFCOMM serial channel
+
+Use Bluetooth2 1.10, Bluetooth.Driver 1.8, and USB2BluetoothTest 0.12.
+Start a Classic Bluetooth serial service on the peer and use `SERVICES`
+to find its RFCOMM channel. Then run the test with that channel number:
+
+```text
+USB2BluetoothTest UNIT=0 RFCOMM=AA:BB:CC:DD:EE:FF CHANNEL=1
+```
+
+If a saved bond exists, the test uses it to authenticate and enable
+encryption. It opens the RFCOMM multiplexer and serial channel, exchanges
+modem status, and closes the connection.
+
+With Bluetooth2 1.11, Bluetooth.Driver 1.9, and USB2BluetoothTest 0.13,
+add `TEXT` to send data and `REPLY` to wait for the peer's first non-empty
+frame. Use a peer serial application that can receive and answer the text.
+
+```text
+USB2BluetoothTest RFCOMM=AA:BB:CC:DD:EE:FF CHANNEL=1 TEXT="Hello from Amiga" REPLY
+```
+
+The tool sends the text as entered without appending a newline. For
+credit-based flow control it accepts up to 512 bytes and sends them in
+negotiated frame sizes. For basic flow control it sends one frame.
+`REPLY` displays up to 127 bytes and escapes nonprintable bytes as hex.
+An Amiga serial device for continuous transfers is future work.
+
+### Send a binary file
+
+With Bluetooth2 1.12, Bluetooth.Driver 1.10, and USB2BluetoothTest 0.14,
+start a serial receiver on the peer and capture its raw input to a file.
+Then run:
+
+```text
+USB2BluetoothTest RFCOMM=AA:BB:CC:DD:EE:FF CHANNEL=1 FILE="RAM:sample.bin"
+```
+
+The command opens one RFCOMM connection and streams the file as raw bytes.
+The peer must negotiate credit-based flow control. Press Ctrl-C to cancel.
+Compare the captured file with the source to verify the transfer on hardware.
+
+### Receive a binary file
+
+With Bluetooth2 1.13, Bluetooth.Driver 1.11, and USB2BluetoothTest 0.15,
+enter the exact size of the file the peer will send:
+
+```text
+USB2BluetoothTest UNIT=0 RFCOMM=AA:BB:CC:DD:EE:FF CHANNEL=1 SAVE="RAM:received.bin" BYTES=4096
+```
+
+Send the raw bytes from the peer's serial application once the channel opens.
+The command saves the file after it receives the requested count. Choose a
+new destination filename. The peer must negotiate credit-based flow control,
+and Ctrl-C cancels the capture.
+
+### Send with Bluetooth Object Push
+
+With Bluetooth2 1.14, Bluetooth.Driver 1.12, and USB2BluetoothTest 0.16,
+start the peer's Bluetooth file receiver. Run `SERVICES=<address>` and
+use the RFCOMM channel advertised by Object Push (service class `$1105`).
+
+```text
+USB2BluetoothTest UNIT=0 RFCOMM=AA:BB:CC:DD:EE:FF CHANNEL=3 PUSH="RAM:sample.bin"
+```
+
+The peer receives the source filename and can ask whether to accept the
+file. The command reports success after the receiver accepts the entire
+file. It supports files up to 4 GiB minus one byte. Press Ctrl-C to cancel.
+
+An Amiga successfully sent a file to Windows using the `07D1:F101` dongle.
+
+## Scan and advertise over Bluetooth LE
+
+Bluetooth2 1.15, Bluetooth.Driver 1.13, and USB2BluetoothTest 0.17 add
+Bluetooth Low Energy testing with an LE-capable controller.
+
+```text
+USB2BluetoothTest UNIT=0 LESCAN SECONDS=10
+USB2BluetoothTest UNIT=0 LESCAN PASSIVE SECONDS=10
+USB2BluetoothTest UNIT=0 LEADVERTISE AS="Amiga" SECONDS=30
+```
+
+An active scan can request extra data such as the device name. A passive
+scan only listens. The tool lists up to 64 distinct addresses with address
+type, signal strength, and name when available. Use a BLE scanner on a
+phone to see the Amiga's nonconnectable advertisement. Both commands
+use legacy LE advertising on the primary channels and support Ctrl-C.
 
 ## Test legacy PIN pairing
 
@@ -80,7 +221,8 @@ make -f makefile_archive build_bluetooth_test
 Each class task registers a request port with Bluetooth2 and performs the
 requested operation on the same task that owns the USB requests. Host HCI
 parsing, inquiry, and the controller registry live in the companion Bluetooth2
-repository. Secure Simple Pairing, BLE, and Bluetooth profiles are still in development.
+repository. Secure Simple Pairing, LE connections and GATT, and additional
+Bluetooth profiles are still in development.
 
 See the [Bluetooth2 repository](https://github.com/rolsen74/bt2) and the
 [Bluetooth USB HCI transport specification](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core_v7.0/out/en/host-controller-interface/usbtransport-layer-hci-usb--specification.html).

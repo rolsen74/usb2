@@ -19,6 +19,8 @@ BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint )
 	usb->InterfaceNumber = message->Interface->IFC_Num;
 	usb->EventPending = FALSE;
 	usb->Events = NULL;
+	usb->ACLIn = NULL;
+	usb->ACLOut = NULL;
 
 	usb->Registration = usb->USB2->USB2_Reg_RegisterTags( USB2Tag_Reg_DriverMessage, message,
 		USB2Tag_Reg_Title, "Bluetooth USB HCI", TAG_END );

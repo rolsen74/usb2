@@ -39,17 +39,24 @@ Detached( struct USB2_Register *reg )
 
 static void
 RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairing,
-	struct Bluetooth2BondingIFace *bonding, struct BTUSB *usb, struct MsgPort *requests )
+	struct Bluetooth2BondingIFace *bonding, struct Bluetooth2NamesIFace *names,
+	struct Bluetooth2VisibilityIFace *visibility, struct Bluetooth2L2CAPIFace *l2cap,
+	struct Bluetooth2SDPIFace *sdp, struct Bluetooth2RFCOMMIFace *rfcomm,
+	struct Bluetooth2SerialIFace *serial, struct Bluetooth2SerialFileIFace *serialFile,
+	struct Bluetooth2SerialCaptureIFace *serialCapture, struct Bluetooth2ObjectPushIFace *objectPush,
+	struct Bluetooth2LEIFace *le, struct BTUSB *usb, struct MsgPort *requests )
 {
 	struct BTControllerProbe *probe;
-	struct BTHCITransport transport;
+	struct BTACLTransport transport;
 
 	U32 signals;
 	U32 mask;
 
-	transport.Context = usb;
-	transport.StartCommand = BTUSB_StartCommand;
-	transport.ReadEventChunk = BTUSB_ReadEventChunk;
+	transport.HCI.Context = usb;
+	transport.HCI.StartCommand = BTUSB_StartCommand;
+	transport.HCI.ReadEventChunk = BTUSB_ReadEventChunk;
+	transport.WriteACL = BTUSB_WriteACL;
+	transport.ReadACLChunk = BTUSB_ReadACLChunk;
 	mask = usb->Registration->Stack_MsgPortBit | ( 1UL << requests->mp_SigBit ) | SIGBREAKF_CTRL_C;
 
 	for( ;; )
@@ -73,26 +80,80 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 			continue;
 		}
 
-		probe->Result = bt2->ResetController( & transport, probe->Error );
+		probe->Result = bt2->ResetController( & transport.HCI, probe->Error );
 
 		if ( probe->Result == BT_HCI_OK )
 		{
-			if ( ( bonding ) && ( probe->Message.mn_Length >= sizeof( *probe ) ) && ( probe->Bond ) )
+			if ( ( le ) && ( probe->Message.mn_Length >= sizeof( *probe ) ) && ( probe->LE ) )
 			{
-				probe->Result = bonding->Bond( & transport, probe->Bond, probe->Error );
+				probe->Result = le->Run( & transport.HCI, probe->LE, probe->Error );
+			}
+			else if ( ( objectPush ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, LE ) ) &&
+				( probe->ObjectPush ) )
+			{
+				probe->Result = objectPush->Push( & transport, probe->ObjectPush, probe->Error );
+			}
+			else if ( ( serialCapture ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, ObjectPush ) ) &&
+				( probe->SerialCapture ) )
+			{
+				probe->Result = serialCapture->Receive( & transport, probe->SerialCapture, probe->Error );
+			}
+			else if ( ( serialFile ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, SerialCapture ) ) &&
+				( probe->SerialFile ) )
+			{
+				probe->Result = serialFile->Send( & transport, probe->SerialFile, probe->Error );
+			}
+			else if ( ( serial ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, SerialFile ) ) &&
+				( probe->Serial ) )
+			{
+				probe->Result = serial->Exchange( & transport, probe->Serial, probe->Error );
+			}
+			else if ( ( rfcomm ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Serial ) ) &&
+				( probe->RFCOMM ) )
+			{
+				probe->Result = rfcomm->Test( & transport, probe->RFCOMM, probe->Error );
+			}
+			else if ( ( sdp ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, RFCOMM ) ) &&
+				( probe->Services ) )
+			{
+				probe->Result = sdp->Browse( & transport, probe->Services, probe->Error );
+			}
+			else if ( ( l2cap ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Services ) ) &&
+				( probe->EchoAddress ) )
+			{
+				probe->Result = l2cap->Echo( & transport, probe->EchoAddress, probe->Error );
+			}
+			else if ( ( visibility ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, EchoAddress ) ) &&
+				( probe->Visibility ) )
+			{
+				probe->Result = visibility->RunVisible( & transport.HCI, probe->Visibility, probe->Error );
+			}
+			else if ( ( names ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Visibility ) ) &&
+				( probe->RemoteName ) )
+			{
+				probe->Result = names->ReadRemoteName( & transport.HCI, probe->RemoteName, probe->Error );
+			}
+			else if ( ( bonding ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, RemoteName ) ) &&
+				( probe->Bond ) )
+			{
+				probe->Result = bonding->Bond( & transport.HCI, probe->Bond, probe->Error );
 			}
 			else if ( ( pairing ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Bond ) ) &&
 				( probe->Pair ) )
 			{
-				probe->Result = pairing->Pair( & transport, probe->Pair, probe->Error );
+				probe->Result = pairing->Pair( & transport.HCI, probe->Pair, probe->Error );
 			}
 			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Pair ) ) && ( probe->Inquiry ) )
 			{
-				probe->Result = bt2->Inquiry( & transport, probe->Inquiry, probe->Error );
+				probe->Result = bt2->Inquiry( & transport.HCI, probe->Inquiry, probe->Error );
+			}
+			else if ( probe->Info )
+			{
+				probe->Result = bt2->ReadControllerInfo( & transport.HCI, probe->Info, probe->Error );
 			}
 			else
 			{
-				probe->Result = bt2->ReadControllerInfo( & transport, probe->Info, probe->Error );
+				probe->Result = BT_HCI_UNSUPPORTED;
 			}
 		}
 
@@ -109,6 +170,16 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 	struct Bluetooth2IFace *bt2;
 	struct Bluetooth2PairingIFace *pairing;
 	struct Bluetooth2BondingIFace *bonding;
+	struct Bluetooth2NamesIFace *names;
+	struct Bluetooth2VisibilityIFace *visibility;
+	struct Bluetooth2L2CAPIFace *l2cap;
+	struct Bluetooth2SDPIFace *sdp;
+	struct Bluetooth2RFCOMMIFace *rfcomm;
+	struct Bluetooth2SerialIFace *serial;
+	struct Bluetooth2SerialFileIFace *serialFile;
+	struct Bluetooth2SerialCaptureIFace *serialCapture;
+	struct Bluetooth2ObjectPushIFace *objectPush;
+	struct Bluetooth2LEIFace *le;
 	struct MsgPort *port;
 	struct MsgPort *requests;
 	struct BTUSB usb;
@@ -175,6 +246,30 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 
 	bonding = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_BONDING_INTERFACE, BLUETOOTH2_BONDING_VERSION, NULL );
 
+	names = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_NAMES_INTERFACE, BLUETOOTH2_NAMES_VERSION, NULL );
+
+	visibility = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_VISIBILITY_INTERFACE,
+		BLUETOOTH2_VISIBILITY_VERSION, NULL );
+
+	l2cap = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_L2CAP_INTERFACE, BLUETOOTH2_L2CAP_VERSION, NULL );
+
+	sdp = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_SDP_INTERFACE, BLUETOOTH2_SDP_VERSION, NULL );
+
+	rfcomm = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_RFCOMM_INTERFACE, BLUETOOTH2_RFCOMM_VERSION, NULL );
+
+	serial = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_SERIAL_INTERFACE, BLUETOOTH2_SERIAL_VERSION, NULL );
+
+	serialFile = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_SERIALFILE_INTERFACE,
+		BLUETOOTH2_SERIALFILE_VERSION, NULL );
+
+	serialCapture = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_CAPTURE_INTERFACE,
+		BLUETOOTH2_CAPTURE_VERSION, NULL );
+
+	objectPush = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_OBEX_INTERFACE,
+		BLUETOOTH2_OBEX_VERSION, NULL );
+
+	le = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_LE_INTERFACE, BLUETOOTH2_LE_VERSION, NULL );
+
 	requests = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
 	if ( ! requests )
@@ -188,7 +283,45 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 		location.ProductID = message->DeviceID;
 		location.EventEndpoint = endpoint;
 
-		if ( ( bonding ) && ( pairing ) )
+		if ( le )
+		{
+			unit = le->AddController( requests, & location, BTUSB_OpenACL( & usb ) );
+		}
+		else if ( ( l2cap ) && ( visibility ) && ( names ) && ( bonding ) && ( pairing ) && ( BTUSB_OpenACL( & usb ) ) )
+		{
+			if ( ( serial ) && ( rfcomm ) && ( sdp ) )
+			{
+				if ( ( serialCapture ) && ( serialFile ) )
+				{
+					unit = objectPush ? objectPush->AddController( requests, & location ) : serialCapture->AddController( requests, & location );
+				}
+				else
+				{
+					unit = serialFile ? serialFile->AddController( requests, & location ) : serial->AddController( requests, & location );
+				}
+			}
+			else if ( ( rfcomm ) && ( sdp ) )
+			{
+				unit = rfcomm->AddController( requests, & location );
+			}
+			else if ( sdp )
+			{
+				unit = sdp->AddController( requests, & location );
+			}
+			else
+			{
+				unit = l2cap->AddController( requests, & location );
+			}
+		}
+		else if ( ( visibility ) && ( names ) && ( bonding ) && ( pairing ) )
+		{
+			unit = visibility->AddController( requests, & location );
+		}
+		else if ( ( names ) && ( bonding ) && ( pairing ) )
+		{
+			unit = names->AddController( requests, & location );
+		}
+		else if ( ( bonding ) && ( pairing ) )
 		{
 			unit = bonding->AddController( requests, & location );
 		}
@@ -210,7 +343,8 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 			DebugPrintF( "Bluetooth USB: unit %ld attached (%04lx:%04lx)\n",
 				unit, (U32) location.VendorID, (U32) location.ProductID );
 
-			RunController( bt2, pairing, bonding, & usb, requests );
+			RunController( bt2, pairing, bonding, names, visibility, l2cap, sdp, rfcomm, serial,
+				serialFile, serialCapture, objectPush, le, & usb, requests );
 
 			bt2->RemoveController( unit, requests );
 
@@ -231,6 +365,56 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 	FreeSysObject( ASOT_PORT, requests );
 
 drop_interface:
+	if ( le )
+	{
+		DropInterface( (PTR) le );
+	}
+
+	if ( objectPush )
+	{
+		DropInterface( (PTR) objectPush );
+	}
+
+	if ( serialCapture )
+	{
+		DropInterface( (PTR) serialCapture );
+	}
+
+	if ( serialFile )
+	{
+		DropInterface( (PTR) serialFile );
+	}
+
+	if ( serial )
+	{
+		DropInterface( (PTR) serial );
+	}
+
+	if ( rfcomm )
+	{
+		DropInterface( (PTR) rfcomm );
+	}
+
+	if ( sdp )
+	{
+		DropInterface( (PTR) sdp );
+	}
+
+	if ( l2cap )
+	{
+		DropInterface( (PTR) l2cap );
+	}
+
+	if ( visibility )
+	{
+		DropInterface( (PTR) visibility );
+	}
+
+	if ( names )
+	{
+		DropInterface( (PTR) names );
+	}
+
 	if ( bonding )
 	{
 		DropInterface( (PTR) bonding );

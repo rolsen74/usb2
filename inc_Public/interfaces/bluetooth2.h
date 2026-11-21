@@ -25,6 +25,16 @@ struct BTControllerProbe
 	struct BTInquiryResult *Inquiry;
 	const struct BTPairRequest *Pair;
 	struct BTBondRequest *Bond;
+	struct BTRemoteName *RemoteName;
+	const struct BTVisibility *Visibility;
+	const uint8_t *EchoAddress;
+	struct BTServiceQuery *Services;
+	struct BTRFCOMMTest *RFCOMM;
+	struct BTRFCOMMTransfer *Serial;
+	struct BTRFCOMMFile *SerialFile;
+	struct BTRFCOMMCapture *SerialCapture;
+	struct BTObjectPush *ObjectPush;
+	struct BTLERequest *LE;
 };
 
 struct Bluetooth2IFace
@@ -93,6 +103,206 @@ struct Bluetooth2BondingIFace
 		const struct BTHCITransport *transport, struct BTBondRequest *bond, struct BTHCIError *error );
 	int32_t APICALL (*AddController)( struct Bluetooth2BondingIFace *Self, struct MsgPort *port,
 		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_NAMES_INTERFACE "names"
+#define BLUETOOTH2_NAMES_VERSION 1
+
+struct Bluetooth2NamesIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2NamesIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2NamesIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2NamesIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2NamesIFace *Self );
+
+	enum BTHCIResult APICALL (*ReadName)( struct Bluetooth2NamesIFace *Self, uint32_t unit,
+		struct BTRemoteName *remote, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*ReadRemoteName)( struct Bluetooth2NamesIFace *Self,
+		const struct BTHCITransport *transport, struct BTRemoteName *remote, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2NamesIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_VISIBILITY_INTERFACE "visibility"
+#define BLUETOOTH2_VISIBILITY_VERSION 1
+
+struct Bluetooth2VisibilityIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2VisibilityIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2VisibilityIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2VisibilityIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2VisibilityIFace *Self );
+
+	enum BTHCIResult APICALL (*MakeVisible)( struct Bluetooth2VisibilityIFace *Self, uint32_t unit,
+		const struct BTVisibility *visibility, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*RunVisible)( struct Bluetooth2VisibilityIFace *Self,
+		const struct BTHCITransport *transport, const struct BTVisibility *visibility, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2VisibilityIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_L2CAP_INTERFACE "l2cap"
+#define BLUETOOTH2_L2CAP_VERSION 1
+
+struct Bluetooth2L2CAPIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2L2CAPIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2L2CAPIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2L2CAPIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2L2CAPIFace *Self );
+
+	enum BTHCIResult APICALL (*EchoController)( struct Bluetooth2L2CAPIFace *Self, uint32_t unit,
+		const uint8_t *address, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Echo)( struct Bluetooth2L2CAPIFace *Self,
+		const struct BTACLTransport *transport, const uint8_t *address, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2L2CAPIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_SDP_INTERFACE "sdp"
+#define BLUETOOTH2_SDP_VERSION 1
+
+struct Bluetooth2SDPIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2SDPIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2SDPIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2SDPIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2SDPIFace *Self );
+
+	enum BTHCIResult APICALL (*BrowseController)( struct Bluetooth2SDPIFace *Self, uint32_t unit,
+		struct BTServiceQuery *query, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Browse)( struct Bluetooth2SDPIFace *Self,
+		const struct BTACLTransport *transport, struct BTServiceQuery *query, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2SDPIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_RFCOMM_INTERFACE "rfcomm"
+#define BLUETOOTH2_RFCOMM_VERSION 1
+
+struct Bluetooth2RFCOMMIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2RFCOMMIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2RFCOMMIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2RFCOMMIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2RFCOMMIFace *Self );
+
+	enum BTHCIResult APICALL (*TestController)( struct Bluetooth2RFCOMMIFace *Self, uint32_t unit,
+		struct BTRFCOMMTest *test, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Test)( struct Bluetooth2RFCOMMIFace *Self,
+		const struct BTACLTransport *transport, struct BTRFCOMMTest *test, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2RFCOMMIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_SERIAL_INTERFACE "serial"
+#define BLUETOOTH2_SERIAL_VERSION 1
+
+struct Bluetooth2SerialIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2SerialIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2SerialIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2SerialIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2SerialIFace *Self );
+
+	enum BTHCIResult APICALL (*ExchangeController)( struct Bluetooth2SerialIFace *Self, uint32_t unit,
+		struct BTRFCOMMTransfer *transfer, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Exchange)( struct Bluetooth2SerialIFace *Self,
+		const struct BTACLTransport *transport, struct BTRFCOMMTransfer *transfer, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2SerialIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_SERIALFILE_INTERFACE "serialfile"
+#define BLUETOOTH2_SERIALFILE_VERSION 1
+
+struct Bluetooth2SerialFileIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2SerialFileIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2SerialFileIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2SerialFileIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2SerialFileIFace *Self );
+
+	enum BTHCIResult APICALL (*SendController)( struct Bluetooth2SerialFileIFace *Self, uint32_t unit,
+		struct BTRFCOMMFile *file, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Send)( struct Bluetooth2SerialFileIFace *Self,
+		const struct BTACLTransport *transport, struct BTRFCOMMFile *file, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2SerialFileIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_CAPTURE_INTERFACE "serialcapture"
+#define BLUETOOTH2_CAPTURE_VERSION 1
+
+struct Bluetooth2SerialCaptureIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2SerialCaptureIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2SerialCaptureIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2SerialCaptureIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2SerialCaptureIFace *Self );
+
+	enum BTHCIResult APICALL (*ReceiveController)( struct Bluetooth2SerialCaptureIFace *Self, uint32_t unit,
+		struct BTRFCOMMCapture *capture, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Receive)( struct Bluetooth2SerialCaptureIFace *Self,
+		const struct BTACLTransport *transport, struct BTRFCOMMCapture *capture, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2SerialCaptureIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_OBEX_INTERFACE "objectpush"
+#define BLUETOOTH2_OBEX_VERSION 1
+
+struct Bluetooth2ObjectPushIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2ObjectPushIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2ObjectPushIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2ObjectPushIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2ObjectPushIFace *Self );
+
+	enum BTHCIResult APICALL (*PushController)( struct Bluetooth2ObjectPushIFace *Self, uint32_t unit,
+		struct BTObjectPush *push, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Push)( struct Bluetooth2ObjectPushIFace *Self,
+		const struct BTACLTransport *transport, struct BTObjectPush *push, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2ObjectPushIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location );
+};
+
+#define BLUETOOTH2_LE_INTERFACE "le"
+#define BLUETOOTH2_LE_VERSION 1
+
+struct Bluetooth2LEIFace
+{
+	struct InterfaceData Data;
+
+	ULONG APICALL (*Obtain)( struct Bluetooth2LEIFace *Self );
+	ULONG APICALL (*Release)( struct Bluetooth2LEIFace *Self );
+	void APICALL (*Expunge)( struct Bluetooth2LEIFace *Self );
+	struct Interface *APICALL (*Clone)( struct Bluetooth2LEIFace *Self );
+
+	enum BTHCIResult APICALL (*RunController)( struct Bluetooth2LEIFace *Self, uint32_t unit,
+		struct BTLERequest *request, struct BTHCIError *error );
+	enum BTHCIResult APICALL (*Run)( struct Bluetooth2LEIFace *Self,
+		const struct BTHCITransport *transport, struct BTLERequest *request, struct BTHCIError *error );
+	int32_t APICALL (*AddController)( struct Bluetooth2LEIFace *Self, struct MsgPort *port,
+		const struct BTControllerLocation *location, uint32_t acl );
 };
 
 #endif
