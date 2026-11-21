@@ -37,7 +37,7 @@ build_stack: | build_dir_tree
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
 	$(MAKE) -f makefile strip && \
-	cp bin/usb2.device $(BINDIR)/usb2/Kickstart
+	cp bin/usb2.kmod $(BINDIR)/usb2/Kickstart
 	@echo "Stack done"
 
 ###########################################################################

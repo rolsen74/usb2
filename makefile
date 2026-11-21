@@ -10,7 +10,7 @@
 .PHONY: clean revision install installsdk includes strip
 ###########################################################################
 
-TARGET		:= usb2.device
+TARGET		:= usb2.kmod
 MAPFILE		:= usb2.map
 VERSION		:= 1
 REVISION	:= 9
@@ -452,7 +452,7 @@ clean:
 ###########################################################################
 
 install:
-	copy $(BINDIR)/usb2.device sys:kickstart/
+	copy $(BINDIR)/$(TARGET) sys:kickstart/
 
 ###########################################################################
 

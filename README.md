@@ -13,6 +13,8 @@ The following functionality has been reported working:
 - USB Keyboard (HID)
 - USB Mass Storage Devices (MSD)
 - USB Printer Class (Printer Protocol)
+- USB Audio Class 1.0 PCM microphone capture and playback on tested devices
+- USB Video Class (UVC) webcam capture and live preview on tested cameras
 - 2.4 GHz Wi-Fi on the tested RTL8188EU and RT2870 adapters
 - UHCI (USB 1.1 Host Controller; tested on Pegasus2 under QEMU)
 - OHCI (USB 1.1 Host Controller)
@@ -117,7 +119,7 @@ creates this directory tree.
 ```text
 usb2/
 ├── Kickstart/
-│   └── usb2.device
+│   └── usb2.kmod
 ├── Devs/
 │   ├── AHI/
 │   │   └── usb2.audio
@@ -159,9 +161,10 @@ usb2/
     └── USB2VideoTest
 ```
 
-- **Core stack** — Copy `usb2.device` to `SYS:Kickstart/` and reference the
-  installed filename in your USB2 Kicklayout entry. The default build includes
-  the host controller, hub, HID, and mass-storage drivers.
+- **Core stack** — Copy `usb2.kmod` to `SYS:Kickstart/` and use
+  `MODULE Kickstart/usb2.kmod` in your USB2 Kicklayout entry. The module
+  registers `usb2.device` and includes the host controller, hub, HID, and
+  mass-storage drivers.
 - **Printer** — Copy `usb2printer.device` to `DEVS:` and select that device in
   your printer preferences.
 - **Networking** — Copy the RTL8152 or RTL8188EU device from `Devs/Networks/`
