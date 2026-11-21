@@ -78,16 +78,10 @@ U32 flags;
 	ioreq->io_Actual = actual;
 	ioreq->io_Error = 0;
 
-	#if 0
-	struct ExecIFace *IExec = usbbase->usb_IExec;
-	IExec->DebugPrintF( "32 dg_SectorSize ... : %lu\n",  tmp_dg.dg_SectorSize );
-	IExec->DebugPrintF( "64 dg_Reserved1 .... : %llu\n", tmp_dg.dg_Reserved1 );
-	IExec->DebugPrintF( "64 dg_TotalSectors . : %llu\n", tmp_dg.dg_TotalSectors );
-	IExec->DebugPrintF( "32 dg_BufMemTags ... : %p\n",	 tmp_dg.dg_BufMemTags );
-	IExec->DebugPrintF( " 8 dg_DeviceType  .. : %lu\n",  tmp_dg.dg_DeviceType );
-	IExec->DebugPrintF( " 8 dg_Flags ........ : %lu\n",  tmp_dg.dg_Flags );
-	IExec->DebugPrintF( "16 dg_Reserved2 .... : %lu\n",  tmp_dg.dg_Reserved2 );
-	#endif
+	// DebugPrintF consumes longwords for these numeric arguments.
+	MSDDEBUG( "MSD: unit %lu geometry64, $%08lX%08lX sectors of %lu bytes\n",
+		msddisk->msddisk_UnitNr, (U32) ( tmp_dg.dg_TotalSectors >> 32 ),
+		(U32) tmp_dg.dg_TotalSectors, tmp_dg.dg_SectorSize );
 
 bailout:
 

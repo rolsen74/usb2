@@ -18,7 +18,6 @@ SEC_CODE enum PhaseStat MSD_Bulk_Cmd_Data( struct USBBase *usbbase, struct MSDDi
 struct USB2_EPResource *epr;
 struct USB2_IORequest *ioreq;
 struct MSDDevice *msddev;
-struct ExecIFace *IExec;
 //struct MSDDisk *msddisk;
 enum PhaseStat stat;
 U32 IsRead;
@@ -35,9 +34,8 @@ U32 IsRead;
 	stat	= PS_Error;
 	epr		= ( IsRead ) ? msddev->msddev_Res_Bulk_In :  msddev->msddev_Res_Bulk_Out;
 	ioreq	= epr->IORequests[0];
-	IExec	= usbbase->usb_IExec;
 
-//	IExec->DebugPrintF( "Data Block is : %s : Mem %p : MemLen %ld\n", ( IsRead ) ? "Read" : "Write", mem, memlen );
+//	MSDDEBUG( "Data Block is : %s : Mem %p : MemLen %ld\n", ( IsRead ) ? "Read" : "Write", mem, memlen );
 
 	ioreq->io_Command		= ( IsRead ) ? CMD_READ : CMD_WRITE;
 	ioreq->io_Data			= dbs->dbs_Data;
@@ -49,14 +47,14 @@ U32 IsRead;
 	IO_DO( ioreq );
 	dbs->dbs_Data_Actual = ioreq->io_Actual;
 
-//	IExec->DebugPrintF( "Data : io_Error = %ld : io_Actual %ld\n", ioreq->io_Error, ioreq->io_Actual );
+//	MSDDEBUG( "Data : io_Error = %ld : io_Actual %ld\n", ioreq->io_Error, ioreq->io_Actual );
 
 	/**/ if ( ioreq->io_Error == USB2Err_NoError )
 	{
 		// IN short read is normal; OUT short write is suspicious.
 		if (( ! IsRead ) && ( ioreq->io_Actual != dbs->dbs_Data_Length )) 
 		{
-			IExec->DebugPrintF( "Data : short OUT (actual %lu of %lu)\n", ioreq->io_Actual, dbs->dbs_Data_Length );
+			MSDDEBUG( "Data : short OUT (actual %lu of %lu)\n", ioreq->io_Actual, dbs->dbs_Data_Length );
 
 			// Still return OK; CSW will decide if this is acceptable.
 		}

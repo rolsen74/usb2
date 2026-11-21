@@ -14,52 +14,50 @@
 // --
 #if 1
 
-SEC_CODE S32 MSD_Cmd_0015_TD_RemChangeInt( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE void
+MSD_Cmd_0015_TD_RemChangeInt( struct USBBase *usbbase, struct IOStdReq *ioreq )
 {
-struct MSDDisk *msddisk;
-S32 reply;
-PTR node;
+	struct MSDDisk *msddisk;
+	struct IOStdReq *registered;
 
 	TASK_NAME_ENTER( "MSD : _cmd_0015_TD_RemChangeInt" );
 	USBERROR( "MSD : _cmd_0015_TD_RemChangeInt" );
 
-	reply = TRUE;
-
 	msddisk = (PTR) ioreq->io_Unit;
+	ioreq->io_Actual = 0;
+
+	if ( ! msddisk )
+	{
+		ioreq->io_Error = TDERR_BadUnitNum;
+
+		TASK_NAME_LEAVE();
+
+		return;
+	}
 
 	SEMAPHORE_OBTAIN( & msddisk->msddisk_MSDUnit_Semaphore );
 
-	node = msddisk->msddisk_MSDUnit_ChangeList.uh_Head;
-
-	while( node )
+	for( registered = Header_Head( & msddisk->msddisk_MSDUnit_ChangeList );
+		( registered ) && ( registered != ioreq ); registered = Node_Next( registered ) )
 	{
-		if ( node == ioreq )
-		{
-			break;
-		}
-		else
-		{
-			node = Node_Next( node );
-		}
 	}
 
-	if ( ! node )
+	if ( ! registered )
 	{
 		USBERROR( "MSD : Unknwon IOReq %p", ioreq );
+
 		ioreq->io_Error = TDERR_NotSpecified;
-//		reply = FALSE;
 	}
 	else
 	{
-		NODE_REMNODE( & msddisk->msddisk_MSDUnit_ChangeList, node );
+		NODE_REMNODE( & msddisk->msddisk_MSDUnit_ChangeList, registered );
+
 		ioreq->io_Error = 0;
-//		reply = TRUE;
 	}
 
 	SEMAPHORE_RELEASE( & msddisk->msddisk_MSDUnit_Semaphore );
 
 	TASK_NAME_LEAVE();
-	return( reply );
 }
 
 #endif

@@ -36,6 +36,16 @@ struct IOStdReq *ioreq;
 	msddisk->msddisk_Detached = TRUE;
 	msddev->msddev_Detached = TRUE;
 
+	MSDDEBUG( "MSD: unit %lu LUN %lu detached\n", msddisk->msddisk_UnitNr, msddisk->msddisk_Lun );
+
+	if ( msddisk->msddisk_MediaPresent )
+	{
+		msddisk->msddisk_MediaPresent = FALSE;
+		msddisk->msddisk_DiskChangeCount++;
+
+		MSD_Disk_NotifyChange( usbbase, msddisk );
+	}
+
 	usbbase->usb_IExec->ObtainSemaphore( & msddisk->msddisk_StatSemaphore );
 
 	while(( callback = NODE_REMHEAD( & msddisk->msddisk_MSDUnit_StatList ) ))
@@ -55,7 +65,10 @@ struct IOStdReq *ioreq;
 	if ( msddisk->msddisk_Announced )
 	{
 		usbbase->usb_IMounter->DenounceDevice( MSD_Device_Name, msddisk->msddisk_UnitNr );
+
 		msddisk->msddisk_Announced = FALSE;
+
+		MSDDEBUG( "MSD: unit %lu denounced to mounter\n", msddisk->msddisk_UnitNr );
 	}
 
 	// --

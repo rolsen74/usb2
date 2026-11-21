@@ -23,6 +23,12 @@
 #define MSD_Device_Version		1
 #define MSD_Device_Revision		0
 
+#ifdef MSD_DEBUG
+#define MSDDEBUG( ... )			usbbase->usb_IExec->DebugPrintF( __VA_ARGS__ )
+#else
+#define MSDDEBUG( ... )			((void)0)
+#endif
+
 #define MSD_SubClass_ATAPI		0x02	// CD/DVD ATAPI
 #define MSD_SubClass_QIC		0x03	// Obsolete QIC-157
 #define MSD_SubClass_UFI		0x04	// Floppy Disk
@@ -250,6 +256,9 @@ struct MSDDisk
 	U8								msddisk_InRecovery;
 	U8								msddisk_Announced;
 	U8								msddisk_Detached;
+#ifdef MSD_DEBUG
+	U8								msddisk_ReadLogged;
+#endif
 };
 
 // --
@@ -288,8 +297,8 @@ S32 MSD_Cmd_000A_TD_Seek( struct USBBase *usbbase UNUSED, struct MSDDevice *msdd
 S32 MSD_Cmd_000B_TD_Format( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq );
 S32 MSD_Cmd_000D_TD_ChangeNum( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq );
 S32 MSD_Cmd_0012_TD_GetDriveType( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev, struct IOStdReq *ioreq );
-S32 MSD_Cmd_0014_TD_AddChangeInt( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
-S32 MSD_Cmd_0015_TD_RemChangeInt( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
+S32 MSD_Cmd_0014_TD_AddChangeInt( struct USBBase *usbbase, struct IOStdReq *ioreq );
+void MSD_Cmd_0015_TD_RemChangeInt( struct USBBase *usbbase, struct IOStdReq *ioreq );
 S32 MSD_Cmd_0016_TD_GetGeometry( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
 S32 MSD_Cmd_0017_TD_Eject( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq );
 S32 MSD_Cmd_0018_TD_Read64( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq );
@@ -306,7 +315,7 @@ S32 MSD_Cmd_C000_NSCmd_Read64( struct USBBase *usbbase, struct MSDDevice *msddev
 enum PhaseStat MSD_Bulk_Cmd_Phase( struct USBBase *usbbase, struct MSDDisk *msddisk, struct DoBulkStruct *dbs );
 enum PhaseStat MSD_Bulk_Cmd_Data( struct USBBase *usbbase, struct MSDDisk *msddisk, struct DoBulkStruct *dbs );
 enum PhaseStat MSD_Bulk_Cmd_Status( struct USBBase *usbbase, struct MSDDisk *msddisk );
-void MSD_DoBulk_Recovery( struct USBBase *usbbase, struct MSDDisk *msddisk );
+S32 MSD_DoBulk_Recovery( struct USBBase *usbbase, struct MSDDisk *msddisk );
 S32 MSD_Disk_DoBulk( struct USBBase *usbbase, struct MSDDisk *msddisk, struct DoBulkStruct *dbs );
 
 void MSD_Manager_AbortIO( struct DeviceManagerInterface *Self UNUSED, struct IOStdReq *ioreq UNUSED );
@@ -332,6 +341,7 @@ S32 MSD_SCSI_Write10( struct USBBase *usbbase, struct MSDDisk *msddisk, struct D
 S32 MSD_SCSI_Write16( struct USBBase *usbbase, struct MSDDisk *msddisk, struct DoBulkResult *dbr, U64 blk_start, U32 blk_blocks, PTR mem, U32 *actual_ptr );
 S32 MSD_Disk_TestUnitReady( struct USBBase *usbbase, struct MSDDisk *msddisk );
 S32 MSD_Disk_MediaCheck( struct USBBase *usbbase, struct MSDDisk *msddisk );
+void MSD_Disk_NotifyChange( struct USBBase *usbbase, struct MSDDisk *msddisk );
 
 void MSD_Main( struct USBBase *usbbase, struct MSDDevice *msddev );
 void MSD_Main_1_Normal( struct USBBase *usbbase, struct MSDDevice *msddev );

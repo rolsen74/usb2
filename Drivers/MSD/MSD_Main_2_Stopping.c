@@ -16,11 +16,19 @@
 
 SEC_CODE void MSD_Main_2_Stopping( struct USBBase *usbbase, struct MSDDevice *msddev )
 {
+struct MSDDisk *msddisk;
+
 U32 wait;
 U32 mask;
 
 	TASK_NAME_ENTER( "MSD : MSD_Main_2_Stopping" );
 	USBERROR( "MSD : MSD_Main_2_Stopping" );
+
+	// The normal loop's media timer has already stopped.
+	for( msddisk = Header_Head( & msddev->msddev_MSDDisk_Header ); msddisk; msddisk = Node_Next( msddisk ) )
+	{
+		MSD_Disk_Detach( usbbase, msddisk );
+	}
 
 	msddev->Running = TRUE;
 

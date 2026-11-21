@@ -115,6 +115,9 @@ LDFLAGS		+= -Wl,--cref,-M,-Map=$(MAPFILE)
 # Print extra Debug Messages on serial
 #CFLAGS		+= -DDO_DEBUG
 
+# Print mass storage diagnostics on serial
+MSD_DEBUG	?= 0
+
 # Add extra error code checks, 
 # for higher Stability and larger Binary file
 #CFLAGS		+= -DDO_STABLE
@@ -137,6 +140,9 @@ SRCDIRS		:= Stack/PortDevice
 ifeq ($(DRV_MSD),1)
 SRCDIRS		+= Drivers/MSD
 CFLAGS		+= -DDRV_MSD
+ifeq ($(MSD_DEBUG),1)
+CFLAGS		+= -DMSD_DEBUG
+endif
 endif
 
 ifeq ($(DRV_HUB),1)

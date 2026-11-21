@@ -16,7 +16,6 @@ SEC_CODE S32 MSD_Disk_MediaCheck( struct USBBase *usbbase, struct MSDDisk *msddi
 {
 struct DoBulkResult dbr;
 struct DoBulkResult sense_result;
-struct IOStdReq *ioreq;
 U64 blocks;
 U32 size;
 U32 shift;
@@ -90,21 +89,7 @@ U8 sense[18];
 
 	if ( changed )
 	{
-		SEMAPHORE_OBTAIN( & msddisk->msddisk_MSDUnit_Semaphore );
-
-		ioreq = (PTR) msddisk->msddisk_MSDUnit_ChangeList.uh_Head;
-
-		while( ioreq )
-		{
-			if ( ioreq->io_Data )
-			{
-				usbbase->usb_IExec->Cause( (PTR) ioreq->io_Data );
-			}
-
-			ioreq = Node_Next( ioreq );
-		}
-
-		SEMAPHORE_RELEASE( & msddisk->msddisk_MSDUnit_Semaphore );
+		MSD_Disk_NotifyChange( usbbase, msddisk );
 	}
 
 bailout:

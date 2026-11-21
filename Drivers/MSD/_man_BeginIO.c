@@ -26,6 +26,25 @@ struct MSDDisk *msddisk;
 	usbbase = MSDBase->msdbase_usbbase;
 	msddisk	= (PTR) ioreq->io_Unit;
 
+	// TD_REMCHANGEINT reuses the request held by TD_ADDCHANGEINT.
+	if ( ioreq->io_Command == TD_REMCHANGEINT )
+	{
+		MSD_Cmd_0015_TD_RemChangeInt( usbbase, ioreq );
+
+		if ( ioreq->io_Flags & IOF_QUICK )
+		{
+			ioreq->io_Message.mn_Node.ln_Type = NT_REPLYMSG;
+		}
+		else
+		{
+			MSGPORT_REPLYMSG( ioreq );
+		}
+
+		TASK_NAME_LEAVE();
+
+		return;
+	}
+
 	ioreq->io_Message.mn_Node.ln_Type = NT_MESSAGE;
 	ioreq->io_Flags		&= ~IOF_QUICK;
 	ioreq->io_Error		= 0;
@@ -35,6 +54,16 @@ struct MSDDisk *msddisk;
 	// so just pass the message to msgport
 	switch( ioreq->io_Command )
 	{
+		case TD_ADDCHANGEINT:
+		{
+			if ( MSD_Cmd_0014_TD_AddChangeInt( usbbase, ioreq ) )
+			{
+				MSGPORT_REPLYMSG( ioreq );
+			}
+
+			break;
+		}
+
 		// These commands manage held requests directly, including reuse of the
 		// original ADD request for REMOVE.
 		case NSCMD_TD_ADDSTATCALLBACK:
@@ -71,8 +100,6 @@ struct MSDDisk *msddisk;
 		case /* 000E */ TD_CHANGESTATE:
 		case /* 000F */ TD_PROTSTATUS:
 		case /* 0012 */ TD_GETDRIVETYPE:
-		case /* 0014 */ TD_ADDCHANGEINT:
-		case /* 0015 */ TD_REMCHANGEINT:
 		case /* 0016 */ TD_GETGEOMETRY:
 		case /* 0017 */ TD_EJECT:
 		case /* 0018 */ TD_READ64:
@@ -104,9 +131,24 @@ struct MSDDisk *msddisk;
 
 		default:
 		{
+#ifdef MSD_DEBUG
+			if ( msddisk )
+			{
+				MSDDEBUG( "MSD: BeginIO unit %lu unknown command $%04lX\n",
+					msddisk->msddisk_UnitNr, (U32) ioreq->io_Command );
+			}
+			else
+			{
+				MSDDEBUG( "MSD: BeginIO unknown command $%04lX (no unit)\n", (U32) ioreq->io_Command );
+			}
+#else
 			USBERROR( "MSD : MSD_Manager_BeginIO : Unknown Cmd ($%04lx)", (U32) ioreq->io_Command );
+#endif
+
 			ioreq->io_Error = IOERR_NOCMD;
+
 			MSGPORT_REPLYMSG( ioreq );
+
 			break;
 		}
 	}

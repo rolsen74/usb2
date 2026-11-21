@@ -18,7 +18,6 @@ SEC_CODE enum PhaseStat MSD_Bulk_Cmd_Status( struct USBBase *usbbase, struct MSD
 struct USB2_EPResource *epr;
 struct USB2_IORequest *ioreq;
 struct MSDDevice *msddev;
-struct ExecIFace *IExec;
 //struct MSDDisk *msddisk;
 enum PhaseStat stat;
 S32 stalled;
@@ -35,7 +34,6 @@ S32 tries;
 	stat	= PS_Error;
 	epr		= msddev->msddev_Res_Bulk_In;
 	ioreq	= epr->IORequests[0];
-	IExec	= usbbase->usb_IExec;
 
 	for( tries=0 ; tries<2 ; tries++ )
 	{
@@ -52,7 +50,7 @@ S32 tries;
 
 		IO_DO( ioreq );
 
-//		IExec->DebugPrintF( "CSW  : io_Error = %ld : io_Actual %ld\n", ioreq->io_Error, ioreq->io_Actual );
+//		MSDDEBUG( "CSW  : io_Error = %ld : io_Actual %ld\n", ioreq->io_Error, ioreq->io_Actual );
 
 		/**/ if ( ioreq->io_Error == USB2Err_NoError )
 		{
@@ -64,7 +62,7 @@ S32 tries;
 			else
 			{
 				// Short/long read without STALL → invalid CSW, fail fast.
-				IExec->DebugPrintF ("CSW : unexpected size %ld (wanted %ld)\n", ioreq->io_Actual, (S32) sizeof( struct MSDCSW ));
+				MSDDEBUG( "CSW : unexpected size %ld (wanted %ld)\n", ioreq->io_Actual, (S32) sizeof( struct MSDCSW ));
 				stat = PS_Error;
 			}
 			break;
@@ -94,16 +92,16 @@ S32 tries;
 	// -- Lets dump struct
 	U32 __pos = 0;
 	U8 *__data = (PTR) & msddisk->msddisk_CSW;
-	IExec->DebugPrintF( "\n\n### CSW Dump (Status) ###\n" );
-	IExec->DebugPrintF( "CSW: Signature: $%02lx %02lx %02lx %02lx\n", __data[__pos+0], __data[__pos+1], __data[__pos+2], __data[__pos+3] );
+	MSDDEBUG( "\n\n### CSW Dump (Status) ###\n" );
+	MSDDEBUG( "CSW: Signature: $%02lx %02lx %02lx %02lx\n", __data[__pos+0], __data[__pos+1], __data[__pos+2], __data[__pos+3] );
 	__pos += 4;
-	IExec->DebugPrintF( "CSW: Tag      : $%02lx %02lx %02lx %02lx\n", __data[__pos+0], __data[__pos+1], __data[__pos+2], __data[__pos+3] );
+	MSDDEBUG( "CSW: Tag      : $%02lx %02lx %02lx %02lx\n", __data[__pos+0], __data[__pos+1], __data[__pos+2], __data[__pos+3] );
 	__pos += 4;
-	IExec->DebugPrintF( "CSW: DResidue : $%02lx %02lx %02lx %02lx\n", __data[__pos+0], __data[__pos+1], __data[__pos+2], __data[__pos+3] );
+	MSDDEBUG( "CSW: DResidue : $%02lx %02lx %02lx %02lx\n", __data[__pos+0], __data[__pos+1], __data[__pos+2], __data[__pos+3] );
 	__pos += 4;
-	IExec->DebugPrintF( "CSW: Status   : $%02lx\n", __data[__pos] );
+	MSDDEBUG( "CSW: Status   : $%02lx\n", __data[__pos] );
 	__pos += 1;
-	IExec->DebugPrintF( "__pos %ld\n", __pos );
+	MSDDEBUG( "__pos %ld\n", __pos );
 	#endif
 
 	TASK_NAME_LEAVE();

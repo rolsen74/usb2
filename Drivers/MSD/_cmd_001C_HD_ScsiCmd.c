@@ -189,6 +189,7 @@ bailout:
 SEC_CODE S32 MSD_Cmd_001C_HD_SCSICmd( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
 {
 struct __scsi_intern si;
+struct MSDDisk *msddisk;
 struct SCSICmd *scsi;
 S32 reply;
 
@@ -199,6 +200,7 @@ S32 reply;
 
 	reply = TRUE;
 	scsi = ioreq->io_Data;
+	msddisk = (PTR) ioreq->io_Unit;
 
 	if (( scsi == NULL )
 	||	( ioreq->io_Length < sizeof( struct SCSICmd ))
@@ -231,19 +233,16 @@ S32 reply;
 	USBERROR( "MSD : cmd[4] ........... : $%02lx", (U32) si.cmd[4] );
 	USBERROR( "MSD : cmd[5] ........... : $%02lx", (U32) si.cmd[5] );
 
-	switch( si.cmd[0] )
+	// Optical drives must report the current disc's capacity or sense data.
+	if ( ( si.cmd[0] == SCSI_DA_READ_CAPACITY ) && ( scsi->scsi_CmdLength == 10 ) &&
+		( msddisk->msddisk_DeviceType != DG_CDROM ) && ( msddisk->msddisk_MediaPresent ) &&
+		( msddisk->msddisk_TotalBlocks ) && ( msddisk->msddisk_Block_Size ) )
 	{
-		case /* 25 */ SCSI_DA_READ_CAPACITY:
-		{
-			__HDSCSI_ReadCap10( usbbase, ioreq, & si );
-			break;
-		}
-
-		default:
-		{
-			__HDSCSI_Default( usbbase, ioreq, & si );
-			break;
-		}
+		__HDSCSI_ReadCap10( usbbase, ioreq, & si );
+	}
+	else
+	{
+		__HDSCSI_Default( usbbase, ioreq, & si );
 	}
 
 bailout:

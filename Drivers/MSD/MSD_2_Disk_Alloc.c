@@ -44,6 +44,8 @@ U8 type;
 
 	usbbase->usb_IExec->InitSemaphore( & msddisk->msddisk_StatSemaphore );
 
+	SEMAPHORE_INIT( & msddisk->msddisk_MSDUnit_Semaphore );
+
 	msddisk->msddisk_Lun = lun;
 	msddisk->msddisk_MSDDev = msddev;
 	msddisk->msddisk_MSDBase = msdbase;
@@ -99,8 +101,9 @@ U8 type;
 		goto bailout;
 	}
 
+	// Some USB bridges omit the removable-media bit for CD/DVD drives.
 	msddisk->msddisk_DeviceType	= type;
-	msddisk->msddisk_Removable	= ( inquiry[1] & 0x80 ) ? TRUE : FALSE;
+	msddisk->msddisk_Removable	= ( ( type == DG_CDROM ) || ( inquiry[1] & 0x80 ) ) ? TRUE : FALSE;
 
 	// --
 	// We need to execute a Test Unit Ready .. too turn on the device
@@ -195,6 +198,10 @@ U8 type;
 
 	msddisk->msddisk_Announced = ( stat ) ? TRUE : FALSE ;
 	USBERROR( "Mount Stat: %ld (%s/%ld)", stat, "USB", msddisk->msddisk_UnitNr );
+
+	MSDDEBUG( "MSD: unit %lu %04lX:%04lX LUN %lu, media %lu, mounter announce %ld\n",
+		unit_nr, (U32) msddev->msddev_StartMsg->VendorID, (U32) msddev->msddev_StartMsg->DeviceID,
+		lun, (U32) msddisk->msddisk_MediaPresent, stat );
 
 	// --
 

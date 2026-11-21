@@ -43,8 +43,6 @@ S32 reply;
 			case /* 000E */ TD_CHANGESTATE:				reply = MSD_Cmd_000E_TD_ChangeState( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 000F */ TD_PROTSTATUS:				reply = MSD_Cmd_000F_TD_ProtStatus( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0012 */ TD_GETDRIVETYPE:			reply = MSD_Cmd_0012_TD_GetDriveType( usbbase, msddev, (PTR) ioreq ); break;
-			case /* 0014 */ TD_ADDCHANGEINT:			reply = MSD_Cmd_0014_TD_AddChangeInt( usbbase, msddev, (PTR) ioreq ); break;
-			case /* 0015 */ TD_REMCHANGEINT:			reply = MSD_Cmd_0015_TD_RemChangeInt( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0016 */ TD_GETGEOMETRY:				reply = MSD_Cmd_0016_TD_GetGeometry( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0017 */ TD_EJECT:					reply = MSD_Cmd_0017_TD_Eject( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 0018 */ TD_READ64:					reply = MSD_Cmd_0018_TD_Read64( usbbase, msddev, (PTR) ioreq ); break;
@@ -80,6 +78,40 @@ S32 reply;
 
 		if ( reply )
 		{
+#ifdef MSD_DEBUG
+			switch( ioreq->io_Command )
+			{
+				case CMD_READ:
+				case TD_READ64:
+				case NSCMD_TD_READ64:
+				case CMD_WRITE:
+				case TD_WRITE64:
+				case NSCMD_TD_WRITE64:
+				{
+					struct MSDDisk *msddisk;
+
+					msddisk = (PTR) ioreq->io_Unit;
+
+					if ( ( msddisk ) && ( ioreq->io_Error ) )
+					{
+						MSDDEBUG( "MSD: unit %lu disk I/O command $%04lX failed, error %ld, requested %lu bytes\n",
+							msddisk->msddisk_UnitNr, (U32) ioreq->io_Command,
+							(S32) ioreq->io_Error, ioreq->io_Length );
+					}
+					else if ( ( msddisk ) && ( ! msddisk->msddisk_ReadLogged ) &&
+						( ( ioreq->io_Command == CMD_READ ) || ( ioreq->io_Command == TD_READ64 ) ||
+							( ioreq->io_Command == NSCMD_TD_READ64 ) ) && ( ioreq->io_Actual ) )
+					{
+						msddisk->msddisk_ReadLogged = TRUE;
+
+						MSDDEBUG( "MSD: unit %lu first block read, %lu/%lu bytes\n",
+							msddisk->msddisk_UnitNr, ioreq->io_Actual, ioreq->io_Length );
+					}
+
+					break;
+				}
+			}
+#endif
 			MSD_Disk_NotifyStatCallbacks( usbbase, ioreq );
 
 			MSGPORT_REPLYMSG( ioreq );

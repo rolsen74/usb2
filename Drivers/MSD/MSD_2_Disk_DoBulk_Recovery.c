@@ -13,125 +13,71 @@
 
 // --
 
-SEC_CODE void MSD_DoBulk_Recovery( struct USBBase *usbbase, struct MSDDisk *msddisk )
+SEC_CODE S32
+MSD_DoBulk_Recovery( struct USBBase *usbbase, struct MSDDisk *msddisk )
 {
-struct USB2_IORequest *ioreq;
-struct USB2_SetupData *sd;
-//struct DoBulkResult dbr;
-struct MSDDevice *msddev;
-//struct MSDDisk *msddisk;
-struct ExecIFace *IExec;
-//U32 oldtime;
-//U8 sense[18];
+	struct USB2_IORequest *ioreq;
+	struct USB2_SetupData *sd;
+	struct MSDDevice *msddev;
+
+	S32 result;
 
 	TASK_NAME_ENTER( "MSD_DoBulk_Recovery" );
-	USBERROR( "MSD : MSD_DoBulk_Recovery" );
 
-	IExec = usbbase->usb_IExec;
+	msddev = msddisk->msddisk_MSDDev;
+	result = FALSE;
 
-//
-	msddev	= msddisk->msddisk_MSDDev;
-
-	// --
-	// Check if we allready are in Recovery Mode
-
-	if ( msddisk->msddisk_InRecovery )
+	if ( ( msddev->msddev_Detached ) || ( msddisk->msddisk_InRecovery ) )
 	{
-		USBERROR( "MSD : MSD_DoBulk_Recovery : Allready in Recovery" );
 		goto bailout;
 	}
 
 	msddisk->msddisk_InRecovery = TRUE;
-
-	// -- Send Recovery
-
-	IExec->DebugPrintF( "MSD_DoBulk_Recovery 11\n" );
-
 	sd = msddev->msddev_Res_Control->SetupData;
-	sd->RequestType		= REQTYPE_Write | REQTYPE_Class | REQTYPE_Interface;
-	sd->RequestCode		= REQCODE_MassStorage_Reset;
-	sd->Value			= LE_SWAP16( 0 );
-	sd->Index			= LE_SWAP16( msddev->msddev_InterfaceNr );
-	sd->Length			= LE_SWAP16( 0 );
+	sd->RequestType = REQTYPE_Write | REQTYPE_Class | REQTYPE_Interface;
+	sd->RequestCode = REQCODE_MassStorage_Reset;
+	sd->Value = LE_SWAP16( 0 );
+	sd->Index = LE_SWAP16( msddev->msddev_InterfaceNr );
+	sd->Length = LE_SWAP16( 0 );
 
 	ioreq = msddev->msddev_Res_Control->IORequests[0];
-	ioreq->io_Command		= CMD_WRITE;
-	ioreq->io_Data			= NULL;
-	ioreq->io_Length		= 0;
-	ioreq->io_SetupData		= sd;
-	ioreq->io_SetupLength	= sizeof( struct USB2_SetupData );
-
-//	oldtime = ioreq->io_TimeOut;
-//	ioreq->io_TimeOut = 500000;  // 0.5s
+	ioreq->io_Command = CMD_WRITE;
+	ioreq->io_Data = NULL;
+	ioreq->io_Length = 0;
+	ioreq->io_SetupData = sd;
+	ioreq->io_SetupLength = sizeof( *sd );
 
 	IO_DO( ioreq );
 
-//	ioreq->io_TimeOut = oldtime;
-
-	IExec->DebugPrintF( "MSD_DoBulk_Recovery 12 : io_Error %ld\n", (S32) ioreq->io_Error );
-
-	// Settle delay
-	MISC_MICRODELAY( 10 * 1000 );		// wait 10ms
-
-	// Send Clear Stall on Bulk
-
-	IExec->DebugPrintF( "MSD_DoBulk_Recovery 13\n" );
-
-	ENDPOINTRES_DESTALL( msddev->msddev_Res_Bulk_In );
-
-	IExec->DebugPrintF( "MSD_DoBulk_Recovery 14\n" );
-
-	ENDPOINTRES_DESTALL( msddev->msddev_Res_Bulk_Out );
-
-	IExec->DebugPrintF( "MSD_DoBulk_Recovery 15\n" );
-
-	// Optional tiny breather after de-stalls
-	MISC_MICRODELAY( 5 * 1000 );		// wait 5ms
-
-	// --
-	#if 0
-
-	MEM_SET( & dbr, 0x33, sizeof( dbr ));
-	MEM_SET( & sense, 0x55, sizeof( sense ));
-
-	IExec->DebugPrintF( "MSD_DoBulk_Recovery 16\n" );
-
-	if ( ! MSD_SCSI_TestUnitReady( usbbase, msddisk, & dbr ))
+	if ( ioreq->io_Error )
 	{
-		IExec->DebugPrintF( "MSD_DoBulk_Recovery 17\n" );
+		MSDDEBUG( "MSD: Bulk-Only Reset failed, USB error %ld\n", (S32) ioreq->io_Error );
 
-		// TUR failed → ask for sense (fixed format, 18 bytes)
-		if ( MSD_SCSI_RequestSense( usbbase, msddisk, NULL, sense, sizeof( sense ))) 
+		if ( ioreq->io_Error == USB2Err_Device_Detached )
 		{
-			U8 key  = sense[2] & 0x0F;
-			U8 asc  = sense[12];
-			U8 ascq = sense[13];
-
-			IExec->DebugPrintF( "Recovery/TUR: Sense key=%02lx ASC=%02lx ASCQ=%02lx\n", key, asc, ascq );
-
-			// No fallback here (per your plan). Just good logging:
-			// if (key==0x05 && asc==0x20 && ascq==0x00) → device doesn’t support READ(16).
-		} 
-		else 
-		{
-			IExec->DebugPrintF( "Recovery/TUR: RequestSense failed\n" );
+			MSD_Disk_Detach( usbbase, msddisk );
 		}
-	} 
-	else 
+	}
+	else
 	{
-		IExec->DebugPrintF( "Recovery/TUR: Unit is ready\n ");
+		MISC_MICRODELAY( 10 * 1000 );
+
+		if ( ( ! msddev->msddev_Detached ) && ( ENDPOINTRES_DESTALL( msddev->msddev_Res_Bulk_In ) ) &&
+			( ! msddev->msddev_Detached ) && ( ENDPOINTRES_DESTALL( msddev->msddev_Res_Bulk_Out ) ) )
+		{
+			MISC_MICRODELAY( 5 * 1000 );
+
+			result = ! msddev->msddev_Detached;
+		}
 	}
 
-	IExec->DebugPrintF( "MSD_DoBulk_Recovery 18\n" );
-
-	#endif
-	// --
 	msddisk->msddisk_InRecovery = FALSE;
 
 bailout:
 
-	// --
 	TASK_NAME_LEAVE();
+
+	return ( result );
 }
 
 // --

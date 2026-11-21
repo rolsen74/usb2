@@ -34,6 +34,8 @@ MSD_Cmd_A006_NSCmd_AddStatCallBack( struct USBBase *usbbase, struct IOStdReq *io
 		return ( TRUE );
 	}
 
+	MSDDEBUG( "MSD: unit %lu received ADDSTATCALLBACK ($A006)\n", msddisk->msddisk_UnitNr );
+
 	if ( ( ! hook ) || ( ! hook->h_Entry ) )
 	{
 		ioreq->io_Error = IOERR_BADADDRESS;

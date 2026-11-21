@@ -14,27 +14,44 @@
 // --
 #if 1
 
-SEC_CODE S32 MSD_Cmd_0014_TD_AddChangeInt( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE S32
+MSD_Cmd_0014_TD_AddChangeInt( struct USBBase *usbbase, struct IOStdReq *ioreq )
 {
-struct MSDDisk *msddisk;
-S32 reply;
+	struct MSDDisk *msddisk;
+	struct IOStdReq *registered;
 
 	TASK_NAME_ENTER( "MSD : _cmd_0014_TD_AddChangeInt" );
 	USBERROR( "MSD : _cmd_0014_TD_AddChangeInt" );
 
-	// We return the IOReq, on Stat change or RemChangeInt
-	reply = FALSE;
-
 	msddisk = (PTR) ioreq->io_Unit;
+
+	if ( ! msddisk )
+	{
+		ioreq->io_Error = TDERR_BadUnitNum;
+
+		TASK_NAME_LEAVE();
+
+		return ( TRUE );
+	}
 
 	SEMAPHORE_OBTAIN( & msddisk->msddisk_MSDUnit_Semaphore );
 
-	NODE_ADDTAIL( & msddisk->msddisk_MSDUnit_ChangeList, ioreq );
+	for( registered = Header_Head( & msddisk->msddisk_MSDUnit_ChangeList );
+		( registered ) && ( registered != ioreq ); registered = Node_Next( registered ) )
+	{
+	}
+
+	if ( ! registered )
+	{
+		NODE_ADDTAIL( & msddisk->msddisk_MSDUnit_ChangeList, ioreq );
+	}
 
 	SEMAPHORE_RELEASE( & msddisk->msddisk_MSDUnit_Semaphore );
 
 	TASK_NAME_LEAVE();
-	return( reply );
+
+	// The registration stays pending until TD_REMCHANGEINT.
+	return ( FALSE );
 }
 
 #endif

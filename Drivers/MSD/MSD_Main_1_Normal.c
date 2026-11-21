@@ -55,11 +55,21 @@ U32 mask;
 		wait |= tick_port.ump_Signal.sig_Signal_Mask;
 	}
 
-	while( msddev->Running )
+	while( ( msddev->Running ) && ( ! msddev->msddev_Register->reg_Function->fkt_Detach ) )
 	{
 		mask = TASK_WAIT( wait );
 
-		if ( ( tick_ready ) && ( mask & tick_port.ump_Signal.sig_Signal_Mask ) )
+		if ( mask & SIGBREAKF_CTRL_C )
+		{
+			USBDEBUG( "MSD : Got CTRL+C" );
+		}
+
+		if ( ( mask & SIGBREAKF_CTRL_C ) || ( msddev->msddev_Register->reg_Function->fkt_Detach ) )
+		{
+			msddev->Running = FALSE;
+		}
+
+		if ( ( msddev->Running ) && ( tick_ready ) && ( mask & tick_port.ump_Signal.sig_Signal_Mask ) )
 		{
 			if ( MSGPORT_GETMSG( & tick_port ) )
 			{
@@ -112,13 +122,6 @@ U32 mask;
 			USBDEBUG( "MSD : Got Stack Msg" );
 
 			MSD_Main__myHandle_Stack( usbbase, msddev );
-		}
-
-		if ( mask & SIGBREAKF_CTRL_C )
-		{
-			USBDEBUG( "MSD : Got CTRL+C" );
-
-			msddev->Running = FALSE;
 		}
 	}
 

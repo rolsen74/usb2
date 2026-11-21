@@ -112,24 +112,8 @@ S32 reply;
 	ioreq->io_Actual = actual;
 	ioreq->io_Error = 0;
 
-	#if 1
-	struct ExecIFace *IExec = usbbase->usb_IExec;
-	IExec->DebugPrintF( "64 blk_last ........ : %llu\n", blk_secs - 1 );
-	IExec->DebugPrintF( "32 blk_size ........ : %lu\n",  blk_size );
-	IExec->DebugPrintF( "32 blk_mask ........ : %lu\n",  msddisk->msddisk_Block_Mask );
-	IExec->DebugPrintF( "32 blk_shift ....... : %lu\n",  msddisk->msddisk_Block_Shift );
-	IExec->DebugPrintF( "64 blk_secs ........ : %llu\n", blk_secs );
-	IExec->DebugPrintF( "32 dg_SectorSize ... : %lu\n", msddisk->msddisk_Geometry.dg_SectorSize );
-	IExec->DebugPrintF( "32 dg_TotalSectors . : %lu\n", msddisk->msddisk_Geometry.dg_TotalSectors );
-	IExec->DebugPrintF( "32 dg_Cylinders .... : %lu\n", msddisk->msddisk_Geometry.dg_Cylinders );
-	IExec->DebugPrintF( "32 dg_CylSectors ... : %lu\n", msddisk->msddisk_Geometry.dg_CylSectors );
-	IExec->DebugPrintF( "32 dg_Heads  ....... : %lu\n", msddisk->msddisk_Geometry.dg_Heads );
-	IExec->DebugPrintF( "32 dg_TrackSectors . : %lu\n", msddisk->msddisk_Geometry.dg_TrackSectors );
-	IExec->DebugPrintF( "32 dg_BufMemType ... : %lu\n", msddisk->msddisk_Geometry.dg_BufMemType );
-	IExec->DebugPrintF( " 8 dg_DeviceType ... : %u\n",  msddisk->msddisk_Geometry.dg_DeviceType );
-	IExec->DebugPrintF( " 8 dg_Flags ........ : %u\n",  msddisk->msddisk_Geometry.dg_Flags );
-	IExec->DebugPrintF( "16 dg_Reserved ..... : %lu\n", msddisk->msddisk_Geometry.dg_Reserved );
-	#endif
+	MSDDEBUG( "MSD: unit %lu geometry, %lu sectors of %lu bytes\n",
+		msddisk->msddisk_UnitNr, tmp_dg.dg_TotalSectors, tmp_dg.dg_SectorSize );
 
 bailout:
 

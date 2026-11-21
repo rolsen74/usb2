@@ -84,6 +84,10 @@ U32 lun;
 	msddev->msddev_InterfaceNr = ifcnr;
 	msddev->msddev_SubClass = ifcdsc->InterfaceSubClass;
 
+	MSDDEBUG( "MSD: probing %04lX:%04lX interface %lu, subclass $%02lX, protocol $%02lX\n",
+		(U32) msg->VendorID, (U32) msg->DeviceID, ifcnr,
+		(U32) ifcdsc->InterfaceSubClass, (U32) ifcdsc->InterfaceProtocol );
+
 	// ---
 	// Support check
 
