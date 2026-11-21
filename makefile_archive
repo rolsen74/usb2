@@ -7,7 +7,7 @@ BINDIR				:= $(ROOTDIR)/_Data
 
 all: build_all
 
-.PHONY: all build_all build_dir_tree build_stack build_printer build_video build_sdr_test \
+.PHONY: all build_all build_dir_tree build_stack build_printer build_video build_sdr_test build_bluetooth_test \
 	build_ptp build_serial build_audio build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_analyzer \
 	build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_archive
 
@@ -72,6 +72,16 @@ build_sdr_test: | build_dir_tree
 	$(MAKE) -C Programs/USB2SDRTest clean
 	$(MAKE) -C Programs/USB2SDRTest
 	cp Programs/USB2SDRTest/bin/USB2SDRTest $(BINDIR)/usb2/Tools
+
+###########################################################################
+
+build_bluetooth_test: | build_dir_tree
+	@echo "Building Bluetooth USB class driver"
+	$(MAKE) -C Drivers/Bluetooth/USBHCI BINDIR=bin
+	cp Drivers/Bluetooth/USBHCI/bin/Bluetooth.Driver Drivers/Bluetooth/USBHCI/Bluetooth.Class $(BINDIR)/usb2/Libs/USB2
+	@echo "Building USB2BluetoothTest"
+	$(MAKE) -C Programs/USB2BluetoothTest
+	cp Programs/USB2BluetoothTest/bin/USB2BluetoothTest $(BINDIR)/usb2/Tools
 
 ###########################################################################
 
@@ -216,7 +226,7 @@ build_wireless_manager: | build_dir_tree
 
 ###########################################################################
 
-build_archive: build_stack build_printer build_video build_sdr_test build_ptp build_serial build_audio \
+build_archive: build_stack build_printer build_video build_sdr_test build_bluetooth_test build_ptp build_serial build_audio \
 	build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
 	@echo "Building Archive"
 	@rm -f usb2.lha

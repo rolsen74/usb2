@@ -61,6 +61,14 @@ USB Audio Class 1.0 PCM capture and playback use `usb2audio.device`. See the
 Compatible [PL2303](Doc/PL2303.md) USB serial adapters are exposed through
 `usb2serial.device`. Hardware testing is pending.
 
+## USB Bluetooth (Experimental)
+
+The Bluetooth USB class driver registers compatible HCI controllers with
+`bluetooth2.device` when they are connected and removes them on detach.
+[USB2BluetoothTest](Doc/USB2BluetoothTest.md) probes controllers, discovers
+nearby Classic Bluetooth devices, and exercises legacy PIN pairing and
+reconnect with a saved bond.
+
 ## USB Networking (Experimental)
 
 | Adapter | USB vendor:product IDs | SANA-II device |
@@ -128,6 +136,8 @@ usb2/
 │   ├── USB2/
 │   │   ├── Audio.Class
 │   │   ├── Audio.Driver
+│   │   ├── Bluetooth.Class
+│   │   ├── Bluetooth.Driver
 │   │   ├── PL2303.Class
 │   │   ├── PL2303.Driver
 │   │   ├── PTP.Class
@@ -141,6 +151,7 @@ usb2/
 └── Tools/
     ├── USB2Analyzer
     ├── USB2AudioTest
+    ├── USB2BluetoothTest
     ├── USB2SDRTest
     ├── USB2WirelessManager
     └── USB2VideoTest
