@@ -8,7 +8,7 @@ BINDIR				:= $(ROOTDIR)/_Data
 all: build_all
 
 .PHONY: all build_all build_dir_tree build_stack build_printer build_video build_sdr_test build_bluetooth_test \
-	build_ptp build_serial build_audio build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_analyzer \
+	build_ptp build_serial build_smartcard build_audio build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_analyzer \
 	build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_archive
 
 ###########################################################################
@@ -91,18 +91,27 @@ build_ptp: | build_dir_tree
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
 	$(MAKE) -f makefile strip && \
-	cp bin/PTP.Driver PTP.Class $(BINDIR)/usb2/Libs/USB2
+	cp bin/PTP.Driver PTP.Class MTP.Class $(BINDIR)/usb2/Libs/USB2
 	@echo "PTP done"
 
 ###########################################################################
 
 build_serial: | build_dir_tree
-	@echo "Building PL2303 Serial Driver"
+	@echo "Building PL2303 and CDC ACM Serial Driver"
 	cd $(ROOTDIR)/Drivers/Serial/PL2303 && \
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
-	cp bin/PL2303.Driver PL2303.Class $(BINDIR)/usb2/Libs/USB2
-	@echo "PL2303 Serial done"
+	cp bin/PL2303.Driver PL2303.Class CDCACM.Class $(BINDIR)/usb2/Libs/USB2
+	@echo "USB Serial done"
+
+###########################################################################
+
+build_smartcard: | build_dir_tree
+	@echo "Building USB CCID smart-card driver and test"
+	$(MAKE) -C Drivers/SmartCard
+	$(MAKE) -C Programs/USB2SmartCardTest
+	cp Drivers/SmartCard/bin/SmartCard.Driver Drivers/SmartCard/SmartCard.Class $(BINDIR)/usb2/Libs/USB2
+	cp Programs/USB2SmartCardTest/bin/USB2SmartCardTest $(BINDIR)/usb2/Tools
 
 ###########################################################################
 
@@ -226,7 +235,7 @@ build_wireless_manager: | build_dir_tree
 
 ###########################################################################
 
-build_archive: build_stack build_printer build_video build_sdr_test build_bluetooth_test build_ptp build_serial build_audio \
+build_archive: build_stack build_printer build_video build_sdr_test build_bluetooth_test build_ptp build_serial build_smartcard build_audio \
 	build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
 	@echo "Building Archive"
 	@rm -f usb2.lha

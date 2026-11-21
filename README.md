@@ -14,6 +14,7 @@ The following functionality has been reported working:
 - USB Mass Storage Devices (MSD)
 - USB Printer Class (Printer Protocol)
 - USB Audio Class 1.0 PCM microphone capture and playback on tested devices
+- Experimental USB Audio Class 2.0 capture and playback at the device's current clock rate
 - USB Video Class (UVC) webcam capture and live preview on tested cameras
 - USB Bluetooth Classic discovery, legacy PIN pairing, saved-bond reconnect, and Object Push file transfer to Windows on tested hardware
 - 2.4 GHz Wi-Fi on the tested RTL8188EU and RT2870 adapters
@@ -32,8 +33,8 @@ Compiling a driver does not establish that it works with hardware.
 | --- | --- |
 | Host controllers | [EHCI](Doc/EHCI.md), [OHCI](Doc/OHCI.md), [UHCI](Doc/UHCI.md), [xHCI](Doc/XHCI.md) |
 | Built-in device drivers | [HUB](Doc/HUB.md), [HID](Doc/HID.md), [MSD](Doc/MSD.md) |
-| Classes | [PTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md), [Bluetooth](Doc/USB2BluetoothTest.md) |
-| Serial devices | [PL2303](Doc/PL2303.md) |
+| Classes | [PTP and MTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md), [Bluetooth](Doc/USB2BluetoothTest.md), [Smart card (CCID)](Doc/SmartCard.md) |
+| Serial devices | [PL2303 and CDC ACM](Doc/PL2303.md) |
 | Networking | [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md), [RT2870](Doc/RT2870.md) |
 | AHI and AmigaInput | [AHI playback](Doc/AHI.md), [Competition Pro](Doc/CompPro.md), [Xbox 360](Doc/Xbox360.md) |
 
@@ -59,13 +60,16 @@ UVC cameras expose MJPEG and YUY2 capture through `usb2video.device`. See the
 
 ## USB Audio (Experimental)
 
-USB Audio Class 1.0 PCM capture and playback use `usb2audio.device`. See the
+USB Audio Class 1.0 PCM capture and playback and experimental Class 2.0
+support use `usb2audio.device`. See the
 [Audio guide](Doc/Audio.md) and [AHI playback guide](Doc/AHI.md).
 
-## Serial Devices
+## Serial and Parallel Devices
 
-Compatible [PL2303](Doc/PL2303.md) USB serial adapters are exposed through
-`usb2serial.device`. Hardware testing is pending.
+The USB stack creates `usb2serial.device` and `usb2parallel.device` at boot.
+Both start with no units. The [PL2303 and CDC ACM driver](Doc/PL2303.md)
+registers serial units as adapters are attached. Parallel is ready for a
+backend driver. Hardware testing is pending.
 
 ## USB Bluetooth (Experimental)
 
@@ -83,8 +87,13 @@ to Windows. Both `07D1:F101` and `1131:1001` passed controller probes.
 LE scanning and advertising require a controller that supports Bluetooth LE.
 Experimental A2DP Source playback streams a PCM WAV file to a Classic
 Bluetooth speaker using SBC. See the [speaker playback guide](Doc/USB2BluetoothTest.md#play-a-wav-on-a-bluetooth-speaker).
+Experimental [RTL8761BU firmware loading](Doc/USB2BluetoothTest.md#realtek-rtl8761bu-adapters)
+covers specific ASUS USB-BT500 and TP-Link UB500 revisions.
 The [Bluetooth2 AHI mode](Doc/AHI.md#bluetooth-speaker-playback) streams the
 AHI mixer output to a selected speaker.
+[Classic Bluetooth HID](Doc/USB2BluetoothTest.md#monitor-a-classic-bluetooth-keyboard-or-mouse)
+captures Boot Protocol keyboard and mouse reports. The experimental
+`INPUT` option routes a bonded peripheral to Workbench.
 
 ## USB Networking
 
@@ -158,8 +167,10 @@ usb2/
 │   │   ├── Audio.Driver
 │   │   ├── Bluetooth.Class
 │   │   ├── Bluetooth.Driver
+│   │   ├── CDCACM.Class
 │   │   ├── PL2303.Class
 │   │   ├── PL2303.Driver
+│   │   ├── MTP.Class
 │   │   ├── PTP.Class
 │   │   ├── PTP.Driver
 │   │   ├── Video.Class
@@ -192,13 +203,13 @@ usb2/
   files to match USB interfaces and load the corresponding drivers.
   - `Audio` provides PCM capture and playback through `usb2audio.device`.
     Run `Tools/USB2AudioTest` to check microphone capture.
-  - [PTP](Doc/PTP.md) lets you browse and download camera files through `PTP:` and upload new files on cameras that support it.
+  - [PTP and MTP](Doc/PTP.md) let you browse and copy files through `PTP:` for compatible cameras, phones, and media players.
   - `Video` exposes USB webcam capture through `usb2video.device`. Run
     `Tools/USB2VideoTest` for a live preview or run it with `SAVE` to capture
     a still image. See the
     [Video guide](Doc/Video.md).
-- **Serial devices** — Copy `PL2303.Class` and `PL2303.Driver` to
-  `LIBS:USB2/` to use supported PL2303 adapters through `usb2serial.device`.
+- **Serial devices** — Copy `PL2303.Class`, `CDCACM.Class`, and `PL2303.Driver`
+  to `LIBS:USB2/` to use supported adapters through `usb2serial.device`.
 - **AHI playback** — Copy `Devs/AHI/usb2.audio` and `Devs/AudioModes/USB2`
   to the corresponding directories under `DEVS:`. For Bluetooth speakers,
   install the `bluetooth2.audio` driver and `Bluetooth2` mode from the same
