@@ -35,7 +35,10 @@ Driver_Setup( struct devUnit *unit )
 		return ( FALSE );
 	}
 
-	RTL8152_SetSpeed( unit, TRUE, SPEED_100, TRUE );
+	if ( ! RTL8152_SetSpeed( unit, TRUE, SPEED_100, TRUE ) )
+	{
+		return ( FALSE );
+	}
 
 	myRead2( unit, URE_PLA_FMC, URE_MCU_TYPE_PLA, & filter );
 

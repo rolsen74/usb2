@@ -12,166 +12,85 @@
 
 // --
 
-SEC_CODE static void _myIFC_GetTail( 
-	struct USBBase *usbbase, 
-	struct RealFunctionNode **ptr_fn, 
+SEC_CODE static void
+FindFirstInterface( struct USB2_Node *node,
+	struct RealFunctionNode **ptr_fn,
 	struct USB2_InterfaceGroup **ptr_ig,
 	struct USB2_InterfaceHeader **ptr_ih )
 {
-struct USB2_InterfaceHeader *ih;
-struct USB2_InterfaceGroup *ig;
 struct RealFunctionNode *fn;
 struct USB2_ConfigNode *cn;
-struct USB2_Node *n;
-PTR f;
-PTR g;
-PTR h;
-
-	f = NULL;
-	g = NULL;
-	h = NULL;
-
-	// --
-	// Scan
-	//  Functions from Tail
-	//  Interfaces Group from Head
-	//  Interfaces Header from Head
-
-	n = usbbase->usb_Fkt_Header.uh_Tail;
-
-	if ( n )
-	{
-		fn = n->un_Data;
-
-		if ( fn )
-		{
-			cn = fn->fkt_Config_Active;
-
-			if ( cn )
-			{
-				ig = cn->cfg_InterfaceGroups.uh_Head;
-
-				if ( ig )
-				{
-					ih = ig->ig_Group.uh_Head;
-	
-					if ( ih )
-					{
-						f = fn;
-						g = ig;
-						h = ih;
-					}
-				}
-			}
-		}
-	}
-
-	// --
-
-	*ptr_fn = f;
-	*ptr_ig = g;
-	*ptr_ih = h;
-}
-
-// --
-
-SEC_CODE static void _myIFC_GetPrev( 
-	struct RealFunctionNode **ptr_fn, 
-	struct USB2_InterfaceGroup **ptr_ig,
-	struct USB2_InterfaceHeader **ptr_ih )
-{
-struct USB2_InterfaceHeader *ih;
 struct USB2_InterfaceGroup *ig;
-struct RealFunctionNode *fn;
-struct USB2_ConfigNode *cn;
-struct USB2_Node *n;
-PTR f;
-PTR g;
-PTR h;
+struct USB2_InterfaceHeader *ih;
 
-	f  = NULL;
-	g  = NULL;
-	h  = NULL;
-	fn = *ptr_fn;
-	ig = *ptr_ig;
-	ih = *ptr_ih;
-
-	// --
-	// Scan
-	//  Functions from Tail
-	//  Interfaces Group from Head
-	//  Interfaces Header from Head
-
-	while( TRUE )
+	// Keep scanning past devices with no active configuration.
+	while( node )
 	{
-		// -- Next : Ifc Header
+		fn = node->un_Data;
+		cn = fn ? fn->fkt_Config_Active : NULL;
+		ig = cn ? cn->cfg_InterfaceGroups.uh_Head : NULL;
 
-		ih = ih->ih_Node.un_Next;
-
-		if ( ih )
-		{
-			f = fn;
-			g = ig;
-			h = ih;
-			break;
-		}
-
-		// -- Next : Ifc Group
-
-		ig = ig->ig_Node.un_Next;
-
-		if ( ig )
+		while( ig )
 		{
 			ih = ig->ig_Group.uh_Head;
 
 			if ( ih )
 			{
-				f = fn;
-				g = ig;
-				h = ih;
-				break;
+				*ptr_fn = fn;
+				*ptr_ig = ig;
+				*ptr_ih = ih;
+
+				return;
 			}
+
+			ig = ig->ig_Node.un_Next;
 		}
 
-		// -- Next : Function
-
-		n = fn->fkt_GlobalNode.un_Prev;
-
-		if ( n )
-		{
-			fn = n->un_Data;
-
-			if ( fn )
-			{
-				cn = fn->fkt_Config_Active;
-
-				if ( cn )
-				{
-					ig = cn->cfg_InterfaceGroups.uh_Head;
-
-					if ( ig )
-					{
-						ih = ig->ig_Group.uh_Head;
-
-						if ( ih )
-						{
-							f = fn;
-							g = ig;
-							h = ih;
-							break;
-						}
-					}
-				}
-			}
-		}
-		break;
+		node = node->un_Prev;
 	}
 
-	// --
+	*ptr_fn = NULL;
+	*ptr_ig = NULL;
+	*ptr_ih = NULL;
+}
 
-	*ptr_fn = f;
-	*ptr_ig = g;
-	*ptr_ih = h;
+// --
+
+SEC_CODE static void
+_myIFC_GetPrev( struct RealFunctionNode **ptr_fn,
+	struct USB2_InterfaceGroup **ptr_ig,
+	struct USB2_InterfaceHeader **ptr_ih )
+{
+struct USB2_InterfaceGroup *ig;
+struct USB2_InterfaceHeader *ih;
+
+	ih = (*ptr_ih)->ih_Node.un_Next;
+
+	if ( ih )
+	{
+		*ptr_ih = ih;
+
+		return;
+	}
+
+	ig = (*ptr_ig)->ig_Node.un_Next;
+
+	while( ig )
+	{
+		ih = ig->ig_Group.uh_Head;
+
+		if ( ih )
+		{
+			*ptr_ig = ig;
+			*ptr_ih = ih;
+
+			return;
+		}
+
+		ig = ig->ig_Node.un_Next;
+	}
+
+	FindFirstInterface( (*ptr_fn)->fkt_GlobalNode.un_Prev, ptr_fn, ptr_ig, ptr_ih );
 }
 
 // --
@@ -313,7 +232,7 @@ U32 cnt;
 
 	// Functions are added to Head of list
 	// so scan from bottom up so Index are more reliable
-	_myIFC_GetTail( usbbase, & fn, & ig, & ih );
+	FindFirstInterface( usbbase->usb_Fkt_Header.uh_Tail, & fn, & ig, & ih );
 
 	while(( fn ) && ( ig ) && ( ih ))
 	{

@@ -51,12 +51,16 @@
 
 SEC_CODE void EHCI_Control_Remove( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
+struct RealFunctionNode *fn;
+struct EHCI_TD *td;
 struct EHCI_QH *last;
 struct EHCI_QH *qh;
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+U32 token[3];
+U32 caps;
+U32 slot;
+
 	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
 
 	TASK_NAME_ENTER( "EHCI : EHCI_Control_Remove" );
 //	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Remove : IOReq %p\n", ioreq );
@@ -112,6 +116,30 @@ struct EHCI_QH *qh;
 	// --
 	// its no longer active, but still controlled by HCD
 	ioreq->req_PublicStat = IORS_HCD;
+
+	fn = ioreq->req_Function;
+
+	if ( ( ( ioreq->req_Public.io_Error == USB2Err_Host_Timeout ) ||
+		   ( LE_SWAP32( qh->qh_status ) & EHCI_TD_HALTED ) ) &&
+		 ( fn->fkt_DeviceDescriptor ) &&
+		 ( LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ) == 0x0bda ) &&
+		 ( LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ) == 0x8152 ) )
+	{
+		// Snapshot after the controller releases the queue head.
+		caps = LE_SWAP32( qh->qh_ep2 );
+		td = qh->pqh_first_td;
+
+		for( slot = 0; slot < 3; slot++ )
+		{
+			token[slot] = td ? LE_SWAP32( td->td_status ) : 0;
+			td = td ? td->ptd_virt_next : NULL;
+		}
+
+		usbbase->usb_IExec->DebugPrintF( "RTL8152 EHCI EP0: addr %lu speed %lu max packet %lu TT hub %lu port %lu, QH $%08lx, qTDs $%08lx $%08lx $%08lx\n",
+			(U32) fn->fkt_Address, (U32) fn->fkt_Speed, (U32) ioreq->req_EndPoint->ep_MaxPacketSize,
+			EHCI_QH_GET_HUBA( caps ), EHCI_QH_GET_PORT( caps ), LE_SWAP32( qh->qh_status ),
+			token[0], token[1], token[2] );
+	}
 
 	#if 0
 	EHCI_DUMP_QH( hn, qh, TRUE );

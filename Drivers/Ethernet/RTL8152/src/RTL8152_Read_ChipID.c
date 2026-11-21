@@ -18,12 +18,30 @@ myReadChipID( struct devUnit *unit )
 {
 uint16 val;
 int retval;
+S32 error;
+U32 attempt;
 
 	retval = FALSE;
 
-	if ( myRead2( unit, URE_PLA_TCR1, URE_MCU_TYPE_PLA, & val ))
+	error = myRead2( unit, URE_PLA_TCR1, URE_MCU_TYPE_PLA, & val );
+
+	// Only retry this read-only probe before any chip registers are written.
+	for( attempt = 0; ( attempt < 2 ) && ( error == USB2Err_Host_Timeout ); attempt++ )
 	{
-		SHOWMSG( "Read Error" );
+		IDOS->Delay( 5 );
+
+		unit->unit_USBControlError = USB2Err_NoError;
+
+		error = myRead2( unit, URE_PLA_TCR1, URE_MCU_TYPE_PLA, & val );
+	}
+
+	if ( error )
+	{
+		if ( error == USB2Err_Host_Timeout )
+		{
+			RTL8152_ReportUSBConfiguration( unit );
+		}
+
 		goto bailout;
 	}
 

@@ -9,6 +9,7 @@
 // --
 
 #include "All.h"
+#include "Version.h"
 
 // --
 
@@ -22,33 +23,35 @@ int retval;
 
 	if ( unit_Process_InitMisc( unit ) == FALSE )
 	{
-		SHOWMSG( "Init Misc Failed" );
+		IExec->DebugPrintF( "RTL8152: could not initialize unit resources\n" );
 		goto bailout;
 	}
 
 	if ( unit_Process_OpenUSBDevice( unit ) == FALSE )
 	{
-		SHOWMSG( "Error Opening USB Device" );
+		IExec->DebugPrintF( "RTL8152: could not open usb2.device\n" );
 		goto bailout;
 	}
 
 	if ( unit_Process_FindUSBDevice( unit ) == FALSE )
 	{
-		SHOWMSG( "Error Finding USB Device" );
+		IExec->DebugPrintF( "RTL8152: no 0BDA:8152 vendor-specific interface found\n" );
 		goto bailout;
 	}
 
 	if ( unit_Process_InitUSB( unit ) == FALSE )
 	{
-		SHOWMSG( "Error Allocating USB Resources" );
+		IExec->DebugPrintF( "RTL8152: could not claim USB interface or allocate transfers\n" );
 		goto bailout;
 	}
 
 	if ( Driver_Setup( unit ) == FALSE )
 	{
-		SHOWMSG( "Error Setting up Chip" );
+		IExec->DebugPrintF( "RTL8152: chip setup failed\n" );
 		goto bailout;
 	}
+
+	IExec->DebugPrintF( "RTL8152: %s unit %lu initialized\n", VERS, unit->unit_UnitNumber );
 
     retval = TRUE;
 

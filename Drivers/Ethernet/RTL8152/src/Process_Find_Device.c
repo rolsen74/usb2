@@ -30,6 +30,7 @@ static const struct USB_Ethernet_Device USB_Device_IDs[] =
 int
 unit_Process_FindUSBDevice( struct devUnit *unit )
 {
+	struct USB2_Interface *ifc;
 	struct USB2IFace *IUSB2;
 
 	U32 index;
@@ -47,6 +48,17 @@ unit_Process_FindUSBDevice( struct devUnit *unit )
 		if ( unit->unit_USBInterface )
 		{
 			return ( TRUE );
+		}
+
+		ifc = IUSB2->USB2_Ifc_FindTags(
+			USB2Tag_Find_VendorID, USB_Device_IDs[index].vendor,
+			USB2Tag_Find_DeviceID, USB_Device_IDs[index].device,
+			TAG_END );
+
+		if ( ifc )
+		{
+			IExec->DebugPrintF( "RTL8152: 0BDA:8152 has an active USB interface %lu, but no vendor-specific match\n",
+				ifc->IFC_Num );
 		}
 	}
 

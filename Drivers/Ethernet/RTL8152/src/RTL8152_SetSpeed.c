@@ -13,7 +13,7 @@
 
 // --
 
-void
+int
 RTL8152_SetSpeed( struct devUnit *unit, int AutoNeg, uint16 Speed, int Duplex )
 {
 U32 cnt;
@@ -24,15 +24,21 @@ uint16 gbcr;
 
 	// --
 
-	myReadMDIO( unit, MII_ADVERTISE, & anar );
+	if ( myReadMDIO( unit, MII_ADVERTISE, & anar ) )
+	{
+		return ( FALSE );
+	}
 
     anar &= ~( ADVERTISE_10HALF | ADVERTISE_10FULL | ADVERTISE_100HALF | ADVERTISE_100FULL );
 
 	if ( unit->unit_Support_GMII )
     {
-		myReadMDIO( unit, MII_CTRL1000, & gbcr );
+		if ( myReadMDIO( unit, MII_CTRL1000, & gbcr ) )
+		{
+			return ( FALSE );
+		}
 
-	    gbcr &= ~( ADVERTISE_10HALF | ADVERTISE_10FULL );
+	    gbcr &= ~( ADVERTISE_1000HALF | ADVERTISE_1000FULL );
     }
     else
     {
@@ -103,35 +109,39 @@ uint16 gbcr;
 	    bmcr = BMCR_ANENABLE | BMCR_ANRESTART;
     }
 
-	// Do Always reset PHY?
-    bmcr |= BMCR_RESET;
+	if ( ( unit->unit_Support_GMII ) && ( myWriteMDIO( unit, MII_CTRL1000, gbcr ) ) )
+	{
+		return ( FALSE );
+	}
 
+	if ( myWriteMDIO( unit, MII_ADVERTISE, anar ) )
+	{
+		return ( FALSE );
+	}
 
-	if ( unit->unit_Support_GMII )
-    {
-	    myWriteMDIO( unit, MII_CTRL1000, gbcr );
-    }
+	if ( myWriteMDIO( unit, MII_BMCR, bmcr | BMCR_RESET ) )
+	{
+		return ( FALSE );
+	}
 
-    myWriteMDIO( unit, MII_ADVERTISE, anar );
-    myWriteMDIO( unit, MII_BMCR, bmcr );
+	for( cnt = 0; cnt < 50; cnt++ )
+	{
+		IDOS->Delay( 1 );
 
-    if ( bmcr & BMCR_RESET )
-    {
-	    for( cnt=0 ; cnt<50 ; cnt++ )
-	    {
-			myReadMDIO( unit, MII_BMCR, & bmcr );
+		if ( myReadMDIO( unit, MII_BMCR, & bmcr ) )
+		{
+			return ( FALSE );
+		}
 
-			if ( bmcr & BMCR_RESET )
-		    {
-			    break;
-		    }
-		    else
-		    {
-			    IDOS->Delay( 1 );
-		    }
-	    }
-    }
+		if ( ! ( bmcr & BMCR_RESET ) )
+		{
+			return ( TRUE );
+		}
+	}
 
+	IExec->DebugPrintF( "RTL8152: PHY reset timed out\n" );
+
+	return ( FALSE );
 }
 
 // --

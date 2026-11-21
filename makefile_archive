@@ -127,9 +127,9 @@ build_audio: | build_dir_tree
 build_rtl8152: | build_dir_tree
 	@echo "Building RTL8152 Ethernet Driver"
 	cd $(ROOTDIR)/Drivers/Ethernet/RTL8152 && \
-	$(MAKE) -f makefile clean && \
-	$(MAKE) -f makefile && \
-	$(MAKE) -f makefile strip && \
+	$(MAKE) -f makefile BINDIR=bin clean && \
+	$(MAKE) -f makefile BINDIR=bin && \
+	$(MAKE) -f makefile BINDIR=bin strip && \
 	cp bin/usb2rtl8152.device $(BINDIR)/usb2/Devs/Networks
 	@echo "RTL8152 Ethernet done"
 

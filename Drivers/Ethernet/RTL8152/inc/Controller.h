@@ -89,6 +89,7 @@ enum
 // --
 
 int RTL8152_Control( struct devUnit *unit, U32 command, U16 address, U16 index, U8 *data, U16 length );
+void RTL8152_ReportUSBConfiguration( struct devUnit *unit );
 int myReadMem( struct devUnit *unit, U16 address, U16 index, U8 *data, U16 length );
 int myRead1( struct devUnit *unit, uint16 reg, uint16 index, uint8 *result );
 int myRead2( struct devUnit *unit, uint16 reg, uint16 index, uint16 *result );
@@ -112,7 +113,7 @@ void RTL8153_Teredo_Off( struct devUnit *unit );
 int RTL8152_Nic_Reset( struct devUnit *unit );
 int RTL8152_GetMacAddress( struct devUnit *unit );
 void RTL8152_Power_Cut( struct devUnit *unit, int Enable );
-void RTL8152_SetSpeed( struct devUnit *unit, int AutoNeg, uint16 Speed, int Duplex );
+int RTL8152_SetSpeed( struct devUnit *unit, int AutoNeg, uint16 Speed, int Duplex );
 void RTL8152_Enable_FC( struct devUnit *unit );
 void RTL8152_Enable_ALDPS( struct devUnit *unit );
 void RTL8152_Disable_ALDPS( struct devUnit *unit );
