@@ -13,6 +13,7 @@ The following functionality has been reported working:
 - USB Keyboard (HID)
 - USB Mass Storage Devices (MSD)
 - USB Printer Class (Printer Protocol)
+- 2.4 GHz Wi-Fi on the tested RTL8188EU and RT2870 adapters
 - UHCI (USB 1.1 Host Controller; tested on Pegasus2 under QEMU)
 - OHCI (USB 1.1 Host Controller)
 - EHCI (USB 2.0 Host Controller)
@@ -28,7 +29,7 @@ Compiling a driver does not establish that it works with hardware.
 | Built-in device drivers | [HUB](Doc/HUB.md), [HID](Doc/HID.md), [MSD](Doc/MSD.md) |
 | Classes | [PTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md) |
 | Serial devices | [PL2303](Doc/PL2303.md) |
-| Networking | [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md) |
+| Networking | [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md), [RT2870](Doc/RT2870.md) |
 | AHI and AmigaInput | [AHI playback](Doc/AHI.md), [Competition Pro](Doc/CompPro.md), [Xbox 360](Doc/Xbox360.md) |
 
 ## Human Interface Devices
@@ -75,6 +76,7 @@ reconnect with a saved bond.
 | --- | --- | --- | --- |
 | [RTL8152 wired Ethernet](Doc/RTL8152.md) | `0bda:8152` | `usb2rtl8152.device` | Experimental |
 | [RTL8188EU 2.4 GHz Wi-Fi](Doc/RTL8188.md) | `0bda:8179`, `07b8:8179`, `2357:010c` | `usb2rtl8188.device` | Working on `0bda:8179` |
+| [RT2870 2.4 GHz Wi-Fi](Doc/RT2870.md) | `07d1:3c09` | `usb2rt2870.device` | Working on `07d1:3c09` |
 
 Install the devices in `DEVS:Networks/`. See the adapter guides for
 firmware, setup, and hardware validation.
@@ -209,20 +211,10 @@ usb2/
   supports baseband initialization, RF calibration, and channel selection
   from 1 to 13 through `S2_SETOPTIONS`. The unit stays offline pending
   association and packet transfer. Build it with `make -C Drivers/Ethernet/SiS163U`.
-- **RT2870 Wi-Fi (development)** — `Devs/Networks/usb2rt2870.device`
-  matches the D-Link adapter with USB ID `07D1:3C09`. Install it in
-  `DEVS:Networks/` and copy `rt2870.bin` and `rt2870.licence` from
-  `Devs/Firmware/` to `DEVS:Firmware/`. Open unit 0 and check the serial
-  log for the MAC/BBP revision, EEPROM station address, MCU readiness,
-  and the baseband revision from BBP register 0. Use
-  `USB2WirelessManager "My Network" DEVICE=usb2rt2870.device` to scan
-  channels 1 through 13 on the two-chain RF2820 configuration. Add `AUTH`
-  to test 802.11 authentication or `ASSOCIATE` to test association and
-  reception of the first WPA2 handshake message. Add `WPA2` to connect to
-  a WPA2-Personal network with CCMP. Start TCP/IP after the manager
-  reports `WPA2 connected`.
-  Build it with `make -C Drivers/Ethernet/RT2870`. The firmware comes from
-  the [Linux firmware repository](https://kernel.googlesource.com/pub/scm/linux/kernel/git/firmware/linux-firmware/+/refs/heads/main/rt2870.bin).
+- **[RT2870 Wi-Fi](Doc/RT2870.md)** — Install
+  `Devs/Networks/usb2rt2870.device` in `DEVS:Networks/` and copy
+  `rt2870.bin` and `rt2870.licence` from `Devs/Firmware/` to
+  `DEVS:Firmware/`.
 - **[USB2Analyzer](Doc/USB2Analyzer.md)** — Run it from the extracted
   `Tools/` directory after booting with the USB2 stack. It displays host
   controllers, attached devices, and their interfaces.
