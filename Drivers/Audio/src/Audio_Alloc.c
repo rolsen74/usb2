@@ -36,17 +36,7 @@ U32 limit;
 	unit->StartMsg = msg;
 	unit->UnitNr = AUDIO_MAX_UNITS;
 	unit->InterfaceNr = msg->InterfaceDescriptor->InterfaceNumber;
-
-	if ( ! Audio_Parse( unit ) )
-	{
-		AUDIO_TRACE( "interface %lu has no usable UAC1 PCM16 alternate setting\n", (U32) unit->InterfaceNr );
-
-		goto bailout;
-	}
-
-	AUDIO_TRACE( "interface %lu alt %lu endpoint $%02lx, %lu Hz, packet %lu bytes, interval %lu us\n",
-		(U32) unit->InterfaceNr, (U32) unit->AltNr, (U32) unit->EndPoint,
-		unit->Format.SampleRate, unit->PacketBytes, unit->IntervalUS );
+	unit->Protocol = msg->InterfaceDescriptor->InterfaceProtocol;
 
 	unit->BeginPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
@@ -72,13 +62,24 @@ U32 limit;
 
 	control = unit->Register->Res_Control;
 
-	if ( ( ! control ) || ( ! control->IORequests ) || ( ! control->IORequests[0] ) ||
+	if ( ( ! control ) || ( ! control->SetupData ) || ( ! control->IORequests ) || ( ! control->IORequests[0] ) ||
 		( control->IORequests[0]->io_Message.mn_Length < sizeof( struct USB2_IORequest ) ) )
 	{
 		AUDIO_TRACE( "interface %lu missing control endpoint or isochronous request fields\n", (U32) unit->InterfaceNr );
 
 		goto bailout;
 	}
+
+	if ( ! Audio_Parse( unit ) )
+	{
+		AUDIO_TRACE( "interface %lu has no usable PCM16 alternate setting\n", (U32) unit->InterfaceNr );
+
+		goto bailout;
+	}
+
+	AUDIO_TRACE( "interface %lu alt %lu endpoint $%02lx, %lu Hz, packet %lu bytes, interval %lu us\n",
+		(U32) unit->InterfaceNr, (U32) unit->AltNr, (U32) unit->EndPoint,
+		unit->Format.SampleRate, unit->PacketBytes, unit->IntervalUS );
 
 	if ( ! USB2_Ifc_SetAlt( unit->Register, msg->Interface, unit->AltNr ) )
 	{
@@ -88,6 +89,14 @@ U32 limit;
 	}
 
 	unit->ActiveAlt = TRUE;
+
+	if ( ( unit->Protocol == AUDIO_PROTOCOL_UAC2 ) && ( Audio_ClockRate( unit ) != unit->Format.SampleRate ) )
+	{
+		AUDIO_TRACE( "interface %lu clock rate changed after selecting the alternate setting\n", (U32) unit->InterfaceNr );
+
+		goto bailout;
+	}
+
 	unit->RatePending = ( unit->FrequencyControl ) && ( unit->EndPoint & EPADR_Dir_Mask ) &&
 		( unit->RateDescriptor[7] == 1 );
 

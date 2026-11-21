@@ -12,8 +12,6 @@
 // --
 
 #define DRIVER_NAME "Audio.Driver"
-#define DRIVER_VERSION 1
-#define DRIVER_REVISION 0
 
 // --
 
@@ -77,7 +75,7 @@ static USED const struct Resident driver_res =
 	(PTR) & driver_res,
 	(PTR) ( & driver_res + 1 ),
 	RTF_NATIVE | RTF_COLDSTART,
-	DRIVER_VERSION,
+	AUDIO_DRIVER_VERSION,
 	NT_LIBRARY,
 	0,
 	(STR) DRIVER_NAME,

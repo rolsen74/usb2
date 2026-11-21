@@ -20,7 +20,8 @@ struct AudioUnit *unit;
 	if ( ( ! msg ) || ( ! msg->Interface ) || ( ! msg->InterfaceDescriptor ) ||
 		( msg->InterfaceDescriptor->InterfaceClass != USBCLASS_Audio ) ||
 		( msg->InterfaceDescriptor->InterfaceSubClass != 0x02 ) ||
-		( msg->InterfaceDescriptor->InterfaceProtocol != 0 ) )
+		( ( msg->InterfaceDescriptor->InterfaceProtocol != 0 ) &&
+		  ( msg->InterfaceDescriptor->InterfaceProtocol != AUDIO_PROTOCOL_UAC2 ) ) )
 	{
 		return ( FALSE );
 	}

@@ -41,10 +41,13 @@ See the [AHI guide](AHI.md) for the playback driver and mode file.
 ## Playback through EHCI
 
 Playback supports synchronous and adaptive UAC1 endpoints without feedback.
+Full-speed devices with an unspecified synchronization type can also use
+playback when they advertise one discrete rate and a 1 ms packet sized
+exactly for that rate.
 Full-speed USB audio can use OHCI or an EHCI controller through a high-speed
 hub. Playback error `-18` means the controller rejected the USB speed for
 the transfer. Use USB2Analyzer to check the controller and the hub path.
-UAC2, asynchronous feedback, general USB mixer controls, and AHI recording
+Asynchronous playback feedback, general USB mixer controls, and AHI recording
 are unsupported.
 
 For full-speed playback through EHCI, the driver prefers a supported rate
@@ -54,6 +57,18 @@ rejects the preferred rate. EHCI can schedule two playback batches
 in succession on the same endpoint. A missed isochronous slot can still
 produce a short write (`-43`). The completed byte count excludes missed
 samples.
+
+## USB Audio Class 2.0
+
+Audio.Driver 1.2 adds experimental UAC2 capture and playback for mono and
+stereo PCM16. The driver uses the current rate reported by the stream's
+directly connected Clock Source. Playback requires a synchronous or adaptive
+endpoint without feedback. Clock selectors, rate switching, UAC2 gain
+controls, and wider PCM formats are outside this initial support.
+
+Install both the updated `Audio.Class` and `Audio.Driver` and reboot.
+Use `USB2AudioTest PLAY` for playback or `USB2AudioTest` for capture.
+UAC2 has passed descriptor tests and awaits hardware testing.
 
 ## Hardware validation
 

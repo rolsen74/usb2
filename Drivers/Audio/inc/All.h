@@ -25,12 +25,16 @@
 #define SEC_CODE
 #define SEC_RODATA
 
+#define AUDIO_DRIVER_VERSION 1
+#define AUDIO_DRIVER_REVISION 2
+#define AUDIO_DRIVER_ID "Audio.Driver 1.2 (21.11.2026)"
+
 #ifdef USB2_AUDIO_TRACE
 #define AUDIO_TRACE( ... ) DebugPrintF( "USB Audio: " __VA_ARGS__ )
-#define AUDIO_DRIVER_LABEL "Audio.Driver 1.0 (17.11.2026) [audio trace]\r\n"
+#define AUDIO_DRIVER_LABEL AUDIO_DRIVER_ID " [audio trace]\r\n"
 #else
 #define AUDIO_TRACE( ... ) ((void) 0)
-#define AUDIO_DRIVER_LABEL "Audio.Driver 1.0 (17.11.2026)\r\n"
+#define AUDIO_DRIVER_LABEL AUDIO_DRIVER_ID "\r\n"
 #endif
 
 #include "Audio.h"

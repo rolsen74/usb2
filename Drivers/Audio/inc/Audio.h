@@ -17,6 +17,7 @@
 #define AUDIO_READ_TIMEOUT ( 5U * 1000000U )
 #define AUDIO_EMPTY_BATCH_LIMIT 4
 #define AUDIO_IO_ABORT 0x80
+#define AUDIO_PROTOCOL_UAC2 0x20
 
 struct AudioUnit;
 struct AudioBase;
@@ -75,6 +76,7 @@ struct AudioUnit
 	U16 IsoPacketLengths[AUDIO_PACKET_COUNT];
 	U16 WritePacketLengths[AUDIO_WRITE_REQUESTS][AUDIO_PACKET_COUNT];
 	U8 InterfaceNr;
+	U8 Protocol;
 	U8 AltNr;
 	U8 EndPoint;
 	U8 Detached;
@@ -85,6 +87,8 @@ struct AudioUnit
 	U8 RatePending;
 	U8 RateValid;
 	U8 TerminalLink;
+	U8 ClockInterface;
+	U8 ClockEntity;
 	U8 GainInterface;
 	U8 GainEntity;
 	U8 GainChannel;
@@ -97,6 +101,8 @@ SEC_CODE struct AudioUnit *Audio_Alloc( struct AudioContext *ctx, struct USB2_Dr
 SEC_CODE void Audio_Free( struct AudioUnit *unit );
 SEC_CODE void Audio_Main( struct AudioUnit *unit );
 SEC_CODE S32 Audio_Parse( struct AudioUnit *unit );
+SEC_CODE S32 Audio_FindClock( struct AudioUnit *unit, U32 config_size, U8 terminal, U8 endpoint );
+SEC_CODE U32 Audio_ClockRate( struct AudioUnit *unit );
 SEC_CODE S32 Audio_Frequency( struct AudioUnit *unit, U32 sample_rate );
 SEC_CODE S32 Audio_Rate_Valid( struct AudioUnit *unit, U32 sample_rate );
 SEC_CODE void Audio_FindGain( struct AudioUnit *unit, U32 configSize );
