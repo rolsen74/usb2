@@ -1,0 +1,56 @@
+
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+// --
+
+#include "PortDevice.h"
+
+// --
+
+SEC_CODE void
+PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *request )
+{
+	struct USB2PortDevice *base;
+	struct USB2PortUnit *unit;
+	struct ExecIFace *IExec;
+
+	base = (PTR) Self->Data.LibBase;
+	IExec = base->IExec;
+	unit = (PTR) request->io_Unit;
+	request->io_Error = 0;
+
+	if ( request->io_Message.mn_Length >= sizeof( *request ) )
+	{
+		request->io_Actual = 0;
+	}
+
+	IExec->ObtainSemaphore( & base->Lock );
+
+	if ( ( unit ) && ( unit->BeginPort ) )
+	{
+		request->io_Flags &= ~( IOF_QUICK | IOSERF_ABORT | IOSERF_QUEUED | IOSERF_ACTIVE );
+		request->io_Message.mn_Node.ln_Type = NT_MESSAGE;
+
+		IExec->PutMsg( unit->BeginPort, (PTR) request );
+
+		IExec->ReleaseSemaphore( & base->Lock );
+
+		return;
+	}
+
+	IExec->ReleaseSemaphore( & base->Lock );
+
+	request->io_Error = IOERR_UNITBUSY;
+
+	if ( ! ( request->io_Flags & IOF_QUICK ) )
+	{
+		IExec->ReplyMsg( (PTR) request );
+	}
+}
+
+// --

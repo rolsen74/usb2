@@ -132,7 +132,7 @@ LDFLAGS		+= -Wl,--cref,-M,-Map=$(MAPFILE)
 
 ###########################################################################
 
-SRCDIRS		:=
+SRCDIRS		:= Stack/PortDevice
 
 ifeq ($(DRV_MSD),1)
 SRCDIRS		+= Drivers/MSD

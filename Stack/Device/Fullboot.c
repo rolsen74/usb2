@@ -9,6 +9,7 @@
 // --
 
 #include "usb2_all.h"
+#include "usb2_rev.h"
 
 // --
 
@@ -43,7 +44,8 @@ struct DOSIFace *IDOS;
 struct Library *DOSBase;
 
 	IExec = USB2_GetExecIFace();
-	IExec->DebugPrintF( "USB : Full Boot\n" );
+
+	IExec->DebugPrintF( "USB : Full Boot (" VERS ")\n" );
 
 	#ifdef SIS163U_RX_TRACE
 	IExec->DebugPrintF( "USB : SiS163U EHCI RX trace active\n" );

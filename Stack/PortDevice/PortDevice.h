@@ -1,0 +1,50 @@
+
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+// --
+
+#ifndef USB2_PORTDEVICE_H
+#define USB2_PORTDEVICE_H
+
+#include "usb2_all.h"
+
+#define DEVICES_SERIAL_H_OBSOLETE
+#include <devices/serial.h>
+#include <devices/parallel.h>
+#include <interfaces/usb2port.h>
+
+// --
+
+struct USB2PortUnit
+{
+	struct USB2PortUnit *Next;
+	struct MsgPort *BeginPort;
+	struct MsgPort *AbortPort;
+	U32 Number;
+	U32 Opens;
+	U8 Shared;
+};
+
+struct USB2PortDevice
+{
+	struct Library Library;
+	struct ExecIFace *IExec;
+	struct SignalSemaphore Lock;
+	struct USB2PortUnit *Units;
+	U8 Serial;
+};
+
+SEC_CODE void PortDevice_Create( struct USBBase *usbbase );
+SEC_CODE S32 PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, U32 number, U32 flags );
+SEC_CODE PTR PortDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request );
+SEC_CODE void PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *request );
+SEC_CODE void PortDevice_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *request );
+SEC_CODE struct USB2PortUnit *PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
+SEC_CODE void PortDevice_Unregister( struct USB2PortIFace *Self, struct USB2PortUnit *unit );
+
+#endif
