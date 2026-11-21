@@ -14,33 +14,65 @@
 
 // --
 
-#define WIFI_ADAPTERS 2
-#define WIFI_UNITS 32
-
 struct WiFiWorker
 {
 	struct DeathMessage Death;
+	struct WiFiWorker *Next;
+	const char *Device;
 	U32 Adapter;
 	U32 Unit;
 };
 
-// Keep each slot reserved until DOS confirms that the worker has left library code.
-static struct WiFiWorker Workers[WIFI_ADAPTERS][WIFI_UNITS];
-static U32 Running[WIFI_ADAPTERS];
+static struct WiFiWorker *Workers;
+
+// --
+
+static void
+RemoveWorker( struct WiFiWorker *worker )
+{
+	struct WiFiWorker **link;
+
+	link = &Workers;
+
+	while ( *link != worker )
+	{
+		link = &(*link)->Next;
+	}
+
+	*link = worker->Next;
+
+	FreeVec( worker );
+}
+
+// --
+
+static void
+ReapWorkers( void )
+{
+	struct WiFiWorker *worker;
+
+	while ( ( worker = (APTR)GetMsg( WiFiWorkerPort ) ) )
+	{
+		RemoveWorker( worker );
+	}
+}
 
 // --
 
 S32
 WiFi_WorkersActive( void )
 {
-	struct WiFiWorker *worker;
+	S32 active;
 
-	while( ( worker = (APTR) GetMsg( WiFiWorkerPort ) ) )
-	{
-		Running[worker->Adapter] &= ~( 1UL << worker->Unit );
-	}
+	ObtainSemaphore( &WiFiLock );
 
-	return ( Running[USB2WIFI_RTL8188] || Running[USB2WIFI_RT2870] );
+	ReapWorkers();
+
+	active = Workers != NULL;
+
+	ReleaseSemaphore( &WiFiLock );
+
+	return ( active );
 }
 
 // --
@@ -50,12 +82,9 @@ AutoProcess( void )
 {
 	struct WiFiWorker *worker;
 
-	const char *device;
-
 	worker = FindTask( NULL )->tc_UserData;
-	device = worker->Adapter == USB2WIFI_RT2870 ? "usb2rt2870.device" : "usb2rtl8188.device";
 
-	return ( WiFi_Run( device, worker->Unit ) );
+	return ( WiFi_Run( worker->Device, worker->Unit, FALSE ) );
 }
 
 // --
@@ -67,31 +96,46 @@ WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
 	struct Process *process;
 	struct Library *base;
 
-	U32 bit;
+	const char *device;
 
-	if ( ( adapter >= WIFI_ADAPTERS ) || ( unit >= WIFI_UNITS ) )
+	device = WiFi_DeviceName( adapter );
+
+	if ( ! device )
 	{
 		return ( FALSE );
 	}
 
-	bit = 1UL << unit;
+	ObtainSemaphore( &WiFiLock );
 
-	ObtainSemaphore( & WiFiLock );
+	ReapWorkers();
 
-	WiFi_WorkersActive();
-
-	if ( ( ActiveUnits[adapter] | Running[adapter] ) & bit )
+	for ( worker = Workers; worker; worker = worker->Next )
 	{
-		ReleaseSemaphore( & WiFiLock );
+		if ( ( worker->Adapter == adapter ) && ( worker->Unit == unit ) )
+		{
+			break;
+		}
+	}
+
+	if ( ( worker ) || ( WiFi_UnitClaimed( adapter, unit ) ) )
+	{
+		ReleaseSemaphore( &WiFiLock );
 
 		return ( TRUE );
 	}
 
-	Running[adapter] |= bit;
-	worker = & Workers[adapter][unit];
+	worker = AllocVecTags( sizeof( *worker ), AVT_ClearWithValue, 0, TAG_END );
 
-	memset( worker, 0, sizeof( *worker ) );
+	if ( ! worker )
+	{
+		ReleaseSemaphore( &WiFiLock );
 
+		return ( FALSE );
+	}
+
+	worker->Next = Workers;
+	Workers = worker;
+	worker->Device = device;
 	worker->Adapter = adapter;
 	worker->Unit = unit;
 	worker->Death.dm_Msg.mn_Node.ln_Type = NT_MESSAGE;
@@ -107,7 +151,7 @@ WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
 	{
 		ObtainSemaphore( & WiFiLock );
 
-		Running[adapter] &= ~bit;
+		RemoveWorker( worker );
 
 		ReleaseSemaphore( & WiFiLock );
 
@@ -120,7 +164,7 @@ WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
 
 	DebugPrintF( "USB2 Wi-Fi: usb2wifi.library %lu.%lu started the connection task for %s unit %lu.\n",
 		(U32) base->lib_Version, (U32) base->lib_Revision,
-		adapter == USB2WIFI_RT2870 ? "RT2870" : "RTL8188EU", unit );
+		device, unit );
 
 	return ( TRUE );
 }

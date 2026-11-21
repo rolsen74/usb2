@@ -27,20 +27,23 @@ typedef uint32_t U32;
 typedef int32_t S32;
 
 extern struct SignalSemaphore WiFiLock;
-extern U32 ActiveUnits[2];
 extern const APTR WiFiVectors[];
 extern struct MsgPort *WiFiWorkerPort;
 
 struct WiFiScan;
 
 S32 WiFi_WorkersActive( void );
-S32 WiFi_Run( const char *device, U32 unit );
-void WiFi_FindPassword( U32 adapter, U32 unit, struct USB2WiFiProfile *network );
+S32 WiFi_Run( const char *device, U32 unit, S32 setup );
+const char *WiFi_DeviceName( U32 adapter );
+S32 WiFi_UnitClaimed( U32 adapter, U32 unit );
+void WiFi_FindPassword( struct USB2WiFiProfile *network );
 void WiFi_RememberScan( U32 adapter, U32 unit, const struct WiFiScan *scan );
 void WiFi_RestoreScan( U32 adapter, U32 unit, struct WiFiScan *scan );
 
 S32 WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, S32 retry, U32 *action );
 void WiFi_CloseIntuition( void );
+S32 WiFi_ObtainIntuition( void );
+S32 APICALL WiFi_EditProfiles( struct USB2WiFiIFace *self );
 S32 APICALL WiFi_Setup( struct USB2WiFiIFace *self, struct USB2WiFiProfile *profile, U32 adapter, U32 unit, U32 *action );
 S32 APICALL WiFi_SetupRetry( struct USB2WiFiIFace *self, struct USB2WiFiProfile *profile, U32 adapter, U32 unit, U32 *action );
 S32 APICALL WiFi_StartPrompt( struct USB2WiFiIFace *self, struct USB2WiFiPrompt *prompt );

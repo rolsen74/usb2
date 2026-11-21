@@ -53,6 +53,7 @@ WiFi_Connected( struct Wireless *wireless, U32 channel )
 
 	wifi = wireless->Auto;
 	wifi->Profile.Channel = channel;
+	wifi->Linked = TRUE;
 
 	if ( wifi->SetupConnect )
 	{
@@ -81,7 +82,7 @@ WiFi_Connected( struct Wireless *wireless, U32 channel )
 // --
 
 static S32
-ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action )
+ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action, S32 fromPicker )
 {
 	struct Wireless wireless;
 
@@ -89,7 +90,8 @@ ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action )
 	U32 maxChannel;
 
 	wifi->SavePassword = action == USB2WIFI_SAVE_PASSWORD;
-	wifi->SetupConnect = TRUE;
+	wifi->SetupConnect = fromPicker;
+	wifi->Linked = FALSE;
 	wifi->DetectSecurity = wifi->Profile.Security == WIFI_SECURITY_UNSUPPORTED;
 
 	printf( "Connecting using %s unit %lu for SSID \"%s\".\n", device,
@@ -139,13 +141,14 @@ ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action )
 // --
 
 S32
-WiFi_Run( const char *device, U32 unit )
+WiFi_Run( const char *device, U32 unit, S32 setup )
 {
 	struct AutoWiFi wifi;
 	struct Library *base;
 
 	U32 action;
 	S32 retryPicker;
+	S32 autoConnect;
 	S32 result;
 	S32 status;
 
@@ -176,6 +179,7 @@ WiFi_Run( const char *device, U32 unit )
 	}
 
 	retryPicker = base->lib_Version > USB2WIFI_VERSION || base->lib_Revision >= USB2WIFI_RETRY_PICKER_REVISION;
+	autoConnect = base->lib_Version > USB2WIFI_VERSION || base->lib_Revision >= USB2WIFI_EDITOR_REVISION;
 	wifi.Adapter = ! strcmp( device, WIRELESS_RT2870_DEVICE ) ? USB2WIFI_RT2870 : USB2WIFI_RTL8188;
 	wifi.Unit = unit;
 
@@ -202,6 +206,22 @@ WiFi_Run( const char *device, U32 unit )
 	{
 		wifi.Profile.Security = USB2WIFI_WPA3;
 	}
+	else if ( ( autoConnect ) && ( ! setup ) && ( wifi.Profile.Options & USB2WIFI_PROFILE_AUTO ) )
+	{
+		if ( ( wifi.Profile.Security == USB2WIFI_OPEN ) || ( wifi.Profile.Password[0] ) )
+		{
+			result = ConnectProfile( & wifi, device, USB2WIFI_KEEP_PASSWORD, FALSE );
+
+			if ( ( wifi.Linked ) || ( result == RETURN_OK ) )
+			{
+				goto done;
+			}
+		}
+		else
+		{
+			wifi.Retry = TRUE;
+		}
+	}
 
 	for( ;; )
 	{
@@ -216,7 +236,7 @@ WiFi_Run( const char *device, U32 unit )
 
 		do
 		{
-			result = ConnectProfile( & wifi, device, action );
+			result = ConnectProfile( & wifi, device, action, TRUE );
 			action = USB2WIFI_KEEP_PASSWORD;
 		}
 		while( ( wifi.Retry ) && ( ! retryPicker ) );

@@ -223,7 +223,8 @@ usb2/
   for RTL8188EU and RT2870. Build it with `make -C Libraries/WPA3`.
 - **[USB2WirelessManager](Doc/USB2WirelessManager.md)** — Run it from
   `Tools/` to find a named Wi-Fi network with RTL8188EU or RT2870.
-  Use `SETUP` or `AUTO` to open the network picker.
+  Run it without arguments to edit saved profiles. Use `SETUP` to open
+  the picker or `AUTO` to start Wi-Fi using the saved autoconnect flag.
   Both drivers support WPA2-Personal. RTL8188EU also supports open networks.
   For WPA2, copy `Libs/usb2wpa2.library` to `LIBS:` and install
   AmiSSL v5 (5.16+) or v6 (6.1+).

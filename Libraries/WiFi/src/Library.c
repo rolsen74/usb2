@@ -14,8 +14,8 @@
 
 #define LIBRARY_NAME USB2WIFI_NAME
 #define LIBRARY_VERSION USB2WIFI_VERSION
-#define LIBRARY_REVISION 20
-#define LIBRARY_ID LIBRARY_NAME " 1.20 (20.11.2026)"
+#define LIBRARY_REVISION 26
+#define LIBRARY_ID LIBRARY_NAME " 1.26 (21.11.2026)"
 
 struct WiFiLibraryBase
 {
@@ -28,7 +28,6 @@ struct ExecIFace *IExec;
 struct DOSIFace *IDOS;
 struct SignalSemaphore WiFiLock;
 struct MsgPort *WiFiWorkerPort;
-U32 ActiveUnits[2];
 struct Library *NewlibBase;
 struct Interface *INewlib;
 

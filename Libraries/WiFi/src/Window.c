@@ -126,8 +126,8 @@ StringInputDispatch( struct Hook *hook, APTR object, APTR message )
 
 // --
 
-static S32
-ObtainIntuition( void )
+S32
+WiFi_ObtainIntuition( void )
 {
 	S32 opened;
 
@@ -298,7 +298,7 @@ SavedNetworkPassword( struct WiFiControls *controls, const struct USB2WiFiProfil
 	}
 	else
 	{
-		WiFi_FindPassword( controls->Adapter, controls->Unit, autofill );
+		WiFi_FindPassword( autofill );
 	}
 
 	return ( autofill->Password );
@@ -541,7 +541,7 @@ ReadControls( const struct WiFiControls *controls, struct USB2WiFiProfile *profi
 		GetAttr( STRINGA_TextVal, controls->SSID, & value );
 
 		ssid = (const char *) value;
-		options = USB2WIFI_PROFILE_AUTO;
+		options = profile->Options & USB2WIFI_PROFILE_AUTO;
 
 		if ( ( ! ssid ) || ( ! *ssid ) || ( strlen( ssid ) >= sizeof( profile->SSID ) ) )
 		{
@@ -891,7 +891,7 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 	result = USB2WIFI_ERROR;
 	mask = 0;
 
-	if ( ! ObtainIntuition() )
+	if ( ! WiFi_ObtainIntuition() )
 	{
 		FPrintf( ErrorOutput(), "Could not open intuition.library.\n" );
 
@@ -1135,7 +1135,7 @@ done:
 static S32
 SetupWindow( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 retry, U32 *action )
 {
-	if ( ( ! profile ) || ( ! action ) || ( adapter > USB2WIFI_RT2870 ) || ( unit > 31 ) ||
+	if ( ( ! profile ) || ( ! action ) || ( ! WiFi_DeviceName( adapter ) ) ||
 		( ! memchr( profile->SSID, 0, sizeof( profile->SSID ) ) ) ||
 		( ! memchr( profile->Password, 0, sizeof( profile->Password ) ) ) ||
 		( profile->Security > USB2WIFI_WPA3 ) ||

@@ -11,214 +11,73 @@
 #include "All.h"
 #include "WiFiScan.h"
 
-#include <stddef.h>
+#include "ProfileFormat.h"
 
 // --
 
-#define PROFILE_VARIABLE "usb2wifi"
-#define PROFILE_FLAGS ( GVF_GLOBAL_ONLY | GVF_BINARY_VAR | GVF_DONT_NULL_TERM )
-#define ADAPTER_COUNT 2
-#define UNIT_COUNT 32
-
-struct ProfileDatabase
+struct WiFiClaim
 {
-	U8 Header[4];
-	struct USB2WiFiProfile Profiles[ADAPTER_COUNT][UNIT_COUNT];
-	U8 ExtraByte;
+	struct WiFiClaim *Next;
+	struct Task *Owner;
+	struct WiFiScan *Scan;
+	U32 Adapter;
+	U32 Unit;
 };
 
-struct ScanSnapshot
-{
-	struct WiFiNetwork Network[WIFI_SCAN_NETWORKS];
-	U32 Count;
-};
-
-#define PROFILE_SIZE offsetof( struct ProfileDatabase, ExtraByte )
-
-static const U8 Header[4] = { 'U', 'W', 'F', 1 };
-static struct Task *ClaimOwner[ADAPTER_COUNT][UNIT_COUNT];
-static struct ScanSnapshot *ScanSnapshots[ADAPTER_COUNT][UNIT_COUNT];
+static struct WiFiClaim *Claims;
 
 // --
 
-static void
-Erase( void *memory, U32 length )
+const char *
+WiFi_DeviceName( U32 adapter )
 {
-	volatile U8 *data;
-
-	data = memory;
-
-	while( length-- )
+	switch ( adapter )
 	{
-		*data++ = 0;
-	}
-}
-
-// --
-
-static S32
-ValidProfile( const struct USB2WiFiProfile *profile, U32 adapter )
-{
-	const char *end;
-	const char *p;
-
-	if ( ( ! profile->SSID[0] ) || ( ! memchr( profile->SSID, 0, sizeof( profile->SSID ) ) ) ||
-		( profile->Security > USB2WIFI_WPA3 ) || ( profile->Options & ~( USB2WIFI_PROFILE_AUTO | USB2WIFI_PROFILE_HIDDEN ) ) ||
-		( profile->Channel > ( adapter == USB2WIFI_RT2870 ? 13 : 11 ) ) ||
-		( adapter == USB2WIFI_RT2870 && profile->Security == USB2WIFI_OPEN ) )
-	{
-		return ( FALSE );
+		case USB2WIFI_RTL8188: return ( "usb2rtl8188.device" );
+		case USB2WIFI_RT2870: return ( "usb2rt2870.device" );
 	}
 
-	end = memchr( profile->Password, 0, sizeof( profile->Password ) );
-
-	if ( ! end )
-	{
-		return ( FALSE );
-	}
-
-	if ( end != profile->Password )
-	{
-		if ( ( profile->Security == USB2WIFI_OPEN ) ||
-			( end - profile->Password < ( profile->Security == USB2WIFI_WPA3 ? 1 : 8 ) ) )
-		{
-			return ( FALSE );
-		}
-
-		for( p = profile->Password; p < end; p++ )
-		{
-			if ( ( (U8) *p < 32 ) || ( (U8) *p > 126 ) )
-			{
-				return ( FALSE );
-			}
-		}
-	}
-
-	return ( TRUE );
-}
-
-// --
-
-static S32
-ReadDatabase( struct ProfileDatabase *db )
-{
-	S32 bytes;
-
-	bytes = GetVar( PROFILE_VARIABLE, (char *) db, sizeof( *db ), PROFILE_FLAGS );
-
-	if ( bytes < 0 )
-	{
-		if ( IoErr() != ERROR_OBJECT_NOT_FOUND )
-		{
-			return ( USB2WIFI_ERROR );
-		}
-
-		memset( db, 0, sizeof( *db ) );
-
-		memcpy( db->Header, Header, sizeof( Header ) );
-
-		return ( USB2WIFI_MISSING );
-	}
-
-	if ( ( bytes != PROFILE_SIZE ) ||
-		( memcmp( db->Header, Header, sizeof( Header ) ) ) )
-	{
-		return ( USB2WIFI_ERROR );
-	}
-
-	return ( USB2WIFI_OK );
-}
-
-// --
-
-static S32
-SameNetwork( const struct USB2WiFiProfile *a, const struct USB2WiFiProfile *b )
-{
-	return ( a->Security == b->Security && ! strncmp( a->SSID, b->SSID, sizeof( a->SSID ) ) );
+	return ( NULL );
 }
 
 // --
 
 static void
-CopyPassword( struct USB2WiFiProfile *target, const struct USB2WiFiProfile *profile )
+CopyPassword( struct USB2WiFiProfile *target, const char *password )
 {
-	Erase( target->Password, sizeof( target->Password ) );
+	memset( target->Password, 0, sizeof( target->Password ) );
 
-	strcpy( target->Password, profile->Password );
-}
-
-// --
-
-static const struct USB2WiFiProfile *
-FindPassword( const struct ProfileDatabase *db, U32 adapter, U32 unit, const struct USB2WiFiProfile *network )
-{
-	const struct USB2WiFiProfile *match;
-	const struct USB2WiFiProfile *entry;
-
-	U32 device;
-	U32 index;
-
-	entry = & db->Profiles[adapter][unit];
-
-	if ( ( entry->Password[0] ) && ( SameNetwork( entry, network ) ) && ( ValidProfile( entry, adapter ) ) )
-	{
-		return ( entry );
-	}
-
-	match = NULL;
-
-	for( device = 0; device < ADAPTER_COUNT; device++ )
-	{
-		for( index = 0; index < UNIT_COUNT; index++ )
-		{
-			entry = & db->Profiles[device][index];
-
-			if ( ( ! entry->Password[0] ) || ( ! SameNetwork( entry, network ) ) || ( ! ValidProfile( entry, device ) ) )
-			{
-				continue;
-			}
-
-			if ( ( match ) && ( strcmp( match->Password, entry->Password ) ) )
-			{
-				return ( NULL );
-			}
-
-			match = entry;
-		}
-	}
-
-	return ( match );
+	strcpy( target->Password, password );
 }
 
 // --
 
 void
-WiFi_FindPassword( U32 adapter, U32 unit, struct USB2WiFiProfile *network )
+WiFi_FindPassword( struct USB2WiFiProfile *profile )
 {
 	struct ProfileDatabase db;
-	const struct USB2WiFiProfile *match;
+	struct ProfileNetwork *network;
 
-	if ( ( adapter >= ADAPTER_COUNT ) || ( unit >= UNIT_COUNT ) ||
-		( network->Security < USB2WIFI_WPA ) || ( network->Security > USB2WIFI_WPA3 ) )
+	if ( ( profile->Security < USB2WIFI_WPA ) || ( profile->Security > USB2WIFI_WPA3 ) )
 	{
 		return;
 	}
 
-	ObtainSemaphore( & WiFiLock );
+	ObtainSemaphore( &WiFiLock );
 
-	if ( ReadDatabase( & db ) == USB2WIFI_OK )
+	if ( WiFi_ReadProfiles( &db ) == USB2WIFI_OK )
 	{
-		match = FindPassword( & db, adapter, unit, network );
+		network = WiFi_ProfileNetwork( &db, profile, FALSE );
 
-		if ( match )
+		if ( network )
 		{
-			CopyPassword( network, match );
+			CopyPassword( profile, network->Profile.Password );
 		}
 	}
 
-	Erase( & db, sizeof( db ) );
+	WiFi_FreeProfiles( &db );
 
-	ReleaseSemaphore( & WiFiLock );
+	ReleaseSemaphore( &WiFiLock );
 }
 
 // --
@@ -227,50 +86,47 @@ static S32
 WiFi_Load( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 unit, struct USB2WiFiProfile *profile )
 {
 	struct ProfileDatabase db;
-	const struct USB2WiFiProfile *match;
+	struct ProfileAdapter *entry;
+	struct ProfileNetwork *network;
 
+	const char *device;
 	S32 result;
 
-	if ( ( ! profile ) || ( adapter >= ADAPTER_COUNT ) || ( unit >= UNIT_COUNT ) )
+	device = WiFi_DeviceName( adapter );
+
+	if ( ( ! profile ) || ( ! device ) )
 	{
 		return ( USB2WIFI_ERROR );
 	}
 
 	memset( profile, 0, sizeof( *profile ) );
 
-	ObtainSemaphore( & WiFiLock );
+	ObtainSemaphore( &WiFiLock );
 
-	result = ReadDatabase( & db );
+	result = WiFi_ReadProfiles( &db );
 
 	if ( result == USB2WIFI_OK )
 	{
-		if ( ! db.Profiles[adapter][unit].SSID[0] )
-		{
-			result = USB2WIFI_MISSING;
-		}
-		else if ( ValidProfile( & db.Profiles[adapter][unit], adapter ) )
-		{
-			*profile = db.Profiles[adapter][unit];
+		entry = WiFi_ProfileAdapter( &db, device, unit, FALSE );
 
-			if ( ( ! profile->Password[0] ) && ( profile->Security != USB2WIFI_OPEN ) )
-			{
-				match = FindPassword( & db, adapter, unit, profile );
+		result = USB2WIFI_MISSING;
 
-				if ( match )
-				{
-					CopyPassword( profile, match );
-				}
-			}
-		}
-		else
+		if ( entry )
 		{
-			result = USB2WIFI_ERROR;
+			network = WiFi_ProfileNetwork( &db, &entry->Profile, FALSE );
+
+			*profile = entry->Profile;
+			profile->Options |= network->Profile.Options;
+
+			CopyPassword( profile, network->Profile.Password );
+
+			result = WiFi_ValidProfile( profile, adapter ) ? USB2WIFI_OK : USB2WIFI_ERROR;
 		}
 	}
 
-	Erase( & db, sizeof( db ) );
+	WiFi_FreeProfiles( &db );
 
-	ReleaseSemaphore( & WiFiLock );
+	ReleaseSemaphore( &WiFiLock );
 
 	return ( result );
 }
@@ -282,55 +138,53 @@ WiFi_Save( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 
 	const struct USB2WiFiProfile *profile, U32 passwordAction )
 {
 	struct ProfileDatabase db;
-	struct USB2WiFiProfile *target;
-	struct USB2WiFiProfile next;
+	struct ProfileAdapter *entry;
+	struct ProfileNetwork *network;
 
+	const char *device;
 	S32 result;
 
-	if ( ( ! profile ) || ( adapter >= ADAPTER_COUNT ) || ( unit >= UNIT_COUNT ) ||
-		( passwordAction > USB2WIFI_FORGET_PASSWORD ) || ( ! ValidProfile( profile, adapter ) ) )
+	device = WiFi_DeviceName( adapter );
+
+	if ( ( ! profile ) || ( ! device ) || ( passwordAction > USB2WIFI_FORGET_PASSWORD )
+		|| ( ! WiFi_ValidProfile( profile, adapter ) ) )
 	{
 		return ( USB2WIFI_ERROR );
 	}
 
-	memset( & next, 0, sizeof( next ) );
+	ObtainSemaphore( &WiFiLock );
 
-	strcpy( next.SSID, profile->SSID );
-
-	next.Security = profile->Security;
-	next.Channel = profile->Channel;
-	next.Options = profile->Options;
-
-	if ( passwordAction == USB2WIFI_SAVE_PASSWORD )
-	{
-		CopyPassword( & next, profile );
-	}
-
-	ObtainSemaphore( & WiFiLock );
-
-	result = ReadDatabase( & db );
+	result = WiFi_ReadProfiles( &db );
 
 	if ( result >= 0 )
 	{
-		target = & db.Profiles[adapter][unit];
+		entry = WiFi_ProfileAdapter( &db, device, unit, TRUE );
 
-		if ( ( passwordAction == USB2WIFI_KEEP_PASSWORD ) && ( SameNetwork( target, & next ) ) &&
-			( ValidProfile( target, adapter ) ) )
+		network = WiFi_ProfileNetwork( &db, profile, TRUE );
+
+		result = USB2WIFI_ERROR;
+
+		if ( ( entry ) && ( network ) )
 		{
-			CopyPassword( & next, target );
+			strcpy( entry->Profile.SSID, profile->SSID );
+
+			entry->Profile.Security = profile->Security;
+			entry->Profile.Channel = profile->Channel;
+			entry->Profile.Options = profile->Options & USB2WIFI_PROFILE_AUTO;
+			network->Profile.Options = profile->Options & USB2WIFI_PROFILE_HIDDEN;
+
+			if ( passwordAction != USB2WIFI_KEEP_PASSWORD )
+			{
+				CopyPassword( &network->Profile, passwordAction == USB2WIFI_SAVE_PASSWORD ? profile->Password : "" );
+			}
+
+			result = WiFi_WriteProfiles( &db );
 		}
-
-		*target = next;
-
-		result = SetVar( PROFILE_VARIABLE, (const char *) & db, PROFILE_SIZE, PROFILE_FLAGS ) ?
-			USB2WIFI_OK : USB2WIFI_ERROR;
 	}
 
-	Erase( & next, sizeof( next ) );
+	WiFi_FreeProfiles( &db );
 
-	Erase( & db, sizeof( db ) );
-
-	ReleaseSemaphore( & WiFiLock );
+	ReleaseSemaphore( &WiFiLock );
 
 	return ( result );
 }
@@ -342,46 +196,78 @@ WiFi_Connected( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter,
 	const struct USB2WiFiProfile *profile, U32 savePassword )
 {
 	struct ProfileDatabase db;
-	struct USB2WiFiProfile *target;
+	struct ProfileAdapter *entry;
+	struct ProfileNetwork *network;
 
+	const char *device;
 	S32 result;
 
-	if ( ( ! profile ) || ( adapter >= ADAPTER_COUNT ) || ( unit >= UNIT_COUNT ) || ( ! ValidProfile( profile, adapter ) ) )
+	device = WiFi_DeviceName( adapter );
+
+	if ( ( ! profile ) || ( ! device ) || ( ! WiFi_ValidProfile( profile, adapter ) ) )
 	{
 		return ( USB2WIFI_ERROR );
 	}
 
-	ObtainSemaphore( & WiFiLock );
+	ObtainSemaphore( &WiFiLock );
 
-	result = ReadDatabase( & db );
+	result = WiFi_ReadProfiles( &db );
 
 	if ( result == USB2WIFI_OK )
 	{
-		target = & db.Profiles[adapter][unit];
+		entry = WiFi_ProfileAdapter( &db, device, unit, FALSE );
 
-		if ( ( ! SameNetwork( target, profile ) ) || ( ! ValidProfile( target, adapter ) ) )
+		network = WiFi_ProfileNetwork( &db, profile, FALSE );
+
+		if ( ( ! entry ) || ( ! network ) || ( entry->Profile.Security != profile->Security )
+			|| ( strcmp( entry->Profile.SSID, profile->SSID ) ) )
 		{
 			result = USB2WIFI_MISSING;
 		}
-		else if ( ( target->Channel != profile->Channel ) || ( savePassword ) )
+		else if ( ( entry->Profile.Channel != profile->Channel ) || ( savePassword ) )
 		{
-			target->Channel = profile->Channel;
+			entry->Profile.Channel = profile->Channel;
 
 			if ( savePassword )
 			{
-				CopyPassword( target, profile );
+				CopyPassword( &network->Profile, profile->Password );
 			}
 
-			result = SetVar( PROFILE_VARIABLE, (const char *) & db, PROFILE_SIZE, PROFILE_FLAGS ) ?
-				USB2WIFI_OK : USB2WIFI_ERROR;
+			result = WiFi_WriteProfiles( &db );
 		}
 	}
 
-	Erase( & db, sizeof( db ) );
+	WiFi_FreeProfiles( &db );
 
-	ReleaseSemaphore( & WiFiLock );
+	ReleaseSemaphore( &WiFiLock );
 
 	return ( result );
+}
+
+// --
+
+static struct WiFiClaim **
+FindClaim( U32 adapter, U32 unit )
+{
+	struct WiFiClaim **link;
+
+	link = &Claims;
+
+	while ( ( *link ) && ( ( (*link)->Adapter != adapter ) || ( (*link)->Unit != unit ) ) )
+	{
+		link = &(*link)->Next;
+	}
+
+	return ( link );
+}
+
+// --
+
+S32
+WiFi_UnitClaimed( U32 adapter, U32 unit )
+{
+	// Caller holds WiFiLock.
+	return ( *FindClaim( adapter, unit ) != NULL );
 }
 
 // --
@@ -389,38 +275,33 @@ WiFi_Connected( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter,
 void
 WiFi_RememberScan( U32 adapter, U32 unit, const struct WiFiScan *scan )
 {
-	struct ScanSnapshot *snapshot;
-	struct Task *task;
+	struct WiFiClaim *claim;
 
-	if ( ( ! scan->Count ) || ( scan->Count > WIFI_SCAN_NETWORKS ) ||
-		( adapter >= ADAPTER_COUNT ) || ( unit >= UNIT_COUNT ) )
+	if ( ( ! scan->Count ) || ( scan->Count > WIFI_SCAN_NETWORKS ) )
 	{
 		return;
 	}
 
-	task = FindTask( NULL );
+	ObtainSemaphore( &WiFiLock );
 
-	ObtainSemaphore( & WiFiLock );
+	claim = *FindClaim( adapter, unit );
 
-	if ( ClaimOwner[adapter][unit] == task )
+	if ( ( claim ) && ( claim->Owner == FindTask( NULL ) ) )
 	{
-		snapshot = ScanSnapshots[adapter][unit];
-
-		if ( ! snapshot )
+		if ( ! claim->Scan )
 		{
-			snapshot = AllocVecTags( sizeof( *snapshot ), TAG_END );
-			ScanSnapshots[adapter][unit] = snapshot;
+			claim->Scan = AllocVecTags( sizeof( *claim->Scan ), TAG_END );
 		}
 
-		if ( snapshot )
+		if ( claim->Scan )
 		{
-			snapshot->Count = scan->Count;
+			claim->Scan->Count = scan->Count;
 
-			memcpy( snapshot->Network, scan->Network, scan->Count * sizeof( *scan->Network ) );
+			memcpy( claim->Scan->Network, scan->Network, scan->Count * sizeof( *scan->Network ) );
 		}
 	}
 
-	ReleaseSemaphore( & WiFiLock );
+	ReleaseSemaphore( &WiFiLock );
 }
 
 // --
@@ -428,28 +309,20 @@ WiFi_RememberScan( U32 adapter, U32 unit, const struct WiFiScan *scan )
 void
 WiFi_RestoreScan( U32 adapter, U32 unit, struct WiFiScan *scan )
 {
-	const struct ScanSnapshot *snapshot;
-	struct Task *task;
+	struct WiFiClaim *claim;
 
-	if ( ( adapter >= ADAPTER_COUNT ) || ( unit >= UNIT_COUNT ) )
+	ObtainSemaphore( &WiFiLock );
+
+	claim = *FindClaim( adapter, unit );
+
+	if ( ( claim ) && ( claim->Scan ) && ( claim->Owner == FindTask( NULL ) ) )
 	{
-		return;
+		scan->Count = claim->Scan->Count;
+
+		memcpy( scan->Network, claim->Scan->Network, scan->Count * sizeof( *scan->Network ) );
 	}
 
-	task = FindTask( NULL );
-
-	ObtainSemaphore( & WiFiLock );
-
-	snapshot = ScanSnapshots[adapter][unit];
-
-	if ( ( snapshot ) && ( ClaimOwner[adapter][unit] == task ) )
-	{
-		scan->Count = snapshot->Count;
-
-		memcpy( scan->Network, snapshot->Network, scan->Count * sizeof( *scan->Network ) );
-	}
-
-	ReleaseSemaphore( & WiFiLock );
+	ReleaseSemaphore( &WiFiLock );
 }
 
 // --
@@ -457,33 +330,42 @@ WiFi_RestoreScan( U32 adapter, U32 unit, struct WiFiScan *scan )
 static S32
 WiFi_Claim( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 unit )
 {
-	struct Task *task;
+	struct WiFiClaim *claim;
 
-	U32 bit;
-	S32 claimed;
-
-	if ( ( adapter >= ADAPTER_COUNT ) || ( unit >= UNIT_COUNT ) )
+	if ( ! WiFi_DeviceName( adapter ) )
 	{
 		return ( FALSE );
 	}
 
-	bit = 1UL << unit;
+	claim = AllocVecTags( sizeof( *claim ), AVT_ClearWithValue, 0, TAG_END );
 
-	task = FindTask( NULL );
-
-	ObtainSemaphore( & WiFiLock );
-
-	claimed = ! ( ActiveUnits[adapter] & bit );
-
-	if ( claimed )
+	if ( ! claim )
 	{
-		ClaimOwner[adapter][unit] = task;
-		ActiveUnits[adapter] |= bit;
+		return ( FALSE );
 	}
 
-	ReleaseSemaphore( & WiFiLock );
+	claim->Owner = FindTask( NULL );
 
-	return ( claimed );
+	claim->Adapter = adapter;
+	claim->Unit = unit;
+
+	ObtainSemaphore( &WiFiLock );
+
+	if ( WiFi_UnitClaimed( adapter, unit ) )
+	{
+		ReleaseSemaphore( &WiFiLock );
+
+		FreeVec( claim );
+
+		return ( FALSE );
+	}
+
+	claim->Next = Claims;
+	Claims = claim;
+
+	ReleaseSemaphore( &WiFiLock );
+
+	return ( TRUE );
 }
 
 // --
@@ -491,30 +373,51 @@ WiFi_Claim( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32
 static void
 WiFi_Unclaim( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 unit )
 {
-	if ( ( adapter >= ADAPTER_COUNT ) || ( unit >= UNIT_COUNT ) )
+	struct WiFiClaim **link;
+	struct WiFiClaim *claim;
+
+	ObtainSemaphore( &WiFiLock );
+
+	link = FindClaim( adapter, unit );
+
+	claim = *link;
+
+	if ( claim )
 	{
-		return;
+		*link = claim->Next;
 	}
 
-	ObtainSemaphore( & WiFiLock );
+	ReleaseSemaphore( &WiFiLock );
 
-	if ( ScanSnapshots[adapter][unit] )
+	if ( claim )
 	{
-		FreeVec( ScanSnapshots[adapter][unit] );
+		if ( claim->Scan )
+		{
+			FreeVec( claim->Scan );
+		}
 
-		ScanSnapshots[adapter][unit] = NULL;
+		FreeVec( claim );
 	}
-
-	ClaimOwner[adapter][unit] = NULL;
-	ActiveUnits[adapter] &= ~( 1UL << unit );
-
-	ReleaseSemaphore( & WiFiLock );
 }
 
 // --
 
-const APTR WiFiVectors[] =
-{
-	WiFi_InterfaceObtain, WiFi_InterfaceRelease, NULL, NULL, WiFi_Load, WiFi_Save, WiFi_Connected,
-	WiFi_Claim, WiFi_Unclaim, WiFi_Setup, WiFi_StartPrompt, WiFi_CancelPrompt, WiFi_StartAuto, WiFi_SetupRetry, (APTR) -1
-};
+const APTR WiFiVectors[] = //
+	{
+		WiFi_InterfaceObtain,  //
+		WiFi_InterfaceRelease, //
+		NULL,				   //
+		NULL,				   //
+		WiFi_Load,			   //
+		WiFi_Save,			   //
+		WiFi_Connected,		   //
+		WiFi_Claim,			   //
+		WiFi_Unclaim,		   //
+		WiFi_Setup,			   //
+		WiFi_StartPrompt,	   //
+		WiFi_CancelPrompt,	   //
+		WiFi_StartAuto,		   //
+		WiFi_SetupRetry,	   //
+		WiFi_EditProfiles,	   //
+		(APTR)-1			   //
+	};

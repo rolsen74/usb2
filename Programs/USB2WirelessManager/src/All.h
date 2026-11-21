@@ -106,6 +106,7 @@ struct AutoWiFi
 	U32 Unit;
 	S32 Claimed;
 	S32 SetupConnect;
+	S32 Linked;
 	S32 DetectSecurity;
 	S32 Retry;
 	S32 SavePassword;
@@ -175,7 +176,7 @@ typedef S32 (*FrameMatch)( struct Wireless *wireless, const U8 *frame, U32 lengt
 
 S32 Wireless_PromptPassword( struct Wireless *wireless, U32 *action );
 enum WirelessResult WiFi_Passphrase( struct Wireless *wireless, char *input, char **password, U32 *length );
-S32 WiFi_Run( const char *device, U32 unit );
+S32 WiFi_Run( const char *device, U32 unit, S32 setup );
 void WiFi_Connected( struct Wireless *wireless, U32 channel );
 S32 Run_Wireless( struct Wireless *wireless, U32 channel, U32 maxChannel, S32 open, S32 auth, S32 associate );
 S32 Valid_Password( const char *password, U32 minimum );

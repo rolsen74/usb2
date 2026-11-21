@@ -99,13 +99,23 @@ with `AID 0, online 0` means association has not completed yet.
 
 ## Saved profiles and startup
 
-Install `usb2wifi.library` 1.20 or later in `LIBS:`.
+Install `usb2wifi.library` 1.26 or later in `LIBS:`.
 Use RTL8188EU 1.7 or RT2870 1.27 or later. When TCP/IP configures one of
-these adapters, the library opens the picker before it scans. Networks
-appear as they are found, and the picker waits for **Connect**.
-The optional USB2WirelessManager Shell tool (0.33 or later) can also open
-the ReAction settings for a chosen device and unit. End an existing
-connection on that unit before opening setup.
+these adapters, the library connects without a window if its saved
+`ETH:` record has autoconnect enabled and the login succeeds. If the
+connection fails, or a required password is missing, the picker opens.
+With autoconnect disabled, the picker opens before scanning and waits
+for **Connect**. Networks appear as they are found.
+
+Run `USB2WirelessManager` with no arguments to open the profile editor.
+Use the **SSIDs** and **Devices** tabs to add, remove, or edit entries.
+Double-clicking an entry opens its editor. To remove an SSID referenced
+by a device, change or remove that device's entry first.
+**Use** writes the edits to `ENV:usb2wifi` for this boot. **Save** writes
+them to both `ENV:usb2wifi` and `ENVARC:usb2wifi` so they survive a reboot.
+**Cancel** and the window close button discard unsaved changes. The editor
+requires manager 0.34 or later. To open the picker explicitly, end any active connection
+on that adapter and use `SETUP`.
 
 ```text
 USB2WirelessManager SETUP
@@ -130,12 +140,36 @@ reuses a saved password for the same network and security mode or opens a
 password prompt when one is needed.
 
 A successful connection caches the network, channel and password in
-`ENV:usb2wifi` for the current boot. Older profiles already in
-`ENVARC:usb2wifi` can still be loaded through the normal AmigaOS startup.
+`ENV:usb2wifi` for the current boot. The file is ASCII and stores
+network credentials separately from each adapter's last connection.
+
+```text
+# SSID: name, security, password, hidden
+SSID: "My Network", WPA2, "example-password", 0
+
+# ETH: device filename, unit, last SSID, security, last channel, autoconnect
+ETH: "usb2rtl8188.device", 0, "My Network", WPA2, 6, 0
+ETH: "usb2rt2870.device", 0, "My Network", WPA2, 11, 0
+```
+
+An `ETH:` line references an `SSID:` line by name and security mode.
+Adapters using the same network share its password. Use `OPEN`, `WPA`,
+`WPA2`, or `WPA3` for security, channel `0` when unknown, and `""` for
+an empty password. Hidden and autoconnect flags are `0` or `1`.
+Set autoconnect to `1` to try the saved network when the interface starts.
+In quoted fields, use `\"` for a quote, `\\` for a backslash, and
+`\xHH` for a byte outside printable ASCII. Blank lines and lines
+starting with `#` are allowed. The password is readable in the file.
+
+Older binary profiles and the earlier single-line ASCII format can still
+be loaded, including copies restored from `ENVARC:usb2wifi` at boot.
+The next successful profile write converts `ENV:usb2wifi`. When old
+profiles contain different passwords for the same SSID and security mode,
+the library asks for a password before it can save a shared credential.
 
 Use the same `DEVICE` and `UNIT` options you used to configure TCP/IP.
-`AUTO` also opens the picker, so existing startup scripts still bring up
-the window. The following commands open it from a Shell task.
+`AUTO` uses the same autoconnect setting as normal startup. The
+following commands start Wi-Fi from a Shell task.
 
 ```text
 Run <NIL: >NIL: USB2WirelessManager AUTO
