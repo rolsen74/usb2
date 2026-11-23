@@ -13,6 +13,15 @@
 
 // --
 
+#define MSD_VERSION_TEXT_( value ) #value
+#define MSD_VERSION_TEXT( value )  MSD_VERSION_TEXT_ ( value )
+
+SEC_RODATA static const char MSD_Device_ID[]
+	= "\0$VER: " MSD_Device_Name
+	  " " MSD_VERSION_TEXT ( MSD_Device_Version ) "." MSD_VERSION_TEXT ( MSD_Device_Revision ) " (" MSD_Device_Date ")\r\n";
+
+// --
+
 SEC_CODE struct MSDBase *
 MSD_Manager_Init ( struct MSDBase * MSDBase, PTR seglist, struct ExecIFace * IExec UNUSED )
 {
@@ -25,7 +34,7 @@ MSD_Manager_Init ( struct MSDBase * MSDBase, PTR seglist, struct ExecIFace * IEx
 	MSDBase->msdbase_Library.lib_Flags		  = LIBF_SUMUSED | LIBF_CHANGED;
 	MSDBase->msdbase_Library.lib_Version	  = MSD_Device_Version;
 	MSDBase->msdbase_Library.lib_Revision	  = MSD_Device_Revision;
-	MSDBase->msdbase_Library.lib_IdString	  = NULL;
+	MSDBase->msdbase_Library.lib_IdString	  = (STR)( MSD_Device_ID + sizeof ( "\0$VER: " ) - 1 );
 	MSDBase->msdbase_SegList				  = seglist;
 
 	TASK_NAME_LEAVE ();

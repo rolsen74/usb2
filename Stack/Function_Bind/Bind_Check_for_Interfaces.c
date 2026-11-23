@@ -12,302 +12,210 @@
 
 // --
 
-SEC_CODE static void __myIFC_Entry( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
+SEC_CODE static S32
+_Start_Interface ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_FktDriverNode * fdn,
+				   struct USB2_InterfaceHeader * ih, struct USB2_Interface_Desc * ifcdsc, struct USB2_ASync * as )
 {
-struct USB2DriverIFace *ifc;
-struct USB2_DriverNode *dn;
-PTR base;
-S32 proc;
-S32 old;
+	struct USB2_DriverNode * dn;
+	struct USB2_TaskNode *	 tn;
+	enum TaskReturn			 stat;
+	U32						 retval;
 
-	TASK_NAME_ENTER( "__myIFC_Entry" );
+	TASK_NAME_ENTER ( "_Start_Interface" );
 
-	dn = userdata;
-
-//	USBDEBUG( "__myIFCT_Entry : 1 : DN    %p : Call Driver", dn );
-
-	// --
-
-	if ( DRIVER_LOCK( dn ) == LSTAT_Okay )
-	{
-		/**/ if ( dn->dn_Entry )
-		{
-//			USBERROR( "__myIFC_Entry : 2 : DN    %p : Entry %p", dn, dn->dn_Entry );
-
-			dn->dn_Entry( usbbase, & dn->dn_Message.rdm_Public );
-		}
-		else if (( dn->dn_Filename ) && ( usbbase->usb_DriverDirLock ))
-		{
-//			USBERROR( "__myIFC_Entry : 3 : DN    %p : Filename '%s'", dn, dn->dn_Filename );
-
-			proc = MISC_SETPROCWINDOW( -1 );
-
-//			USBERROR( "lock : $%08lx", usbbase->usb_DriverDirLock );
-
-			old  = MISC_SETCURRENTDIR( usbbase->usb_DriverDirLock );
-
-//			USBERROR( "old  : $%08lx", old );
-
-			base = MISC_OPENLIBRARY( dn->dn_Filename, 0 );
-
-			USBERROR( "base : %p", base );
-
-			ifc	 = MISC_OBTAININTERFACE( base, "main", 1 );
-
-			USBERROR( "ifc  : %p", ifc );
-
-			MISC_SETPROCWINDOW( proc );
-
-			if ( ifc )
-			{
-				ifc->Entry( & dn->dn_Message.rdm_Public );
-			}
-
-			MISC_RELEASEINTERFACE( ifc );
-
-			MISC_CLOSELIBRARY( base );
-
-			MISC_SETCURRENTDIR( old );
-		}
-		else
-		{
-			USBERROR( "__myIFC_Entry : 4 : DN    %p : No Entry", dn );
-		}
-
-		// Driver Quit
-		dn->dn_FreeMe = TRUE;
-	
-		DRIVER_UNLOCK( dn );
-	}
-
-	// --
-
-//	USBERROR( "__myIFC_Entry : 5 : DN    %p : Driver Exit", dn );
-
-	TASK_NAME_LEAVE();
-}
-
-// --
-
-SEC_CODE static S32 _Start_Interface( 
-	struct USBBase *usbbase, 
-	struct RealFunctionNode *fn,
-	struct USB2_FktDriverNode *fdn,
-	struct USB2_InterfaceHeader *ih,
-	struct USB2_Interface_Desc *ifcdsc,
-	struct USB2_ASync *as )
-{
-struct USB2_DriverNode *dn;
-struct USB2_TaskNode *tn;
-enum TaskReturn stat;
-U32 retval;
-
-	TASK_NAME_ENTER( "_Start_Interface" );
-
-	USBDEBUG( "_Start_Interface" );
+	USBDEBUG ( "_Start_Interface" );
 
 	retval = TASK_Return_Stack_Error;
+	tn	   = NULL;
 
 	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner ) )
 	{
 		goto bailout;
 	}
 
-	dn = DRIVER_ALLOC( fn, as );
+	dn = DRIVER_ALLOC ( fn, as );
 
 	if ( ! dn )
 	{
-		USBERROR( "_Start_Interface : Error allocating memory" );
+		USBERROR ( "_Start_Interface : Error allocating memory" );
 		goto bailout;
 	}
 
-	dn->dn_Entry = fdn->fdn_Entry;
+	dn->dn_ASync	= as;
+	dn->dn_Class	= fdn;
+	dn->dn_Entry	= fdn->fdn_Entry;
 	dn->dn_Filename = fdn->fdn_Driver_Filename;
 
 	// -- Init Public Message
 
 	// Alloc check FN
-//	if ( FUNCTION_VALID(fn) != VSTAT_Okay )
-//	{
-//		USBERROR( "_Start_Interface : Function Valid error (%p)", fn );
-//		goto bailout;
-//	}
+	//	if ( FUNCTION_VALID(fn) != VSTAT_Okay )
+	//	{
+	//		USBERROR( "_Start_Interface : Function Valid error (%p)", fn );
+	//		goto bailout;
+	//	}
 
-	dn->dn_Message.rdm_Public.IUSB2 = usbbase->usb_IUSB2;
-	dn->dn_Message.rdm_Public.VendorID = LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID );
-	dn->dn_Message.rdm_Public.DeviceID = LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID );
-	dn->dn_Message.rdm_Public.Function = (PTR) fn;
-	dn->dn_Message.rdm_Public.ConfigDescriptors = (PTR) fn->fkt_Config_Desc_Buf;
-	dn->dn_Message.rdm_Public.ClassTitle = fdn->fdn_Title;
-	dn->dn_Message.rdm_Public.ClassDriver = fdn->fdn_Driver_Filename;
-	dn->dn_Message.rdm_Public.ClassAlias = fdn->fdn_Alias;
-	
-	if ( INTERFACE_LOCKHEADER( ih ) != LSTAT_Okay )
+	dn->dn_Message.rdm_Public.IUSB2				= usbbase->usb_IUSB2;
+	dn->dn_Message.rdm_Public.VendorID			= LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID );
+	dn->dn_Message.rdm_Public.DeviceID			= LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID );
+	dn->dn_Message.rdm_Public.Function			= (PTR)fn;
+	dn->dn_Message.rdm_Public.ConfigDescriptors = (PTR)fn->fkt_Config_Desc_Buf;
+	dn->dn_Message.rdm_Public.ClassTitle		= fdn->fdn_Title;
+	dn->dn_Message.rdm_Public.ClassDriver		= fdn->fdn_Driver_Filename;
+	dn->dn_Message.rdm_Public.ClassAlias		= fdn->fdn_Alias;
+
+	if ( INTERFACE_LOCKHEADER ( ih ) != LSTAT_Okay )
 	{
-		DRIVER_FREE( dn );
+		DRIVER_FREE ( dn );
 
 		goto bailout;
 	}
 
-	dn->dn_Interface = ih;
-	dn->dn_Message.rdm_Public.Interface = (PTR) & ih->ih_Public ;
+	dn->dn_Interface							  = ih;
+	dn->dn_Message.rdm_Public.Interface			  = (PTR)&ih->ih_Public;
 	dn->dn_Message.rdm_Public.InterfaceDescriptor = ifcdsc;
 
 	// -- Start Driver
 
-	stat = TASK_START(
-		TASK_Tag_Func_Main, __myIFC_Entry,
-		TASK_Tag_UserData, dn,
-		TASK_Tag_Get_TN, & tn,
-		TASK_Tag_Prioity, fdn->fdn_Pri,
-		TASK_Tag_ASync, as,
-		TASK_Tag_Type, TASK_Type_FKT,
-		TASK_Tag_Name, fdn->fdn_Title,
-		TAG_END	
-	);
+	stat = TASK_START ( TASK_Tag_Func_Init, DriverWorkerInit, TASK_Tag_Func_Main, DriverWorkerMain, TASK_Tag_Func_Free,
+						DriverWorkerFree, TASK_Tag_UserData, dn, TASK_Tag_Get_TN, &tn, TASK_Tag_Prioity, fdn->fdn_Pri,
+						TASK_Tag_ASync, as, TASK_Tag_Type, TASK_Type_FKT, TASK_Tag_Name, fdn->fdn_Title, TAG_END );
 
 	// --
 
 	retval = stat;
 
-	if ( TASKRETURN_OK(stat) )
+	if ( ( ! myIS_TASKRETURN_ERR ( stat ) ) && ( tn ) )
 	{
-		USBDEBUG( "_Start_Interface         : Okay (Stat $%08lx)", stat );
-
-		// --
-		// -- Link Driver and Task
-
-		if ( TASK_LOCK(tn) != LSTAT_Okay )
+		if ( ! PublishDriver ( usbbase, dn, tn ) )
 		{
-			USBPANIC( "_Start_Interface : Invalid TN %p", tn );
+			retval = TASK_Return_Error;
 		}
-
-		#ifdef DO_DEBUG
-
-		if ( tn->tn_Owner )
-		{
-			USBPANIC( "_Start_Interface : Already set tn_Owner  %p", tn->tn_Owner );
-		}
-
-		if ( dn->dn_Task )
-		{
-			USBPANIC( "_Start_Interface : Already set dn_Task  %p", dn->dn_Task );
-		}
-
-		#endif
-
-		tn->tn_Owner = dn;
-		dn->dn_Task = tn;
-
-		// --
-
-		SEMAPHORE_OBTAIN(	& usbbase->usb_Bind_Semaphore );
-		NODE_ADDTAIL(		& usbbase->usb_Bind_Header, dn );
-		SEMAPHORE_RELEASE(	& usbbase->usb_Bind_Semaphore );
-
-//		retval = stat;
 	}
 	else
 	{
-		USBERROR( "_Start_Interface         : Failed (Stat $%08lx)", stat );
-
-		if ( DRIVER_FREE( dn ) != FSTAT_Okay )
+		if ( ! myIS_TASKRETURN_ERR ( stat ) )
 		{
-			USBDEBUG( "_Start_Interface         : Unable to Free, parking" );
-
-			SEMAPHORE_OBTAIN(	& usbbase->usb_Bind_Semaphore );
-			NODE_ADDTAIL(		& usbbase->usb_Bind_Header, dn );
-			SEMAPHORE_RELEASE(	& usbbase->usb_Bind_Semaphore );
+			retval = TASK_Return_Stack_Error;
 		}
 
-		dn = NULL;
-
-//		retval = stat;
+		DiscardDriver ( usbbase, dn );
 	}
-  
-	// --
 
 bailout:
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( retval );
+	return ( retval );
 }
 
 // --
 
 SEC_CODE static S32
-_Check_Interface( struct USBBase *usbbase, struct RealFunctionNode *fn,
-	struct USB2_InterfaceHeader *ih, struct USB2_ASync *as )
+_Check_Interface ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_InterfaceHeader * ih,
+				   struct USB2_ASync * as, struct USB2_DriverNode * previous )
 {
-	struct USB2_FktDriverNode *fdn;
-	struct USB2_Interface_Desc *ifcdsc;
-	enum DriverDeviceMatch wanted;
+	struct USB2_FktDriverNode *	 fdn;
+	struct USB2_DriverNode *	 bound;
+	struct USB2_Interface_Desc * ifcdsc;
+	enum DriverDeviceMatch		 wanted;
 
 	S32 stat;
+	S32 skip;
 
-	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_Bind_Semaphore );
 
-	ifcdsc = ( ih->ih_Active ) ? ih->ih_Active->in_Descriptor : NULL;
+	for ( bound = usbbase->usb_Bind_Header.uh_Head; bound; bound = Node_Next ( bound ) )
+	{
+		if ( ( bound != previous ) && ( bound->dn_Interface == ih ) && ( ! bound->dn_Detach ) && ( ! bound->dn_FreeMe ) )
+		{
+			break;
+		}
+	}
 
-	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_RELEASE ( &usbbase->usb_Bind_Semaphore );
+
+	if ( bound )
+	{
+		return ( TRUE );
+	}
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+	ifcdsc = ( ( ih->ih_Active ) && ( ! ih->ih_Owner ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) )
+				 ? ih->ih_Active->in_Descriptor
+				 : NULL;
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 	if ( ! ifcdsc )
 	{
 		return ( FALSE );
 	}
 
+	skip = previous != NULL;
+
 	// Try device-specific classes first, keeping the existing order within each pass.
-	for( wanted = DriverMatch_ID; wanted != DriverMatch_None; wanted-- )
+	for ( wanted = DriverMatch_ID; wanted != DriverMatch_None; wanted-- )
 	{
-		for( fdn = Header_Head( & usbbase->usb_FDriver_Header ); fdn; fdn = Node_Next( fdn ) )
+		for ( fdn = Header_Head ( &usbbase->usb_FDriver_Header ); fdn; fdn = Node_Next ( fdn ) )
 		{
-			if ( ( fdn->fdn_Type != USB2Val_FDriver_Interface ) || ( fdn->fdn_Detach ) ||
-				( ( fdn->fdn_Driver_Filename ) && ( ! usbbase->usb_FrontendsReady ) ) )
+			if ( ( fdn->fdn_Type != USB2Val_FDriver_Interface ) || ( fdn->fdn_Detach )
+				 || ( ( fdn->fdn_Driver_Filename ) && ( ! usbbase->usb_FrontendsReady ) ) )
 			{
 				continue;
 			}
 
-			if ( Match_Driver_Device( usbbase, fdn, fn->fkt_DeviceDescriptor ) != wanted )
+			if ( Match_Driver_Device ( usbbase, fdn, fn->fkt_DeviceDescriptor ) != wanted )
 			{
 				continue;
 			}
 
-			#ifdef USB2_BIND_DEBUG
+			if ( skip )
+			{
+				if ( fdn == previous->dn_Class )
+				{
+					skip = FALSE;
+				}
+
+				continue;
+			}
+
+#ifdef USB2_BIND_DEBUG
 			if ( ( wanted == DriverMatch_ID ) && ( fdn->fdn_Driver_Filename ) )
 			{
-				usbbase->usb_IExec->DebugPrintF( "USB2 bind: '%s' ID match, interface %lu %02lX/%02lX/%02lX, filter %lX/%lX/%lX\n",
-					fdn->fdn_Driver_Filename, (U32) ifcdsc->InterfaceNumber, (U32) ifcdsc->InterfaceClass,
-					(U32) ifcdsc->InterfaceSubClass, (U32) ifcdsc->InterfaceProtocol,
-					(U32) fdn->fdn_Class, (U32) fdn->fdn_SubClass, (U32) fdn->fdn_Protocol );
+				usbbase->usb_IExec->DebugPrintF (
+					"USB2 bind: '%s' ID match, interface %lu %02lX/%02lX/%02lX, filter %lX/%lX/%lX\n", fdn->fdn_Driver_Filename,
+					(U32)ifcdsc->InterfaceNumber, (U32)ifcdsc->InterfaceClass, (U32)ifcdsc->InterfaceSubClass,
+					(U32)ifcdsc->InterfaceProtocol, (U32)fdn->fdn_Class, (U32)fdn->fdn_SubClass, (U32)fdn->fdn_Protocol );
 			}
-			#endif
+#endif
 
-			if ( ( ( fdn->fdn_Class != ifcdsc->InterfaceClass ) && ( fdn->fdn_Class != FDCLASS_Any ) ) ||
-				( ( fdn->fdn_SubClass != ifcdsc->InterfaceSubClass ) && ( fdn->fdn_SubClass != FDSUBCLASS_Any ) ) ||
-				( ( fdn->fdn_Protocol != ifcdsc->InterfaceProtocol ) && ( fdn->fdn_Protocol != FDPROTOCOL_Any ) ) )
+			if ( ( ( fdn->fdn_Class != ifcdsc->InterfaceClass ) && ( fdn->fdn_Class != FDCLASS_Any ) )
+				 || ( ( fdn->fdn_SubClass != ifcdsc->InterfaceSubClass ) && ( fdn->fdn_SubClass != FDSUBCLASS_Any ) )
+				 || ( ( fdn->fdn_Protocol != ifcdsc->InterfaceProtocol ) && ( fdn->fdn_Protocol != FDPROTOCOL_Any ) ) )
 			{
 				continue;
 			}
 
-			stat = _Start_Interface( usbbase, fn, fdn, ih, ifcdsc, as );
+			stat = _Start_Interface ( usbbase, fn, fdn, ih, ifcdsc, as );
 
-			#ifdef USB2_BIND_DEBUG
+#ifdef USB2_BIND_DEBUG
 			if ( fdn->fdn_Driver_Filename )
 			{
-				usbbase->usb_IExec->DebugPrintF( "USB2 bind: '%s' interface %lu start result $%08lX\n",
-					fdn->fdn_Driver_Filename, (U32) ifcdsc->InterfaceNumber, (U32) stat );
+				usbbase->usb_IExec->DebugPrintF ( "USB2 bind: '%s' interface %lu start result $%08lX\n",
+												  fdn->fdn_Driver_Filename, (U32)ifcdsc->InterfaceNumber, (U32)stat );
 			}
 			else if ( ( fdn->fdn_Entry ) && ( fdn->fdn_Title ) )
 			{
-				usbbase->usb_IExec->DebugPrintF( "USB2 bind: '%s' %04lX:%04lX interface %lu start result $%08lX\n",
-					fdn->fdn_Title, (U32) LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ),
-					(U32) LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ),
-					(U32) ifcdsc->InterfaceNumber, (U32) stat );
+				usbbase->usb_IExec->DebugPrintF ( "USB2 bind: '%s' %04lX:%04lX interface %lu start result $%08lX\n",
+												  fdn->fdn_Title, (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID ),
+												  (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID ),
+												  (U32)ifcdsc->InterfaceNumber, (U32)stat );
 			}
-			#endif
+#endif
 
-			if ( ! myIS_TASKRETURN_ERR( stat ) )
+			if ( ! myIS_TASKRETURN_ERR ( stat ) )
 			{
 				return ( TRUE );
 			}
@@ -319,23 +227,36 @@ _Check_Interface( struct USBBase *usbbase, struct RealFunctionNode *fn,
 
 // --
 
-static enum FDSTAT _Check_for_Interfaces( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as )
+SEC_CODE static void
+RetryInterfaceBinding ( struct USBBase * usbbase, struct USB2_DriverNode * dn )
 {
-struct USB2_InterfaceHeader *ih;
-struct USB2_InterfaceHeader *interfaces[256];
-struct USB2_InterfaceGroup *ig;
-struct USB2_ConfigNode *cn;
-enum FDSTAT stat;
+	SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
 
-U32 count;
-U32 index;
+	_Check_Interface ( usbbase, dn->dn_Function, dn->dn_Interface, dn->dn_ASync, dn );
 
-	USBDEBUG( "_Check_for_Interfaces: 1" );
+	SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
+}
 
-	stat = FDSTAT_Not_Found;
+// --
+
+static enum FDSTAT
+_Check_for_Interfaces ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_ASync * as )
+{
+	struct USB2_InterfaceHeader * ih;
+	struct USB2_InterfaceHeader * interfaces[256];
+	struct USB2_InterfaceGroup *  ig;
+	struct USB2_ConfigNode *	  cn;
+	enum FDSTAT					  stat;
+
+	U32 count;
+	U32 index;
+
+	USBDEBUG ( "_Check_for_Interfaces: 1" );
+
+	stat  = FDSTAT_Not_Found;
 	count = 0;
 
-	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	cn = fn->fkt_Config_Active;
 
@@ -343,40 +264,40 @@ U32 index;
 	{
 		ig = cn->cfg_InterfaceGroups.uh_Head;
 
-		while( ig )
+		while ( ig )
 		{
 			// An association group can contain interfaces with different classes.
 			ih = ig->ig_Group.uh_Head;
 
-			while( INTERFACE_VALIDHEADER(ih) == VSTAT_Okay )
+			while ( INTERFACE_VALIDHEADER ( ih ) == VSTAT_Okay )
 			{
-				if ( INTERFACE_LOCKHEADER( ih ) == LSTAT_Okay )
+				if ( INTERFACE_LOCKHEADER ( ih ) == LSTAT_Okay )
 				{
 					interfaces[count++] = ih;
 				}
 
-				ih = Node_Next( ih );
+				ih = Node_Next ( ih );
 			}
 
-			ig = Node_Next( ig );
+			ig = Node_Next ( ig );
 		}
 	}
 
-	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
-	for( index = 0; index < count; index++ )
+	for ( index = 0; index < count; index++ )
 	{
 		ih = interfaces[index];
 
-		if ( _Check_Interface( usbbase, fn, ih, as ) )
+		if ( _Check_Interface ( usbbase, fn, ih, as, NULL ) )
 		{
 			stat = FDSTAT_Found;
 		}
 
-		INTERFACE_UNLOCKHEADER( ih );
+		INTERFACE_UNLOCKHEADER ( ih );
 	}
 
-	return( stat );
+	return ( stat );
 }
 
 // --

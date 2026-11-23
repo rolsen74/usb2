@@ -9,12 +9,10 @@
 // --
 // This Subtask have been Shutdown, now handle stuff
 
-static void myRemoveNode( 
-	struct USB2_TaskMsg *tm, 
-	struct USBBase *usbbase,
-	struct intern *in )
+static void
+myRemoveNode ( struct USB2_TaskMsg * tm, struct USBBase * usbbase, struct intern * in )
 {
-	USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 55 : Ended : " );
+	USBDEBUG ( "--> Cmd :: __Cmd_Stop_Process       : 55 : Ended : " );
 
 	// --
 	// Timer
@@ -22,48 +20,45 @@ static void myRemoveNode(
 	if ( tm->tm_TimeReq_Active )
 	{
 		tm->tm_TimeReq_Active = FALSE;
-		IO_STOP( & tm->tm_TimeRequest );
+		IO_STOP ( &tm->tm_TimeRequest );
 	}
 
 	// --
 	// Remove from List
 
-	if ( tm->tm_Added )
-	{
-		tm->tm_Added = FALSE;
-		NODE_REMNODE( & in->Shutdown_TM_List, tm );
-	}
+	NODE_REMNODE ( &in->Shutdown_TM_List, tm );
 
-	TASKMSG_FREE( tm );
-	tm = NULL;	// Just make sure we don't use it from now on
+	TASKMSG_FREE ( tm );
+	tm = NULL; // Just make sure we don't use it from now on
 
 	// --
 	// Inform Master (our self?) a task have ended
-	TASK_SIGNAL( usbbase->usb_Master_Task.tn_TaskAdr, SIGBREAKF_CTRL_D );
+	TASK_SIGNAL ( usbbase->usb_Master_Task.tn_TaskAdr, SIGBREAKF_CTRL_D );
 }
 
 // --
 
-SEC_CODE static void myHandle_Task_Ended( struct USBBase *usbbase, struct intern *in )
+SEC_CODE static void
+myHandle_Task_Ended ( struct USBBase * usbbase, struct intern * in )
 {
-struct USB2_TaskNode *tn;
-struct USB2_TaskMsg *tm;
-struct USB2_TaskMsg *next;
-//struct ExecIFace *IExec;
+	struct USB2_TaskNode * tn;
+	struct USB2_TaskMsg *  tm;
+	struct USB2_TaskMsg *  next;
+	// struct ExecIFace *IExec;
 
-//	IExec = usbbase->usb_IExec;
+	//	IExec = usbbase->usb_IExec;
 
-	USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 66 : Ended : " );
+	USBDEBUG ( "--> Cmd :: __Cmd_Stop_Process       : 66 : Ended : " );
 
 	tm = in->Shutdown_TM_List.uh_Head;
 
-	while( tm )
+	while ( tm )
 	{
-		USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 68 : Ended : TM    %p", tm );
+		USBDEBUG ( "--> Cmd :: __Cmd_Stop_Process       : 68 : Ended : TM    %p", tm );
 
 		tn = tm->tm_Task;
 
-		#if 0
+#if 0
 		IExec->Disable();
 		IExec->DebugPrintF( "myHandle_Task_Ended : TM    %p\n", tm );
 		TASKNODE_PRINT(tn);
@@ -89,33 +84,31 @@ struct USB2_TaskMsg *next;
 		IExec->DebugPrintF( "tm_StackSize .... : %08lx\n", (U32) tm->tm_StackSize );
 		IExec->DebugPrintF( "tm_TimeReq_Active : %08lx\n", (U32) tm->tm_TimeReq_Active );
 		IExec->DebugPrintF( "tm_Wait ......... : %08lx\n", (U32) tm->tm_Wait );
-		IExec->DebugPrintF( "tm_Keep ......... : %08lx\n", (U32) tm->tm_Keep );
-		IExec->DebugPrintF( "tm_Added ........ : %08lx\n", (U32) tm->tm_Added );
 		IExec->Enable();
-		#endif
-	
+#endif
+
 		// --
 
-		next = Node_Next(tm);
+		next = Node_Next ( tm );
 
 		tn = tm->tm_Task;
 
 		if ( ! tn )
 		{
-//			USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 61 : Ended : No TaskNode : TM    %p", tm );
-			myRemoveNode( tm, usbbase, in );
+			//			USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 61 : Ended : No TaskNode : TM    %p", tm );
+			myRemoveNode ( tm, usbbase, in );
 		}
-		else if ( ! tn->tn_TaskAdr )
+		else if ( tn->tn_State == TASK_State_Stopped )
 		{
-//			USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 62 : Ended : Task Ended : TM    %p", tm );
-			myRemoveNode( tm, usbbase, in );
+			//			USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 62 : Ended : Task Ended : TM    %p", tm );
+			myRemoveNode ( tm, usbbase, in );
 		}
 
 		tm = next;
 	}
 
-//	usbbase->usb_IExec->DebugPrintF( "myHandle_Task_Ended : 44 :\n" );
-//	USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 70 : Ended" );
+	//	usbbase->usb_IExec->DebugPrintF( "myHandle_Task_Ended : 44 :\n" );
+	//	USBDEBUG( "--> Cmd :: __Cmd_Stop_Process       : 70 : Ended" );
 }
 
 // --

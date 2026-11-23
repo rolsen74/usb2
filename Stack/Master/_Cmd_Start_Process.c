@@ -32,6 +32,9 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 	S32					   wait;
 	PTR					   in;
 
+	struct Task * parent;
+	U32			  parent_mask;
+
 	// Get Pointers, before msg is freed
 	usbbase = tm->tm_Cmd.cm_usbbase;
 	USBDEBUG ( "CmdStart_Entry           :  1 : Enter" );
@@ -163,9 +166,12 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 
 		if ( ! wait )
 		{
-			TASK_SIGNAL ( tn->tn_Parent, tn->tn_Mask );
+			parent		  = tn->tn_Parent;
+			parent_mask	  = tn->tn_Mask;
 			tn->tn_Parent = NULL;
 			tn->tn_Mask	  = 0;
+
+			TASK_SIGNAL ( parent, parent_mask );
 		}
 
 		if ( main )
@@ -268,7 +274,7 @@ CmdStart_Process ( void )
 	struct USB2_TaskMsg * tm;
 	struct ExecIFace *	  IExec;
 
-	IExec = USB2_GetExecIFace();
+	IExec = USB2_GetExecIFace ();
 	tm	  = (PTR)( IExec->FindTask ( NULL )->tc_UserData );
 
 	CmdStart_Entry ( tm );
@@ -312,6 +318,9 @@ __Cmd_Start_Process ( struct USBBase * usbbase, struct intern * in UNUSED, struc
 	if ( TASK_LOCK ( tn ) != LSTAT_Okay )
 	{
 		USBDEBUG ( "__Cmd_Start_Process : Error locking TN %p", tn );
+
+		TASK_FREE ( tn );
+
 		goto bailout;
 	}
 	tm->tm_Task = tn;
@@ -345,19 +354,14 @@ __Cmd_Start_Process ( struct USBBase * usbbase, struct intern * in UNUSED, struc
 	{
 		//		USBDEBUG( "__Cmd_Start_Process : 15 : TN    %p : Failed", tn );
 		// Failed to start Process, we need to reply
+		tm->tm_Task = NULL;
+
+		TASK_UNLOCK ( tn );
+
 		TASK_FREE ( tn );
-		reply = TRUE;
-		tn	  = NULL;
 	}
 
 bailout:
-
-	if ( tm->tm_Get_TaskNode )
-	{
-		*tm->tm_Get_TaskNode = tn;
-	}
-
-	//	USBDEBUG( "__Cmd_Start_Process : 16 : TN    %p : Reply %ld :", task, reply );
 
 	return ( reply );
 }

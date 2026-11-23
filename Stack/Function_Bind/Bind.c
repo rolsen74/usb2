@@ -12,7 +12,7 @@
 
 // --
 
-//#include "Bind__Entry.c"
+// #include "Bind__Entry.c"
 
 enum DriverDeviceMatch
 {
@@ -24,10 +24,9 @@ enum DriverDeviceMatch
 // --
 
 SEC_CODE static enum DriverDeviceMatch
-Match_Device_IDs( U16 vendor, U16 product, U16 filter_vendor, U16 filter_product )
+Match_Device_IDs ( U16 vendor, U16 product, U16 filter_vendor, U16 filter_product )
 {
-	if ( ( ( filter_vendor ) && ( filter_vendor != vendor ) ) ||
-		( ( filter_product ) && ( filter_product != product ) ) )
+	if ( ( ( filter_vendor ) && ( filter_vendor != vendor ) ) || ( ( filter_product ) && ( filter_product != product ) ) )
 	{
 		return ( DriverMatch_None );
 	}
@@ -38,31 +37,31 @@ Match_Device_IDs( U16 vendor, U16 product, U16 filter_vendor, U16 filter_product
 // --
 
 SEC_CODE static enum DriverDeviceMatch
-Match_Driver_Device( struct USBBase *usbbase, struct USB2_FktDriverNode *fdn, const struct USB2_Device_Desc *desc )
+Match_Driver_Device ( struct USBBase * usbbase, struct USB2_FktDriverNode * fdn, const struct USB2_Device_Desc * desc )
 {
-	struct USB2_DeviceNode *entry;
-	struct ExecIFace *IExec;
-	enum DriverDeviceMatch match;
-	enum DriverDeviceMatch best;
+	struct USB2_DeviceNode * entry;
+	struct ExecIFace *		 IExec;
+	enum DriverDeviceMatch	 match;
+	enum DriverDeviceMatch	 best;
 
 	U16 vendor;
 	U16 product;
 
-	IExec = usbbase->usb_IExec;
-	vendor = LE_SWAP16( desc->VendorID );
-	product = LE_SWAP16( desc->DeviceID );
-	best = DriverMatch_None;
+	IExec	= usbbase->usb_IExec;
+	vendor	= LE_SWAP16 ( desc->VendorID );
+	product = LE_SWAP16 ( desc->DeviceID );
+	best	= DriverMatch_None;
 
-	entry = (PTR) IExec->GetHead( & fdn->fdn_Devices );
+	entry = (PTR)IExec->GetHead ( &fdn->fdn_Devices );
 
 	if ( ! entry )
 	{
-		return ( Match_Device_IDs( vendor, product, fdn->fdn_VendorID, fdn->fdn_DeviceID ) );
+		return ( Match_Device_IDs ( vendor, product, fdn->fdn_VendorID, fdn->fdn_DeviceID ) );
 	}
 
-	while( entry )
+	while ( entry )
 	{
-		match = Match_Device_IDs( vendor, product, entry->VendorID, entry->DeviceID );
+		match = Match_Device_IDs ( vendor, product, entry->VendorID, entry->DeviceID );
 
 		if ( match == DriverMatch_ID )
 		{
@@ -74,7 +73,7 @@ Match_Driver_Device( struct USBBase *usbbase, struct USB2_FktDriverNode *fdn, co
 			best = match;
 		}
 
-		entry = (PTR) IExec->GetSucc( & entry->Node );
+		entry = (PTR)IExec->GetSucc ( &entry->Node );
 	}
 
 	return ( best );
@@ -82,115 +81,273 @@ Match_Driver_Device( struct USBBase *usbbase, struct USB2_FktDriverNode *fdn, co
 
 // --
 
-#include "Bind_Check_for_Device.c"
+SEC_CODE static S32
+DriverWorkerInit ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in UNUSED )
+{
+	S32 window;
+
+	if ( DRIVER_LOCK ( dn ) != LSTAT_Okay )
+	{
+		return ( FALSE );
+	}
+
+	dn->dn_WorkerPinned = TRUE;
+
+	if ( dn->dn_Entry )
+	{
+		return ( TRUE );
+	}
+
+	if ( ( ! dn->dn_Filename ) || ( ! usbbase->usb_DriverDirLock ) )
+	{
+		return ( FALSE );
+	}
+
+	window = MISC_SETPROCWINDOW ( -1 );
+
+	dn->dn_OldDir	  = MISC_SETCURRENTDIR ( usbbase->usb_DriverDirLock );
+	dn->dn_DirChanged = TRUE;
+
+	dn->dn_Library = MISC_OPENLIBRARY ( dn->dn_Filename, 0 );
+
+	if ( dn->dn_Library )
+	{
+		dn->dn_DriverIFace = MISC_OBTAININTERFACE ( dn->dn_Library, "main", 1 );
+	}
+
+	MISC_SETPROCWINDOW ( window );
+
+	return ( ( dn->dn_DriverIFace ) && ( dn->dn_DriverIFace->Entry ) );
+}
+
+// --
+
+SEC_CODE static void RetryInterfaceBinding ( struct USBBase * usbbase, struct USB2_DriverNode * dn );
+
+// --
+
+SEC_CODE static void
+DriverWorkerMain ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in UNUSED )
+{
+	struct Task * parent;
+
+	U32 result;
+
+	if ( dn->dn_Entry )
+	{
+		result = dn->dn_Entry ( usbbase, &dn->dn_Message.rdm_Public );
+	}
+	else
+	{
+		result = dn->dn_DriverIFace->Entry ( &dn->dn_Message.rdm_Public );
+	}
+
+	// The root hub can report readiness before entering its event loop.
+	parent = dn->dn_Message.rdm_Parent;
+
+	if ( parent )
+	{
+		dn->dn_Message.rdm_Parent = NULL;
+		dn->dn_Message.rdm_Result = myGET_TASKRETURN_CODE ( result );
+
+		TASK_SIGNAL ( parent, dn->dn_Message.rdm_Mask );
+	}
+	else if ( ( dn->dn_Interface ) && ( ( myIS_TASKRETURN_ERR ( result ) ) || ( result == TASK_Return_Unsupported ) ) )
+	{
+		RetryInterfaceBinding ( usbbase, dn );
+	}
+}
+
+// --
+
+SEC_CODE static void
+DriverWorkerFree ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in UNUSED )
+{
+	if ( dn->dn_DriverIFace )
+	{
+		MISC_RELEASEINTERFACE ( dn->dn_DriverIFace );
+	}
+
+	if ( dn->dn_Library )
+	{
+		MISC_CLOSELIBRARY ( dn->dn_Library );
+	}
+
+	if ( dn->dn_DirChanged )
+	{
+		MISC_SETCURRENTDIR ( dn->dn_OldDir );
+	}
+
+	if ( dn->dn_WorkerPinned )
+	{
+		dn->dn_FreeMe = TRUE;
+
+		DRIVER_UNLOCK ( dn );
+	}
+}
+
+// --
+
+// Consume the caller's retained task reference.
+SEC_CODE static S32
+PublishDriver ( struct USBBase * usbbase, struct USB2_DriverNode * dn, struct USB2_TaskNode * tn )
+{
+	S32 detached;
+	S32 stop;
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_Bind_Semaphore );
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+	detached	  = ( dn->dn_Function->fkt_Detach ) || ( dn->dn_Function->fkt_FreeMe );
+	dn->dn_Detach = detached;
+	dn->dn_Task	  = tn;
+	tn->tn_Owner  = dn;
+	stop		  = ( detached ) && ( TASK_LOCK ( tn ) == LSTAT_Okay );
+
+	NODE_ADDTAIL ( &usbbase->usb_Bind_Header, dn );
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_Bind_Semaphore );
+
+	if ( stop )
+	{
+		TASK_STOP_TN ( tn );
+
+		TASK_UNLOCK ( tn );
+	}
+
+	return ( ! detached );
+}
+
+// --
+
+SEC_CODE static void
+DiscardDriver ( struct USBBase * usbbase, struct USB2_DriverNode * dn )
+{
+	if ( DRIVER_FREE ( dn ) != FSTAT_Okay )
+	{
+		SEMAPHORE_OBTAIN ( &usbbase->usb_Bind_Semaphore );
+
+		NODE_ADDTAIL ( &usbbase->usb_Bind_Header, dn );
+
+		SEMAPHORE_RELEASE ( &usbbase->usb_Bind_Semaphore );
+	}
+}
+
+// --
+
 #include "Bind_Check_for_Function.c"
+#include "Bind_Check_for_Device.c"
 #include "Bind_Check_for_Interfaces.c"
 
 // --
 
-SEC_CODE S32 __Function_Bind( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as )
+SEC_CODE S32
+__Function_Bind ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_ASync * as )
 {
-enum FDSTAT stat;
-S32 retval;
+	enum FDSTAT stat;
+	S32			retval;
 
-	#ifdef USB2_BIND_DEBUG
+#ifdef USB2_BIND_DEBUG
 	U32 config;
-	#endif
+#endif
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Bind : FN    %p\n##\n\n", fn );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Bind : FN    %p\n##\n\n", fn );
 
 	// --
 
-	#ifdef DO_PANIC
+#ifdef DO_PANIC
 
-	if ( TASK_FIND() == usbbase->usb_Master_Task.tn_TaskAdr )
+	if ( TASK_FIND () == usbbase->usb_Master_Task.tn_TaskAdr )
 	{
 		// if run from master task, we will get a dead lock when starting a driver
-		USBPANIC( "__Function_Bind          : Do NOT run from Master Task" );
+		USBPANIC ( "__Function_Bind          : Do NOT run from Master Task" );
 	}
 
-	#endif
+#endif
 
 	// --
 
 	stat = FDSTAT_Not_Found;
 
-	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
+	if ( FUNCTION_LOCK ( fn ) == LSTAT_Okay )
 	{
-		#ifdef USB2_BIND_DEBUG
+#ifdef USB2_BIND_DEBUG
 		if ( fn->fkt_DeviceDescriptor )
 		{
-			SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+			SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 			config = ( fn->fkt_Config_Active ) ? fn->fkt_Config_Active->cfg_Number : 0;
 
-			SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+			SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
-			usbbase->usb_IExec->DebugPrintF( "USB2 bind: %04lX:%04lX address %lu, active configuration %lu, owner %p\n",
-				(U32) LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ), (U32) LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ),
-				(U32) fn->fkt_Address, config, fn->fkt_Owner );
+			usbbase->usb_IExec->DebugPrintF ( "USB2 bind: %04lX:%04lX address %lu, active configuration %lu, owner %p\n",
+											  (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID ),
+											  (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID ), (U32)fn->fkt_Address,
+											  config, fn->fkt_Owner );
 		}
-		#endif
+#endif
 
-		// Fast check, if someone owns this device.. 
+		// Fast check, if someone owns this device..
 		// no need to check for any drivers
 		if ( ! fn->fkt_Owner )
 		{
-			SEMAPHORE_OBTAIN( & usbbase->usb_FDriver_Semaphore );
+			SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
 
 			do
 			{
 				if ( stat == FDSTAT_Not_Found )
 				{
-					stat = _Check_for_Devices( usbbase, fn, as );
+					stat = _Check_for_Devices ( usbbase, fn, as );
 				}
 
 				if ( stat == FDSTAT_Error )
 				{
-					USBDEBUG( "__Function_Bind : Checking for Devices failed" );
+					USBDEBUG ( "__Function_Bind : Checking for Devices failed" );
 					break;
 				}
 
 				if ( stat == FDSTAT_Not_Found )
 				{
-					stat = _Check_for_Functions( usbbase, fn, as );
+					stat = _Check_for_Functions ( usbbase, fn, as );
 				}
 
 				if ( stat == FDSTAT_Error )
 				{
-					USBDEBUG( "__Function_Bind : Checking for Functions failed" );
+					USBDEBUG ( "__Function_Bind : Checking for Functions failed" );
 					break;
 				}
 
 				if ( stat == FDSTAT_Not_Found )
 				{
-					stat = _Check_for_Interfaces( usbbase, fn, as );
+					stat = _Check_for_Interfaces ( usbbase, fn, as );
 				}
 
 				if ( stat == FDSTAT_Error )
 				{
-					USBDEBUG( "__Function_Bind : Checking for Interfaces failed" );
+					USBDEBUG ( "__Function_Bind : Checking for Interfaces failed" );
 					break;
 				}
-			}
-			while( FALSE );
+			} while ( FALSE );
 
-			SEMAPHORE_RELEASE( & usbbase->usb_FDriver_Semaphore );
+			SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
 		}
 		else
 		{
 			// Allready claimed
-//			USBERROR( "Skipping Function (claimed) : FN    %p : Class %ld", fn, fn->fkt_Class );
+			//			USBERROR( "Skipping Function (claimed) : FN    %p : Class %ld", fn, fn->fkt_Class );
 		}
 
-		FUNCTION_UNLOCK( fn );
+		FUNCTION_UNLOCK ( fn );
 	}
 
-	retval = ( stat != FDSTAT_Error ) ? TRUE : FALSE ;
+	retval = ( stat != FDSTAT_Error ) ? TRUE : FALSE;
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Bind 222 : Bind State %ld\n##\n\n", (S32) retval );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Bind 222 : Bind State %ld\n##\n\n", (S32) retval );
 
-	return( retval );
+	return ( retval );
 }
 
 // --

@@ -13,130 +13,136 @@
 
 // --
 
-SEC_CODE enum TaskReturn __Task_Start( struct USBBase *usbbase, ... )
+SEC_CODE enum TaskReturn
+__Task_Start ( struct USBBase * usbbase, ... )
 {
-struct USB2_TaskMsg *tm;
-struct USB2_HCDNode *hn;
-enum TaskReturn retval;
-va_list ap;
-U32 data;
-U32 tag;
+	struct USB2_TaskMsg * tm;
+	struct USB2_HCDNode * hn;
+	enum TaskReturn		  retval;
+	va_list				  ap;
+	U32					  data;
+	U32					  tag;
 
 	retval = TASK_Return_Stack_Error;
 
-//	USBDEBUG( "__Task_Start             : 1 : " );
+	//	USBDEBUG( "__Task_Start             : 1 : " );
 
-	va_start( ap, usbbase );
+	va_start ( ap, usbbase );
 
 	hn = NULL;
-	tm = TASKMSG_ALLOC();
+	tm = TASKMSG_ALLOC ();
 
 	if ( ! tm )
 	{
-		USBERROR( "__Task_Start             : 2 : Error allocating TaskMsg" );
+		USBERROR ( "__Task_Start             : 2 : Error allocating TaskMsg" );
 		goto bailout;
 	}
 
 	tm->tm_Cmd.cm_Command = CMD_START_PROCESS;
 
-	while( TRUE )
+	while ( TRUE )
 	{
-		tag = va_arg( ap, U32 );
+		tag = va_arg ( ap, U32 );
 
 		if ( ! tag )
 		{
 			break;
 		}
 
-		data = va_arg( ap, U32 );
+		data = va_arg ( ap, U32 );
 
-		switch( tag )
+		switch ( tag )
 		{
 			case TASK_Tag_Func_Init:
 			{
-				tm->tm_Func_Init = (PTR) data ;
+				tm->tm_Func_Init = (PTR)data;
 
-				USBDEBUG( "TASK_Tag_Func_Init ..... : %p", (PTR) data );
+				USBDEBUG ( "TASK_Tag_Func_Init ..... : %p", (PTR)data );
 				break;
 			}
 
 			case TASK_Tag_Func_Main:
 			{
-				tm->tm_Func_Entry = (PTR) data ;
+				tm->tm_Func_Entry = (PTR)data;
 
-				USBDEBUG( "TASK_Tag_Func_Entry .... : %p", (PTR) data );
+				USBDEBUG ( "TASK_Tag_Func_Entry .... : %p", (PTR)data );
 				break;
 			}
 
 			case TASK_Tag_Func_Free:
 			{
-				tm->tm_Func_Free = (PTR) data ;
+				tm->tm_Func_Free = (PTR)data;
 
-				USBDEBUG( "TASK_Tag_Func_Free ..... : %p", (PTR) data );
+				USBDEBUG ( "TASK_Tag_Func_Free ..... : %p", (PTR)data );
 				break;
 			}
 
 			case TASK_Tag_Prioity:
 			{
-				tm->tm_Prioity = (S32) data ;
+				tm->tm_Prioity = (S32)data;
 
-				USBDEBUG( "TASK_Tag_Prioity ....... : %ld", (S32) data );
+				USBDEBUG ( "TASK_Tag_Prioity ....... : %ld", (S32)data );
 				break;
 			}
 
 			case TASK_Tag_ASync:
 			{
-				tm->tm_ASync = (PTR) data ;
+				tm->tm_ASync = (PTR)data;
 
-				USBDEBUG( "TASK_Tag_ASync ......... : %p", (PTR) data );
+				USBDEBUG ( "TASK_Tag_ASync ......... : %p", (PTR)data );
 				break;
 			}
 
 			case TASK_Tag_UserData:
 			{
-				tm->tm_UserData = (PTR) data ;
+				tm->tm_UserData = (PTR)data;
 
-				USBDEBUG( "TASK_Tag_UserData ...... : %p", (PTR) data );
+				USBDEBUG ( "TASK_Tag_UserData ...... : %p", (PTR)data );
 				break;
 			}
 
 			case TASK_Tag_Name:
 			{
-				tm->tm_Name = (STR) data ;
+				tm->tm_Name = (STR)data;
 
-				USBDEBUG( "TASK_Tag_Name .......... : %s", (STR) data );
+				USBDEBUG ( "TASK_Tag_Name .......... : %s", (STR)data );
 				break;
 			}
 
 			case TASK_Tag_Type:
 			{
-				tm->tm_Type = data ;
+				tm->tm_Type = data;
 
-				USBDEBUG( "TASK_Tag_Type .......... : %ld", (S32) data );
+				USBDEBUG ( "TASK_Tag_Type .......... : %ld", (S32)data );
 				break;
 			}
 
 			case TASK_Tag_HCDNode:
 			{
-				hn = (PTR) data;
+				hn = (PTR)data;
 
-				USBDEBUG( "TASK_Tag_HCDNode ....... : %p", (PTR) data );
+				USBDEBUG ( "TASK_Tag_HCDNode ....... : %p", (PTR)data );
 				break;
 			}
 
 			case TASK_Tag_Get_TN:
 			{
-				tm->tm_Get_TaskNode = (PTR) data;
+				tm->tm_Get_TaskNode = (PTR)data;
 
-				USBDEBUG( "TASK_Tag_Get_TN ........ : %p", (PTR) data );
+				if ( tm->tm_Get_TaskNode )
+				{
+					*tm->tm_Get_TaskNode = NULL;
+				}
+
+				USBDEBUG ( "TASK_Tag_Get_TN ........ : %p", (PTR)data );
 				break;
 			}
 
 			case USB2_WaitForTermination:
 			{
-				tm->tm_Wait_For_Term = ( data ) ? 1 : 0 ;
+				tm->tm_Wait_For_Term = ( data ) ? 1 : 0;
 
-				USBDEBUG( "USB2_WaitForTermination  : %ld", (S32) data );
+				USBDEBUG ( "USB2_WaitForTermination  : %ld", (S32)data );
 				break;
 			}
 
@@ -144,27 +150,27 @@ U32 tag;
 			{
 				tm->tm_InternSize = data;
 
-				USBDEBUG( "TASK_Tag_InternSize .... : %lu bytes", (U32) data );
+				USBDEBUG ( "TASK_Tag_InternSize .... : %lu bytes", (U32)data );
 				break;
 			}
 
 			default:
 			{
-				USBDEBUG( "Unknown Tag ............ : [%08lx:%08lx]", (U32) tag, (U32) data );
+				USBDEBUG ( "Unknown Tag ............ : [%08lx:%08lx]", (U32)tag, (U32)data );
 				break;
 			}
 		}
 	}
 
-	if (( ! tm->tm_Func_Init ) && ( ! tm->tm_Func_Entry ) && ( ! tm->tm_Func_Free ))
+	if ( ( ! tm->tm_Func_Init ) && ( ! tm->tm_Func_Entry ) && ( ! tm->tm_Func_Free ) )
 	{
-		USBDEBUG( "__Task_Start             : 4 : Missing Process Entry Point" );
+		USBDEBUG ( "__Task_Start             : 4 : Missing Process Entry Point" );
 		goto bailout;
 	}
 
-	if (( tm->tm_Type <= TASK_Type_Unset ) || ( tm->tm_Type >= TASK_Type_Last ))
+	if ( ( tm->tm_Type <= TASK_Type_Unset ) || ( tm->tm_Type >= TASK_Type_Last ) )
 	{
-		USBDEBUG( "__Task_Start             : 5 : Invalid Process Type (%ld)", tm->tm_Type );
+		USBDEBUG ( "__Task_Start             : 5 : Invalid Process Type (%ld)", tm->tm_Type );
 		goto bailout;
 	}
 
@@ -172,9 +178,9 @@ U32 tag;
 
 	if ( hn )
 	{
-		if ( HCD_LOCK( hn ) != LSTAT_Okay )
+		if ( HCD_LOCK ( hn ) != LSTAT_Okay )
 		{
-			USBDEBUG( "__Task_Start             : Invalid HCD Node (%p)", hn );
+			USBDEBUG ( "__Task_Start             : Invalid HCD Node (%p)", hn );
 			goto bailout;
 		}
 
@@ -183,28 +189,34 @@ U32 tag;
 
 	// --
 
-	retval = MISC_DOCOMMAND( & tm->tm_Cmd );
+	retval = myGET_TASKRETURN_CODE ( MISC_DOCOMMAND ( &tm->tm_Cmd ) );
+
+	if ( ( ! myIS_TASKRETURN_ERR ( retval ) ) && ( tm->tm_Get_TaskNode ) )
+	{
+		*tm->tm_Get_TaskNode = tm->tm_Task;
+		tm->tm_Task			 = NULL;
+	}
 
 	// --
 
 bailout:
 
-	#ifdef DO_DEBUG
-	if ( ! IS_TASKRETURN(retval) )
+#ifdef DO_DEBUG
+	if ( ! IS_TASKRETURN ( retval ) )
 	{
-		USBPANIC( "TaskReturn value error : %08lx", (U32) retval );
+		USBPANIC ( "TaskReturn value error : %08lx", (U32)retval );
 	}
-	#endif
+#endif
 
-	va_end( ap );
+	va_end ( ap );
 
-	if (tm)
+	if ( tm )
 	{
-		USBDEBUG( "__Task_Start             : 99 : Free TM %p", tm );
-		TASKMSG_FREE(tm);
+		USBDEBUG ( "__Task_Start             : 99 : Free TM %p", tm );
+		TASKMSG_FREE ( tm );
 	}
 
-	return( retval );
+	return ( retval );
 }
 
 // --

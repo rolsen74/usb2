@@ -78,12 +78,13 @@
 #endif
 // --
 
-SEC_CODE U32 HUB_Entry( struct USBBase *usbbase, struct USB2_DriverMessage *msg )
+SEC_CODE U32
+HUB_Entry ( struct USBBase * usbbase, struct USB2_DriverMessage * msg )
 {
-struct intern *in;
-U32 retval;
+	struct intern * in;
+	U32				retval;
 
-	TASK_NAME_ENTER( "HUB : HUB_Entry" );
+	TASK_NAME_ENTER ( "HUB : HUB_Entry" );
 
 	in = NULL;
 
@@ -91,73 +92,73 @@ U32 retval;
 
 	// --
 
-	struct RealFunctionNode *fn = (PTR) msg->Function;
+	struct RealFunctionNode * fn = (PTR)msg->Function;
 
-	#ifdef DO_PANIC
+#ifdef DO_PANIC
 
-	if ( FUNCTION_VALID(fn) != VSTAT_Okay )
+	if ( FUNCTION_VALID ( fn ) != VSTAT_Okay )
 	{
-		USBPANIC( "HUB : FN    %p : Invalid Pointer", fn );
+		USBPANIC ( "HUB : FN    %p : Invalid Pointer", fn );
 	}
 
-	#endif
+#endif
 
-	#ifdef DO_DEBUG
+#ifdef DO_DEBUG
 	U32 startadr = fn->fkt_Address; // used later
-	usbbase->usb_IExec->DebugPrintF( "\n##\n## HUB_Entry : Adr #%lu : Enter\n##\n\n", fn->fkt_Address );
-	#endif
+	usbbase->usb_IExec->DebugPrintF ( "\n##\n## HUB_Entry : Adr #%lu : Enter\n##\n\n", fn->fkt_Address );
+#endif
 
 	// --
 
-	#ifdef DO_INFO
-	struct ExecIFace *IExec = usbbase->usb_IExec;
-	IExec->Disable();
-	IExec->DebugPrintF( "\nStartup new HUB\n" );
-	IExec->DebugPrintF( "HCD Index   : %ld\n", fn->fkt_HCD->hn_HCDIndex );
-	IExec->DebugPrintF( "Tier        : %ld\n", fn->fkt_Tier );
-	IExec->DebugPrintF( "Addr Nr     : %ld\n", fn->fkt_Address );
-	IExec->DebugPrintF( "Port Nr     : %ld\n\n", fn->fkt_PortNr );
-	IExec->Enable();
-	#endif
+#ifdef DO_INFO
+	struct ExecIFace * IExec = usbbase->usb_IExec;
+	IExec->Disable ();
+	IExec->DebugPrintF ( "\nStartup new HUB\n" );
+	IExec->DebugPrintF ( "HCD Index   : %ld\n", fn->fkt_HCD->hn_HCDIndex );
+	IExec->DebugPrintF ( "Tier        : %ld\n", fn->fkt_Tier );
+	IExec->DebugPrintF ( "Addr Nr     : %ld\n", fn->fkt_Address );
+	IExec->DebugPrintF ( "Port Nr     : %ld\n\n", fn->fkt_PortNr );
+	IExec->Enable ();
+#endif
 
 	if ( USB_HUB_MAX_DEPTH <= fn->fkt_Tier )
 	{
-		USBINFO( "HUB_Entry                : HUB Max Depth (%ld<=%ld)", USB_HUB_MAX_DEPTH, fn->fkt_Tier );
+		USBINFO ( "HUB_Entry                : HUB Max Depth (%ld<=%ld)", USB_HUB_MAX_DEPTH, fn->fkt_Tier );
 		goto bailout;
 	}
 
 	// --
 
-	in = MEM_ALLOCVEC( sizeof( struct intern ), TRUE );
+	in = MEM_ALLOCVEC ( sizeof ( struct intern ), TRUE );
 
 	if ( ! in )
 	{
-		USBDEBUG( "HUB_Entry                : Error allocating memory" );
+		USBDEBUG ( "HUB_Entry                : Error allocating memory" );
 		goto bailout;
 	}
 
-	#ifdef DO_DEBUG
+#ifdef DO_DEBUG
 	in->StructID = ID_IN_HUB;
-	#endif
+#endif
 
 	in->StartMsg = msg;
-	in->Function = (PTR) msg->Function;
-	in->HCDNode = in->Function->fkt_HCD;
-	in->HUB_ID = ( (U32) TASK_FIND() + 1 );
+	in->Function = (PTR)msg->Function;
+	in->HCDNode	 = in->Function->fkt_HCD;
+	in->HUB_ID	 = ( (U32)TASK_FIND () + 1 );
 
-	USBDEBUG( "HUB_Entry                : HUB_ID $%08lx", in->HUB_ID );
+	USBDEBUG ( "HUB_Entry                : HUB_ID $%08lx", in->HUB_ID );
 
 	// --
 
-	if ( ! HUB_Init( usbbase, in ))
+	if ( ! HUB_Init ( usbbase, in ) )
 	{
-		USBDEBUG( "HUB_Entry                : Error Inilization Driver" );
+		USBDEBUG ( "HUB_Entry                : Error Inilization Driver" );
 		goto bailout;
 	}
 
-	if ( ! HUB_Power_Up( usbbase, in ))
+	if ( ! HUB_Power_Up ( usbbase, in ) )
 	{
-		USBERROR( "HUB_Entry                : Error powering HUB ports" );
+		USBERROR ( "HUB_Entry                : Error powering HUB ports" );
 		goto bailout;
 	}
 
@@ -165,8 +166,8 @@ U32 retval;
 	// we do this to make sure RootHUB driver
 	// is started correct, so stack work.
 
-	struct RealDriverMessage *rmsg = (PTR) msg;
-	struct Task *parent;
+	struct RealDriverMessage * rmsg = (PTR)msg;
+	struct Task *			   parent;
 
 	parent = rmsg->rdm_Parent;
 
@@ -174,20 +175,20 @@ U32 retval;
 	{
 		rmsg->rdm_Parent = NULL;
 		rmsg->rdm_Result = TASK_Return_Okay;
-		TASK_SIGNAL( parent, SIGBREAKF_CTRL_E );
+		TASK_SIGNAL ( parent, rmsg->rdm_Mask );
 	}
 
 	// --
 
 	retval = TASK_Return_Okay;
 
-	HUB_Initial_Scan( usbbase, in );
+	HUB_Initial_Scan ( usbbase, in );
 
 	// Start Reading Interrupts
-	HUB_Schedule( usbbase, in );
+	HUB_Schedule ( usbbase, in );
 
 	// Handle Messages
-	HUB_Main( usbbase, in );
+	HUB_Main ( usbbase, in );
 
 	// --
 
@@ -195,20 +196,21 @@ bailout:
 
 	if ( in )
 	{
-		HUB_Free( usbbase, in );
-	
-		MEM_FREEVEC( in );
+		HUB_Free ( usbbase, in );
+
+		MEM_FREEVEC ( in );
 		in = NULL;
 	}
 
 	// --
 
-	#ifdef DO_DEBUG
-	usbbase->usb_IExec->DebugPrintF( "\n##\n## HUB_Entry : Adr #%lu (%lu) : FN    %p : Locks %2ld : Leave\n##\n\n", fn->fkt_Address, startadr, fn, fn->fkt_Locks );
-	#endif
+#ifdef DO_DEBUG
+	usbbase->usb_IExec->DebugPrintF ( "\n##\n## HUB_Entry : Adr #%lu (%lu) : FN    %p : Locks %2ld : Leave\n##\n\n",
+									  fn->fkt_Address, startadr, fn, fn->fkt_Locks );
+#endif
 
-	TASK_NAME_LEAVE();
-	return( retval );
+	TASK_NAME_LEAVE ();
+	return ( retval );
 }
 
 // --

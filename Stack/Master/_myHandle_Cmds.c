@@ -14,29 +14,30 @@
 
 // --
 
-SEC_CODE static void myHandle_Cmds( struct USBBase *usbbase, struct intern *in )
+SEC_CODE static void
+myHandle_Cmds ( struct USBBase * usbbase, struct intern * in )
 {
-struct CmdHeader *msg;
-S32 reply;
+	struct CmdHeader * msg;
+	S32				   reply;
 
-//	usbbase->usb_IExec->DebugPrintF( "myHandle_Cmds\n" );
+	//	usbbase->usb_IExec->DebugPrintF( "myHandle_Cmds\n" );
 
-	while( TRUE )
+	while ( TRUE )
 	{
-		msg = MSGPORT_GETMSG( & in->Cmd_MsgPort );
+		msg = MSGPORT_GETMSG ( &in->Cmd_MsgPort );
 
 		if ( ! msg )
 		{
 			break;
 		}
 
-		switch( msg->cm_Command )
+		switch ( msg->cm_Command )
 		{
 			case CMD_START_PROCESS:
 			{
 				if ( ! in->Stopping )
 				{
-					reply = __Cmd_Start_Process( usbbase, in, (PTR) msg );
+					reply = __Cmd_Start_Process ( usbbase, in, (PTR)msg );
 				}
 				else
 				{
@@ -48,19 +49,20 @@ S32 reply;
 
 			case CMD_STOP_PROCESS:
 			{
-				reply = __Cmd_Stop_Process( usbbase, in, (PTR) msg );
+				__Cmd_Stop_Process ( usbbase, in, (PTR)msg );
+				continue;
 				break;
 			}
 
 			case CMD_FKT_DETACH:
 			{
-				reply = __Cmd_Fkt_Detach( usbbase, in, (PTR) msg );
+				reply = __Cmd_Fkt_Detach ( usbbase, in, (PTR)msg );
 				break;
 			}
 
 			default:
 			{
-				usbbase->usb_IExec->DebugPrintF( "%s:%04d: Unknown Cmd %ld\n", __FILE__, __LINE__, msg->cm_Command );
+				usbbase->usb_IExec->DebugPrintF ( "%s:%04d: Unknown Cmd %ld\n", __FILE__, __LINE__, msg->cm_Command );
 				reply = TRUE;
 				break;
 			}
@@ -68,13 +70,13 @@ S32 reply;
 
 		if ( reply )
 		{
-			USBDEBUG( "myHandle_Cmds            : Reply Msg : TM %p : Task %p : Mask $%08lx", msg, msg->cm_Task, msg->cm_Mask );
+			USBDEBUG ( "myHandle_Cmds            : Reply Msg : TM %p : Task %p : Mask $%08lx", msg, msg->cm_Task, msg->cm_Mask );
 
-			TASK_SIGNAL( msg->cm_Task, msg->cm_Mask );
+			TASK_SIGNAL ( msg->cm_Task, msg->cm_Mask );
 		}
 		else
 		{
-			USBDEBUG( "myHandle_Cmds            : Skipping Reply : TM %p : Task %p : Mask $%08lx", msg, msg->cm_Task, msg->cm_Mask  );
+			USBDEBUG ( "myHandle_Cmds            : Skipping Reply : TM %p", msg );
 		}
 	}
 }
