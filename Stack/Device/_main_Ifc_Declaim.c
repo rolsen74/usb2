@@ -12,53 +12,36 @@
 
 // --
 
-/* -- Main Interface -- */
-
-static S32 _main_Ifc_Declaim( struct USB2IFace *Self, struct RealRegister *reg, struct USB2_Interface *ifc )
+static S32
+_main_Ifc_Declaim ( struct USB2IFace * Self, struct RealRegister * reg, struct USB2_Interface * ifc )
 {
-struct USB2_InterfaceHeader *ih;
-struct USBBase *usbbase;
-S32 retval;
+	struct USB2_InterfaceHeader * ih;
+	struct USBBase *			  usbbase;
 
-	retval = FALSE;
+	S32 retval;
 
-	usbbase = (PTR) Self->Data.LibBase;
+	usbbase = (PTR)Self->Data.LibBase;
+	retval	= FALSE;
 
-	if ( ! ifc )
+	if ( ( ! ifc ) || ( REGISTER_LOCK ( reg ) != LSTAT_Okay ) )
 	{
-		USBERROR( "_main_Ifc_Declaim : NULL Pointer" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	ih = (PTR) ( (char *) ifc - offsetof( struct USB2_InterfaceHeader, ih_Public ));
+	ih = LockRegistrationInterface ( usbbase, reg, ifc );
 
-	#ifdef DO_DEBUG
-
-	// Declaim also validates IH, so not needed here
-	// but good for early error detection in debug mode
-	if ( INTERFACE_VALIDHEADER( ih ) != VSTAT_Okay )
+	if ( ih )
 	{
-		USBERROR( "main_Ifc_Declaim : Error invalid Interface Pointer" );
-		goto bailout;
+		INTERFACE_DECLAIMHEADER ( reg, ih );
+
+		INTERFACE_UNLOCKHEADER ( ih );
+
+		retval = TRUE;
 	}
 
-	// Declaim also validates Reg, so not needed here
-	// but good for early error detection in debug mode
-	if ( REGISTER_VALID( reg ) != VSTAT_Okay )
-	{
-		USBERROR( "main_Ifc_Declaim : Error invalid Register Pointer" );
-		goto bailout;
-	}
+	REGISTER_UNLOCK ( reg );
 
-	#endif
-
-	INTERFACE_DECLAIMHEADER( reg, ih );
-
-	retval = TRUE;
-
-bailout:
-
-	return( retval );
+	return ( retval );
 }
 
 // --

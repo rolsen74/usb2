@@ -16,30 +16,33 @@
 
 // --
 
-SEC_CODE S32 __RootHUB_Handle_Read( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct RealRequest *ioreq )
+SEC_CODE S32
+__RootHUB_Handle_Read ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 {
-S32 reply;
+	S32 reply;
 
-	reply = TRUE;		// Default: Yes we have handled the IOReq, lets reply it on exit
+	reply = TRUE; // Default: Yes we have handled the IOReq, lets reply it on exit
 
-	USBDEBUG( "__RootHUB_Handle_Read" );
+	USBDEBUG ( "__RootHUB_Handle_Read" );
 
-	switch( ioreq->req_EndPoint->ep_Number )
+	switch ( ioreq->req_EndPoint->ep_Number )
 	{
 		case 0:
 		case 16:
 		{
-			__Control_Read( usbbase, hn, ioreq );
+			__Control_Read ( usbbase, hn, ioreq );
 			break;
 		}
 
 		case HUB_IntEp_Nr:
 		{
-//			usbbase->usb_IExec->DebugPrintF( "Queue 2 : %p\n", ioreq );
-			NODE_ADDTAIL( & hn->hn_HUB_Interrupts, ioreq );
+			//			usbbase->usb_IExec->DebugPrintF( "Queue 2 : %p\n", ioreq );
+			ioreq->req_PublicStat = IORS_HCD_Queued;
+
+			NODE_ADDTAIL ( &hn->hn_HUB_Interrupts, ioreq );
 
 			// Tigger a PortChange so already connected Device get Reconized
-			TASK_SIGNAL( hn->hn_Task->tn_TaskAdr, hn->hn_HUB_Signal.sig_Signal_Mask );
+			TASK_SIGNAL ( hn->hn_Task->tn_TaskAdr, hn->hn_HUB_Signal.sig_Signal_Mask );
 
 			reply = FALSE;
 			break;
@@ -47,14 +50,14 @@ S32 reply;
 
 		default:
 		{
-			USBDEBUG( "Root HUB : Unknown EndPoint Nr %lu", (U32) ioreq->req_EndPoint->ep_Number );
+			USBDEBUG ( "Root HUB : Unknown EndPoint Nr %lu", (U32)ioreq->req_EndPoint->ep_Number );
 
 			ioreq->req_Public.io_Error = USB2Err_Host_Stall;
 			break;
 		}
 	}
 
-	return( reply );
+	return ( reply );
 }
 
 // --

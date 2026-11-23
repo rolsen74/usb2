@@ -12,191 +12,144 @@
 
 // --
 
-SEC_CODE static void _myFKT_GetTail( struct USBBase *usbbase, struct RealFunctionNode **ptr_fn )
-{
-struct RealFunctionNode *fn;
-struct USB2_Node *n;
-PTR f;
-
-	// --
-	// Scan
-	//  Functions from Tail
-
-	f = NULL;
-	n = usbbase->usb_Fkt_Header.uh_Tail;
-
-	if ( n )
-	{
-		fn = n->un_Data;
-
-		if ( fn )
-		{
-			f = fn;
-		}
-	}
-
-	*ptr_fn = f;
-
-	// --
-}
-
-// --
-
-SEC_CODE static void _myFKT_GetPrev( struct RealFunctionNode **ptr_fn )
-{
-struct RealFunctionNode *fn;
-struct USB2_Node *n;
-PTR f;
-
-	// --
-	// Scan
-	//  Functions from Tail
-
-	fn = *ptr_fn;
-
-	f  = NULL;
-	n  = fn->fkt_GlobalNode.un_Prev;
-
-	if ( n )
-	{
-		fn = n->un_Data;
-
-		if ( fn )
-		{
-			f = fn;
-		}
-	}
-	else
-	{
-		f = fn;
-	}
-
-	*ptr_fn = f;
-
-	// --
-}
-
 /* -- Main Interface -- */
 
-static struct USB2_Function * VARARGS68K _main_Fkt_FindTags( struct USB2IFace *Self, ... )
+static struct USB2_Function * VARARGS68K
+_main_Fkt_FindTags ( struct USB2IFace * Self, ... )
 {
-va_list ap;
-PTR fn;
+	va_list ap;
+	PTR		fn;
 
-//	USBERROR( "USB2 Stack : _main_FindFunctionTags" );
+	//	USBERROR( "USB2 Stack : _main_FindFunctionTags" );
 
-	va_start( ap, Self );
+	va_start ( ap, Self );
 
-	fn = Self->USB2_Fkt_FindList( va_getlinearva( ap, struct TagItem * ));
+	fn = Self->USB2_Fkt_FindList ( va_getlinearva ( ap, struct TagItem * ) );
 
-	va_end( ap );
+	va_end ( ap );
 
-	return( fn );
+	return ( fn );
 }
 
 // --
 
-static struct USB2_Function *_main_Fkt_FindList( struct USB2IFace *Self, struct TagItem *taglist )
+static struct USB2_Function *
+_main_Fkt_FindList ( struct USB2IFace * Self, struct TagItem * taglist )
 {
-struct RealFunctionNode *fn;
-struct USBBase *usbbase;
-struct TagItem *tag;
-S32 DoSubClass;
-S32 SeeClaimed;
-S32 DoClaimed;
-S32 DoDevice;
-S32 DoVendor;
-S32 SubClass;
-S32 DoIndex;
-S32 DoClass;
-U16 Device;
-U16 Vendor;
-PTR retval;
-U32 Index;
-S32 found;
-S32 Class;
-U32 cnt;
+	struct RealFunctionNode * fn;
+	struct USB2_Node *		  node;
+	struct USBBase *		  usbbase;
+	struct USB2_Function *	  copy;
+	const USB2_ID *			  function_id;
+	struct TagItem *		  tag;
+	S32						  DoSubClass;
+	S32						  SeeClaimed;
+	S32						  DoClaimed;
+	S32						  DoDevice;
+	S32						  DoVendor;
+	S32						  SubClass;
+	S32						  DoIndex;
+	S32						  DoClass;
+	U16						  Device;
+	U16						  Vendor;
+	PTR						  retval;
+	U32						  Index;
+	S32						  Class;
+	U32						  cnt;
 
-	usbbase = (PTR) Self->Data.LibBase;
-	USBERROR( "USB2 Stack : _main_FindFunctionList" );
+	usbbase = (PTR)Self->Data.LibBase;
 
-	retval = NULL;
+	retval		= NULL;
+	copy		= NULL;
+	function_id = NULL;
 
 	// -- Parse Tags
 
-	DoVendor	= FALSE;
-	DoDevice	= FALSE;
-	DoClass		= FALSE;
-	DoSubClass	= FALSE;
-	DoClaimed	= FALSE;
-	DoIndex		= FALSE;
+	DoVendor   = FALSE;
+	DoDevice   = FALSE;
+	DoClass	   = FALSE;
+	DoSubClass = FALSE;
+	DoClaimed  = FALSE;
+	DoIndex	   = FALSE;
 
 	// --
 
-	Vendor		= 0;
-	Device		= 0;
-	Class		= 0;
-	SubClass	= 0;
-	SeeClaimed	= FALSE;
-	Index		= 0;
+	Vendor	   = 0;
+	Device	   = 0;
+	Class	   = 0;
+	SubClass   = 0;
+	SeeClaimed = FALSE;
+	Index	   = 0;
 
 	// --
 
-	while(( tag = MISC_NEXTTAGITEM( & taglist )))
+	while ( ( tag = MISC_NEXTTAGITEM ( &taglist ) ) )
 	{
 		switch ( tag->ti_Tag )
 		{
 			case USB2Tag_Find_VendorID:
 			{
-				USBINFO( "Find VendorID  : $%04lx", tag->ti_Data );
-				Vendor = tag->ti_Data;
+				USBINFO ( "Find VendorID  : $%04lx", tag->ti_Data );
+				Vendor	 = tag->ti_Data;
 				DoVendor = TRUE;
 				break;
 			}
 
 			case USB2Tag_Find_DeviceID:
 			{
-				USBINFO( "Find DeviceID : $%04lx", tag->ti_Data );
-				Device = tag->ti_Data;
+				USBINFO ( "Find DeviceID : $%04lx", tag->ti_Data );
+				Device	 = tag->ti_Data;
 				DoDevice = TRUE;
 				break;
 			}
 
 			case USB2Tag_Find_Class:
 			{
-				USBINFO( "Find Class     : %ld", tag->ti_Data );
-				Class = tag->ti_Data;
+				USBINFO ( "Find Class     : %ld", tag->ti_Data );
+				Class	= tag->ti_Data;
 				DoClass = TRUE;
 				break;
 			}
 
 			case USB2Tag_Find_SubClass:
 			{
-				USBINFO( "Find SubClass  : %ld", tag->ti_Data );
-				SubClass = tag->ti_Data;
+				USBINFO ( "Find SubClass  : %ld", tag->ti_Data );
+				SubClass   = tag->ti_Data;
 				DoSubClass = TRUE;
 				break;
 			}
 
 			case USB2Tag_Find_SeeClaimed:
 			{
-				USBINFO( "Find SeeClaimed: %s", ( tag->ti_Data ) ? "Yes" : "No" );
-				SeeClaimed = ( tag->ti_Data ) ? TRUE : FALSE ;
-				DoClaimed = TRUE;
+				USBINFO ( "Find SeeClaimed: %s", ( tag->ti_Data ) ? "Yes" : "No" );
+				SeeClaimed = ( tag->ti_Data ) ? TRUE : FALSE;
+				DoClaimed  = TRUE;
 				break;
 			}
 
 			case USB2Tag_Find_Index:
 			{
-				USBINFO( "Find Index     : %ld", tag->ti_Data );
-				Index = tag->ti_Data;
+				USBINFO ( "Find Index     : %ld", tag->ti_Data );
+				Index	= tag->ti_Data;
 				DoIndex = TRUE;
+				break;
+			}
+
+			case USB2Tag_Find_Copy:
+			{
+				copy = (PTR)tag->ti_Data;
+				break;
+			}
+
+			case USB2Tag_Find_FunctionID:
+			{
+				function_id = (PTR)tag->ti_Data;
 				break;
 			}
 
 			default:
 			{
-				USBINFO( "Unknown Tag    : $%04lx:%04lx", tag->ti_Tag, tag->ti_Data );
+				USBINFO ( "Unknown Tag    : $%04lx:%04lx", tag->ti_Tag, tag->ti_Data );
 				break;
 			}
 		}
@@ -204,105 +157,50 @@ U32 cnt;
 
 	// -- Scan
 
-	SEMAPHORE_OBTAIN( & usbbase->usb_Fkt_Semaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_Fkt_Semaphore );
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	cnt = 0;
 
-	// Functions are added to Head of list
-	// so scan from bottom up so Index are more reliable
-	_myFKT_GetTail( usbbase, & fn );
-
-	while( fn )
+	for ( node = usbbase->usb_Fkt_Header.uh_Tail; node; node = node->un_Prev )
 	{
-//		USBERROR( "USB2 Stack : _main_FindFunctionList : FN    %p : FktClass %lu", fn, fn->fkt_Class );
+		fn = node->un_Data;
 
-		found = TRUE;
-
-		// Always Ignore Detached Devices
-		if ( fn->fkt_Detach )
+		if ( ( ! fn ) || ( ! fn->fkt_Initialized ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe )
+			 || ( ! fn->fkt_DeviceDescriptor ) )
 		{
-			USBERROR( "fkt Detach" );
-			found = FALSE;
+			continue;
 		}
 
-		// Check Vendor ID
-		if ( DoVendor )
+		if ( ( ( function_id ) && ( *function_id != fn->fkt_NotifyID ) )
+			 || ( ( DoVendor ) && ( LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID ) != Vendor ) )
+			 || ( ( DoDevice ) && ( LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID ) != Device ) )
+			 || ( ( DoClass ) && ( fn->fkt_Class != Class ) ) || ( ( DoSubClass ) && ( fn->fkt_SubClass != SubClass ) )
+			 || ( ( DoClaimed ) && ( ! SeeClaimed ) && ( fn->fkt_Owner ) ) )
 		{
-			if ( LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ) != Vendor )
+			continue;
+		}
+
+		if ( ( ! DoIndex ) || ( cnt == Index ) )
+		{
+			if ( copy )
 			{
-//				USBERROR( "fkt Vendor : $%04lx", LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID  ));
-				found = FALSE;
+				*copy = fn->fkt_Public;
 			}
+
+			retval = ( copy ) ? copy : &fn->fkt_Public;
+			break;
 		}
 
-		// Check Device ID
-		if ( DoDevice )
-		{
-			if ( LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ) != Device )
-			{
-//				USBERROR( "fkt Device : $%04lx", LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID  ));
-				found = FALSE;
-			}
-		}
-
-		// Check Interface Class
-		if ( DoClass )
-		{
-			if ( fn->fkt_Class != Class )
-			{ 
-//				USBERROR( "fkt Class : %lu", (U32) fn->fkt_Class );
-				found = FALSE;
-			}
-		}
-
-		// Check Interface SubClass
-		if ( DoSubClass )
-		{
-			if ( fn->fkt_SubClass != SubClass )
-			{ 
-//				USBERROR( "fkt SubClass : %lu", (U32) fn->fkt_SubClass );
-				found = FALSE;
-			}
-		}
-
-		// Check See Claimed Devices
-		if ( DoClaimed )
-		{
-			if (( ! SeeClaimed ) && ( fn->fkt_Owner ))
-			{
-//				USBERROR( "fkt Claimed" );
-				found = FALSE;
-			}
-		}
-
-		// Did we find it?
-		if ( found )
-		{
-			if ( DoIndex )
-			{
-				if ( cnt == Index )
-				{
-					retval = fn;
-					break;
-				}
-				else
-				{
-					cnt++;
-				}
-			}
-			else
-			{
-				retval = fn;
-				break;
-			}
-		}
-
-		_myFKT_GetPrev( & fn );
+		cnt++;
 	}
 
-	SEMAPHORE_RELEASE( & usbbase->usb_Fkt_Semaphore );
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
-	return( retval );
+	SEMAPHORE_RELEASE ( &usbbase->usb_Fkt_Semaphore );
+
+	return ( retval );
 }
 
 // --

@@ -12,21 +12,21 @@
 
 // --
 
-SEC_CODE USB2_ID __Misc_NewNotifyID( struct USBBase *usbbase )
+SEC_CODE USB2_ID
+__Misc_NewNotifyID ( struct USBBase * usbbase )
 {
-USB2_ID id;
+	USB2_ID id;
 
-	SEMAPHORE_OBTAIN( & usbbase->usb_Notify_Semaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	do
 	{
 		id = ++usbbase->usb_Notify_ID;
-	} 
-	while( id < 200 );
-	
-	SEMAPHORE_RELEASE( & usbbase->usb_Notify_Semaphore );
+	} while ( id < 200 );
 
-	return( id );
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+	return ( id );
 }
 
 // --

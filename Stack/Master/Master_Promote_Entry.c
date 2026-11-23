@@ -32,7 +32,7 @@ Master_Promote_Entry ( void )
 	// struct Task *self;
 	U32 mask;
 
-	IExec = USB2_GetExecIFace();
+	IExec = USB2_GetExecIFace ();
 	msg	  = (PTR)( IExec->FindTask ( NULL )->tc_UserData );
 
 	usbbase = msg->usbbase;
@@ -56,6 +56,8 @@ Master_Promote_Entry ( void )
 		msg->Result = TRUE;
 		TASK_SIGNAL ( parent, mask );
 		TASK_SETPRI ( 25 );
+
+		TASK_SIGNAL ( TASK_FIND (), SIGBREAKF_CTRL_E );
 
 		__myProcess_Main ( usbbase, in );
 

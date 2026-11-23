@@ -13,27 +13,28 @@
 
 // --
 
-S32 __myMaster_StartPromote( struct USBBase *usbbase );
+S32 __myMaster_StartPromote ( struct USBBase * usbbase );
 
 // --
 
-SEC_CODE static S32 __myTask_Main( struct USBBase *usbbase, struct intern *in )
+SEC_CODE static S32
+__myTask_Main ( struct USBBase * usbbase, struct intern * in )
 {
-S32 retval;
-U32 mask;
-U32 wait;
+	S32 retval;
+	U32 mask;
+	U32 wait;
 
-	USBDEBUG( "__myTask_Main (Master)   : Running" );
+	USBDEBUG ( "__myTask_Main (Master)   : Running" );
 
 	retval = MAIN_RETURN_UNSET;
 
-	while( TRUE )
+	while ( TRUE )
 	{
 		/*
 		** Check if we should exit
 		*/
 
-		#if 0
+#if 0
 		USBDEBUG( 
 			"__myTask_Main (Master)\n"
 			"  :: Stopping ...... : %ld\n"
@@ -52,9 +53,9 @@ U32 wait;
 				& usbbase->usb_HCDASync,
 				usbbase->usb_HCDASync.ua_Counter
 		);
-		#endif
+#endif
 
-		#if 0
+#if 0
 		usbbase->usb_IExec->DebugPrintF(
 			"__myTask_Main (Master)\n"
 			"  :: Stopping ...... : %ld\n"
@@ -73,13 +74,11 @@ U32 wait;
 				& usbbase->usb_HCDASync,
 				usbbase->usb_HCDASync.ua_Counter
 		);
-		#endif
+#endif
 
-		if (( in->Stopping )
-		&&	( in->Shutdown_TM_List.uh_Nodes <= 0 )
-		&&	( usbbase->usb_HCDASync.ua_Counter <= 0 ))
+		if ( ( in->Stopping ) && ( in->Shutdown_TM_List.uh_Nodes <= 0 ) && ( usbbase->usb_HCDASync.ua_Counter <= 0 ) )
 		{
-			USBDEBUG( "__myTask_Main (Master)   : Exit" );
+			USBDEBUG ( "__myTask_Main (Master)   : Exit" );
 			retval = MAIN_RETURN_EXIT;
 			break;
 		}
@@ -89,7 +88,7 @@ U32 wait;
 		*/
 
 		// Master Exit signal
-		wait  = SIGBREAKF_CTRL_C;
+		wait = SIGBREAKF_CTRL_C;
 
 		// Master Refresh signal
 		wait |= SIGBREAKF_CTRL_D;
@@ -112,8 +111,7 @@ U32 wait;
 		// Notify Reply
 		wait |= in->Notify_ReplyMsgPort.ump_Signal.sig_Signal_Mask;
 
-		mask  = TASK_WAIT( wait );
-
+		mask = TASK_WAIT ( wait );
 
 		/*
 		** Check Flags
@@ -124,93 +122,95 @@ U32 wait;
 		{
 			if ( usbbase->usb_Master_Task.tn_Parent )
 			{
-				USBDEBUG( "__myTask_Main (Master)   : Got : CTRL+C : Exit Signal" );
+				USBDEBUG ( "__myTask_Main (Master)   : Got : CTRL+C : Exit Signal" );
 				in->Stopping = TRUE;
 			}
 			else
 			{
-				USBDEBUG( "__myTask_Main (Master)   : Got : CTRL+C : Someone tryed to stop us, ignoring" );
+				USBDEBUG ( "__myTask_Main (Master)   : Got : CTRL+C : Someone tryed to stop us, ignoring" );
 			}
 		}
 
 		if ( mask & SIGBREAKF_CTRL_D )
 		{
 			// Just a refresh, so we can break the Wait()
-			USBDEBUG( "__myTask_Main (Master)   : Got : CTRL+D" );
-			myFree_DNs( usbbase );
-			myFree_TNs( usbbase );
+			USBDEBUG ( "__myTask_Main (Master)   : Got : CTRL+D" );
+			myFree_DNs ( usbbase );
+			myFree_TNs ( usbbase );
 		}
 
 		if ( mask & SIGBREAKF_CTRL_E )
 		{
 			// Fullboot signal, DOS is now around
-//			usbbase->usb_IExec->DebugPrintF( "\nFullboot Signal\n\n" );
+			//			usbbase->usb_IExec->DebugPrintF( "\nFullboot Signal\n\n" );
 
 			if ( ! in->Stopping )
 			{
-				if ( __myMaster_StartPromote( usbbase ))
+				if ( __myMaster_StartPromote ( usbbase ) )
 				{
-					USBDEBUG( "__myTask_Main : Promote exit\n" );
+					USBDEBUG ( "__myTask_Main : Promote exit\n" );
 					retval = MAIN_RETURN_PROMOTE;
 					break; // exit right away
 				}
+
+				USB2_FullBoot_Complete ( usbbase, FALSE );
 			}
 		}
 
 		if ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
-//			USBDEBUG( "__myTask_Main (Master)   : Got : Tick Timer" );
-			if ( MSGPORT_GETMSG( & in->Tick_MsgPort ))
+			//			USBDEBUG( "__myTask_Main (Master)   : Got : Tick Timer" );
+			if ( MSGPORT_GETMSG ( &in->Tick_MsgPort ) )
 			{
-				myFree_DNs( usbbase );
-				myFree_TNs( usbbase );
-				in->Tick_TimeRequest.Time.Seconds = 2;
+				myFree_DNs ( usbbase );
+				myFree_TNs ( usbbase );
+				in->Tick_TimeRequest.Time.Seconds	   = 2;
 				in->Tick_TimeRequest.Time.Microseconds = 0;
-				IO_SEND( & in->Tick_TimeRequest );
+				IO_SEND ( &in->Tick_TimeRequest );
 			}
 		}
 
 		// a Subtask ended
 		if ( mask & in->Task_Shutdown_Signal.sig_Signal_Mask )
 		{
-			USBDEBUG( "__myTask_Main (Master)   : Got : Task_Shutdown_Signal" );
-			myHandle_Task_Ended( usbbase, in );
+			USBDEBUG ( "__myTask_Main (Master)   : Got : Task_Shutdown_Signal" );
+			myHandle_Task_Ended ( usbbase, in );
 		}
 
 		// a Subtask dident stop in time .. timeout, crashed?
 		if ( mask & in->Task_Shutdown_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
-			USBDEBUG( "__myTask_Main (Master)   : Got : Task_Shutdown_MsgPort" );
-			myHandle_Task_Timeout( usbbase, in );
+			USBDEBUG ( "__myTask_Main (Master)   : Got : Task_Shutdown_MsgPort" );
+			myHandle_Task_Timeout ( usbbase, in );
 		}
 
 		// External User Command
 		if ( mask & in->Cmd_MsgPort.ump_Signal.sig_Signal_Mask )
 		{
-			USBDEBUG( "__myTask_Main (Master)   : Got : Cmd_MsgPort" );
-			myHandle_Cmds( usbbase, in );
+			USBDEBUG ( "__myTask_Main (Master)   : Got : Cmd_MsgPort" );
+			myHandle_Cmds ( usbbase, in );
 		}
 
 		// Notify Reply
 		if ( mask & in->Notify_ReplyMsgPort.ump_Signal.sig_Signal_Mask )
 		{
-			USBDEBUG( "__myTask_Main (Master)   : Got : Notify_Reply" );
+			USBDEBUG ( "__myTask_Main (Master)   : Got : Notify_Reply" );
 
-			while( TRUE )
+			while ( TRUE )
 			{
-				PTR msg = MSGPORT_GETMSG( & in->Notify_ReplyMsgPort );
+				PTR msg = MSGPORT_GETMSG ( &in->Notify_ReplyMsgPort );
 
 				if ( ! msg )
 				{
 					break;
 				}
 
-				MEMORY_FREE( MEMID_NotifyMessage, msg, 0 );
+				MEMORY_FREE ( MEMID_NotifyMessage, msg, 0 );
 			}
 		}
 	}
 
-	return( retval );
+	return ( retval );
 }
 
 // --

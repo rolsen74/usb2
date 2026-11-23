@@ -25,36 +25,26 @@ struct USB2IFace * IUSB2;
 static S32
 ProbeReceiver ( U32 frequency, U8 * samples, U32 bytes, S32 listen, U32 output )
 {
-	struct USB2_Interface * ifc;
-	struct USB2_Register *	reg;
-	struct Message *		msg;
+	struct USB2_Interface  ifc;
+	struct USB2_Register * reg;
+	struct Message *	   msg;
 
 	U8 * config;
 	U8	 endpoint;
 	U8	 tunerAddress;
 	U32	 size;
-	U32	 index;
 	S32	 result;
 
-	for ( index = 0;; index++ )
+	if ( USB2_Ifc_FindTags ( USB2Tag_Find_VendorID, RTL2832_VENDOR, USB2Tag_Find_DeviceID, RTL2832_PRODUCT, USB2Tag_Find_Class,
+							 USBCLASS_Vendor_Specific, USB2Tag_Find_InterfaceNumber, 0, USB2Tag_Find_Copy, &ifc, TAG_END )
+		 != &ifc )
 	{
-		ifc = USB2_Ifc_FindTags ( USB2Tag_Find_VendorID, RTL2832_VENDOR, USB2Tag_Find_DeviceID, RTL2832_PRODUCT,
-								  USB2Tag_Find_Class, USBCLASS_Vendor_Specific, USB2Tag_Find_Index, index, TAG_END );
+		Printf ( "No RTL2832U receiver (0BDA:2838) with interface 0 found.\n" );
 
-		if ( ! ifc )
-		{
-			Printf ( "No RTL2832U receiver (0BDA:2838) with interface 0 found.\n" );
-
-			return ( RETURN_FAIL );
-		}
-
-		if ( ifc->IFC_Num == 0 )
-		{
-			break;
-		}
+		return ( RETURN_FAIL );
 	}
 
-	reg = USB2_Reg_RegisterTags ( USB2Tag_Reg_Interface, ifc, USB2Tag_Reg_Title, "USB2SDRTest", TAG_END );
+	reg = USB2_Reg_RegisterTags ( USB2Tag_Reg_InterfaceID, &ifc.IFC_ID, USB2Tag_Reg_Title, "USB2SDRTest", TAG_END );
 
 	if ( ! reg )
 	{
@@ -278,7 +268,7 @@ main ( int argc, char ** argv )
 	}
 	else if ( options[3] )
 	{
-		path = (const char *)options[3];
+		path	= (const char *)options[3];
 		saveWav = TRUE;
 	}
 

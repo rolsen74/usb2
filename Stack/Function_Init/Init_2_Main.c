@@ -28,76 +28,73 @@
 
 // --
 
-SEC_CODE static void __myMain( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
+SEC_CODE static void
+__myMain ( struct USBBase * usbbase, PTR userdata, PTR in UNUSED )
 {
-struct USB2_EPResource *epr;
-struct RealFunctionNode *fn;
-struct USB2_IORequest *ioreq;
-struct USB2_SetupData *sd;
-struct RealRegister *reg;
-struct USB2_ConfigNode *config;
-U32 cfgval;
+	struct USB2_EPResource *  epr;
+	struct RealFunctionNode * fn;
+	struct USB2_IORequest *	  ioreq;
+	struct USB2_SetupData *	  sd;
+	struct RealRegister *	  reg;
+	struct USB2_ConfigNode *  config;
+	U32						  cfgval;
 
 	fn = userdata;
 
-	#ifdef DO_INFO
-{
-	struct ExecIFace *IExec = usbbase->usb_IExec;
-	IExec->Disable();
-	IExec->DebugPrintF( "\nStartup new Init\n" );
-	IExec->DebugPrintF( "HCD Index   : %ld\n", fn->fkt_HCD->hn_HCDIndex );
-	IExec->DebugPrintF( "Tier        : %ld\n", fn->fkt_Tier );
-	IExec->DebugPrintF( "Addr Nr     : %ld\n", fn->fkt_Address );
-	IExec->DebugPrintF( "Port Nr     : %ld\n\n", fn->fkt_PortNr );
-	IExec->Enable();
-}
-	#endif
+#ifdef DO_INFO
+	{
+		struct ExecIFace * IExec = usbbase->usb_IExec;
+		IExec->Disable ();
+		IExec->DebugPrintF ( "\nStartup new Init\n" );
+		IExec->DebugPrintF ( "HCD Index   : %ld\n", fn->fkt_HCD->hn_HCDIndex );
+		IExec->DebugPrintF ( "Tier        : %ld\n", fn->fkt_Tier );
+		IExec->DebugPrintF ( "Addr Nr     : %ld\n", fn->fkt_Address );
+		IExec->DebugPrintF ( "Port Nr     : %ld\n\n", fn->fkt_PortNr );
+		IExec->Enable ();
+	}
+#endif
 
-	USBDEBUG( "__myMain (Init)          : Enter : FN    %p", fn );
+	USBDEBUG ( "__myMain (Init)          : Enter : FN    %p", fn );
 
 	reg = NULL;
 
 	// --
 
-	if ( FUNCTION_VALID(fn) != VSTAT_Okay )
+	if ( FUNCTION_VALID ( fn ) != VSTAT_Okay )
 	{
-		USBERROR( "__myMain (Init)          : Invalid FN (%p)", fn );
+		USBERROR ( "__myMain (Init)          : Invalid FN (%p)", fn );
 		goto bailout;
 	}
 
 	// --
 
-	reg = REGISTER_REGISTERTAGS(
-		USB2Tag_Reg_Function, fn,
-		USB2Tag_Reg_TimeOut, 2 * 1000000,
-		USB2Tag_Reg_Title, "Init",
-		TAG_END
-	);
+	reg = REGISTER_REGISTERTAGS ( USB2Tag_Reg_Function, fn, USB2Tag_Reg_TimeOut, 2 * 1000000, USB2Tag_Reg_Title, "Init",
+								  TAG_END );
 
-	if ( REGISTER_VALID( reg ) != VSTAT_Okay )
+	if ( REGISTER_VALID ( reg ) != VSTAT_Okay )
 	{
-		USBERROR( "__myMain (Init)          : Error Registering Device" );
+		USBERROR ( "__myMain (Init)          : Error Registering Device" );
 		goto bailout;
 	}
 
 	// --
 
-	USBDEBUG( "__myMain (Init) Running" );
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY 1 - Register\n##\n\n" );
+	USBDEBUG ( "__myMain (Init) Running" );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY 1 - Register\n##\n\n" );
 
-	epr		= reg->reg_Public.Res_Control;
-	ioreq	= epr->IORequests[0];
-	sd		= epr->SetupData;
+	epr	  = reg->reg_Public.Res_Control;
+	ioreq = epr->IORequests[0];
+	sd	  = epr->SetupData;
 
 	/*
 	** Get Control EndPoint size
 	*/
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY2 -- Get Control EndPoint Size\n##\n\n" );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY2 -- Get Control EndPoint Size\n##\n\n" );
 
-	if ( ! __Get_EndPoint_Size( epr, fn, ioreq, sd, usbbase ))
+	if ( ! __Get_EndPoint_Size ( epr, fn, ioreq, sd, usbbase ) )
 	{
-		USBERROR( "Error: Get Control EndPoint size" );
+		USBERROR ( "Error: Get Control EndPoint size" );
 		goto bailout;
 	}
 
@@ -105,45 +102,45 @@ U32 cfgval;
 	** Get Full Device Descriptor
 	*/
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY3 -- Get Full Device Descriptor\n##\n\n" );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY3 -- Get Full Device Descriptor\n##\n\n" );
 
-	if ( ! __Get_Device_Desc( fn, ioreq, sd, usbbase ))
+	if ( ! __Get_Device_Desc ( fn, ioreq, sd, usbbase ) )
 	{
-		USBERROR( "Error: Get Full Device Descriptor" );
+		USBERROR ( "Error: Get Full Device Descriptor" );
 		goto bailout;
 	}
 
-	USBDEBUG( "VendorID..: $%04lx", LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ));
-	USBDEBUG( "ProdictID.: $%04lx", LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ));
-	USBDEBUG( "Class.....: $%02lx", fn->fkt_DeviceDescriptor->DeviceClass );
-	USBDEBUG( "SubClass..: $%02lx", fn->fkt_DeviceDescriptor->DeviceSubClass );
-	USBDEBUG( "Protocol..: $%02lx", fn->fkt_DeviceDescriptor->DeviceProtocol );
+	USBDEBUG ( "VendorID..: $%04lx", LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID ) );
+	USBDEBUG ( "ProdictID.: $%04lx", LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID ) );
+	USBDEBUG ( "Class.....: $%02lx", fn->fkt_DeviceDescriptor->DeviceClass );
+	USBDEBUG ( "SubClass..: $%02lx", fn->fkt_DeviceDescriptor->DeviceSubClass );
+	USBDEBUG ( "Protocol..: $%02lx", fn->fkt_DeviceDescriptor->DeviceProtocol );
 
 	/*
 	** Get Device Status
 	*/
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY4 -- Get Device Status\n##\n\n" );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY4 -- Get Device Status\n##\n\n" );
 
-	if ( ! __Get_Device_Stat( fn, ioreq, sd, usbbase ))
+	if ( ! __Get_Device_Stat ( fn, ioreq, sd, usbbase ) )
 	{
-		USBERROR( "Error: Get Device Status" );
+		USBERROR ( "Error: Get Device Status" );
 		goto bailout;
 	}
 
-	fn->fkt_Class		= fn->fkt_DeviceDescriptor->DeviceClass;
-	fn->fkt_SubClass	= fn->fkt_DeviceDescriptor->DeviceSubClass;
-	fn->fkt_Protocol	= fn->fkt_DeviceDescriptor->DeviceProtocol;
+	fn->fkt_Class	 = fn->fkt_DeviceDescriptor->DeviceClass;
+	fn->fkt_SubClass = fn->fkt_DeviceDescriptor->DeviceSubClass;
+	fn->fkt_Protocol = fn->fkt_DeviceDescriptor->DeviceProtocol;
 
 	/*
 	** Get Config Descriptor
 	*/
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY5 -- Get Config Desc Size\n##\n\n" );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY5 -- Get Config Desc Size\n##\n\n" );
 
-	if ( ! __Get_Config_Size( fn, ioreq, sd, usbbase ))
+	if ( ! __Get_Config_Size ( fn, ioreq, sd, usbbase ) )
 	{
-		USBERROR( "Error: Get Config Desc Size" );
+		USBERROR ( "Error: Get Config Desc Size" );
 		goto bailout;
 	}
 
@@ -151,11 +148,11 @@ U32 cfgval;
 	** Get Full Config Descriptor
 	*/
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY6 -- Get Full Config Descriptor\n##\n\n" );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY6 -- Get Full Config Descriptor\n##\n\n" );
 
-	if ( ! __Get_Config_Desc( fn, ioreq, sd, usbbase ))
+	if ( ! __Get_Config_Desc ( fn, ioreq, sd, usbbase ) )
 	{
-		USBERROR( "Error: Get Full Config Desc" );
+		USBERROR ( "Error: Get Full Config Desc" );
 		goto bailout;
 	}
 
@@ -163,28 +160,28 @@ U32 cfgval;
 	** Parse Config Descriptor we got
 	*/
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY7 -- Parse Config Desc\n##\n\n" );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY7 -- Parse Config Desc\n##\n\n" );
 
 	// Build full Descriptor setup
-	if ( ! CONFIG_PARSE(fn))
+	if ( ! CONFIG_PARSE ( fn ) )
 	{
-		USBERROR( "Error: Parsing Config failed" );
+		USBERROR ( "Error: Parsing Config failed" );
 		goto bailout;
 	}
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY8 -- Set Config\n##\n\n" );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY8 -- Set Config\n##\n\n" );
 
-	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	config = fn->fkt_Configs.uh_Head;
 	cfgval = config ? config->cfg_Number : 0;
 
-	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 	// Set Config
-	if ( ( ! cfgval ) || ( ! CONFIG_SET( fn, (PTR) ioreq, cfgval ) ) )
+	if ( ( ! cfgval ) || ( ! CONFIG_SET ( fn, (PTR)ioreq, cfgval ) ) )
 	{
-		USBERROR( "Error: Set Config failed" );
+		USBERROR ( "Error: Set Config failed" );
 		goto bailout;
 	}
 
@@ -194,11 +191,11 @@ U32 cfgval;
 
 	if ( fn->fkt_Class == USBCLASS_HUB )
 	{
-		fn->fkt_HUBDescriptor = MEM_ALLOCIOBUFFER( 256, TRUE );
+		fn->fkt_HUBDescriptor = MEM_ALLOCIOBUFFER ( 256, TRUE );
 
 		if ( ! fn->fkt_HUBDescriptor )
 		{
-			USBERROR( "Error: Allocating memory" );
+			USBERROR ( "Error: Allocating memory" );
 			goto bailout;
 		}
 	}
@@ -207,30 +204,38 @@ U32 cfgval;
 	** Get Language Descriptor
 	*/
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY9 -- Get Strings\n##\n\n" );
+	//	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY9 -- Get Strings\n##\n\n" );
 
-	if ( ! __Get_Strings( fn, ioreq, sd, usbbase ))
+	if ( ! __Get_Strings ( fn, ioreq, sd, usbbase ) )
 	{
-		USBERROR( "Error: Set Config failed" );
+		USBERROR ( "Error: Set Config failed" );
 		goto bailout;
 	}
 
-	fn->fkt_Initialized = TRUE;
-	USB2_Notify_Function( usbbase, fn, USBNC_Adding );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	USBDEBUG( "__myMain (Init)          : Done" );
+	if ( ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) )
+	{
+		fn->fkt_Initialized = TRUE;
+
+		USB2_Notify_Function ( usbbase, fn, USBNC_Adding );
+	}
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+	USBDEBUG ( "__myMain (Init)          : Done" );
 
 bailout:
 
 	// --
 
-	USBDEBUG( "__myMain (Init)          : Unregister %p", reg );
+	USBDEBUG ( "__myMain (Init)          : Unregister %p", reg );
 
-	REGISTER_UNREGISTER( reg );
+	REGISTER_UNREGISTER ( reg );
 
 	// -- Exit
 
-	USBDEBUG( "__myMain (Init)          : Leave" );
+	USBDEBUG ( "__myMain (Init)          : Leave" );
 
 	return;
 }

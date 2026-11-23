@@ -20,10 +20,14 @@ OpenTimer ( struct USBBase * usbbase )
 	struct USB2_MsgPort mp;
 	struct ExecIFace *	IExec;
 	S32					retval;
+	S32					opened;
 
 	retval = FALSE;
+	opened = FALSE;
 
 	IExec = usbbase->usb_IExec;
+
+	MEM_SET ( &mp, 0, sizeof ( mp ) );
 
 	if ( ! MSGPORT_INIT ( &mp ) )
 	{
@@ -40,11 +44,13 @@ OpenTimer ( struct USBBase * usbbase )
 		goto bailout;
 	}
 
-	if ( IExec->OpenDevice ( "timer.device", 0, (PTR)usbbase->usb_TimeRequest, UNIT_MICROHZ ) )
+	if ( IExec->OpenDevice ( "timer.device", UNIT_MICROHZ, (PTR)usbbase->usb_TimeRequest, 0 ) )
 	{
 		USBERROR ( "Error opening Timer Device" );
 		goto bailout;
 	}
+
+	opened = TRUE;
 
 	usbbase->usb_TimeRequest->Request.io_Command = TR_ADDREQUEST;
 	usbbase->usb_TimeRequest->Time.Seconds		 = 0;
@@ -63,11 +69,19 @@ bailout:
 
 	if ( ( ! retval ) && ( usbbase->usb_TimeRequest ) )
 	{
+		if ( opened )
+		{
+			IExec->CloseDevice ( (PTR)usbbase->usb_TimeRequest );
+		}
+
 		IExec->FreeSysObject ( ASOT_IOREQUEST, usbbase->usb_TimeRequest );
 		usbbase->usb_TimeRequest = NULL;
 	}
 
-	MSGPORT_FREE ( &mp );
+	if ( mp.ump_StructID == ID_USB2_MP )
+	{
+		MSGPORT_FREE ( &mp );
+	}
 
 	return ( retval );
 }
@@ -113,7 +127,7 @@ bailout:
 SEC_CODE USED PTR
 ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 {
-	struct USB2EthDevice *ethernet;
+	struct USB2EthDevice *	ethernet;
 	struct ExpansionIFace * IExpansion;
 	struct ExecIFace *		IExec;
 	struct USBBase *		usbbase;
@@ -151,6 +165,35 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 	usbbase->usb_SegList			  = SegList;
 	usbbase->usb_IExec				  = IExec;
 
+#ifdef DO_PANIC
+	SEC_CODE void VARARGS68K __Debug_Panic ( struct USBBase * usbbase, STR filename, U32 linenr, STR fmt, ... );
+	usbbase->_Panic = __Debug_Panic;
+#endif
+
+#ifdef DO_ERROR
+	SEC_CODE void VARARGS68K __Debug_Error ( struct USBBase * usbbase, STR fmt, ... );
+	usbbase->_Error = __Debug_Error;
+#endif
+
+#ifdef DO_INFO
+	SEC_CODE void VARARGS68K __Debug_Info ( struct USBBase * usbbase, STR fmt, ... );
+	usbbase->_Info = __Debug_Info;
+#endif
+
+#ifdef DO_DEBUG
+	SEC_CODE void VARARGS68K __Debug_Debug ( struct USBBase * usbbase, STR fmt, ... );
+	usbbase->_Debug = __Debug_Debug;
+#endif
+
+	// --
+	// Init Device Functions
+	// eg.  usbbase->_Config_Alloc	= __Config_Alloc;
+	// eg.  usbbase->_Config_Free	= __Config_Free;
+
+#define USB2_CREATEFUNC( ret_type, name, ... ) usbbase->_##name = __##name;
+#include "usb2_Protos.h"
+#undef USB2_CREATEFUNC
+
 	// --
 	// -- Optional : libs may not be around yet, but lets try
 	usbbase->usb_DOSBase	   = (PTR)IExec->OpenLibrary ( "dos.library", 0 );
@@ -177,28 +220,6 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 	{
 		goto bailout;
 	}
-
-	// --
-
-#ifdef DO_PANIC
-	SEC_CODE void VARARGS68K __Debug_Panic ( struct USBBase * usbbase, STR filename, U32 linenr, STR fmt, ... );
-	usbbase->_Panic = __Debug_Panic;
-#endif
-
-#ifdef DO_ERROR
-	SEC_CODE void VARARGS68K __Debug_Error ( struct USBBase * usbbase, STR fmt, ... );
-	usbbase->_Error = __Debug_Error;
-#endif
-
-#ifdef DO_INFO
-	SEC_CODE void VARARGS68K __Debug_Info ( struct USBBase * usbbase, STR fmt, ... );
-	usbbase->_Info = __Debug_Info;
-#endif
-
-#ifdef DO_DEBUG
-	SEC_CODE void VARARGS68K __Debug_Debug ( struct USBBase * usbbase, STR fmt, ... );
-	usbbase->_Debug = __Debug_Debug;
-#endif
 
 	// --
 
@@ -253,15 +274,12 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 #endif
 
 	// --
-	// Init Device Functions
-	// eg.  usbbase->_Config_Alloc	= __Config_Alloc;
-	// eg.  usbbase->_Config_Free	= __Config_Free;
 
-#define USB2_CREATEFUNC( ret_type, name, ... ) usbbase->_##name = __##name;
-#include "usb2_Protos.h"
-#undef USB2_CREATEFUNC
+	SEMAPHORE_INIT ( &usbbase->usb_LockSemaphore );
 
-	// --
+	SEMAPHORE_INIT ( &usbbase->usb_Fkt_Semaphore );
+
+	SEMAPHORE_INIT ( &usbbase->usb_Notify_Semaphore );
 
 	SEMAPHORE_INIT ( &usbbase->usb_Bind_Semaphore );
 	ASYNC_INIT ( &usbbase->usb_HCDASync, NULL );
@@ -320,7 +338,6 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 	}
 
 	// --
-
 
 	//	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 #if defined( DO_PANIC )
@@ -401,36 +418,35 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 
 	//	IExec->DebugPrintF( "Add Device\n" );
 
-	ethernet = EthDevice_Alloc( usbbase );
+	ethernet = EthDevice_Alloc ( usbbase );
 
 	if ( ! ethernet )
 	{
 		goto bailout;
 	}
 
-	if ( ! PortDevice_Create( usbbase ) )
+	if ( ! PortDevice_Create ( usbbase ) )
 	{
-		IExec->DeleteLibrary( (PTR) ethernet );
+		IExec->DeleteLibrary ( (PTR)ethernet );
 
 		goto bailout;
 	}
 
 	usbbase->usb_Library.lib_OpenCnt++;
 
-	IExec->AddDevice( (PTR) ethernet );
+	IExec->AddDevice ( (PTR)ethernet );
 
-	IExec->DebugPrintF( "USB2 Ethernet: " USB2_ETH_DEVICE " ready\n" );
+	IExec->DebugPrintF ( "USB2 Ethernet: " USB2_ETH_DEVICE " ready\n" );
 
-	IExec->AddDevice ( (PTR)usbbase );
-
-	SEMAPHORE_OBTAIN( & usbbase->usb_FDriver_Semaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
 
 	usbbase->usb_FrontendsReady = TRUE;
 
-	SEMAPHORE_RELEASE( & usbbase->usb_FDriver_Semaphore );
+	SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
 
-	USB2_Bind_Enumerated( usbbase );
+	IExec->AddDevice ( (PTR)usbbase );
 
+	USB2_Bind_Enumerated ( usbbase );
 
 	//	USBERROR( "Rock'n Roll" );
 	IExec->DebugPrintF ( "USB : Rock'n Roll\n" );
@@ -444,17 +460,12 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 
 bailout:
 
-	USBERROR ( "USB Failed .. shutting down" );
+	if ( usbbase )
+	{
+		ROMExit ( usbbase, __FILE__ );
 
-	ROMExit ( usbbase, __FILE__ );
-
-	USBERROR ( "USB Failed .. deleting USB Device" );
-
-	// it have not been added
-	IExec->DeleteLibrary ( (PTR)usbbase );
-	usbbase = NULL;
-
-	//	USBERROR( "USB Failed .. exit" );
+		IExec->DeleteLibrary ( (PTR)usbbase );
+	}
 
 	return ( NULL );
 }

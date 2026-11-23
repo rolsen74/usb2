@@ -17,14 +17,13 @@
 ** it means the stack should not use it anymore
 ** and Resources should be free'd.
 **
-** Either the Device have been detached or 
+** Either the Device have been detached or
 ** the owner has been detached.
 **
 ** We do not free anything here, only mark
 */
 
 // --
-
 
 /*
 **      -+- Universal serial bus -+-
@@ -53,15 +52,16 @@ struct CmdHeader
 
 #endif
 
-static void __Send_DetachCommand( struct USBBase *usbbase, struct RealFunctionNode *fn )
+static void
+__Send_DetachCommand ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 {
-struct FktMessage *fm;
+	struct FktMessage * fm;
 
-	fm = MEM_ALLOCVEC( sizeof( struct FktMessage ), TRUE );
+	fm = MEM_ALLOCVEC ( sizeof ( struct FktMessage ), TRUE );
 
 	if ( ! fm )
 	{
-		USBERROR( "Error allocating memory fm" );
+		USBERROR ( "Error allocating memory fm" );
 		goto bailout;
 	}
 
@@ -69,9 +69,9 @@ struct FktMessage *fm;
 
 	// --
 
-	if ( FUNCTION_LOCK( fn ) != LSTAT_Okay )
+	if ( FUNCTION_LOCK ( fn ) != LSTAT_Okay )
 	{
-		MEM_FREEVEC( fm );
+		MEM_FREEVEC ( fm );
 		goto bailout;
 	}
 
@@ -79,7 +79,7 @@ struct FktMessage *fm;
 
 	// --
 
-	MSGPORT_PUTMSG( usbbase->usb_Master_MsgPort, fm );
+	MSGPORT_PUTMSG ( usbbase->usb_Master_MsgPort, fm );
 
 bailout:
 
@@ -88,76 +88,117 @@ bailout:
 
 // --
 
-SEC_CODE void __Function_MarkDetach( struct USBBase *usbbase, struct RealFunctionNode *fn )
+SEC_CODE static void
+NotifyOwner ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct RealRegister * reg )
 {
-struct USB2_InterfaceHeader *ih;
-struct USB2_InterfaceGroup *ig;
-struct USB2_InterfaceNode *in;
-struct USB2_EndPointNode *ep;
-struct USB2_ConfigNode *cn;
+	struct USB2_NotifyMessage * msg;
 
-	TASK_NAME_ENTER( "__Function_MarkDetach" );
-
-	USBDEBUG( "__Function_MarkDetach    : FN    %p", fn );
-
-	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
-
-	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
+	if ( ( ! reg ) || ( reg->reg_FreeMe ) || ( reg->reg_Detach ) || ( ! usbbase->usb_Notify_ReplyMsgPort ) )
 	{
+		return;
+	}
+
+	msg = MEMORY_ALLOC ( MEMID_NotifyMessage, TRUE );
+
+	if ( ! msg )
+	{
+		return;
+	}
+
+	reg->reg_Detach					   = TRUE;
+	msg->nm_Message.mn_ReplyPort	   = &usbbase->usb_Notify_ReplyMsgPort->ump_MsgPort;
+	msg->nm_Message.mn_Length		   = sizeof ( *msg );
+	msg->nm_Type					   = USBNT_Function;
+	msg->nm_Command					   = USBNC_Detached;
+	msg->nm_ID						   = fn->fkt_NotifyID;
+	msg->nm_Data.nm_Function.nm_HCD_ID = fn->fkt_Public.HCD_ID;
+
+	MSGPORT_PUTMSG ( &reg->reg_MsgPort, msg );
+}
+
+// --
+
+SEC_CODE void
+__Function_MarkDetach ( struct USBBase * usbbase, struct RealFunctionNode * fn )
+{
+	struct USB2_InterfaceHeader * ih;
+	struct USB2_InterfaceGroup *  ig;
+	struct USB2_InterfaceNode *	  in;
+	struct USB2_EndPointNode *	  ep;
+	struct USB2_ConfigNode *	  cn;
+
+	TASK_NAME_ENTER ( "__Function_MarkDetach" );
+
+	USBDEBUG ( "__Function_MarkDetach    : FN    %p", fn );
+
+	if ( FUNCTION_LOCK ( fn ) == LSTAT_Okay )
+	{
+		SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
+
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 		if ( ! fn->fkt_Detach )
 		{
-			USBINFO( "Marking FN %p Detached", fn );
-			__Send_DetachCommand( usbbase, fn );
+			USBINFO ( "Marking FN %p Detached", fn );
+			__Send_DetachCommand ( usbbase, fn );
 			fn->fkt_Detach = TRUE;
+
+			NotifyOwner ( usbbase, fn, fn->fkt_Owner );
+
+			if ( fn->fkt_Initialized )
+			{
+				USB2_Notify_Function ( usbbase, fn, USBNC_Removing );
+			}
 		}
 
 		cn = fn->fkt_Configs.uh_Head;
 
-		while( cn )
+		while ( cn )
 		{
 			if ( ! cn->cfg_Detach )
 			{
-				USBINFO( "Marking CN %p Detached", cn );
+				USBINFO ( "Marking CN %p Detached", cn );
 				cn->cfg_Detach = TRUE;
 			}
 
 			ig = cn->cfg_InterfaceGroups.uh_Head;
 
-			while( ig )
+			while ( ig )
 			{
 				if ( ! ig->ig_Detach )
 				{
-					USBINFO( "Marking IG %p Detached", ig );
+					USBINFO ( "Marking IG %p Detached", ig );
 					ig->ig_Detach = TRUE;
 				}
-			
+
 				ih = ig->ig_Group.uh_Head;
 
-				while( ih )
+				while ( ih )
 				{
 					if ( ! ih->ih_Detach )
 					{
-						USBINFO( "Marking IH %p Detached", ih );
+						USBINFO ( "Marking IH %p Detached", ih );
 						ih->ih_Detach = TRUE;
+
+						NotifyOwner ( usbbase, fn, ih->ih_Owner );
 					}
 
 					in = ih->ih_AltSettings.uh_Head;
 
-					while( in )
+					while ( in )
 					{
 						if ( ! in->in_Detach )
 						{
-							USBINFO( "Marking IN %p Detached", in );
+							USBINFO ( "Marking IN %p Detached", in );
 							in->in_Detach = TRUE;
 						}
 
 						ep = in->in_EndPoints.uh_Head;
 
-						while( ep )
+						while ( ep )
 						{
 							if ( ! ep->ep_Detach )
 							{
-								USBINFO( "Marking EP %p Detached", ep );
+								USBINFO ( "Marking EP %p Detached", ep );
 								ep->ep_Detach = TRUE;
 							}
 
@@ -165,27 +206,29 @@ struct USB2_ConfigNode *cn;
 							// I nolonger abort IORequest here
 							// --
 
-							ep = Node_Next( ep );
+							ep = Node_Next ( ep );
 						}
 
-						in = Node_Next( in );
+						in = Node_Next ( in );
 					}
 
-					ih = Node_Next( ih );
+					ih = Node_Next ( ih );
 				}
 
-				ig = Node_Next( ig );
+				ig = Node_Next ( ig );
 			}
 
-			cn = Node_Next( cn );
+			cn = Node_Next ( cn );
 		}
 
-		FUNCTION_UNLOCK( fn );
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
+
+		FUNCTION_UNLOCK ( fn );
 	}
 
-	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
-
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 }
 
 // --

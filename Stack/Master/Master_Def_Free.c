@@ -13,45 +13,50 @@
 
 // --
 
-SEC_CODE static void __myTask_Def_Free( struct USBBase *usbbase, struct intern *in )
+SEC_CODE static void
+__myTask_Def_Free ( struct USBBase * usbbase, struct intern * in )
 {
-	USBINFO( "__myTask_Def_Free (Master)" );
+	USBINFO ( "__myTask_Def_Free (Master)" );
 
 	// --
 
 	usbbase->usb_Master_MsgPort = NULL;
-	MSGPORT_FREE( & in->Cmd_MsgPort );
+	MSGPORT_FREE ( &in->Cmd_MsgPort );
 
 	// --
 
-	while( TRUE )
-	{
-		PTR msg = MSGPORT_GETMSG( & in->Notify_ReplyMsgPort );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-		if ( ! msg )
+	usbbase->usb_Notify_ReplyMsgPort = NULL;
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+	if ( in->Notify_ReplyMsgPort.ump_StructID == ID_USB2_MP )
+	{
+		struct Message * msg;
+
+		while ( ( msg = MSGPORT_GETMSG ( &in->Notify_ReplyMsgPort ) ) )
 		{
-			break;
+			MEMORY_FREE ( MEMID_NotifyMessage, msg, 0 );
 		}
 
-		MEMORY_FREE( MEMID_NotifyMessage, msg, 0 );
+		MSGPORT_FREE ( &in->Notify_ReplyMsgPort );
 	}
-
-	MSGPORT_FREE( & in->Notify_ReplyMsgPort );
 
 	// --
 
-	MSGPORT_FREE( & in->Task_Shutdown_MsgPort );
-	TASK_FREESIGNAL( & in->Task_Shutdown_Signal );
+	MSGPORT_FREE ( &in->Task_Shutdown_MsgPort );
+	TASK_FREESIGNAL ( &in->Task_Shutdown_Signal );
 
 	// -- Timer Tick
 
 	if ( in->Tick_TimerAdded )
 	{
 		in->Tick_TimerAdded = FALSE;
-		IO_STOP( & in->Tick_TimeRequest );
+		IO_STOP ( &in->Tick_TimeRequest );
 	}
 
-	MSGPORT_FREE( & in->Tick_MsgPort );
+	MSGPORT_FREE ( &in->Tick_MsgPort );
 
 	// --
 }

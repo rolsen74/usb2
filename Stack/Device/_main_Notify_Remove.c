@@ -12,29 +12,24 @@
 
 // --
 
-SEC_CODE static void _main_Notify_Remove( struct USB2IFace *Self, struct USB2_NotifyNode *node )
+SEC_CODE static void
+_main_Notify_Remove ( struct USB2IFace * Self, struct USB2_NotifyNode * node )
 {
-struct USB2_NotifyNode *n;
-struct USBBase *usbbase;
+	struct USB2_NotifyNode * n;
+	struct USBBase *		 usbbase;
 
-	usbbase = (PTR) Self->Data.LibBase;
+	usbbase = (PTR)Self->Data.LibBase;
 
 	if ( ! node )
 	{
 		goto bailout;
 	}
 
-	if ( node->nn_StructID != ID_USB2_NN )
-	{
-		USBERROR( "Error this is not a Notify Node" );
-		goto bailout;
-	}
-
-	SEMAPHORE_OBTAIN( & usbbase->usb_Notify_Semaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_Notify_Semaphore );
 
 	n = usbbase->usb_Notify_Header.uh_Head;
 
-	while( n )
+	while ( n )
 	{
 		if ( n == node )
 		{
@@ -50,23 +45,22 @@ struct USBBase *usbbase;
 	{
 		n->nn_StructID = 0;
 
-		NODE_REMNODE( & usbbase->usb_Notify_Header, n );
+		NODE_REMNODE ( &usbbase->usb_Notify_Header, n );
 
-		MEMORY_FREE( MEMID_NotifyNode, n, 0 );
+		MEMORY_FREE ( MEMID_NotifyNode, n, 0 );
 	}
-	#ifdef USBDEBUG
+#ifdef USBDEBUG
 	else
 	{
-		USBERROR( "Node not found" );
+		USBERROR ( "Node not found" );
 	}
-	#endif
+#endif
 
-	SEMAPHORE_RELEASE(	& usbbase->usb_Notify_Semaphore );
+	SEMAPHORE_RELEASE ( &usbbase->usb_Notify_Semaphore );
 
 bailout:
 
 	return;
-	
 }
 
 // --

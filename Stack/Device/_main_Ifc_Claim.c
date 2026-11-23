@@ -12,51 +12,75 @@
 
 // --
 
-/* -- Main Interface -- */
-
-static S32 _main_Ifc_Claim( struct USB2IFace *Self, struct RealRegister *reg, struct USB2_Interface *ifc )
+// A registration can only claim interfaces on its own function.
+static struct USB2_InterfaceHeader *
+LockRegistrationInterface ( struct USBBase * usbbase, struct RealRegister * reg, const struct USB2_Interface * ifc )
 {
-struct USB2_InterfaceHeader *ih;
-struct USBBase *usbbase;
-S32 retval;
+	struct USB2_InterfaceHeader * ih;
+	struct USB2_InterfaceHeader * found;
+	struct USB2_InterfaceGroup *  ig;
+	struct USB2_ConfigNode *	  cn;
+	struct RealFunctionNode *	  fn;
 
-	retval = FALSE;
+	found = NULL;
 
-	usbbase = (PTR) Self->Data.LibBase;
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	if ( ! ifc )
+	fn = reg->reg_Function;
+
+	if ( fn )
 	{
-		USBERROR( "_main_Ifc_Claim : NULL Pointer" );
-		goto bailout;
+		for ( cn = fn->fkt_Configs.uh_Head; ( cn ) && ( ! found ); cn = Node_Next ( cn ) )
+		{
+			for ( ig = cn->cfg_InterfaceGroups.uh_Head; ( ig ) && ( ! found ); ig = Node_Next ( ig ) )
+			{
+				for ( ih = ig->ig_Group.uh_Head; ih; ih = Node_Next ( ih ) )
+				{
+					if ( ( &ih->ih_Public == ifc ) && ( INTERFACE_LOCKHEADER ( ih ) == LSTAT_Okay ) )
+					{
+						found = ih;
+						break;
+					}
+				}
+			}
+		}
 	}
 
-	ih = (PTR) ( (char *) ifc - offsetof( struct USB2_InterfaceHeader, ih_Public ));
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
-	#ifdef DO_DEBUG
+	return ( found );
+}
 
-	// Declaim also validates IH, so not needed here
-	// but good for early error detection in debug mode
-	if ( INTERFACE_VALIDHEADER( ih ) != VSTAT_Okay )
+// --
+
+static S32
+_main_Ifc_Claim ( struct USB2IFace * Self, struct RealRegister * reg, struct USB2_Interface * ifc )
+{
+	struct USB2_InterfaceHeader * ih;
+	struct USBBase *			  usbbase;
+
+	S32 retval;
+
+	usbbase = (PTR)Self->Data.LibBase;
+	retval	= FALSE;
+
+	if ( ( ! ifc ) || ( REGISTER_LOCK ( reg ) != LSTAT_Okay ) )
 	{
-		USBERROR( "main_Ifc_Claim : Error invalid Interface Pointer" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	// Claim also validates Reg, so not needed here
-	// but good for early error detection
-	if ( REGISTER_VALID( reg ) != VSTAT_Okay )
+	ih = LockRegistrationInterface ( usbbase, reg, ifc );
+
+	if ( ih )
 	{
-		USBERROR( "_main_Ifc_Claim : Error invalid Register Pointer" );
-		goto bailout;
+		retval = INTERFACE_CLAIMHEADER ( reg, ih );
+
+		INTERFACE_UNLOCKHEADER ( ih );
 	}
 
-	#endif
+	REGISTER_UNLOCK ( reg );
 
-	retval = INTERFACE_CLAIMHEADER( reg, ih );
-
-bailout:
-
-	return( retval );
+	return ( retval );
 }
 
 // --

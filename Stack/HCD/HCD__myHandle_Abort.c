@@ -12,189 +12,66 @@
 
 // --
 
-SEC_CODE static void __myHandle_Abort( struct USBBase *usbbase, struct USB2_HCDNode *hn )
+SEC_CODE static void
+__myHandle_Abort ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 {
-struct USB2_EndPointNode *ep;
-struct RealFunctionNode *fn;
-struct AbortIOMessage *msg;
-struct RealRequest *ioreq2;
-struct RealRequest *ioreq;
+	struct USB2_Header *	  queue;
+	struct RealFunctionNode * fn;
+	struct RealRequest *	  ioreq;
+	struct RealRequest *	  queued;
+	struct Message *		  msg;
 
-	USBINFO( "__myHandle_Abort" );
-	TASK_NAME_ENTER( "HCD : __myHandle_Abort" );
+	S32 current;
 
-	while( TRUE )
+	while ( TRUE )
 	{
-		msg = MSGPORT_GETMSG( & hn->hn_Abort_MsgPort );
-
-//		usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : Got Msg %p\n", msg );
+		msg = MSGPORT_GETMSG ( &hn->hn_Abort_MsgPort );
 
 		if ( ! msg )
 		{
 			break;
 		}
 
-		ioreq = msg->ioreq;
+		ioreq = (PTR)( (U8 *)msg - offsetof ( struct RealRequest, req_AbortMessage ) );
+		fn	  = ioreq->req_Function;
 
-		// --
+		SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
-		USBINFO( "__myHandle_Abort         : IOReq %p", ioreq );
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-//		usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : IOReq %p\n", ioreq );
+		ioreq->req_AbortQueued = FALSE;
+		current				   = ( ioreq->req_AbortRequested ) && ( ioreq->req_AbortSubmission == ioreq->req_Submission );
 
-		if ( IOREQUEST_LOCK( ioreq ) == LSTAT_Okay )
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		if ( ( current ) && ( ioreq->req_PublicStat == IORS_HCD_Active ) )
 		{
-			fn = ioreq->req_Function;
+			ioreq->req_Public.io_Error = IOERR_ABORTED;
 
-			USBINFO( "__myHandle_Abort         : FN    %p", fn );
+			HCD_TRANSFER_CHECK ( hn, ioreq, TRUE );
+		}
+		else if ( ( current ) && ( ioreq->req_PublicStat == IORS_HCD_Queued ) )
+		{
+			queue = ( fn->fkt_Tier == 0 ) ? &hn->hn_HUB_Interrupts : &ioreq->req_EndPoint->ep_Request_Queue;
 
-//			usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : FN    %p\n", fn );
-
-			if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
+			for ( queued = queue->uh_Head; queued; queued = Node_Next ( queued ) )
 			{
-				SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
-
-				ep = ioreq->req_EndPoint;
-
-				USBINFO( "__myHandle_Abort         : EP    %p", ep );
-
-//				usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : EP    %p\n", ep );
-
-				if ( ENDPOINT_LOCK(ep) == LSTAT_Okay )
+				if ( queued == ioreq )
 				{
-					switch( ioreq->req_Public.io_Command )
-					{
-						case CMD_READ:
-						case CMD_WRITE:
-						{
-							/**/ if ( ioreq->req_PublicStat == IORS_HCD_Active )
-							{
-								// IORequest is active
-								USBINFO( "__myHandle_Abort         : Aborting Active IOReq %p", ioreq );
+					NODE_REMNODE ( queue, ioreq );
 
-//								usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : Aborting Active IOReq %p\n", ioreq );
+					ioreq->req_Public.io_Error = IOERR_ABORTED;
 
-								ioreq->req_Public.io_Error = IOERR_ABORTED;
-
-								HCD_TRANSFER_CHECK( hn, ioreq, TRUE );
-							}
-							else if ( ioreq->req_PublicStat == IORS_HCD_Queued )
-							{
-								// IORequest is queued
-								ioreq2 = ep->ep_Request_Queue.uh_Head;
-		
-								while( ioreq2 )
-								{
-									if ( ioreq2 == ioreq )
-									{
-										break;
-									}
-									else
-									{
-										ioreq2 = Node_Next( ioreq2 );
-									}
-								}
-		
-								if ( ioreq2 )
-								{
-									USBINFO( "__myHandle_Abort         : Aborting Queued IOReq %p", ioreq2 );
-
-//									usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : Aborting Queued IOReq %p\n", ioreq2 );
-
-									NODE_REMNODE( & ep->ep_Request_Queue, ioreq2 );
-
-									// Send back to user
-									ioreq2->req_Public.io_Error = IOERR_ABORTED;
-//									ioreq2->req_PublicStat = IORS_User;
-//									MSGPORT_REPLYMSG(ioreq2);
-//									IOREQUEST_ACTIVE_SUB( ioreq2 );
-
-									HCD_REPLY( ioreq );
-									ioreq2 = NULL;
-								}
-								else
-								{
-									USBINFO( "__myHandle_Abort         : Queued IOReq %p not found", ioreq );
-								}
-							}
-							else // I guess stat have changed
-							{
-								USBINFO( "__myHandle_Abort         : IOReq %p changed stat %ld", ioreq, ioreq->req_PublicStat );
-							}
-							break;
-						}
-
-						default:
-						{
-							USBINFO( "__myHandle_Abort         : Not a Read/Write command (%ld)", (S32) ioreq->req_Public.io_Command );
-							break;
-						}
-					}
-
-					ENDPOINT_UNLOCK(ep);
+					HCD_REPLY ( ioreq );
+					break;
 				}
-				else
-				{
-					USBINFO( "__myHandle_Abort         : Invalid EP %p", ep );
-				}
-
-				SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
-
-				FUNCTION_UNLOCK( fn );
 			}
-			else
-			{
-				USBINFO( "__myHandle_Abort         : Invalid FN %p", fn );
-			}
-
-			IOREQUEST_UNLOCK( ioreq );
-		}
-		else
-		{
-			USBINFO( "__myHandle_Abort         : Invalid IOReq %p", ioreq );
 		}
 
-		// --
+		SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
 
-//		usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : Free Msg %p : 1 :\n", msg );
-
-		#ifdef DO_PANIC
-		if ( HCD_VALID( msg->HCD ) == VSTAT_Okay )
-		#else
-		if ( msg->HCD )
-		#endif
-		{
-			HCD_UNLOCK( msg->HCD );
-			msg->HCD = NULL;
-		}
-
-		#ifdef DO_PANIC
-		if ( FUNCTION_VALID( msg->Function ) == VSTAT_Okay )
-		#else
-		if ( msg->Function )
-		#endif
-		{
-			FUNCTION_UNLOCK( msg->Function );
-			msg->Function = NULL;
-		}
-
-		#ifdef DO_PANIC
-		if ( IOREQUEST_VALID( msg->ioreq ) == VSTAT_Okay )
-		#else
-		if ( msg->ioreq )
-		#endif
-		{
-			IOREQUEST_UNLOCK( msg->ioreq );
-			msg->ioreq = NULL;
-		}
-
-		MEM_FREEVEC( msg );
-		msg = NULL;
-
-//		usbbase->usb_IExec->DebugPrintF( "__myHandle_Abort : Free Msg %p : 2 :\n", msg );
+		IOREQUEST_UNLOCK ( ioreq );
 	}
-
-	TASK_NAME_LEAVE();
 }
 
 // --

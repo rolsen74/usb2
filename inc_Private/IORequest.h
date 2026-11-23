@@ -17,10 +17,10 @@
 
 struct __ohci
 {
-	struct OHCI_ED * ED_Header;
+	struct OHCI_ED *  ED_Header;
 	struct OHCI_ITD * IsoHead;
-	struct OHCI_ED * Start_Header;
-	U32				 Start_Slot;
+	struct OHCI_ED *  Start_Header;
+	U32				  Start_Slot;
 };
 
 struct __uhci
@@ -30,24 +30,24 @@ struct __uhci
 
 struct __ehci
 {
-	struct EHCI_QH * QH_Header;
+	struct EHCI_QH *  QH_Header;
 	struct EHCI_ITD * IsoHead;
-	struct EHCI_QH * Start_Header;
-	U32				 Start_Slot;
-	U32				 IsoRetire;
-	U32				 IsoNextFrame;
-	U32				 IsoLastFrame;
+	struct EHCI_QH *  Start_Header;
+	U32				  Start_Slot;
+	U32				  IsoRetire;
+	U32				  IsoNextFrame;
+	U32				  IsoLastFrame;
 };
 
 struct __xhci
 {
-	struct XHCI_Slot * Slot;
-	U32 EndPoint;
-	U32 Last_TRB;
-	U32 Actual;
-	U32 Completion;
-	U32 Finished;
-	U32 Short_Packet;
+	struct XHCI_Slot *	 Slot;
+	U32					 EndPoint;
+	U32					 Last_TRB;
+	U32					 Actual;
+	U32					 Completion;
+	U32					 Finished;
+	U32					 Short_Packet;
 	struct XHCI_Buffer * Buffers;
 };
 
@@ -60,6 +60,7 @@ enum IORStat
 	IORS_HCD,		 // 2 : Gived to HCD, processing it
 	IORS_HCD_Queued, // 3 : HCD have queued it
 	IORS_HCD_Active, // 4 : HCD have give it to Hardware
+	IORS_HCD_Pending,
 };
 
 struct RealRequest
@@ -67,10 +68,16 @@ struct RealRequest
 	struct USB2_IORequest req_Public; // At the moment must be first, todo: do same as EPResource or ?
 
 	// --
-	U32 req_StructID;
-	S32 req_Locks;
-	U16 req_Detach;
-	U16 req_FreeMe;
+	struct USB2_Node req_LiveNode;
+	struct Message	 req_AbortMessage;
+	U32				 req_Submission;
+	U32				 req_AbortSubmission;
+	U8				 req_AbortQueued;
+	U8				 req_AbortRequested;
+	U32				 req_StructID;
+	S32				 req_Locks;
+	U16				 req_Detach;
+	U16				 req_FreeMe;
 	//	struct USB2_TaskNode *			req_Task;
 	//	struct USB2_ASync *				req_ASync;
 	// --

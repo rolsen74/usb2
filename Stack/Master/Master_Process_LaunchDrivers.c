@@ -16,31 +16,43 @@
 static void
 __myProcess_Entry ( void )
 {
-	struct MasterStartMsg *	  tm;
-	struct ExecIFace *		  IExec;
-	struct USBBase *		  usbbase;
+	struct MasterStartMsg * tm;
+	struct Task *			parent;
+	struct intern *			in;
+	struct ExecIFace *		IExec;
+	struct USBBase *		usbbase;
 
 	// --
 
 	TASK_NAME_ENTER ( "__myProcess_LaunchDrivers" );
 
-	IExec	= USB2_GetExecIFace();
+	IExec	= USB2_GetExecIFace ();
 	tm		= (PTR)( IExec->FindTask ( NULL )->tc_UserData );
 	usbbase = tm->usbbase;
+	parent	= tm->Parent;
+	in		= usbbase->usb_Master_Intern;
 
 	TASK_SIGNAL ( tm->Parent, tm->Mask );
 
-	USB2_Bind_Enumerated( usbbase );
+	USB2_Bind_Enumerated ( usbbase );
 
-	USB2_FullBoot_Complete( usbbase, TRUE );
+	USB2_FullBoot_Complete ( usbbase, TRUE );
+
+	IExec->Disable ();
+
+	in->LauncherRunning = FALSE;
+
+	IExec->Signal ( parent, SIGBREAKF_CTRL_D );
 
 	TASK_NAME_LEAVE ();
+
+	IExec->Enable ();
 }
 
 // --
 
 SEC_CODE static void
-__myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in UNUSED )
+__myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in )
 {
 	struct MasterStartMsg msg;
 	struct USB2_Signal	  sig;
@@ -55,6 +67,8 @@ __myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in UNUSED 
 		msg.Parent	= TASK_FIND ();
 		msg.Result	= FALSE;
 		msg.Mask	= sig.sig_Signal_Mask;
+
+		in->LauncherRunning = TRUE;
 
 		if ( IDOS->CreateNewProcTags ( NP_Name, "Universal Serial Bus - Launcher", NP_Child, FALSE, NP_Priority, 1, NP_StackSize,
 									   1024 * 32, NP_Entry, __myProcess_Entry, NP_UserData, &msg, TAG_END ) )
@@ -71,9 +85,11 @@ __myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in UNUSED 
 		}
 		else
 		{
+			in->LauncherRunning = FALSE;
+
 			USBERROR ( "__myProcess_LaunchDrivers : Process error" );
 
-			USB2_FullBoot_Complete( usbbase, FALSE );
+			USB2_FullBoot_Complete ( usbbase, FALSE );
 		}
 
 		TASK_FREESIGNAL ( &sig );
@@ -82,7 +98,7 @@ __myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in UNUSED 
 	{
 		USBERROR ( "__myProcess_LaunchDrivers : Signal error" );
 
-		USB2_FullBoot_Complete( usbbase, FALSE );
+		USB2_FullBoot_Complete ( usbbase, FALSE );
 	}
 }
 
