@@ -35,16 +35,19 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 	struct RealFunctionNode * fn;
 	struct USB2_TaskNode *	  tn;
 	struct USB2_HCDNode *	  hn;
+	struct ExecIFace *		  IExec;
 	enum TaskReturn			  stat;
 	struct Task *			  master;
 	S32						  retval;
 	STR						  name;
 	S32						  err;
 	S32						  pri;
+	S32						  running;
 
 	TASK_NAME_ENTER ( "HCD : __HCD_Controllers_Start" );
 
 	retval = FALSE;
+	IExec = usbbase->usb_IExec;
 
 	// -- Figure out what pri to run HCD at
 
@@ -99,10 +102,14 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 				break;
 			}
 
-			TASK_SETTLE ( tn );
+			IExec->Disable ();
+
+			running = ( tn->tn_TaskAdr ) && ( tn->tn_State == TASK_State_Running );
+
+			IExec->Enable ();
 
 			// well we may fall throu Main and exit.. just checking its still running
-			if ( ( ! tn->tn_TaskAdr ) || ( tn->tn_State != TASK_State_Running ) )
+			if ( ! running )
 			{
 				USBERROR ( "__HCD_Controllers_Start   :  2 : Error Task not Running" );
 				break;

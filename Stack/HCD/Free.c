@@ -11,36 +11,6 @@
 #include "usb2_all.h"
 
 // --
-// Release all resource we can, for this Struct
-
-SEC_CODE static void __Release( struct USBBase *usbbase UNUSED, struct USB2_HCDNode *hn )
-{
-struct USB2_TaskNode *tn;
-
-//	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
-	// --
-
-	if ( hn->hn_Task )
-	{
-		tn = hn->hn_Task;
-
-		if ( tn->tn_Owner == hn )
-		{
-			TASK_UNLOCK(tn);
-			hn->hn_Task = NULL;
-			tn->tn_Owner = NULL;
-		}
-		else
-		{
-			USBDEBUG( "__Driver_Free : TN    and HN mismatch" );
-		}
-	}
-
-	// --
-//	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
-}
-
-// --
 
 /*
 ** The Node, should have been Removed from the list header before calling.
@@ -73,8 +43,6 @@ enum FSTAT fstat;
 			USBINFO( "Marking HN %p FreeMe", hn );
 			hn->hn_FreeMe = TRUE;
 		}
-
-		__Release( usbbase, hn );
 
 		HCD_UNLOCK( hn );
 	}

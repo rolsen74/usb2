@@ -76,11 +76,16 @@ __myTask_Main ( struct USBBase * usbbase, struct intern * in )
 		);
 #endif
 
-		if ( ( in->Stopping ) && ( in->Shutdown_TM_List.uh_Nodes <= 0 ) && ( usbbase->usb_HCDASync.ua_Counter <= 0 ) )
+		if ( in->Stopping )
 		{
-			USBDEBUG ( "__myTask_Main (Master)   : Exit" );
-			retval = MAIN_RETURN_EXIT;
-			break;
+			myHandle_Cmds ( usbbase, in );
+
+			if ( ( in->Shutdown_TM_List.uh_Nodes <= 0 ) && ( usbbase->usb_HCDASync.ua_Counter <= 0 ) )
+			{
+				USBDEBUG ( "__myTask_Main (Master)   : Exit" );
+				retval = MAIN_RETURN_EXIT;
+				break;
+			}
 		}
 
 		/*

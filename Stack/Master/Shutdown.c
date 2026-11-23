@@ -38,6 +38,7 @@ __Master_Shutdown( struct USBBase *usbbase )
 
 	if ( running )
 	{
+		usbbase->usb_Master_MsgPort = NULL;
 		tn->tn_Parent = self;
 		tn->tn_Mask = mask;
 

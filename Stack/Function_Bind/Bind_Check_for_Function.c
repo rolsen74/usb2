@@ -47,6 +47,7 @@ _Start_Function ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct
 		 && ( fn->fkt_Class == USBCLASS_HUB ) )
 	{
 		isRootHUB = TRUE;
+		ready_signal.sig_StructID = 0;
 
 		USBDEBUG ( "_Start_Function : is RootHUB" );
 		if ( ! TASK_ALLOCSIGNAL ( &ready_signal ) )

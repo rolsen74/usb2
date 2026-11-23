@@ -36,8 +36,6 @@ __myTask_Def_Init( struct USBBase *usbbase, struct intern *in )
 		goto bailout;
 	}
 
-	usbbase->usb_Master_MsgPort = & in->Cmd_MsgPort;
-
 	// --
 
 	if ( ! MSGPORT_INIT( & in->Notify_ReplyMsgPort ))
@@ -65,6 +63,8 @@ __myTask_Def_Init( struct USBBase *usbbase, struct intern *in )
 
 	in->Tick_TimerAdded = TRUE;
 	IO_SEND( & in->Tick_TimeRequest );
+
+	usbbase->usb_Master_MsgPort = & in->Cmd_MsgPort;
 
 	retval = TRUE;
 

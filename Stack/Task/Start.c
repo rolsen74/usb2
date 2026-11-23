@@ -17,6 +17,7 @@ SEC_CODE enum TaskReturn
 __Task_Start ( struct USBBase * usbbase, ... )
 {
 	struct USB2_TaskMsg * tm;
+	struct USB2_TaskMsg    fallback;
 	struct USB2_HCDNode * hn;
 	enum TaskReturn		  retval;
 	va_list				  ap;
@@ -35,7 +36,10 @@ __Task_Start ( struct USBBase * usbbase, ... )
 	if ( ! tm )
 	{
 		USBERROR ( "__Task_Start             : 2 : Error allocating TaskMsg" );
-		goto bailout;
+
+		MEM_SET ( &fallback, 0, sizeof ( fallback ) );
+
+		tm = &fallback;
 	}
 
 	tm->tm_Cmd.cm_Command = CMD_START_PROCESS;
@@ -162,6 +166,11 @@ __Task_Start ( struct USBBase * usbbase, ... )
 		}
 	}
 
+	if ( tm == &fallback )
+	{
+		goto bailout;
+	}
+
 	if ( ( ! tm->tm_Func_Init ) && ( ! tm->tm_Func_Entry ) && ( ! tm->tm_Func_Free ) )
 	{
 		USBDEBUG ( "__Task_Start             : 4 : Missing Process Entry Point" );
@@ -210,7 +219,7 @@ bailout:
 
 	va_end ( ap );
 
-	if ( tm )
+	if ( tm != &fallback )
 	{
 		USBDEBUG ( "__Task_Start             : 99 : Free TM %p", tm );
 		TASKMSG_FREE ( tm );

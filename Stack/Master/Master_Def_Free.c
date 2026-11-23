@@ -20,7 +20,6 @@ __myTask_Def_Free ( struct USBBase * usbbase, struct intern * in )
 
 	// --
 
-	usbbase->usb_Master_MsgPort = NULL;
 	MSGPORT_FREE ( &in->Cmd_MsgPort );
 
 	// --

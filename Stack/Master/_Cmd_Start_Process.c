@@ -27,7 +27,8 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 	PTR					   user_data;
 	STR					   task_name;
 	STR					   org_name;
-	STR					   new_name;
+	char				   worker_name[32];
+	U32					   name_len;
 	U32					   stat;
 	S32					   wait;
 	PTR					   in;
@@ -37,6 +38,7 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 
 	// Get Pointers, before msg is freed
 	usbbase = tm->tm_Cmd.cm_usbbase;
+	IExec = usbbase->usb_IExec;
 	USBDEBUG ( "CmdStart_Entry           :  1 : Enter" );
 
 	// Reset return Status
@@ -61,16 +63,20 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 
 	self	 = TASK_FIND ();
 	org_name = self->tc_Node.ln_Name;
-	new_name = NULL;
-
 	if ( task_name )
 	{
-		new_name = MEM_PRINTF ( "USB ' %s ' driver", task_name );
-	}
+		name_len = sizeof ( "USB ' " ) - 1;
 
-	if ( new_name )
-	{
-		self->tc_Node.ln_Name = new_name;
+		MEM_COPY ( "USB ' ", worker_name, name_len );
+
+		while ( ( name_len < sizeof ( worker_name ) - sizeof ( " ' driver" ) ) && ( *task_name ) )
+		{
+			worker_name[name_len++] = *task_name++;
+		}
+
+		MEM_COPY ( " ' driver", &worker_name[name_len], sizeof ( " ' driver" ) );
+
+		self->tc_Node.ln_Name = worker_name;
 	}
 
 	// --
@@ -107,6 +113,8 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 			break;
 		}
 
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
 		if ( TASK_LOCK ( tn ) == LSTAT_Okay )
 		{
 			tn->tn_Owner = hn;
@@ -115,6 +123,9 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 			// Lock installed
 			user_hn = hn;
 		}
+
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
 		break;
 	}
 
@@ -161,8 +172,12 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 		tm->tm_Cmd.cm_Result = TASK_Return_Stack_Okay;
 		tm					 = NULL; // Can't use tm any more
 		// --
+		IExec->Disable ();
+
 		tn->tn_State   = TASK_State_Running;
-		tn->tn_TaskAdr = TASK_FIND ();
+		tn->tn_TaskAdr = self;
+
+		IExec->Enable ();
 
 		if ( ! wait )
 		{
@@ -191,8 +206,12 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 	}
 
 	// -- Start Shutdown
+	IExec->Disable ();
+
 	tn->tn_State   = TASK_State_Stopping;
 	tn->tn_TaskAdr = NULL;
+
+	IExec->Enable ();
 
 	// -- Call Free func if Any
 	if ( free )
@@ -225,34 +244,26 @@ bailout:
 	}
 
 	// --
-	// Restore task name
-	// nb: MEM_FREE breaks Disable
+	// Restore the original name before the stack buffer goes out of scope.
 
 	self->tc_Node.ln_Name = org_name;
 
-	if ( new_name )
-	{
-		MEM_FREEVEC ( new_name );
-	}
-
-	// --
-	// Exit - time
-	IExec = usbbase->usb_IExec;
-	IExec->Disable ();
-
-	// --
-
-	ASYNC_SUB ( as );
-
-	// --
-	// Remove lock
-
 	if ( user_hn )
 	{
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
 		user_hn->hn_Task = NULL;
 		tn->tn_Owner	 = NULL;
+
 		TASK_UNLOCK ( tn );
+
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 	}
+
+	// Exit - time
+	IExec->Disable ();
+
+	ASYNC_SUB ( as );
 
 	// --
 	// Task is Done

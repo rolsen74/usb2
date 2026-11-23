@@ -120,7 +120,6 @@ USB2_CREATEFUNC( PTR,							Task_Find,					struct USBBase *usbbase );
 USB2_CREATEFUNC( U32,							Task_Wait,					struct USBBase *usbbase, U32 mask );
 USB2_CREATEFUNC( void,							Task_Signal,				struct USBBase *usbbase, PTR task, U32 signals );
 USB2_CREATEFUNC( U32,							Task_SetSignal,				struct USBBase *usbbase, U32 a, U32 b );
-USB2_CREATEFUNC( void,							Task_Settle,				struct USBBase *usbbase, struct USB2_TaskNode *tn );
 USB2_CREATEFUNC( S32,							Task_SetPri,				struct USBBase *usbbase, S32 pri );
 
 // -- Memory

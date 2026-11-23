@@ -36,19 +36,18 @@ __Task_Stop_TN ( struct USBBase * usbbase, struct USB2_TaskNode * tn )
 
 	tm = TASKMSG_ALLOC ();
 
-	if ( ( tm ) && ( usbbase->usb_Master_MsgPort ) )
+	if ( tm )
 	{
 		tm->tm_Cmd.cm_Command = CMD_STOP_PROCESS;
 		tm->tm_Task			  = tn;
 
-		// The master owns the message and its task reference after PutMsg.
-		MSGPORT_PUTMSG ( usbbase->usb_Master_MsgPort, tm );
+		if ( USB2_Master_QueueCommand( usbbase, &tm->tm_Cmd ) )
+		{
+			return;
+		}
 
-		return;
-	}
+		tm->tm_Task = NULL;
 
-	if ( tm )
-	{
 		TASKMSG_FREE ( tm );
 	}
 

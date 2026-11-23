@@ -219,6 +219,8 @@ struct USBBase
 
 // -- Master
 
+S32 USB2_Master_QueueCommand( struct USBBase *usbbase, struct CmdHeader *command );
+
 #define MASTER_STARTUP()				 usbbase->_Master_Startup ( usbbase )
 #define MASTER_SHUTDOWN()				 usbbase->_Master_Shutdown ( usbbase )
 
@@ -311,7 +313,6 @@ struct USBBase
 #define TASK_WAIT( x )					 usbbase->_Task_Wait ( usbbase, x )
 #define TASK_SIGNAL( x, y )				 usbbase->_Task_Signal ( usbbase, x, y )
 #define TASK_SETSIGNAL( x, y )			 usbbase->_Task_SetSignal ( usbbase, x, y )
-#define TASK_SETTLE( x )				 usbbase->_Task_Settle ( usbbase, x )
 #define TASK_SETPRI( x )				 usbbase->_Task_SetPri ( usbbase, x )
 
 // -- Task

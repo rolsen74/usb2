@@ -16,6 +16,7 @@ SEC_CODE void __HCD_Controllers_Stop( struct USBBase *usbbase )
 {
 struct USB2_HCDNode *next;
 struct USB2_HCDNode *hn;
+struct USB2_TaskNode *tn;
 struct PCIResourceRange *range;
 struct PCIDevice *pcidev;
 
@@ -29,9 +30,25 @@ U32 locked;
 	while( hn )
 	{
 		next = Node_Next( hn );
-		// --
-		TASK_STOP_TN( hn->hn_Task );
-		// --
+
+		SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+		tn = hn->hn_Task;
+
+		if ( ( tn ) && ( TASK_LOCK( tn ) != LSTAT_Okay ) )
+		{
+			tn = NULL;
+		}
+
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+		if ( tn )
+		{
+			TASK_STOP_TN( tn );
+
+			TASK_UNLOCK( tn );
+		}
+
 		hn = next;
 	}
 

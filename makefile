@@ -268,6 +268,7 @@ SRCS		+= Stack/IORequest/Free.c
 SRCS		+= Stack/IORequest/Lock.c
 SRCS		+= Stack/IORequest/Unlock.c
 SRCS		+= Stack/IORequest/Valid.c
+SRCS		+= Stack/Master/QueueCommand.c
 SRCS		+= Stack/Master/Shutdown.c
 SRCS		+= Stack/Master/Startup.c
 SRCS		+= Stack/Master/Master.c

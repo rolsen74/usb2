@@ -21,10 +21,15 @@ __myProcess_Main ( struct USBBase * usbbase, struct intern * in )
 
 	while ( TRUE )
 	{
-		if ( ( in->Stopping ) && ( ! in->LauncherRunning ) && ( in->Shutdown_TM_List.uh_Nodes == 0 )
-			 && ( usbbase->usb_HCDASync.ua_Counter == 0 ) )
+		if ( in->Stopping )
 		{
-			break;
+			myHandle_Cmds ( usbbase, in );
+
+			if ( ( ! in->LauncherRunning ) && ( in->Shutdown_TM_List.uh_Nodes == 0 )
+				 && ( usbbase->usb_HCDASync.ua_Counter == 0 ) )
+			{
+				break;
+			}
 		}
 
 		/*
