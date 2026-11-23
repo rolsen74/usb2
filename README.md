@@ -2,9 +2,13 @@
 
 Experimental USB host stack for AmigaOS 4. Includes UHCI, OHCI, EHCI, and experimental xHCI support.
 
-## Build
+## Guides
 
-Use the AmigaOS 4 cross-compiler. Run `make` for the stack or `make -f makefile_archive` to build `usb2.lha` with `lha` installed.
+- Host controllers and built-in drivers. [EHCI](Doc/EHCI.md), [OHCI](Doc/OHCI.md), [UHCI](Doc/UHCI.md), [xHCI](Doc/XHCI.md), [hubs](Doc/HUB.md), [HID](Doc/HID.md), [mass storage](Doc/MSD.md)
+- USB classes. [Audio](Doc/Audio.md), [AHI](Doc/AHI.md), [video](Doc/Video.md), [printers](Doc/Printer.md), [PTP and MTP](Doc/PTP.md), [serial](Doc/PL2303.md), [smart cards](Doc/SmartCard.md)
+- Networking. [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md), [RT2870](Doc/RT2870.md), [Wi-Fi setup](Doc/USB2WirelessManager.md)
+- Bluetooth requires the companion stack. [Bluetooth2](https://github.com/rolsen74/bt2), [USB Bluetooth guide](Doc/USB2BluetoothTest.md)
+- Tools and controllers. [USB2Analyzer](Doc/USB2Analyzer.md), [Competition Pro](Doc/CompPro.md), [Xbox 360](Doc/Xbox360.md)
 
 ## Install
 
@@ -77,13 +81,9 @@ usb2/
     └── USB2WirelessManager
 ```
 
-## Guides
+## Build
 
-- Host controllers and built-in drivers. [EHCI](Doc/EHCI.md), [OHCI](Doc/OHCI.md), [UHCI](Doc/UHCI.md), [xHCI](Doc/XHCI.md), [hubs](Doc/HUB.md), [HID](Doc/HID.md), [mass storage](Doc/MSD.md)
-- USB classes. [Audio](Doc/Audio.md), [AHI](Doc/AHI.md), [video](Doc/Video.md), [printers](Doc/Printer.md), [PTP and MTP](Doc/PTP.md), [serial](Doc/PL2303.md), [smart cards](Doc/SmartCard.md)
-- Networking. [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md), [RT2870](Doc/RT2870.md), [Wi-Fi setup](Doc/USB2WirelessManager.md)
-- Bluetooth requires the companion stack. [Bluetooth2](https://github.com/rolsen74/bt2), [USB Bluetooth guide](Doc/USB2BluetoothTest.md)
-- Tools and controllers. [USB2Analyzer](Doc/USB2Analyzer.md), [Competition Pro](Doc/CompPro.md), [Xbox 360](Doc/Xbox360.md)
+Use the AmigaOS 4 cross-compiler. Run `make` for the stack or `make -f makefile_archive` to build `usb2.lha` with `lha` installed.
 
 ## License
 
