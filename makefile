@@ -285,6 +285,7 @@ SRCS		+= Stack/Misc/Debug_Panic.c
 SRCS		+= Stack/Misc/Debug_Error.c
 SRCS		+= Stack/Misc/Debug_Debug.c
 SRCS		+= Stack/Misc/Debug_Info.c
+SRCS		+= Stack/Misc/Debug_Print.c
 SRCS		+= Stack/Misc/Debug_Task.c
 SRCS		+= Stack/Misc/Desc_Next_Desc.c
 SRCS		+= Stack/Misc/Desc_Next_Interface.c

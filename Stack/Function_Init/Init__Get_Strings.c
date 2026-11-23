@@ -190,9 +190,12 @@ CacheInitString( struct USBBase *usbbase, struct InitStringReads *reads, U32 id,
 // --
 
 SEC_CODE static S32
-InitHasStrings( struct USBBase *usbbase, struct RealFunctionNode *fn )
+InitHasStrings( struct RealFunctionNode *fn )
 {
-	struct USB2_Descriptor *desc;
+	struct USB2_ConfigNode *cn;
+	struct USB2_InterfaceGroup *ig;
+	struct USB2_InterfaceHeader *ih;
+	struct USB2_InterfaceNode *in;
 
 	if ( ( fn->fkt_DeviceDescriptor->ManufacturerStrNr ) || ( fn->fkt_DeviceDescriptor->DeviceStrNr ) ||
 		( fn->fkt_DeviceDescriptor->SerialStrNr ) )
@@ -200,19 +203,26 @@ InitHasStrings( struct USBBase *usbbase, struct RealFunctionNode *fn )
 		return ( TRUE );
 	}
 
-	desc = fn->fkt_Config_Desc_Buf;
-
-	while ( desc )
+	for ( cn = fn->fkt_Configs.uh_Head; cn; cn = Node_Next( cn ) )
 	{
-		if ( ( ( desc->DescriptorType == DSCTYPE_Configuration ) &&
-			   ( ((struct USB2_Config_Desc *) desc)->ConfigurationStrNr ) ) ||
-			 ( ( desc->DescriptorType == DSCTYPE_Interface ) &&
-			   ( ((struct USB2_Interface_Desc *) desc)->InterfaceStrNr ) ) )
+		if ( cn->cfg_Descriptor->ConfigurationStrNr )
 		{
 			return ( TRUE );
 		}
 
-		desc = DESC_NEXT_DESC( desc );
+		for ( ig = cn->cfg_InterfaceGroups.uh_Head; ig; ig = Node_Next( ig ) )
+		{
+			for ( ih = ig->ig_Group.uh_Head; ih; ih = Node_Next( ih ) )
+			{
+				for ( in = ih->ih_AltSettings.uh_Head; in; in = Node_Next( in ) )
+				{
+					if ( in->in_Descriptor->InterfaceStrNr )
+					{
+						return ( TRUE );
+					}
+				}
+			}
+		}
 	}
 
 	return ( FALSE );
@@ -237,7 +247,7 @@ __Get_Strings( struct RealFunctionNode *fn, struct USB2_IORequest *ioreq, struct
 		return ( FALSE );
 	}
 
-	if ( ! InitHasStrings( usbbase, fn ) )
+	if ( ! InitHasStrings( fn ) )
 	{
 		return ( TRUE );
 	}

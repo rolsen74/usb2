@@ -134,7 +134,7 @@ USB2_CREATEFUNC( USB2_ID,						Misc_NewNotifyID,			struct USBBase *usbbase );
 USB2_CREATEFUNC( struct TagItem *,				Misc_NextTagItem,			struct USBBase *usbbase, struct TagItem **tag );
 USB2_CREATEFUNC( U32,							Misc_GetTagValue,			struct USBBase *usbbase, U32 tagid, U32 defvalue, struct TagItem *taglist );
 USB2_CREATEFUNC( PTR,							Misc_GetTagData,			struct USBBase *usbbase, U32 tagid, U32 defvalue, struct TagItem *taglist );
-USB2_CREATEFUNC( void,							Misc_Wait,					struct USBBase *usbbase, U32 secs );
+USB2_CREATEFUNC( S32,							Misc_Wait,					struct USBBase *usbbase, U32 micro );
 USB2_CREATEFUNC( void,							Misc_MicroDelay,			struct USBBase *usbbase, U32 ms );
 USB2_CREATEFUNC( S32,							Misc_AddIntServer,			struct USBBase *usbbase, U32 nr, struct Interrupt *i );
 USB2_CREATEFUNC( void,							Misc_RemIntServer,			struct USBBase *usbbase, U32 nr, struct Interrupt *i );

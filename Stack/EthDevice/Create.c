@@ -115,8 +115,8 @@ EthDevice_Alloc( struct USBBase *usbbase )
 	base->Library.lib_Node.ln_Name = USB2_ETH_DEVICE;
 	base->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
 	base->Library.lib_Version = 1;
-	base->Library.lib_Revision = USB2ETH_REGISTRATION_REVISION;
-	base->Library.lib_IdString = USB2_ETH_DEVICE " 1.8 (" DATE ")\r\n";
+	base->Library.lib_Revision = 9;
+	base->Library.lib_IdString = USB2_ETH_DEVICE " 1.9 (" DATE ")\r\n";
 	base->USB = usbbase;
 
 	IExec->InitSemaphore( & base->OpenLock );

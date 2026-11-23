@@ -49,11 +49,24 @@ SEC_CODE void __ASync_Free( struct USBBase *usbbase, struct USB2_ASync *ua )
 
 	SEMAPHORE_OBTAIN( & ua->ua_Semaphore );
 
+	// The owner must stop producers and drain the group before freeing it.
+	if ( ( ua->ua_Counter ) || ( ua->ua_Task ) )
+	{
+		SEMAPHORE_RELEASE( &ua->ua_Semaphore );
+
+		USBERROR( "ASync_Free : Group still in use" );
+
+		TASK_NAME_LEAVE();
+
+		return;
+	}
+
 	ua->ua_StructID = ID_USB2_FREED;
 	ua->ua_Parent = NULL;
 
-	TASK_FREESIGNAL( & ua->ua_Signal );
-	SEMAPHORE_FREE( & ua->ua_Semaphore );
+	SEMAPHORE_RELEASE( &ua->ua_Semaphore );
+
+	SEMAPHORE_FREE( &ua->ua_Semaphore );
 
 	TASK_NAME_LEAVE();
 }

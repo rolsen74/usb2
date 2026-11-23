@@ -32,7 +32,8 @@ PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 	IExec->ObtainSemaphore( & base->Lock );
 
 	if ( ( unit ) && ( unit->BeginPort ) &&
-		( ( base->Type != PORT_PRINTER ) || ( request->io_Command != NSCMD_DEVICEQUERY ) ) )
+		( ( request->io_Command != NSCMD_DEVICEQUERY ) ||
+		  ( ( base->Type != PORT_PRINTER ) && ( request->io_Message.mn_Length >= sizeof( *request ) ) ) ) )
 	{
 		request->io_Flags &= ~( IOF_QUICK |
 			( base->Type == PORT_SERIAL ? ( IOSERF_ABORT | IOSERF_QUEUED | IOSERF_ACTIVE ) :

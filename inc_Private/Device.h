@@ -131,8 +131,6 @@ struct USBBase
 
 // --
 #if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_INFO ) || defined( DO_DEBUG ) || defined( DO_TASKNAME )
-	struct UtilityIFace * _dbg_IUility;
-	struct ExecIFace *	  _dbg_IExec;
 	struct Task *		  _dbg_Task;
 #endif
 // --

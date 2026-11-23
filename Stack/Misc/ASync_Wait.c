@@ -52,6 +52,15 @@ __ASync_Wait ( struct USBBase * usbbase, struct USB2_ASync * ua )
 
 	SEMAPHORE_OBTAIN ( &ua->ua_Semaphore );
 
+	if ( ! ua->ua_Counter )
+	{
+		SEMAPHORE_RELEASE( &ua->ua_Semaphore );
+
+		TASK_NAME_LEAVE();
+
+		return ( TRUE );
+	}
+
 	allocated					  = TASK_ALLOCSIGNAL ( &ua->ua_Signal );
 	mask						  = allocated ? ua->ua_Signal.sig_Signal_Mask : SIGBREAKF_CTRL_D;
 	ua->ua_Signal.sig_Signal_Mask = mask;

@@ -101,7 +101,10 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 			goto bailout;
 		}
 
-		MISC_WAIT( ETH_OPEN_WAIT_INTERVAL_US );
+		if ( MISC_WAIT( ETH_OPEN_WAIT_INTERVAL_US ) )
+		{
+			goto bailout;
+		}
 
 		IExec->ObtainSemaphore( & base->OpenLock );
 	}

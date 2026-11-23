@@ -29,7 +29,6 @@ SEC_CODE void __ASync_Sub( struct USBBase *usbbase, struct USB2_ASync *as )
 //	USBDEBUG( "__ASync_Sub              : AS    %p", as );
 
 	TASK_NAME_ENTER( "__ASync_Sub" );
-	TASK_NAME_LEAVE();
 
 	if ( ! as )
 	{

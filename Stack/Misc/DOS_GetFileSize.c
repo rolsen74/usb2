@@ -12,24 +12,28 @@
 
 // --
 
-SEC_CODE S32 __Misc_GetFileSize( struct USBBase *usbbase, S32 handle )
+SEC_CODE S32
+__Misc_GetFileSize( struct USBBase *usbbase, S32 handle )
 {
-S32 size;
+	S64 size;
 
 	TASK_NAME_ENTER( "__DOS_GetFileSize" );
 
+	size = -1;
+
 	if ( handle )
 	{
-		size = (S32) usbbase->usb_IDOS->GetFileSize( handle );
-	}
-	else
-	{
-		size = -1;
+		size = usbbase->usb_IDOS->GetFileSize( handle );
+
+		if ( ( size < 0 ) || ( size > 0x7fffffff ) )
+		{
+			size = -1;
+		}
 	}
 
 	TASK_NAME_LEAVE();
 
-	return( size );
+	return ( (S32)size );
 }
 
 // --

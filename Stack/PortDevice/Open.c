@@ -50,6 +50,7 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 	struct USB2PortUnit *unit;
 	struct ExecIFace *IExec;
 
+	S32 wait_error;
 	U8 shared;
 	U32 poll;
 	U32 size;
@@ -113,9 +114,16 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 				return ( request->io_Error );
 			}
 
-			MISC_WAIT( 100000 );
+			wait_error = MISC_WAIT( 100000 );
 
-			IExec->ObtainSemaphore( & base->Lock );
+			IExec->ObtainSemaphore( &base->Lock );
+
+			if ( wait_error )
+			{
+				unit = NULL;
+
+				break;
+			}
 		}
 
 		if ( ( ! unit ) || ( unit->Number != number ) )

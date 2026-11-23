@@ -22,6 +22,9 @@ struct HID_ReportNode *rn;
 
 	// --
 
+	// A failed worker may still have a task-node reference held by Master.
+	ASYNC_WAIT( &hd->ASync_Drivers );
+
 	if ( hd->Register )
 	{
 		USBDEBUG( "HID_Free              : Unregister" );

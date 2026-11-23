@@ -13,40 +13,40 @@
 // --
 #ifdef DO_PANIC
 
-SEC_CODE void VARARGS68K __Debug_Panic( struct USBBase *usbbase UNUSED, STR filename, U32 linenr, STR fmt, ... )
+SEC_CODE void VARARGS68K
+__Debug_Panic( struct USBBase *usbbase, STR filename, U32 linenr, STR fmt, ... )
 {
-struct UtilityIFace *_IU;
-struct ExecIFace *_IE;
-STR printbuf;
-PTR base;
-STR buf;
-va_list ap;
+	struct ExecIFace *IExec;
 
-	_IE	 = (PTR)(*(struct ExecBase **)4)->MainInterface;
-	_IE->DebugPrintF( "USBPANIC!!\n" );
-	base = (PTR) _IE->OpenLibrary( "utility.library", 0 );
-	_IU  = (PTR) _IE->GetInterface( base, "main", 1, NULL );
+	STR buf;
+	va_list ap;
 
-	// ---
+	buf = NULL;
 
-	va_start( ap, fmt );
+	IExec = USB2_GetExecIFace();
 
-	buf = _IU->VASPrintf( fmt, va_getlinearva( ap, PTR ));
+	IExec->DebugPrintF( "USBPANIC!!\n" );
 
-	va_end( ap );
+	if ( ( usbbase ) && ( usbbase->usb_IUtility ) )
+	{
+		va_start( ap, fmt );
 
-	// ---
+		buf = usbbase->usb_IUtility->VASPrintf( fmt, va_getlinearva( ap, PTR ) );
 
-	printbuf = ( buf ) ? buf : (STR) fmt;
+		va_end( ap );
+	}
 
-	_IE->Disable();
-	_IE->DebugPrintF( "\n\n-- USBPANIC --\n" );
-	_IE->DebugPrintF( "%s:%04ld:%s\n", filename, linenr, printbuf );
-	_IE->DebugPrintF( "-- USBPANIC --\n\n\n" );
-	_IE->Wait( 0 );
+	IExec->Disable();
 
-	// ---
+	IExec->DebugPrintF( "\n\n-- USBPANIC --\n" );
+
+	IExec->DebugPrintF( "%s:%04ld:%s\n", filename, linenr, ( buf ) ? buf : fmt );
+
+	IExec->DebugPrintF( "-- USBPANIC --\n\n\n" );
+
+	IExec->Wait( 0 );
 }
 
 #endif
+
 // --

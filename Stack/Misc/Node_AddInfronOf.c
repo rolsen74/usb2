@@ -54,6 +54,7 @@ struct USB2_Node *t;
 		n->un_Next = c;
 
 		c->un_Prev = n;
+		header->uh_Nodes++;
 	}
 
 	#ifdef DO_DEBUG

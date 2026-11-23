@@ -161,7 +161,7 @@ PortDevice_Create ( struct USBBase * usbbase )
 	// --
 	// Serial
 
-	serial = Alloc ( usbbase, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.2 (" DATE ")\r\n", 2, PORT_SERIAL );
+	serial = Alloc ( usbbase, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.3 (" DATE ")\r\n", 3, PORT_SERIAL );
 
 	if ( ! serial )
 	{
@@ -173,7 +173,7 @@ PortDevice_Create ( struct USBBase * usbbase )
 	// --
 	// Parallel
 
-	parallel = Alloc ( usbbase, USB2_PARALLEL_DEVICE, USB2_PARALLEL_DEVICE " 1.2 (" DATE ")\r\n", 2, PORT_PARALLEL );
+	parallel = Alloc ( usbbase, USB2_PARALLEL_DEVICE, USB2_PARALLEL_DEVICE " 1.3 (" DATE ")\r\n", 3, PORT_PARALLEL );
 
 	if ( ! parallel )
 	{
@@ -184,7 +184,7 @@ PortDevice_Create ( struct USBBase * usbbase )
 		return ( FALSE );
 	}
 
-	printer = Alloc ( usbbase, USB2_PRINTER_DEVICE, USB2_PRINTER_DEVICE " 1.5 (" DATE ")\r\n", 5, PORT_PRINTER );
+	printer = Alloc ( usbbase, USB2_PRINTER_DEVICE, USB2_PRINTER_DEVICE " 1.6 (" DATE ")\r\n", 6, PORT_PRINTER );
 
 	if ( ! printer )
 	{
