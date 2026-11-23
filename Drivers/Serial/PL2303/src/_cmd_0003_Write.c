@@ -44,7 +44,6 @@ U32 length;
 		return;
 	}
 
-	ioreq->IOSer.io_Flags |= IOSERF_QUEUED;
 	AddTail( & unit->WriteList, (PTR) ioreq );
 
 	Serial_Write_Start( ctx, unit );

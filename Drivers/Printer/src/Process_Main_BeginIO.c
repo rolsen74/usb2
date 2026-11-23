@@ -59,7 +59,20 @@ __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 		{
 			case CMD_WRITE:
 			{
-				USBERROR( "BeginIO : CMD_WRITE" );
+				if ( unit->unit_NewJob )
+				{
+					unit->unit_JobError = 0;
+					unit->unit_NewJob = FALSE;
+				}
+
+				if ( unit->unit_JobError )
+				{
+					ioreq->io_Error = unit->unit_JobError;
+
+					ReplyMsg( (PTR)ioreq );
+
+					break;
+				}
 
 				if ( unit->unit_Buffer_Size )
 				{

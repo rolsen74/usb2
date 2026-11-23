@@ -86,6 +86,28 @@ SEC_RODATA static const PTR Interfaces[] = //
 
 // --
 
+SEC_RODATA static const PTR SerialVectors[] =
+{
+	(PTR)Obtain,
+	(PTR)Release,
+	NULL,
+	NULL,
+	(PTR)PortDevice_SetParams,
+	(PTR)-1
+};
+
+SEC_RODATA static const struct TagItem SerialTags[] =
+{
+	{ MIT_Name, (Tag)"serial" },
+	{ MIT_VectorTable, (Tag)SerialVectors },
+	{ MIT_Version, 1 },
+	{ TAG_END, 0 }
+};
+
+SEC_RODATA static const PTR SerialInterfaces[] = { (PTR)ManagerTags, (PTR)MainTags, (PTR)SerialTags, NULL };
+
+// --
+
 SEC_RODATA static const PTR PrinterVectors[] =
 {
 	(PTR) Obtain,
@@ -116,12 +138,23 @@ Alloc ( struct USBBase * usbbase, STR name, STR id, U8 revision, enum USB2PortTy
 {
 	struct USB2PortDevice * base;
 	struct ExecIFace * IExec;
+	const PTR *interfaces;
 
 	IExec = usbbase->usb_IExec;
+	interfaces = Interfaces;
+
+	if ( type == PORT_SERIAL )
+	{
+		interfaces = SerialInterfaces;
+	}
+	else if ( type == PORT_PRINTER )
+	{
+		interfaces = PrinterInterfaces;
+	}
 
 	base = (PTR)IExec->CreateLibraryTags (				//
 		CLT_NoLegacyIFace, TRUE,						//
-		CLT_Interfaces, type == PORT_PRINTER ? PrinterInterfaces : Interfaces, //
+		CLT_Interfaces, interfaces, //
 		CLT_DataSize, sizeof ( struct USB2PortDevice ), //
 		TAG_END											//
 	);
@@ -161,7 +194,7 @@ PortDevice_Create ( struct USBBase * usbbase )
 	// --
 	// Serial
 
-	serial = Alloc ( usbbase, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.3 (" DATE ")\r\n", 3, PORT_SERIAL );
+	serial = Alloc ( usbbase, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.4 (" DATE ")\r\n", 4, PORT_SERIAL );
 
 	if ( ! serial )
 	{
@@ -173,7 +206,7 @@ PortDevice_Create ( struct USBBase * usbbase )
 	// --
 	// Parallel
 
-	parallel = Alloc ( usbbase, USB2_PARALLEL_DEVICE, USB2_PARALLEL_DEVICE " 1.3 (" DATE ")\r\n", 3, PORT_PARALLEL );
+	parallel = Alloc ( usbbase, USB2_PARALLEL_DEVICE, USB2_PARALLEL_DEVICE " 1.4 (" DATE ")\r\n", 4, PORT_PARALLEL );
 
 	if ( ! parallel )
 	{
@@ -184,7 +217,7 @@ PortDevice_Create ( struct USBBase * usbbase )
 		return ( FALSE );
 	}
 
-	printer = Alloc ( usbbase, USB2_PRINTER_DEVICE, USB2_PRINTER_DEVICE " 1.6 (" DATE ")\r\n", 6, PORT_PRINTER );
+	printer = Alloc ( usbbase, USB2_PRINTER_DEVICE, USB2_PRINTER_DEVICE " 1.7 (" DATE ")\r\n", 7, PORT_PRINTER );
 
 	if ( ! printer )
 	{

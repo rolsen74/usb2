@@ -29,6 +29,19 @@ PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 		request->io_Actual = 0;
 	}
 
+	if ( request->io_Command != NSCMD_DEVICEQUERY )
+	{
+		if ( ( request->io_Message.mn_Length < sizeof( *request ) ) ||
+			( ( base->Type == PORT_SERIAL ) && ( request->io_Message.mn_Length < sizeof( struct IOExtSer ) ) ) ||
+			( ( ( base->Type == PORT_PARALLEL ) ||
+			    ( ( base->Type == PORT_PRINTER ) && ( request->io_Command == PDCMD_QUERY ) ) ) &&
+			  ( request->io_Message.mn_Length < sizeof( struct IOExtPar ) ) ) )
+		{
+			request->io_Error = IOERR_BADLENGTH;
+			goto reply;
+		}
+	}
+
 	IExec->ObtainSemaphore( & base->Lock );
 
 	if ( ( unit ) && ( unit->BeginPort ) &&
@@ -66,6 +79,8 @@ PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 	{
 		request->io_Error = IOERR_UNITBUSY;
 	}
+
+reply:
 
 	if ( ! ( request->io_Flags & IOF_QUICK ) )
 	{

@@ -22,7 +22,6 @@ SEC_CODE void Serial_Cmd_Read( struct SerialContext *ctx, struct SerialUnit *uni
 		return;
 	}
 
-	ioreq->IOSer.io_Flags |= IOSERF_QUEUED;
 	AddTail( & unit->ReadList, (PTR) ioreq );
 
 	Serial_Read_Drain( ctx, unit );

@@ -64,6 +64,11 @@ S32 line_control;
 		unit->Line[index] = line[index];
 	}
 
+	if ( unit->SerialInterface )
+	{
+		unit->SerialInterface->SetParams( unit->PortUnit, ioreq );
+	}
+
 	// DTR and RTS asserted while the port is configured.
 	if ( ( line_control ) && ( ! Serial_Control( ctx, unit, REQTYPE_Write | REQTYPE_Class | REQTYPE_Interface,
 		0x22, 3, unit->StartMsg->InterfaceDescriptor->InterfaceNumber, NULL, 0 ) ) )

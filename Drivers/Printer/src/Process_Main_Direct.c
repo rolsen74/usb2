@@ -67,6 +67,13 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 		unit->unit_Bulk_Tx_Active[ionr] = NULL;
 		unit->unit_USB_IOReq_ActiveCount--;
 
+		if ( ! pario )
+		{
+			Printer_FormFeedDone( unit, usbio );
+
+			continue;
+		}
+
 		// --
 
 		switch( usbio->io_Error )

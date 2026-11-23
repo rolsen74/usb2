@@ -13,8 +13,16 @@
 
 SEC_CODE void Serial_Reply( struct SerialContext *ctx UNUSED, struct IOExtSer *ioreq )
 {
-	ioreq->IOSer.io_Flags &= ~( IOSERF_QUEUED | IOSERF_ACTIVE );
-	ReplyMsg( (PTR) ioreq );
+	Disable();
+
+	if ( ioreq->IOSer.io_Flags & IOSERF_ABORT )
+	{
+		ioreq->IOSer.io_Error = IOERR_ABORTED;
+	}
+
+	ReplyMsg( (PTR)ioreq );
+
+	Enable();
 }
 
 // --

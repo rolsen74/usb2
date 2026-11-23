@@ -47,6 +47,20 @@ struct USB2PortIFace
 	void APICALL (*Unregister)( struct USB2PortIFace *Self, struct USB2PortUnit *unit );
 };
 
+/* Serial backends can use "serial" v1 to publish effective line settings. */
+struct IOExtSer;
+
+struct USB2SerialIFace
+{
+	struct InterfaceData Data;
+	ULONG APICALL (*Obtain)( struct USB2SerialIFace *Self );
+	ULONG APICALL (*Release)( struct USB2SerialIFace *Self );
+	void APICALL (*Expunge)( struct USB2SerialIFace *Self );
+	struct Interface *APICALL (*Clone)( struct USB2SerialIFace *Self );
+	void APICALL (*SetParams)( struct USB2SerialIFace *Self, struct USB2PortUnit *unit,
+		const struct IOExtSer *params );
+};
+
 /*
  * Printer drivers obtain "main" v1 on USB2_PRINTER_DEVICE. The usual
  * abort-port signal also wakes the worker on last close. Flush the print

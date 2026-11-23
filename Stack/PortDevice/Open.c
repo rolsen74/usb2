@@ -31,6 +31,7 @@ SerialDefaults( struct IOExtSer *request )
 	request->io_CtlChar = SER_DEFAULT_CTLCHAR;
 	request->io_RBufLen = 4096;
 	request->io_ExtFlags = 0;
+	request->io_SerFlags &= ~( SERF_PARTY_ON | SERF_PARTY_ODD );
 	request->io_Baud = 9600;
 	request->io_BrkTime = 250000;
 	request->io_ReadLen = 8;
@@ -38,6 +39,40 @@ SerialDefaults( struct IOExtSer *request )
 	request->io_StopBits = 1;
 	request->io_TermArray.TermArray0 = 0;
 	request->io_TermArray.TermArray1 = 0;
+}
+
+// --
+
+SEC_CODE static void
+CopyLineParams( struct IOExtSer *dst, const struct IOExtSer *src )
+{
+	dst->io_Baud = src->io_Baud;
+	dst->io_ReadLen = src->io_ReadLen;
+	dst->io_WriteLen = src->io_WriteLen;
+	dst->io_StopBits = src->io_StopBits;
+	dst->io_SerFlags = ( dst->io_SerFlags & ~( SERF_PARTY_ON | SERF_PARTY_ODD ) ) |
+		( src->io_SerFlags & ( SERF_PARTY_ON | SERF_PARTY_ODD ) );
+	dst->io_ExtFlags = src->io_ExtFlags & ( SEXTF_MSPON | SEXTF_MARK );
+}
+
+// --
+
+SEC_CODE void
+PortDevice_SetParams( struct USB2SerialIFace *Self, struct USB2PortUnit *unit, const struct IOExtSer *params )
+{
+	struct USB2PortDevice *base;
+	struct ExecIFace *IExec;
+
+	base = (PTR)Self->Data.LibBase;
+	IExec = base->IExec;
+
+	IExec->ObtainSemaphore( &base->Lock );
+
+	CopyLineParams( &unit->SerialParams, params );
+
+	unit->SerialParamsValid = TRUE;
+
+	IExec->ReleaseSemaphore( &base->Lock );
 }
 
 // --
@@ -151,7 +186,12 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 
 		if ( base->Type == PORT_SERIAL )
 		{
-			SerialDefaults( (PTR) request );
+			SerialDefaults( (PTR)request );
+
+			if ( unit->SerialParamsValid )
+			{
+				CopyLineParams( (PTR)request, &unit->SerialParams );
+			}
 		}
 	}
 

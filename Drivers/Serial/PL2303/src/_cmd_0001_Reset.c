@@ -15,6 +15,8 @@ SEC_CODE void Serial_Cmd_Reset( struct SerialContext *ctx, struct SerialUnit *un
 {
 	Serial_Flush( ctx, unit );
 
+	Serial_BreakStop( ctx, unit, IOERR_ABORTED );
+
 	unit->RxHead = 0;
 	unit->RxTail = 0;
 	unit->Stopped = FALSE;
@@ -22,8 +24,10 @@ SEC_CODE void Serial_Cmd_Reset( struct SerialContext *ctx, struct SerialUnit *un
 	if ( unit->WriteActive )
 	{
 		unit->WriteActive->IOSer.io_Flags |= IOSERF_ABORT;
-		AbortIO( (PTR) unit->BulkOut->IORequests[0] );
+		Serial_Abort( ctx, unit );
 	}
+
+	Serial_Read_Start( ctx, unit );
 
 	Serial_Reply( ctx, ioreq );
 }

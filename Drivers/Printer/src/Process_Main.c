@@ -30,7 +30,8 @@ Process_Main( struct PrinterUnit *unit )
 
 	reg = unit->unit_USB_Register;
 	wait = SIGBREAKF_CTRL_C | reg->Stack_MsgPortBit | unit->unit_PRT_Begin_MsgPortBit |
-		unit->unit_PRT_Abort_MsgPortBit | unit->unit_Bulk_Tx_Resource->MsgPortBit;
+		unit->unit_PRT_Abort_MsgPortBit | unit->unit_Bulk_Tx_Resource->MsgPortBit |
+		( 1UL << unit->unit_CloseTimerPort->mp_SigBit );
 
 	while( ! unit->unit_Detached )
 	{
@@ -52,6 +53,17 @@ Process_Main( struct PrinterUnit *unit )
 		if ( ( unit->unit_Detached ) || ( mask & SIGBREAKF_CTRL_C ) )
 		{
 			break;
+		}
+
+		if ( ( mask & ( 1UL << unit->unit_CloseTimerPort->mp_SigBit ) ) &&
+			( GetMsg( unit->unit_CloseTimerPort ) ) )
+		{
+			Close_Timeout( unit );
+
+			if ( unit->unit_Detached )
+			{
+				break;
+			}
 		}
 
 		if ( mask & unit->unit_PRT_Abort_MsgPortBit )

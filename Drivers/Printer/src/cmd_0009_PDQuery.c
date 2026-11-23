@@ -30,6 +30,17 @@ Cmd_PDQuery( struct PrinterUnit *unit, struct IOExtPar *pario )
 	**
 	*/
 
+	if ( unit->unit_JobError )
+	{
+		pario->IOPar.io_Actual = 0;
+		pario->IOPar.io_Error = unit->unit_JobError;
+		pario->io_Status = 0;
+
+		ReplyMsg( (PTR)pario );
+
+		return;
+	}
+
 	epr = unit->unit_USB_Register->Res_Control;
 	sd = epr->SetupData;
 
@@ -60,6 +71,15 @@ Cmd_PDQuery( struct PrinterUnit *unit, struct IOExtPar *pario )
 		case USB2Err_NoError:
 		{
 			USBERROR( "Cmd_PDQuery : USB2Err_NoError" );
+
+			if ( usbio->io_Actual != 1 )
+			{
+				pario->IOPar.io_Actual = 0;
+				pario->IOPar.io_Error = ParErr_LineErr;
+				pario->io_Status = 0;
+
+				break;
+			}
 
 			pario->IOPar.io_Actual = 1;		// Parallel stat size
 			pario->IOPar.io_Error = 0;
@@ -112,7 +132,18 @@ Cmd_PDQuery( struct PrinterUnit *unit, struct IOExtPar *pario )
 
 	USBERROR( "Cmd_PDQuery : Reply IOReq %p", pario );
 
+	Disable();
+
+	if ( pario->IOPar.io_Flags & IOPARF_ABORT )
+	{
+		pario->IOPar.io_Actual = 0;
+		pario->IOPar.io_Error = IOERR_ABORTED;
+		pario->io_Status = 0;
+	}
+
 	ReplyMsg( (PTR) pario );
+
+	Enable();
 }
 
 // --

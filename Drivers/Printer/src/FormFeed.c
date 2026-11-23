@@ -12,37 +12,48 @@
 
 // --
 
-void
+S32
 Send_FormFeed( struct PrinterUnit *unit )
 {
 	struct USB2_IORequest *usbio;
 
-	U8 data[1];
-
-	USBERROR( "Send_FormFeed" );
-
-	data[0] = '\f';
-
-	usbio = (PTR) RemHead( unit->unit_USB_IOReq_FreeList );
+	usbio = (PTR)RemHead( unit->unit_USB_IOReq_FreeList );
 
 	if ( ! usbio )
 	{
-		return;
+		return ( FALSE );
 	}
 
-	usbio->io_Command	= CMD_WRITE;
-	usbio->io_UserData	= NULL;
-	usbio->io_Length	= 1;
-	usbio->io_Data		= data;
+	unit->unit_FormFeed = '\f';
+	unit->unit_LastByteSend = '\f';
+	unit->unit_Bulk_Tx_Active[usbio->io_UserValue] = usbio;
+	unit->unit_USB_IOReq_ActiveCount++;
 
-	DoIO( (PTR) usbio );
+	usbio->io_Command = CMD_WRITE;
+	usbio->io_UserData = NULL;
+	usbio->io_Length = 1;
+	usbio->io_Data = &unit->unit_FormFeed;
 
+	SendIO( (PTR)usbio );
+
+	return ( TRUE );
+}
+
+// --
+
+void
+Printer_FormFeedDone( struct PrinterUnit *unit, struct USB2_IORequest *usbio )
+{
 	if ( usbio->io_Error == USB2Err_Device_Detached )
 	{
 		unit->unit_Detached = TRUE;
 	}
+	else if ( ( ! unit->unit_JobError ) && ( ( usbio->io_Error ) || ( usbio->io_Actual != 1 ) ) )
+	{
+		unit->unit_JobError = ParErr_LineErr;
+	}
 
-	AddTail( unit->unit_USB_IOReq_FreeList, (PTR) usbio );
+	AddTail( unit->unit_USB_IOReq_FreeList, (PTR)usbio );
 }
 
 // --

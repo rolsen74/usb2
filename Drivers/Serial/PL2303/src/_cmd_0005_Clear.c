@@ -17,6 +17,8 @@ SEC_CODE void Serial_Cmd_Clear( struct SerialContext *ctx, struct SerialUnit *un
 	unit->RxTail = 0;
 	unit->Overrun = FALSE;
 
+	Serial_Read_Start( ctx, unit );
+
 	Serial_Reply( ctx, ioreq );
 }
 

@@ -25,12 +25,16 @@ PortDevice_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 
 	IExec->ObtainSemaphore( & base->Lock );
 
+	IExec->Disable();
+
 	if ( ( unit ) && ( unit->AbortPort ) && ( request->io_Message.mn_Node.ln_Type == NT_MESSAGE ) )
 	{
 		request->io_Flags |= ( base->Type == PORT_SERIAL ) ? IOSERF_ABORT : IOPARF_ABORT;
 
 		IExec->Signal( unit->AbortPort->mp_SigTask, 1UL << unit->AbortPort->mp_SigBit );
 	}
+
+	IExec->Enable();
 
 	IExec->ReleaseSemaphore( & base->Lock );
 }

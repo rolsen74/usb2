@@ -21,6 +21,7 @@ struct PrtBuffer
 {
 	struct Node		pb_Node;
 	U32				pb_Pos;
+	U32				pb_Sent;
 	U32				pb_Free;
 	U8				pb_Data[1];
 };

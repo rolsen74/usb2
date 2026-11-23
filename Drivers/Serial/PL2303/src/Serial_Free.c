@@ -25,6 +25,13 @@ struct IOExtSer *ioreq;
 		unit->PortInterface->Unregister( unit->PortUnit );
 	}
 
+	Serial_BreakFree( ctx, unit );
+
+	if ( unit->SerialInterface )
+	{
+		DropInterface( (PTR)unit->SerialInterface );
+	}
+
 	if ( unit->PortInterface )
 	{
 		DropInterface( (PTR) unit->PortInterface );

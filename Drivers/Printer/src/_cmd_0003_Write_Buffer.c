@@ -15,59 +15,26 @@
 void
 Cmd_Write_Buffer( struct PrinterUnit *unit, struct IOStdReq *pario )
 {
-	S32 stat;
-	S32 len;
-	STR str;
+	U32 len;
+	U32 accepted;
 
-	USBERROR( "Printer : Cmd_Write_Buffer : pario %p : length %ld", pario, pario->io_Length );
-
-	/**/ if ( ! pario->io_Data )
+	if ( ( ! pario->io_Data ) || ( ! pario->io_Length ) )
 	{
-		len = 0;
-		stat = FALSE;
-	}
-	else if ( pario->io_Length == -1U )
-	{
-		str = pario->io_Data;
+		pario->io_Error = ParErr_InvParam;
 
-		len = strlen( str );
+		ReplyMsg( (PTR)pario );
 
-		stat = Buffer_Write( unit, (PTR) str, len );
-
-		USBERROR( "Printer : Cmd_Write_Buffer : String : Stat %ld", stat );
-	}
-	else if ( pario->io_Length > 0 )
-	{
-		len = pario->io_Length;
-
-		stat = Buffer_Write( unit, pario->io_Data, len );
-
-		USBERROR( "Printer : Cmd_Write_Buffer : Data : Stat %ld", stat );
-	}
-	else
-	{
-		len = 0;
-		stat = FALSE;
-
-		USBERROR( "Printer : Cmd_Write_Buffer : Invalid IOReq Length %ld", pario->io_Length );
+		return;
 	}
 
-	if ( stat )
-	{
-		USBERROR( "Printer : Cmd_Write_Buffer : Okay : Len %ld", len );
+	len = ( pario->io_Length == -1U ) ? strlen( pario->io_Data ) : pario->io_Length;
 
-		pario->io_Actual = len;
-		pario->io_Error = 0;
-	}
-	else
-	{
-		USBERROR( "Printer : Cmd_Write_Buffer : Error : Len %ld", len );
+	accepted = Buffer_Write( unit, pario->io_Data, len );
 
-		pario->io_Actual = 0;
-		pario->io_Error = ParErr_LineErr;
-	}
+	pario->io_Actual = accepted;
+	pario->io_Error = ( accepted == len ) ? 0 : ParErr_LineErr;
 
-	ReplyMsg( (PTR) pario );
+	ReplyMsg( (PTR)pario );
 }
 
 // --

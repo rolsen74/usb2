@@ -33,6 +33,11 @@ U32 mask;
 		waitmask |= unit->Interrupt->MsgPortBit;
 	}
 
+	if ( unit->BreakTimerOpen )
+	{
+		waitmask |= 1UL << unit->BreakPort->mp_SigBit;
+	}
+
 	while( ! unit->Detached )
 	{
 		mask = Wait( waitmask );
@@ -78,6 +83,11 @@ U32 mask;
 		if ( ( unit->Interrupt ) && ( mask & unit->Interrupt->MsgPortBit ) )
 		{
 			Serial_Interrupt_Done( ctx, unit );
+		}
+
+		if ( ( unit->BreakTimerOpen ) && ( mask & ( 1UL << unit->BreakPort->mp_SigBit ) ) )
+		{
+			Serial_BreakDone( ctx, unit );
 		}
 
 		if ( mask & SIGBREAKF_CTRL_C )

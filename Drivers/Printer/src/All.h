@@ -20,6 +20,7 @@
 
 #include <devices/newstyle.h>
 #include <devices/parallel.h>
+#include <devices/timer.h>
 #include <interfaces/usb2port.h>
 #include <dos/dostags.h>
 
@@ -41,6 +42,7 @@
 
 
 #define NR_of_TXs	3
+#define PRINTER_TX_TIMEOUT_US 15000000
 
 struct PrinterUnit
 {
@@ -98,6 +100,14 @@ struct PrinterUnit
 	U8								unit_PrinterStatus;
 	U8								unit_LastByteSend;
 	U8								unit_JobHasData;
+	S8 unit_JobError;
+	U8 unit_NewJob;
+	U8 unit_FormFeed;
+	U8 unit_CloseTimerOpen;
+	U8 unit_CloseTimerPending;
+	U8 unit_CloseAborting;
+	struct MsgPort *unit_CloseTimerPort;
+	struct TimeRequest *unit_CloseTimer;
 };
 
 // --
@@ -117,7 +127,7 @@ void	Cmd_Write_Direct(				struct PrinterUnit *unit, struct IOStdReq *pario );
 S32		Resources_Init(					void );
 void	Resources_Free(					void );
 void	Buffer_Flush(					struct PrinterUnit *unit );
-S32		Buffer_Write(					struct PrinterUnit *unit, U8 *data, U32 size );
+U32		Buffer_Write(					struct PrinterUnit *unit, U8 *data, U32 size );
 void	Buffer_Schedule(				struct PrinterUnit *unit );
 void	Direct_Schedule(				struct PrinterUnit *unit );
 S32		Process_Setup_Device( struct PrinterUnit *unit, struct USB2_DriverMessage *msg );
@@ -127,7 +137,12 @@ void	Dot4_Shutdown(					struct PrinterUnit *unit );
 U32		Printer_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg );
 void	Process_Main( struct PrinterUnit *unit );
 void	Printer_Abort( struct PrinterUnit *unit );
-void	Send_FormFeed( struct PrinterUnit *unit );
+S32 Send_FormFeed( struct PrinterUnit *unit );
+void Printer_FormFeedDone( struct PrinterUnit *unit, struct USB2_IORequest *usbio );
+S32 Printer_CloseTimerInit( struct PrinterUnit *unit );
+void Printer_CloseTimerFree( struct PrinterUnit *unit );
+void Printer_CloseTimerArm( struct PrinterUnit *unit, U32 seconds );
+void Printer_CloseTimerStop( struct PrinterUnit *unit );
 
 // --
 

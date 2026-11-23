@@ -96,6 +96,7 @@ SRCS		+= src/Resources_Free.c
 SRCS		+= src/Process_Setup_Device.c
 SRCS		+= src/Process_Main.c
 SRCS		+= src/Printer_Abort.c
+SRCS		+= src/CloseTimer.c
 SRCS		+= src/FormFeed.c
 SRCS		+= src/Buffer_Schedule.c
 SRCS		+= src/Direct_Schedule.c

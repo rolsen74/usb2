@@ -16,9 +16,24 @@ SEC_CODE void Serial_Abort( struct SerialContext *ctx, struct SerialUnit *unit )
 struct IOExtSer *ioreq;
 struct IOExtSer *next;
 
+	if ( ( unit->BreakRequest ) && ( unit->BreakRequest->IOSer.io_Flags & IOSERF_ABORT ) )
+	{
+		Serial_BreakStop( ctx, unit, IOERR_ABORTED );
+	}
+
 	if ( ( unit->WriteActive ) && ( unit->WriteActive->IOSer.io_Flags & IOSERF_ABORT ) )
 	{
-		AbortIO( (PTR) unit->BulkOut->IORequests[0] );
+		if ( unit->WritePending )
+		{
+			AbortIO( (PTR)unit->BulkOut->IORequests[0] );
+		}
+		else
+		{
+			ioreq = unit->WriteActive;
+			unit->WriteActive = NULL;
+
+			Serial_Reply( ctx, ioreq );
+		}
 	}
 
 	ioreq = (PTR) GetHead( & unit->ReadList );
@@ -52,6 +67,8 @@ struct IOExtSer *next;
 
 		ioreq = next;
 	}
+
+	Serial_Write_Start( ctx, unit );
 }
 
 // --

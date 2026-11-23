@@ -29,7 +29,7 @@ Printer_Abort( struct PrinterUnit *unit )
 		{
 			request = usbio->io_UserData;
 
-			if ( request->io_Flags & IOPARF_ABORT )
+			if ( ( request ) && ( request->io_Flags & IOPARF_ABORT ) )
 			{
 				AbortIO( (PTR) usbio );
 			}

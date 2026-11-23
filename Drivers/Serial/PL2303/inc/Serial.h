@@ -14,12 +14,13 @@
 
 #define DEVICES_SERIAL_H_OBSOLETE
 #include <devices/serial.h>
+#include <devices/timer.h>
 #include <interfaces/usb2port.h>
 
 #define SERIAL_DRIVER_NAME	   "ser_PL2303.Driver"
 #define SERIAL_DRIVER_VERSION  1
-#define SERIAL_DRIVER_REVISION 4
-#define SERIAL_DRIVER_ID	   SERIAL_DRIVER_NAME " 1.4 (23.11.2026)\r\n"
+#define SERIAL_DRIVER_REVISION 5
+#define SERIAL_DRIVER_ID	   SERIAL_DRIVER_NAME " 1.5 (23.11.2026)\r\n"
 
 #define SERIAL_RX_SIZE		   4096
 #define SERIAL_UART_INDEX	   8
@@ -59,6 +60,7 @@ struct SerialUnit
 {
 	struct IORequest	   PortRequest;
 	struct USB2PortIFace * PortInterface;
+	struct USB2SerialIFace *SerialInterface;
 	struct USB2PortUnit *  PortUnit;
 
 	struct USB2_Interface * DataInterface;
@@ -80,6 +82,12 @@ struct SerialUnit
 	struct List					ReadList;
 	struct List					WriteList;
 	struct IOExtSer *			WriteActive;
+	struct IOExtSer *BreakRequest;
+	struct MsgPort *BreakPort;
+	struct TimeRequest *BreakTimer;
+	U8 BreakTimerOpen;
+	U8 BreakTimerPending;
+	U8 BreakActive;
 	U8							RxBuffer[SERIAL_RX_SIZE];
 	U8							Line[7];
 	U8							UartState;
@@ -128,6 +136,11 @@ SEC_CODE void Serial_Cmd_Stop ( struct SerialContext * ctx, struct SerialUnit * 
 SEC_CODE void Serial_Cmd_Start ( struct SerialContext * ctx, struct SerialUnit * unit, struct IOExtSer * ioreq );
 SEC_CODE void Serial_Cmd_SetParams ( struct SerialContext * ctx, struct SerialUnit * unit, struct IOExtSer * ioreq );
 SEC_CODE void Serial_Cmd_Query ( struct SerialContext * ctx, struct SerialUnit * unit, struct IOExtSer * ioreq );
+SEC_CODE void Serial_BreakInit( struct SerialUnit *unit );
+SEC_CODE void Serial_BreakFree( struct SerialContext *ctx, struct SerialUnit *unit );
+SEC_CODE void Serial_BreakDone( struct SerialContext *ctx, struct SerialUnit *unit );
+SEC_CODE void Serial_BreakStop( struct SerialContext *ctx, struct SerialUnit *unit, S32 error );
+SEC_CODE void Serial_BreakStart( struct SerialContext *ctx, struct SerialUnit *unit, struct IOExtSer *ioreq );
 SEC_CODE void Serial_Cmd_Break ( struct SerialContext * ctx, struct SerialUnit * unit, struct IOExtSer * ioreq );
 SEC_CODE void Serial_Cmd_DeviceQuery ( struct SerialContext * ctx, struct SerialUnit * unit, struct IOStdReq * ioreq );
 

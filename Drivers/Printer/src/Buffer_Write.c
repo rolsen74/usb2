@@ -12,15 +12,15 @@
 
 // --
 
-S32
+U32
 Buffer_Write( struct PrinterUnit *unit, U8 *data, U32 size )
 {
 	struct PrtBuffer *pb;
 
-	S32 retval;
+	U32 accepted;
 	U32 len;
 
-	retval = FALSE;
+	accepted = 0;
 
 	while( TRUE )
 	{
@@ -41,6 +41,7 @@ Buffer_Write( struct PrinterUnit *unit, U8 *data, U32 size )
 			{
 				unit->unit_Buffer_FreeCount--;
 				pb->pb_Pos = 0;
+				pb->pb_Sent = 0;
 				pb->pb_Free = unit->unit_Buffer_Size;
 				break;
 			}
@@ -57,6 +58,7 @@ Buffer_Write( struct PrinterUnit *unit, U8 *data, U32 size )
 			}
 
 			pb->pb_Pos	= 0;
+			pb->pb_Sent = 0;
 			pb->pb_Free	= unit->unit_Buffer_Size;
 			break;
 		}
@@ -109,6 +111,7 @@ Buffer_Write( struct PrinterUnit *unit, U8 *data, U32 size )
 
 		data		+= len;
 		size		-= len;
+		accepted += len;
 		pb->pb_Pos	+= len;
 		pb->pb_Free	-= len;
 
@@ -118,11 +121,10 @@ Buffer_Write( struct PrinterUnit *unit, U8 *data, U32 size )
 		}
 	}
 
-	retval = TRUE;
 
 bailout:
 
-	return ( retval );
+	return ( accepted );
 }
 
 // --

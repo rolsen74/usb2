@@ -42,6 +42,7 @@ Process_Setup_Device( struct PrinterUnit *unit, struct USB2_DriverMessage *msg )
 		USB2Tag_EPRes_NrOfIORequest, NR_of_TXs,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_Out,
 		USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
+		USB2Tag_EPRes_TimeOut, PRINTER_TX_TIMEOUT_US,
 //		USB2Tag_BufferSize, 1522,
 		TAG_END
 	);

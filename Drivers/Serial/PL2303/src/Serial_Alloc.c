@@ -168,12 +168,16 @@ Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg )
 
 	stage = "get " USB2_SERIAL_DEVICE " interface";
 
-	unit->PortInterface = (PTR)GetInterface ( (PTR)unit->PortRequest.io_Device, "main", 1, NULL );
+	unit->PortInterface = (PTR)GetInterface( (PTR)unit->PortRequest.io_Device, "main", 1, NULL );
 
 	if ( ! unit->PortInterface )
 	{
 		goto bailout;
 	}
+
+	unit->SerialInterface = (PTR)GetInterface( (PTR)unit->PortRequest.io_Device, "serial", 1, NULL );
+
+	Serial_BreakInit( unit );
 
 	stage = "register serial unit";
 

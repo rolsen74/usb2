@@ -52,7 +52,7 @@ __myProcess_Init( struct PrinterUnit *unit, struct USB2_DriverMessage *msg )
 
 	// --
 
-	if ( ! Process_Setup_Device( unit, msg ))
+	if ( ( ! Printer_CloseTimerInit( unit ) ) || ( ! Process_Setup_Device( unit, msg ) ) )
 	{
 		USBERROR( "Printer : __myProcess_Init : Error setting up usb device" );
 

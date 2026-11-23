@@ -20,7 +20,7 @@ Direct_Schedule( struct PrinterUnit *unit )
 
 	U32 ionr;
 
-	if ( unit->unit_Detached )
+	if ( ( unit->unit_Detached ) || ( unit->unit_JobError ) )
 	{
 		return;
 	}

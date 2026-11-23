@@ -47,7 +47,7 @@ __myProcess_CleanupDevice( struct PrinterUnit *unit )
 		{
 			FreeVec( usbio->io_UserData );
 		}
-		else
+		else if ( usbio->io_UserData )
 		{
 			request = usbio->io_UserData;
 			request->io_Actual = usbio->io_Actual;

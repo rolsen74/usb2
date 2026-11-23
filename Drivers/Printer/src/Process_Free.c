@@ -21,6 +21,8 @@ __myProcess_Free( struct PrinterUnit *unit )
 {
 	USBERROR( "Printer : __myProcess_Free" );
 
+	Printer_CloseTimerFree( unit );
+
 	__myProcess_CleanupDevice( unit );
 
 	__myProcess_Free_Lists( unit );
