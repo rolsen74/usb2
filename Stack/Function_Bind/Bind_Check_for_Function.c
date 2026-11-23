@@ -110,6 +110,9 @@ U32 retval;
 	dn->dn_Message.rdm_Public.IUSB2 = usbbase->usb_IUSB2;
 	dn->dn_Message.rdm_Public.Function = (PTR) fn;
 	dn->dn_Message.rdm_Public.ConfigDescriptors = (PTR) fn->fkt_Config_Desc_Buf;
+	dn->dn_Message.rdm_Public.ClassTitle = fdn->fdn_Title;
+	dn->dn_Message.rdm_Public.ClassDriver = fdn->fdn_Driver_Filename;
+	dn->dn_Message.rdm_Public.ClassAlias = fdn->fdn_Alias;
 
 	// --
 

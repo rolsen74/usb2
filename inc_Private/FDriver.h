@@ -49,6 +49,7 @@ struct USB2_FktDriverNode
 
 //  STR								fdn_Self;				// own FileName
 	STR								fdn_Title;
+	STR								fdn_Alias;
 	STR								fdn_Driver_Filename;	// FileName of the Driver
 	STR								fdn_Class_Filename;		// FileName of the Class info
 	U32								fdn_Class_FilenameLen;

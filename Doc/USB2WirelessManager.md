@@ -115,12 +115,14 @@ Unit 0 is the default. Association and data transfer are still in development.
 ## Saved profiles and startup
 
 Install `usb2wifi.library` 1.27 or later in `LIBS:`.
-Use `eth_RTL8188.Driver` 1.12 or `eth_RT2870.Driver` 1.29 or later. When TCP/IP configures one of
-these adapters, the library connects without a window if its saved
-`ETH:` record has autoconnect enabled and the login succeeds. If the
-connection fails, or a required password is missing, the picker opens.
-With autoconnect disabled, the picker opens before scanning and waits
-for **Connect**. Networks appear as they are found.
+Starting with `eth_RTL8188.Driver` 1.14 and `eth_RT2870.Driver` 1.31, Wi-Fi
+setup starts when the adapter registers with `usb2ethernet.device`.
+The library connects without a window if its saved `ETH:` record has
+autoconnect enabled and the login succeeds. If no profile matches, autoconnect
+is disabled, the connection fails, or a required password is missing, the
+picker opens. Networks appear as they are found. With the matching stack and
+`usb2wifi.library` 1.30, the picker and password window show the adapter's
+`.Class` title.
 
 Run `USB2WirelessManager` with no arguments to open the profile editor.
 Use the **SSIDs** and **Devices** tabs to add, remove, or edit entries.
@@ -141,52 +143,47 @@ Use Up and Down to select a network, fill its fields and move the cursor
 to the end of **Password**. Tab and Shift+Tab move between the fields.
 Return or keypad Enter moves from **SSID** to **Password** and connects
 from **Password**. Selecting a network fills the **SSID** field. The **Security**
-column shows the mode the adapter can use. Selecting a network also fills
-the masked password field if the cache has a password for that SSID and
-security mode. The library can reuse a matching password from another
-adapter if this device and unit have none. The picker opens with empty fields
+column lists the modes the adapter can use, such as `WPA2 WPA3`. The picker
+chooses WPA3 when both modes are available. Selecting a protected network
+fills the masked password field if the saved password for that SSID is
+valid for the chosen mode. The picker opens with empty fields
 and selects the last successful SSID for the current adapter and unit when
 that network appears, then focuses **Password**. You can use the list or
 arrow keys to choose a network while the scan runs.
 For a hidden network, type its exact name in
 **SSID**. The manager sends a directed probe to discover its security.
 Enter the password and choose **Connect**. Leaving the password blank
-reuses a saved password for the same network and security mode or opens a
-password prompt when one is needed.
+reuses a saved password that fits the connection or opens a password
+prompt when one is needed.
 
 A successful connection caches the network, channel and password in
 `ENV:usb2wifi` for the current boot. The file is ASCII and stores
 network credentials separately from each adapter's last connection.
 
 ```text
-# SSID: name, security, password, hidden
-SSID: "My Network", WPA2, "example-password", 0
+# SSID: name, password, hidden
+SSID: "My Network", "example-password", 0
 
-# ETH: device filename, unit, last SSID, security, last channel, autoconnect, optional factory MAC
-ETH: "usb2rtl8188.device", 0, "My Network", WPA2, 6, 0, "02:11:22:33:44:55"
-ETH: "usb2rt2870.device", 0, "My Network", WPA2, 11, 0
+# ETH: adapter name, last SSID, last security, last channel, autoconnect, factory MAC
+ETH: "RTL8188EU Wi-Fi", "My Network", WPA2, 6, 0, "02:11:22:33:44:55"
 ```
 
-An `ETH:` line references an `SSID:` line by name and security mode.
-Profiles use the adapter type (`usb2rtl8188.device` or `usb2rt2870.device`) and
-factory MAC, so a change in the shared unit number preserves the selection.
+An `ETH:` line references an `SSID:` line by name.
+The saved adapter name comes from its `.Class` title. The factory MAC
+preserves the selection across title or unit number changes.
 The manager opens `usb2ethernet.device` using the registered unit number.
-The older `DEVICE` values still work as adapter selectors. The manager can
-add a factory MAC to a legacy entry in `ENV:usb2wifi` when it can identify
-a single matching adapter and a single saved entry for that type.
-Adapters using the same network share its password. Use `OPEN`, `WPA`,
+The optional `DEVICE` selector accepts the registered `.Class` title, driver
+filename, or alias,
+for example `USB2WirelessManager SETUP DEVICE="RTL8188EU Wi-Fi" UNIT=0`.
+Use `UNIT` to select the adapter when more than one is attached.
+Adapters using the same SSID share its password. The adapter entry saves
+the security mode used for its last successful connection. Use `OPEN`, `WPA`,
 `WPA2`, or `WPA3` for security, channel `0` when unknown, and `""` for
 an empty password. Hidden and autoconnect flags are `0` or `1`.
 Set autoconnect to `1` to try the saved network when the interface starts.
 In quoted fields, use `\"` for a quote, `\\` for a backslash, and
 `\xHH` for a byte outside printable ASCII. Blank lines and lines
 starting with `#` are allowed. The password is readable in the file.
-
-Older binary profiles and the earlier single-line ASCII format can still
-be loaded, including copies restored from `ENVARC:usb2wifi` at boot.
-The next successful profile write converts `ENV:usb2wifi`. When old
-profiles contain different passwords for the same SSID and security mode,
-the library asks for a password before it can save a shared credential.
 
 Use the same `UNIT` number as your `usb2ethernet.device` TCP/IP interface.
 `AUTO` uses the same autoconnect setting as normal startup. The
@@ -208,6 +205,8 @@ If the key exchange fails and can be retried, the full picker reopens with
 the networks it already found and focuses the blank **Password** field for
 the failed SSID. Newly discovered networks appear as the scan runs. You can
 enter a new password or select another network, then choose **Connect** again.
-Closing the picker cancels the attempt. A network initially submitted without a password
-can still bring up the masked password requester. The library caches a
-password after authentication succeeds.
+Close the picker or press **Escape** there to cancel the attempt. If a
+protected network needs a password, a password prompt opens. Type the password
+and press **Enter** to connect. Press **Escape**, close the window, or press
+**Enter** with an empty password to return to the picker. The library caches
+a password after authentication succeeds.

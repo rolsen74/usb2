@@ -14,11 +14,11 @@
 // --
 
 #define VERSION		1
-#define REVISION	9
-#define DATE		"22.11.2026"
-#define VERS		"eth_RTL8152.Driver 1.9"
-#define VSTRING		"eth_RTL8152.Driver 1.9 (22.11.2026)\r\n"
-#define VERSTAG		"\0$VER: eth_RTL8152.Driver 1.9 (22.11.2026)"
+#define REVISION	11
+#define DATE		"23.11.2026"
+#define VERS		"eth_RTL8152.Driver 1.11"
+#define VSTRING		"eth_RTL8152.Driver 1.11 (23.11.2026)\r\n"
+#define VERSTAG		"\0$VER: eth_RTL8152.Driver 1.11 (23.11.2026)"
 #define DEVNAME		"eth_RTL8152.Driver"
 
 // --

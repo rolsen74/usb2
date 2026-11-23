@@ -22,9 +22,9 @@ struct USB2EthUnit
 	const struct USB2EthOps *Ops;
 	PTR Adapter;
 	U32 Number;
-	ULONG Type;
 	U32 Opens;
 	U8 Detached;
+	struct USB2EthAdapterInfo Info;
 };
 
 struct USB2EthDevice
@@ -48,6 +48,14 @@ SEC_CODE void EthDevice_Unregister( struct USB2EthIFace *Self, struct USB2EthUni
 SEC_CODE struct USB2EthUnit *EthDevice_RegisterAdapter( struct USB2EthIFace *Self,
 	const struct USB2EthOps *ops, PTR adapter, ULONG *number, ULONG type );
 SEC_CODE ULONG EthDevice_GetAdapter( struct USB2EthIFace *Self, const struct IORequest *request, ULONG number );
+SEC_CODE struct USB2EthUnit *EthDevice_RegisterNamedAdapter( struct USB2EthIFace *Self,
+	const struct USB2EthOps *ops, PTR adapter, ULONG *number, ULONG type, const char *title );
+SEC_CODE ULONG EthDevice_GetAdapterTitle( struct USB2EthIFace *Self, ULONG number, char *title );
+SEC_CODE struct USB2EthUnit *EthDevice_RegisterClassAdapter( struct USB2EthIFace *Self,
+	const struct USB2EthOps *ops, PTR adapter, ULONG *number, ULONG type,
+	const char *title, const char *driver, const char *alias );
+SEC_CODE LONG EthDevice_GetAdapterInfo( struct USB2EthIFace *Self, const struct IORequest *request,
+	struct USB2EthAdapterInfo *info );
 
 #endif
 

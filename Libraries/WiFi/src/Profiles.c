@@ -30,16 +30,16 @@ static struct WiFiClaim *Claims;
 
 // --
 
-const char *
-WiFi_DeviceName( U32 adapter )
+ULONG
+WiFi_AdapterProtocol( U32 adapter )
 {
 	switch ( adapter )
 	{
-		case USB2WIFI_RTL8188: return ( "usb2rtl8188.device" );
-		case USB2WIFI_RT2870: return ( "usb2rt2870.device" );
+		case USB2WIFI_RTL8188: return ( USB2ETH_ADAPTER_RTL8188 );
+		case USB2WIFI_RT2870: return ( USB2ETH_ADAPTER_RT2870 );
 	}
 
-	return ( NULL );
+	return ( USB2ETH_ADAPTER_UNKNOWN );
 }
 
 // --
@@ -50,6 +50,22 @@ CopyPassword( struct USB2WiFiProfile *target, const char *password )
 	memset( target->Password, 0, sizeof( target->Password ) );
 
 	strcpy( target->Password, password );
+}
+
+// --
+
+static void
+CopyUsablePassword( struct USB2WiFiProfile *profile, const char *password )
+{
+	if ( profile->Security != USB2WIFI_OPEN )
+	{
+		CopyPassword( profile, password );
+
+		if ( ! WiFi_ValidProfile( profile, UINT32_MAX ) )
+		{
+			CopyPassword( profile, "" );
+		}
+	}
 }
 
 // --
@@ -69,11 +85,11 @@ WiFi_FindPassword( struct USB2WiFiProfile *profile )
 
 	if ( WiFi_ReadProfiles( &db ) == USB2WIFI_OK )
 	{
-		network = WiFi_ProfileNetwork( &db, profile, FALSE );
+		network = WiFi_ProfileNetwork( &db, profile->SSID, FALSE );
 
 		if ( network )
 		{
-			CopyPassword( profile, network->Profile.Password );
+			CopyUsablePassword( profile, network->Profile.Password );
 		}
 	}
 
@@ -85,20 +101,23 @@ WiFi_FindPassword( struct USB2WiFiProfile *profile )
 // --
 
 static S32
-ReadStation( U32 adapter, U32 unit, U8 *station, S32 *unique )
+ReadStation( U32 adapter, U32 unit, U8 *station, char *title, S32 *unique )
 {
 	struct IOSana2Req request;
 	struct MsgPort *port;
 	struct USB2EthIFace *ethernet;
+	struct USB2EthAdapterInfo info;
 
+	UWORD revision;
 	U32 wanted;
 	U32 i;
 	U32 matches;
 	S32 found;
 
-	wanted = adapter == USB2WIFI_RT2870 ? USB2ETH_ADAPTER_RT2870 : USB2ETH_ADAPTER_RTL8188;
+	wanted = WiFi_AdapterProtocol( adapter );
 	found = FALSE;
 	*unique = FALSE;
+	title[0] = 0;
 
 	port = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
@@ -114,7 +133,9 @@ ReadStation( U32 adapter, U32 unit, U8 *station, S32 *unique )
 
 	if ( ! OpenDevice( USB2_ETH_DEVICE, unit, &request.ios2_Req, 0 ) )
 	{
-		if ( request.ios2_Req.io_Device->dd_Library.lib_Revision >= USB2ETH_ADAPTER_REVISION )
+		revision = request.ios2_Req.io_Device->dd_Library.lib_Revision;
+
+		if ( revision >= USB2ETH_ADAPTER_REVISION )
 		{
 			ethernet = (APTR) GetInterface( (APTR) request.ios2_Req.io_Device, "main", 1, NULL );
 
@@ -128,8 +149,20 @@ ReadStation( U32 adapter, U32 unit, U8 *station, S32 *unique )
 					{
 						memcpy( station, request.ios2_DstAddr, WIFI_STATION_SIZE );
 
-						found = TRUE;
 						matches = 0;
+
+						if ( revision >= USB2ETH_CLASS_REVISION )
+						{
+							if ( ( ethernet->GetAdapterInfo( &request.ios2_Req, &info ) ) && ( info.Type == wanted ) )
+							{
+								memcpy( title, info.Title, sizeof( info.Title ) );
+							}
+						}
+						else if ( ( revision >= USB2ETH_TITLE_REVISION ) &&
+							( ethernet->GetAdapterTitle( unit, title ) != wanted ) )
+						{
+							title[0] = 0;
+						}
 
 						for ( i = 0; i < USB2_ETH_MAX_UNITS; i++ )
 						{
@@ -139,7 +172,8 @@ ReadStation( U32 adapter, U32 unit, U8 *station, S32 *unique )
 							}
 						}
 
-						*unique = ( matches == 1 ) && ( ethernet->GetAdapter( &request.ios2_Req, unit ) == wanted );
+						found = ethernet->GetAdapter( &request.ios2_Req, unit ) == wanted;
+						*unique = ( matches == 1 ) && ( found );
 					}
 				}
 
@@ -158,23 +192,45 @@ ReadStation( U32 adapter, U32 unit, U8 *station, S32 *unique )
 // --
 
 static struct ProfileAdapter *
-FindAdapter( struct ProfileDatabase *db, const char *device, U32 unit, const U8 *station, S32 unique )
+FindAdapter( struct ProfileDatabase *db, U32 adapter, const U8 *station, const char *title, S32 unique )
 {
 	struct ProfileAdapter *entry;
 	struct ProfileAdapter *legacy;
+	struct ProfileAdapter *match;
 
-	entry = WiFi_ProfileStation( db, device, unit, station, FALSE );
+	S32 shared;
 
-	if ( ( entry ) || ( ! unique ) )
+	match = NULL;
+	shared = FALSE;
+
+	for ( entry = db->Adapters; entry; entry = entry->Next )
 	{
-		return ( entry );
+		if ( memcmp( entry->Station, station, WIFI_STATION_SIZE ) )
+		{
+			continue;
+		}
+
+		// The title distinguishes saved entries that share a MAC.
+		if ( ( title[0] ) && ( ! strcasecmp( entry->Device, title ) ) )
+		{
+			return ( entry );
+		}
+
+		shared = shared || ( match != NULL );
+		match = entry;
+	}
+
+	if ( ( match ) || ( ! unique ) )
+	{
+		return ( shared ? NULL : match );
 	}
 
 	legacy = NULL;
 
 	for ( entry = db->Adapters; entry; entry = entry->Next )
 	{
-		if ( strcasecmp( entry->Device, device ) )
+		if ( ( entry->Type != adapter ) &&
+			( ( ! title[0] ) || ( strcasecmp( entry->Device, title ) ) ) )
 		{
 			continue;
 		}
@@ -194,27 +250,51 @@ FindAdapter( struct ProfileDatabase *db, const char *device, U32 unit, const U8 
 // --
 
 static S32
+AdapterIdentityChanged( const struct ProfileAdapter *entry, const char *title )
+{
+	return ( ( ! WiFi_HasStation( entry->Station ) ) || ( entry->NeedsRewrite ) ||
+		( ( title[0] ) && ( strcmp( entry->Device, title ) ) ) );
+}
+
+// --
+
+static void
+SetAdapterIdentity( struct ProfileAdapter *entry, U32 adapter, const U8 *station, const char *title )
+{
+	memcpy( entry->Station, station, sizeof( entry->Station ) );
+
+	entry->Unit = 0;
+	entry->Type = adapter;
+	entry->NeedsRewrite = FALSE;
+
+	if ( title[0] )
+	{
+		strcpy( entry->Device, title );
+	}
+}
+
+// --
+
+static S32
 WiFi_Load( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 unit, struct USB2WiFiProfile *profile )
 {
 	struct ProfileDatabase db;
 	struct ProfileAdapter *entry;
 	struct ProfileNetwork *network;
 
-	const char *device;
 	U8 station[WIFI_STATION_SIZE];
+	char title[USB2ETH_TITLE_SIZE];
 	S32 unique;
 	S32 result;
 
-	device = WiFi_DeviceName( adapter );
-
-	if ( ( ! profile ) || ( ! device ) )
+	if ( ( ! profile ) || ( ! WiFi_AdapterProtocol( adapter ) ) )
 	{
 		return ( USB2WIFI_ERROR );
 	}
 
 	memset( profile, 0, sizeof( *profile ) );
 
-	if ( ! ReadStation( adapter, unit, station, &unique ) )
+	if ( ! ReadStation( adapter, unit, station, title, &unique ) )
 	{
 		return ( USB2WIFI_MISSING );
 	}
@@ -225,26 +305,24 @@ WiFi_Load( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 
 
 	if ( result == USB2WIFI_OK )
 	{
-		entry = FindAdapter( &db, device, unit, station, unique );
+		entry = FindAdapter( &db, adapter, station, title, unique );
 
 		result = USB2WIFI_MISSING;
 
 		if ( entry )
 		{
-			network = WiFi_ProfileNetwork( &db, &entry->Profile, FALSE );
+			network = WiFi_ProfileNetwork( &db, entry->Profile.SSID, FALSE );
 
 			*profile = entry->Profile;
 			profile->Options |= network->Profile.Options;
 
-			CopyPassword( profile, network->Profile.Password );
+			CopyUsablePassword( profile, network->Profile.Password );
 
 			result = WiFi_ValidProfile( profile, adapter ) ? USB2WIFI_OK : USB2WIFI_ERROR;
 
-			if ( ( result == USB2WIFI_OK ) && ( ! WiFi_HasStation( entry->Station ) ) )
+			if ( ( result == USB2WIFI_OK ) && ( AdapterIdentityChanged( entry, title ) ) )
 			{
-				memcpy( entry->Station, station, sizeof( entry->Station ) );
-
-				entry->Unit = unit;
+				SetAdapterIdentity( entry, adapter, station, title );
 
 				WiFi_WriteProfiles( &db );
 			}
@@ -270,18 +348,17 @@ WiFi_Save( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 
 
 	const char *device;
 	U8 station[WIFI_STATION_SIZE];
+	char title[USB2ETH_TITLE_SIZE];
 	S32 unique;
 	S32 result;
 
-	device = WiFi_DeviceName( adapter );
-
-	if ( ( ! profile ) || ( ! device ) || ( passwordAction > USB2WIFI_FORGET_PASSWORD )
+	if ( ( ! profile ) || ( ! WiFi_AdapterProtocol( adapter ) ) || ( passwordAction > USB2WIFI_FORGET_PASSWORD )
 		|| ( ! WiFi_ValidProfile( profile, adapter ) ) )
 	{
 		return ( USB2WIFI_ERROR );
 	}
 
-	if ( ! ReadStation( adapter, unit, station, &unique ) )
+	if ( ! ReadStation( adapter, unit, station, title, &unique ) )
 	{
 		return ( USB2WIFI_ERROR );
 	}
@@ -292,22 +369,22 @@ WiFi_Save( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 
 
 	if ( result >= 0 )
 	{
-		entry = FindAdapter( &db, device, unit, station, unique );
+		entry = FindAdapter( &db, adapter, station, title, unique );
 
 		if ( ! entry )
 		{
+			device = title[0] ? title : WiFi_LegacyProfileName( adapter );
+
 			entry = WiFi_ProfileStation( &db, device, unit, station, TRUE );
 		}
 
-		network = WiFi_ProfileNetwork( &db, profile, TRUE );
+		network = WiFi_ProfileNetwork( &db, profile->SSID, TRUE );
 
 		result = USB2WIFI_ERROR;
 
 		if ( ( entry ) && ( network ) )
 		{
-			memcpy( entry->Station, station, sizeof( entry->Station ) );
-
-			entry->Unit = unit;
+			SetAdapterIdentity( entry, adapter, station, title );
 
 			strcpy( entry->Profile.SSID, profile->SSID );
 
@@ -342,19 +419,17 @@ WiFi_Connected( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter,
 	struct ProfileAdapter *entry;
 	struct ProfileNetwork *network;
 
-	const char *device;
 	U8 station[WIFI_STATION_SIZE];
+	char title[USB2ETH_TITLE_SIZE];
 	S32 unique;
 	S32 result;
 
-	device = WiFi_DeviceName( adapter );
-
-	if ( ( ! profile ) || ( ! device ) || ( ! WiFi_ValidProfile( profile, adapter ) ) )
+	if ( ( ! profile ) || ( ! WiFi_AdapterProtocol( adapter ) ) || ( ! WiFi_ValidProfile( profile, adapter ) ) )
 	{
 		return ( USB2WIFI_ERROR );
 	}
 
-	if ( ! ReadStation( adapter, unit, station, &unique ) )
+	if ( ! ReadStation( adapter, unit, station, title, &unique ) )
 	{
 		return ( USB2WIFI_MISSING );
 	}
@@ -365,9 +440,9 @@ WiFi_Connected( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter,
 
 	if ( result == USB2WIFI_OK )
 	{
-		entry = FindAdapter( &db, device, unit, station, unique );
+		entry = FindAdapter( &db, adapter, station, title, unique );
 
-		network = WiFi_ProfileNetwork( &db, profile, FALSE );
+		network = WiFi_ProfileNetwork( &db, profile->SSID, FALSE );
 
 		if ( ( ! entry ) || ( ! network ) || ( entry->Profile.Security != profile->Security )
 			|| ( strcmp( entry->Profile.SSID, profile->SSID ) ) )
@@ -375,14 +450,13 @@ WiFi_Connected( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter,
 			result = USB2WIFI_MISSING;
 		}
 		else if ( ( entry->Profile.Channel != profile->Channel ) || ( savePassword ) ||
-			( ! WiFi_HasStation( entry->Station ) ) )
+			( AdapterIdentityChanged( entry, title ) ) )
 		{
-			memcpy( entry->Station, station, sizeof( entry->Station ) );
+			SetAdapterIdentity( entry, adapter, station, title );
 
-			entry->Unit = unit;
 			entry->Profile.Channel = profile->Channel;
 
-			if ( savePassword )
+			if ( ( savePassword ) && ( profile->Security != USB2WIFI_OPEN ) )
 			{
 				CopyPassword( &network->Profile, profile->Password );
 			}
@@ -486,7 +560,7 @@ WiFi_Claim( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32
 {
 	struct WiFiClaim *claim;
 
-	if ( ! WiFi_DeviceName( adapter ) )
+	if ( ! WiFi_AdapterProtocol( adapter ) )
 	{
 		return ( FALSE );
 	}
@@ -573,5 +647,6 @@ const APTR WiFiVectors[] = //
 		WiFi_StartAuto,		   //
 		WiFi_SetupRetry,	   //
 		WiFi_EditProfiles,	   //
+		WiFi_StartPromptForUnit, //
 		(APTR)-1			   //
 	};

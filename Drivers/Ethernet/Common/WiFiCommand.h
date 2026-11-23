@@ -16,6 +16,6 @@
 #include "Types.h"
 
 void Wireless_StartAuto( U32 adapter, U32 unit );
-void Wireless_StartPassword( struct IOSana2Req *request );
+void Wireless_StartPassword( struct IOSana2Req *request, U32 adapter, U32 unit );
 
 #endif

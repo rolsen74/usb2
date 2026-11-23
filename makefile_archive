@@ -9,7 +9,7 @@ all: build_all
 
 .PHONY: all build_all build_dir_tree build_stack build_printer build_video build_sdr_test build_bluetooth_test \
 	build_ptp build_serial build_smartcard build_audio build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer \
-	build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_wait_ethernet build_archive
+	build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_archive
 
 ###########################################################################
 
@@ -248,14 +248,8 @@ build_wireless_manager: | build_dir_tree
 
 ###########################################################################
 
-build_wait_ethernet: | build_dir_tree
-	$(MAKE) -C Programs/USB2WaitEthernet
-	cp Programs/USB2WaitEthernet/bin/USB2WaitEthernet $(BINDIR)/usb2/Tools
-
-###########################################################################
-
 build_archive: build_stack build_printer build_video build_sdr_test build_bluetooth_test build_ptp build_serial build_smartcard build_audio \
-	build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_wait_ethernet
+	build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
 	@echo "Building Archive"
 	@rm -f usb2.lha
 	cd "$(BINDIR)" && lha a "$(ROOTDIR)/usb2.lha" usb2

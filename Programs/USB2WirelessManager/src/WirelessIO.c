@@ -9,31 +9,38 @@
 // --
 
 #include "All.h"
+#include <strings.h>
 
 // --
 
-static ULONG
-Read_Adapter( const struct IORequest *request )
+static void
+Read_Adapter( const struct IORequest *request, struct USB2EthAdapterInfo *info )
 {
 	struct USB2EthIFace *ethernet;
+	UWORD revision;
 
-	ULONG type;
+	memset( info, 0, sizeof( *info ) );
 
-	type = USB2ETH_ADAPTER_UNKNOWN;
+	revision = request->io_Device->dd_Library.lib_Revision;
 
-	if ( request->io_Device->dd_Library.lib_Revision >= USB2ETH_ADAPTER_REVISION )
+	if ( revision >= USB2ETH_ADAPTER_REVISION )
 	{
 		ethernet = (APTR) GetInterface( (APTR) request->io_Device, "main", 1, NULL );
 
 		if ( ethernet )
 		{
-			type = ethernet->GetAdapter( request, 0 );
+			if ( revision >= USB2ETH_CLASS_REVISION )
+			{
+				ethernet->GetAdapterInfo( request, info );
+			}
+			else
+			{
+				info->Type = ethernet->GetAdapter( request, 0 );
+			}
 
 			DropInterface( (APTR) ethernet );
 		}
 	}
-
-	return ( type );
 }
 
 // --
@@ -42,28 +49,7 @@ ULONG
 Wireless_ResolveAdapter( const char *selector, ULONG number )
 {
 	struct IOSana2Req request;
-
-	ULONG expected;
-	ULONG type;
-
-	expected = USB2ETH_ADAPTER_UNKNOWN;
-
-	if ( ! strcmp( selector, WIRELESS_RTL8188_LEGACY ) )
-	{
-		expected = USB2ETH_ADAPTER_RTL8188;
-	}
-	else if ( ! strcmp( selector, WIRELESS_RT2870_DEVICE ) )
-	{
-		expected = USB2ETH_ADAPTER_RT2870;
-	}
-	else if ( ! strcmp( selector, WIRELESS_SIS163U_DEVICE ) )
-	{
-		expected = USB2ETH_ADAPTER_SIS163U;
-	}
-	else if ( strcmp( selector, WIRELESS_DEVICE ) )
-	{
-		return ( USB2ETH_ADAPTER_UNKNOWN );
-	}
+	struct USB2EthAdapterInfo info;
 
 	memset( & request, 0, sizeof( request ) );
 
@@ -74,11 +60,19 @@ Wireless_ResolveAdapter( const char *selector, ULONG number )
 		return ( USB2ETH_ADAPTER_UNKNOWN );
 	}
 
-	type = Read_Adapter( & request.ios2_Req );
+	Read_Adapter( & request.ios2_Req, & info );
 
 	CloseDevice( & request.ios2_Req );
 
-	return ( ( ( ! expected ) || ( expected == type ) ) ? type : USB2ETH_ADAPTER_UNKNOWN );
+	if ( ( ! selector ) || ( ! strcasecmp( selector, WIRELESS_DEVICE ) ) ||
+		( ( info.Title[0] ) && ( ! strcasecmp( selector, info.Title ) ) ) ||
+		( ( info.Driver[0] ) && ( ! strcasecmp( selector, info.Driver ) ) ) ||
+		( ( info.Alias[0] ) && ( ! strcasecmp( selector, info.Alias ) ) ) )
+	{
+		return ( info.Type );
+	}
+
+	return ( USB2ETH_ADAPTER_UNKNOWN );
 }
 
 // --
@@ -86,7 +80,8 @@ Wireless_ResolveAdapter( const char *selector, ULONG number )
 S32
 Wireless_Open( struct Wireless *wireless )
 {
-	ULONG type;
+	struct USB2EthAdapterInfo info;
+
 	S32 error;
 
 	wireless->CommandPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
@@ -142,9 +137,9 @@ Wireless_Open( struct Wireless *wireless )
 
 	wireless->DeviceOpen = TRUE;
 
-	type = Read_Adapter( & wireless->Command->ios2_Req );
+	Read_Adapter( & wireless->Command->ios2_Req, & info );
 
-	if ( ( type == USB2ETH_ADAPTER_UNKNOWN ) || ( type != wireless->AdapterType ) )
+	if ( ( info.Type == USB2ETH_ADAPTER_UNKNOWN ) || ( info.Type != wireless->AdapterType ) )
 	{
 		fprintf( stderr, "%s unit %lu has no matching Wi-Fi adapter.\n",
 			WIRELESS_DEVICE, (unsigned long) wireless->UnitNumber );

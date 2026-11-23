@@ -141,7 +141,7 @@ Process_RadioCommands( struct EthernetUnit *unit )
 		}
 		else if ( request->ios2_Req.io_Command == USB2WIRELESS_CMD_PROMPT )
 		{
-			Wireless_StartPassword( request );
+			Wireless_StartPassword( request, USB2WIFI_RT2870, unit->unit_UnitNr );
 		}
 		else if ( request->ios2_Req.io_Command == S2_SETKEY )
 		{

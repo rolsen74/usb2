@@ -48,7 +48,19 @@ EthClass_Register( struct EthClassPort *port, const struct USB2EthOps *ops, PTR 
 
 	stage = "register the Ethernet unit";
 
-	port->Unit = port->Interface->RegisterAdapter( ops, adapter, number, type );
+	if ( port->Request.io_Device->dd_Library.lib_Revision >= USB2ETH_CLASS_REVISION )
+	{
+		port->Unit = port->Interface->RegisterClassAdapter( ops, adapter, number, type,
+			msg->ClassTitle, msg->ClassDriver, msg->ClassAlias );
+	}
+	else if ( port->Request.io_Device->dd_Library.lib_Revision >= USB2ETH_TITLE_REVISION )
+	{
+		port->Unit = port->Interface->RegisterNamedAdapter( ops, adapter, number, type, msg->ClassTitle );
+	}
+	else
+	{
+		port->Unit = port->Interface->RegisterAdapter( ops, adapter, number, type );
+	}
 
 	if ( port->Unit )
 	{

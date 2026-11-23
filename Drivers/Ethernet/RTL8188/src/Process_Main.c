@@ -8,8 +8,10 @@
 
 // --
 
+#include <usb2wifi.h>
 #include "All.h"
 #include "Radio.h"
+#include "WiFiCommand.h"
 
 // --
 
@@ -22,6 +24,8 @@ Process_Main( struct EthernetUnit *unit )
 	U32 mask;
 
 	wait = unit->unit_USB_Register->Stack_MsgPortBit | unit->unit_Bulk_Rx_Resource->MsgPortBit | SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_E;
+
+	Wireless_StartAuto( USB2WIFI_RTL8188, unit->unit_UnitNr );
 
 	while( ! unit->unit_Detached )
 	{

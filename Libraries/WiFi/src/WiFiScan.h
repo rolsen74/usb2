@@ -20,6 +20,7 @@ struct WiFiNetwork
 {
 	char SSID[33];
 	uint8_t Security;
+	uint8_t SecurityModes;
 	uint8_t Channel;
 };
 

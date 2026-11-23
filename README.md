@@ -97,14 +97,22 @@ captures Boot Protocol keyboard and mouse reports. The experimental
 
 ## USB Networking
 
-| Adapter | USB vendor:product IDs | SANA-II device | Status |
-| --- | --- | --- | --- |
-| [RTL8152 wired Ethernet](Doc/RTL8152.md) | `0bda:8152` | `usb2rtl8152.device` | Experimental |
-| [RTL8188EU 2.4 GHz Wi-Fi](Doc/RTL8188.md) | `0bda:8179`, `07b8:8179`, `2357:010c` | `usb2rtl8188.device` | Working on `0bda:8179` |
-| [RT2870 2.4 GHz Wi-Fi](Doc/RT2870.md) | `07d1:3c09` | `usb2rt2870.device` | Working on `07d1:3c09` |
-| [SiS163U 2.4 GHz Wi-Fi](Doc/USB2WirelessManager.md#sis163u-passive-scan) | `0d8e:0163` | `usb2sis163u.device` | Experimental |
+Ethernet class drivers register their units with `usb2ethernet.device`.
+To add an adapter, install its `.Class` and `.Driver` in `LIBS:USB2/`.
+The class file supplies the USB matching rules, display title and driver
+filename. An optional `ALIAS` entry supplies a compatibility name. A new
+driver can register those names through `RegisterClassAdapter`. The stack
+routes the registered unit through the driver's SANA-II callbacks.
 
-Install the devices in `DEVS:Networks/`. See the adapter guides for
+| Adapter | USB vendor:product IDs | Status |
+| --- | --- | --- |
+| [RTL8152 wired Ethernet](Doc/RTL8152.md) | `0bda:8152` | Experimental |
+| [RTL8188EU 2.4 GHz Wi-Fi](Doc/RTL8188.md) | `0bda:8179`, `07b8:8179`, `2357:010c` | Working on `0bda:8179` |
+| [RT2870 2.4 GHz Wi-Fi](Doc/RT2870.md) | `07d1:3c09` | Working on `07d1:3c09` |
+| [SiS163U 2.4 GHz Wi-Fi](Doc/USB2WirelessManager.md#sis163u-passive-scan) | `0d8e:0163` | Experimental |
+
+Install the `usb2ethernet.device` file-picker placeholder in `DEVS:Networks/`.
+See the adapter guides for
 firmware, setup, and hardware validation.
 
 ## General Limitations
@@ -156,10 +164,7 @@ usb2/
 │   │   ├── rtl8188eufw.licence
 │   │   └── rtl8188eufw.bin
 │   ├── Networks/
-│   │   ├── usb2rtl8152.device
-│   │   ├── usb2rtl8188.device
-│   │   ├── usb2rt2870.device
-│   │   └── usb2sis163u.device
+│   │   └── usb2ethernet.device
 │   └── usb2printer.device
 ├── Libs/
 │   ├── USB2/
@@ -238,7 +243,7 @@ usb2/
   output attached and `usb2audio.device` available. The tool uses the
   first compatible playback unit. Specify `OUTPUT 16` to select a unit,
   and press Ctrl+C to stop.
-- **SiS163U Wi-Fi (experimental)** — `Devs/Networks/usb2sis163u.device`
+- **SiS163U Wi-Fi (experimental)** — `Libs/USB2/eth_SiS163U.Class`
   matches the Topcom 54 Mbps Wi-Fi stick (`0D8E:0163`). Opening the unit
   checks register access and endpoint setup, then reads the station address
   from the adapter EEPROM. SANA-II queries, events,
@@ -249,7 +254,7 @@ usb2/
   Association and packet transfer remain in development.
   Build it with `make -C Drivers/Ethernet/SiS163U`.
 - **[RT2870 Wi-Fi](Doc/RT2870.md)** — Install
-  `Devs/Networks/usb2rt2870.device` in `DEVS:Networks/` and copy
+  `eth_RT2870.Class` and `eth_RT2870.Driver` in `LIBS:USB2/` and copy
   `rt2870.bin` and `rt2870.licence` from `Devs/Firmware/` to
   `DEVS:Firmware/`.
 - **[USB2Analyzer](Doc/USB2Analyzer.md)** — Run it from the extracted

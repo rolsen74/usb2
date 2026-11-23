@@ -33,8 +33,8 @@ extern struct MsgPort *WiFiWorkerPort;
 struct WiFiScan;
 
 S32 WiFi_WorkersActive( void );
-S32 WiFi_Run( const char *device, U32 unit, S32 setup );
-const char *WiFi_DeviceName( U32 adapter );
+S32 WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected );
+ULONG WiFi_AdapterProtocol( U32 adapter );
 S32 WiFi_UnitClaimed( U32 adapter, U32 unit );
 void WiFi_FindPassword( struct USB2WiFiProfile *network );
 void WiFi_RememberScan( U32 adapter, U32 unit, const struct WiFiScan *scan );
@@ -47,6 +47,7 @@ S32 APICALL WiFi_EditProfiles( struct USB2WiFiIFace *self );
 S32 APICALL WiFi_Setup( struct USB2WiFiIFace *self, struct USB2WiFiProfile *profile, U32 adapter, U32 unit, U32 *action );
 S32 APICALL WiFi_SetupRetry( struct USB2WiFiIFace *self, struct USB2WiFiProfile *profile, U32 adapter, U32 unit, U32 *action );
 S32 APICALL WiFi_StartPrompt( struct USB2WiFiIFace *self, struct USB2WiFiPrompt *prompt );
+S32 APICALL WiFi_StartPromptForUnit( struct USB2WiFiIFace *self, struct USB2WiFiPrompt *prompt, U32 adapter, U32 unit );
 S32 APICALL WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit );
 void APICALL WiFi_CancelPrompt( struct USB2WiFiIFace *self, struct USB2WiFiPrompt *prompt );
 

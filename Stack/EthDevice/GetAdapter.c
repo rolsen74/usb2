@@ -42,7 +42,7 @@ EthDevice_GetAdapter( struct USB2EthIFace *Self, const struct IORequest *request
 
 	if ( ( unit ) && ( ! unit->Detached ) )
 	{
-		type = unit->Type;
+		type = unit->Info.Type;
 	}
 
 	IExec->ReleaseSemaphore( & base->RouteLock );

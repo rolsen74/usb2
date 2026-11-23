@@ -14,7 +14,7 @@
 
 #ifndef USB2WIFI_EMBEDDED
 static const char version[] __attribute__((used)) =
-	"\0$VER: USB2WirelessManager 0.37 (22.11.2026)";
+	"\0$VER: USB2WirelessManager 0.40 (23.11.2026)";
 #endif
 
 // --
@@ -317,12 +317,17 @@ main( int argc, char **argv __attribute__((unused)) )
 		unit = values[4] ? *(const LONG *) values[4] : 0;
 		channel = values[3] ? *(const LONG *) values[3] : 0;
 
-		if ( ( strcmp( device, WIRELESS_DEVICE ) && strcmp( device, WIRELESS_SIS163U_DEVICE ) ) ||
-			( unit < 0 ) || ( unit > 31 ) || ( channel < 0 ) || ( channel > 13 ) ||
+		if ( ( unit < 0 ) || ( unit > 31 ) || ( channel < 0 ) || ( channel > 13 ) ||
 			( values[0] ) || ( values[1] ) || ( values[2] ) || ( values[6] ) || ( values[7] ) ||
 			( values[8] ) || ( values[9] ) || ( values[10] ) || ( values[11] ) || ( values[12] ) )
 		{
 			fprintf( stderr, "Use SCAN with a SiS163U unit and optional CHANNEL.\n" );
+
+			result = RETURN_FAIL;
+		}
+		else if ( Wireless_ResolveAdapter( device, unit ) != USB2ETH_ADAPTER_SIS163U )
+		{
+			fprintf( stderr, "No matching SiS163U adapter on %s unit %ld.\n", WIRELESS_DEVICE, unit );
 
 			result = RETURN_FAIL;
 		}
@@ -342,9 +347,7 @@ main( int argc, char **argv __attribute__((unused)) )
 
 		if ( ( values[11] && values[12] ) || ( values[0] ) || ( values[1] ) || ( values[2] ) ||
 			( values[3] ) || ( values[6] ) || ( values[7] ) || ( values[8] ) || ( values[9] ) || ( values[10] ) ||
-			( unit < 0 ) || ( unit > 31 ) ||
-			( strcmp( device, WIRELESS_DEVICE ) && strcmp( device, WIRELESS_RT2870_DEVICE ) &&
-				strcmp( device, WIRELESS_RTL8188_LEGACY ) ) )
+			( unit < 0 ) || ( unit > 31 ) )
 		{
 			fprintf( stderr, "Use AUTO or SETUP with only DEVICE and UNIT.\n" );
 
@@ -352,7 +355,7 @@ main( int argc, char **argv __attribute__((unused)) )
 		}
 		else
 		{
-			result = WiFi_Run( device, unit, values[12] != 0 );
+			result = WiFi_Run( device, unit, values[12] != 0, USB2ETH_ADAPTER_UNKNOWN );
 		}
 
 		FreeArgs( args );

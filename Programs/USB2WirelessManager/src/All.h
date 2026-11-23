@@ -64,9 +64,6 @@ typedef char *STR;
 #define S2PORT_MANAGED 7
 
 #define WIRELESS_DEVICE USB2_ETH_DEVICE
-#define WIRELESS_RTL8188_LEGACY "usb2rtl8188.device"
-#define WIRELESS_RT2870_DEVICE "usb2rt2870.device"
-#define WIRELESS_SIS163U_DEVICE "usb2sis163u.device"
 #define WIRELESS_MAX_CHANNEL 11
 #define WIRELESS_MAX_SSID 32
 #define WIRELESS_ADDR_SIZE 6
@@ -112,6 +109,7 @@ struct AutoWiFi
 	S32 Linked;
 	S32 DetectSecurity;
 	S32 Retry;
+	S32 BackToPicker;
 	S32 SavePassword;
 };
 
@@ -180,7 +178,7 @@ typedef S32 (*FrameMatch)( struct Wireless *wireless, const U8 *frame, U32 lengt
 
 S32 Wireless_PromptPassword( struct Wireless *wireless, U32 *action );
 enum WirelessResult WiFi_Passphrase( struct Wireless *wireless, char *input, char **password, U32 *length );
-S32 WiFi_Run( const char *device, U32 unit, S32 setup );
+S32 WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected );
 void WiFi_Connected( struct Wireless *wireless, U32 channel );
 S32 Run_Wireless( struct Wireless *wireless, U32 channel, U32 maxChannel, S32 open, S32 auth, S32 associate );
 S32 Valid_Password( const char *password, U32 minimum );

@@ -25,6 +25,7 @@
 #define USB2WIFI_SHARED_ETH_REVISION 27
 #define USB2WIFI_RETRY_PICKER_REVISION 18
 #define USB2WIFI_EDITOR_REVISION 24
+#define USB2WIFI_TITLED_PROMPT_REVISION 30
 #define USB2WIFI_RTL8188 0
 #define USB2WIFI_RT2870 1
 
@@ -44,6 +45,7 @@
 #define USB2WIFI_MISSING 0
 #define USB2WIFI_ERROR (-1)
 #define USB2WIFI_CONNECT_NOW 2
+#define USB2WIFI_BACK_TO_PICKER 3
 
 struct USB2WiFiProfile
 {
@@ -89,6 +91,8 @@ struct USB2WiFiIFace
 	int32_t APICALL (*SetupRetry)( struct USB2WiFiIFace *self, struct USB2WiFiProfile *profile,
 		uint32_t adapter, uint32_t unit, uint32_t *action );
 	int32_t APICALL (*EditProfiles)( struct USB2WiFiIFace *self );
+	int32_t APICALL (*StartPromptForUnit)( struct USB2WiFiIFace *self, struct USB2WiFiPrompt *prompt,
+		uint32_t adapter, uint32_t unit );
 };
 
 #endif

@@ -26,6 +26,13 @@ WiFi_Passphrase( struct Wireless *wireless, char *input, char **password, U32 *l
 	{
 		result = Wireless_PromptPassword( wireless, & action );
 
+		if ( result == USB2WIFI_BACK_TO_PICKER )
+		{
+			wifi->BackToPicker = TRUE;
+
+			return ( WIRELESS_STOPPED );
+		}
+
 		if ( result != USB2WIFI_OK )
 		{
 			return ( result == USB2WIFI_MISSING ? WIRELESS_STOPPED : WIRELESS_IO_ERROR );
@@ -92,6 +99,7 @@ ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action, S32 fromP
 	wifi->SavePassword = action == USB2WIFI_SAVE_PASSWORD;
 	wifi->SetupConnect = fromPicker;
 	wifi->Linked = FALSE;
+	wifi->BackToPicker = FALSE;
 	wifi->DetectSecurity = wifi->Profile.Security == WIFI_SECURITY_UNSUPPORTED;
 
 	printf( "Connecting using %s unit %lu for SSID \"%s\".\n", device,
@@ -142,7 +150,7 @@ ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action, S32 fromP
 // --
 
 S32
-WiFi_Run( const char *device, U32 unit, S32 setup )
+WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected )
 {
 	struct AutoWiFi wifi;
 	struct Library *base;
@@ -158,7 +166,8 @@ WiFi_Run( const char *device, U32 unit, S32 setup )
 
 	type = Wireless_ResolveAdapter( device, unit );
 
-	if ( ( type != USB2ETH_ADAPTER_RT2870 ) && ( type != USB2ETH_ADAPTER_RTL8188 ) )
+	if ( ( ( type != USB2ETH_ADAPTER_RT2870 ) && ( type != USB2ETH_ADAPTER_RTL8188 ) ) ||
+		( ( expected != USB2ETH_ADAPTER_UNKNOWN ) && ( expected != type ) ) )
 	{
 		fprintf( stderr, "No matching RTL8188 or RT2870 adapter on %s unit %lu.\n",
 			WIRELESS_DEVICE, (unsigned long) unit );
@@ -227,7 +236,7 @@ WiFi_Run( const char *device, U32 unit, S32 setup )
 		{
 			result = ConnectProfile( & wifi, device, USB2WIFI_KEEP_PASSWORD, FALSE );
 
-			if ( ( wifi.Linked ) || ( result == RETURN_OK ) )
+			if ( ( wifi.Linked ) || ( ( result == RETURN_OK ) && ( ! wifi.BackToPicker ) ) )
 			{
 				goto done;
 			}
@@ -254,9 +263,13 @@ WiFi_Run( const char *device, U32 unit, S32 setup )
 			result = ConnectProfile( & wifi, device, action, TRUE );
 			action = USB2WIFI_KEEP_PASSWORD;
 		}
-		while( ( wifi.Retry ) && ( ! retryPicker ) );
+		while( ( wifi.Retry ) && ( ! retryPicker ) && ( ! wifi.BackToPicker ) );
 
-		if ( ! wifi.Retry )
+		if ( wifi.BackToPicker )
+		{
+			wifi.Retry = FALSE;
+		}
+		else if ( ! wifi.Retry )
 		{
 			goto done;
 		}

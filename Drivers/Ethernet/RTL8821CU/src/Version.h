@@ -13,8 +13,8 @@
 
 #define DEVNAME "eth_RTL8821.Driver"
 #define VERSION 0
-#define REVISION 6
-#define VSTRING DEVNAME " 0.6 (22.11.2026)"
+#define REVISION 8
+#define VSTRING DEVNAME " 0.8 (23.11.2026)"
 #define VERSTAG "\0$VER: " VSTRING
 
 #endif

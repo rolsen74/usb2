@@ -15,10 +15,12 @@
 // --
 
 void
-Wireless_StartPassword( struct IOSana2Req *request )
+Wireless_StartPassword( struct IOSana2Req *request, U32 adapter, U32 unit )
 {
 	struct USB2WiFiIFace *wifi;
 	struct Library *base;
+
+	S32 started;
 
 	if ( ( ! request->ios2_Data ) || ( request->ios2_DataLength != sizeof( struct USB2WiFiPrompt ) ) )
 	{
@@ -46,7 +48,16 @@ Wireless_StartPassword( struct IOSana2Req *request )
 	if ( wifi )
 	{
 		// The pending requester belongs to the caller until DOS signals its exit.
-		if ( ! wifi->StartPrompt( request->ios2_Data ) )
+		if ( ( base->lib_Version > USB2WIFI_VERSION ) || ( base->lib_Revision >= USB2WIFI_TITLED_PROMPT_REVISION ) )
+		{
+			started = wifi->StartPromptForUnit( request->ios2_Data, adapter, unit );
+		}
+		else
+		{
+			started = wifi->StartPrompt( request->ios2_Data );
+		}
+
+		if ( ! started )
 		{
 			request->ios2_Req.io_Error = S2ERR_NO_RESOURCES;
 		}

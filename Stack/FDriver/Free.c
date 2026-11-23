@@ -124,6 +124,13 @@ enum FSTAT fstat;
 		fdn->fdn_Title = NULL;
 	}
 
+	if ( fdn->fdn_Alias )
+	{
+		MEM_FREEVEC( fdn->fdn_Alias );
+
+		fdn->fdn_Alias = NULL;
+	}
+
 	while( ( device = usbbase->usb_IExec->RemHead( & fdn->fdn_Devices ) ) )
 	{
 		MEM_FREEVEC( device );

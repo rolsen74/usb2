@@ -169,32 +169,59 @@ SelectSecurity( struct Wireless *wireless, const struct AccessPoint *candidate )
 // --
 
 static U8
-NetworkSecurity( const struct Wireless *wireless, const struct AccessPoint *candidate )
+NetworkSecurityModes( const struct Wireless *wireless, const struct AccessPoint *candidate )
 {
+	U8 modes;
+
+	modes = 0;
+
 	if ( ( ! wireless->ScanRT2870 ) && ( ! candidate->RatesSupported ) )
 	{
-		return ( WIFI_SECURITY_UNSUPPORTED );
+		return ( 0 );
 	}
 
 	if ( candidate->RSNLength >= 2 )
 	{
 		if ( RSN_Supports_SAE( candidate->RSN + 2, candidate->RSNLength - 2 ) )
 		{
-			return ( USB2WIFI_WPA3 );
+			modes |= 1U << USB2WIFI_WPA3;
 		}
 
 		if ( RSN_Supports_WPA2( candidate->RSN + 2, candidate->RSNLength - 2 ) )
 		{
-			return ( USB2WIFI_WPA2 );
+			modes |= 1U << USB2WIFI_WPA2;
 		}
 	}
 
 	if ( WPA_Supports_TKIP( candidate->WPAIE, candidate->WPAIELength ) )
 	{
-		return ( USB2WIFI_WPA );
+		modes |= 1U << USB2WIFI_WPA;
 	}
 
-	return ( ( candidate->Protected || wireless->ScanRT2870 ) ? WIFI_SECURITY_UNSUPPORTED : USB2WIFI_OPEN );
+	if ( ( ! modes ) && ( ! candidate->Protected ) && ( ! wireless->ScanRT2870 ) )
+	{
+		modes = 1U << USB2WIFI_OPEN;
+	}
+
+	return ( modes );
+}
+
+// --
+
+static U8
+PreferredSecurity( U8 modes )
+{
+	S32 security;
+
+	for( security = USB2WIFI_WPA3; security >= USB2WIFI_OPEN; security-- )
+	{
+		if ( modes & ( 1U << security ) )
+		{
+			return ( security );
+		}
+	}
+
+	return ( WIFI_SECURITY_UNSUPPORTED );
 }
 
 // --
@@ -206,6 +233,7 @@ RecordNetwork( struct Wireless *wireless, const struct AccessPoint *candidate, c
 	struct WiFiNetwork *network;
 
 	U32 index;
+	U8 modes;
 	U8 security;
 
 	if ( ( ! ssid ) || ( ! length ) || ( length > WIRELESS_MAX_SSID ) || memchr( ssid, 0, length ) )
@@ -214,7 +242,9 @@ RecordNetwork( struct Wireless *wireless, const struct AccessPoint *candidate, c
 	}
 
 	scan = wireless->ScanNetworks;
-	security = NetworkSecurity( wireless, candidate );
+	modes = NetworkSecurityModes( wireless, candidate );
+
+	security = PreferredSecurity( modes );
 
 	for( index = 0; index < scan->Count; index++ )
 	{
@@ -222,12 +252,16 @@ RecordNetwork( struct Wireless *wireless, const struct AccessPoint *candidate, c
 
 		if ( ( strlen( network->SSID ) == length ) && ( ! memcmp( network->SSID, ssid, length ) ) )
 		{
-			if ( ( security != WIFI_SECURITY_UNSUPPORTED ) &&
-				( network->Security == WIFI_SECURITY_UNSUPPORTED || security > network->Security ) )
+			if ( modes & ~network->SecurityModes )
 			{
-				network->Security = security;
-				network->Channel = candidate->Channel;
+				network->SecurityModes |= modes;
 				scan->Changed = index + 1;
+
+				if ( ( network->Security == WIFI_SECURITY_UNSUPPORTED ) || ( security > network->Security ) )
+				{
+					network->Security = security;
+					network->Channel = candidate->Channel;
+				}
 			}
 
 			return;
@@ -242,6 +276,7 @@ RecordNetwork( struct Wireless *wireless, const struct AccessPoint *candidate, c
 
 		network->SSID[length] = 0;
 		network->Security = security;
+		network->SecurityModes = modes;
 		network->Channel = candidate->Channel;
 		scan->Changed = scan->Count;
 	}
@@ -453,7 +488,7 @@ Wireless_Match_Beacon( struct Wireless *wireless, const U8 *frame, U32 length )
 
 	if ( wireless->DetectSecurity )
 	{
-		security = NetworkSecurity( wireless, & candidate );
+		security = PreferredSecurity( NetworkSecurityModes( wireless, & candidate ) );
 
 		if ( ( security == WIFI_SECURITY_UNSUPPORTED ) ||
 			( security == USB2WIFI_OPEN && wireless->Auto->Profile.Password[0] ) )

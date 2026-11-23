@@ -14,6 +14,7 @@
 #include <devices/inputevent.h>
 #include <gadgets/listbrowser.h>
 #include <interfaces/listbrowser.h>
+#include <interfaces/usb2eth.h>
 #include <gadgets/layout.h>
 #include <gadgets/string.h>
 #include <images/label.h>
@@ -41,8 +42,7 @@ enum WiFiClass
 
 enum WiFiControl
 {
-	WIFI_CANCEL = 1,
-	WIFI_CONNECT,
+	WIFI_CONNECT = 2,
 	WIFI_NETWORK_LIST,
 	WIFI_SSID,
 	WIFI_PASSWORD
@@ -60,6 +60,7 @@ struct WiFiControls
 	struct ListBrowserIFace *ListBrowser;
 	struct List NetworkRows;
 	struct Node *Rows[WIFI_SCAN_NETWORKS];
+	char SecurityLabels[WIFI_SCAN_NETWORKS][sizeof( "Open WPA WPA2 WPA3" )];
 	struct ColumnInfo Columns[3];
 	Object *Password;
 	struct USB2WiFiProfile Autofill;
@@ -101,14 +102,15 @@ StringInputDispatch( struct Hook *hook, APTR object, APTR message )
 		event = input->gpi_IEvent;
 
 		// Report navigation keys through gadget-up while a string owns keyboard input.
-		if ( ( event->ie_Code == RAWKEY_RETURN ) || ( event->ie_Code == RAWKEY_ENTER ) )
+		if ( ( event->ie_Code == RAWKEY_RETURN ) || ( event->ie_Code == RAWKEY_ENTER ) ||
+			( event->ie_Code == RAWKEY_ESC ) )
 		{
 			if ( event->ie_Qualifier & IEQUALIFIER_REPEAT )
 			{
 				return ( GMR_MEACTIVE );
 			}
 
-			*input->gpi_Termination = WIFI_ACCEPT_FIELD;
+			*input->gpi_Termination = ( event->ie_Code == RAWKEY_ESC ) ? RAWKEY_ESC : WIFI_ACCEPT_FIELD;
 
 			return ( GMR_NOREUSE | GMR_VERIFY );
 		}
@@ -210,10 +212,10 @@ ValidPassword( const char *password, U32 minimum )
 // --
 
 static Object *
-AddControl( struct WiFiControls *controls, Object *child, const char *caption )
+AddControl( struct WiFiControls *controls, Object *child, const char *caption, S32 fixedHeight )
 {
 	struct lmAddChild add;
-	struct TagItem tags[2];
+	struct TagItem tags[3];
 
 	Object *label;
 
@@ -223,7 +225,6 @@ AddControl( struct WiFiControls *controls, Object *child, const char *caption )
 	}
 
 	label = NULL;
-	tags[0].ti_Tag = TAG_END;
 
 	if ( caption )
 	{
@@ -235,12 +236,14 @@ AddControl( struct WiFiControls *controls, Object *child, const char *caption )
 
 			return ( NULL );
 		}
-
-		tags[0].ti_Tag = CHILD_Label;
-		tags[0].ti_Data = (uintptr_t) label;
-		tags[1].ti_Tag = TAG_END;
-		tags[1].ti_Data = 0;
 	}
+
+	tags[0].ti_Tag = label ? CHILD_Label : TAG_IGNORE;
+	tags[0].ti_Data = (uintptr_t) label;
+	tags[1].ti_Tag = fixedHeight ? CHILD_WeightedHeight : TAG_IGNORE;
+	tags[1].ti_Data = 0;
+	tags[2].ti_Tag = TAG_END;
+	tags[2].ti_Data = 0;
 
 	add.MethodID = LM_ADDCHILD;
 	add.lm_Window = NULL;
@@ -393,12 +396,35 @@ MoveNetworkSelection( struct WiFiControls *controls, const struct USB2WiFiProfil
 
 // --
 
-static const char *
-NetworkSecurityName( U8 security )
+static void
+NetworkSecurityLabel( char *label, U8 modes )
 {
-	static const char *names[] = { "Open", "WPA (TKIP)", "WPA2", "WPA3" };
+	static const char *const names[] = { "Open", "WPA", "WPA2", "WPA3" };
 
-	return ( security < sizeof( names ) / sizeof( names[0] ) ? names[security] : "Unsupported" );
+	char *text;
+	U32 security;
+
+	text = label;
+
+	for( security = 0; security < sizeof( names ) / sizeof( names[0] ); security++ )
+	{
+		if ( modes & ( 1U << security ) )
+		{
+			if ( text != label )
+			{
+				*text++ = ' ';
+			}
+
+			strcpy( text, names[security] );
+
+			text += strlen( names[security] );
+		}
+	}
+
+	if ( text == label )
+	{
+		strcpy( label, "Unsupported" );
+	}
 }
 
 // --
@@ -408,9 +434,11 @@ AddNetworkRow( struct WiFiControls *controls, const struct WiFiNetwork *network,
 {
 	struct Node *row;
 
+	NetworkSecurityLabel( controls->SecurityLabels[index], network->SecurityModes );
+
 	row = controls->ListBrowser->AllocListBrowserNode( 2,
 		LBNA_Column, 0, LBNCA_Text, network->SSID,
-		LBNA_Column, 1, LBNCA_Text, NetworkSecurityName( network->Security ), TAG_END );
+		LBNA_Column, 1, LBNCA_Text, controls->SecurityLabels[index], TAG_END );
 
 	if ( ! row )
 	{
@@ -431,8 +459,8 @@ BuildControls( struct WiFiControls *controls, const struct USB2WiFiProfile *prof
 	const struct WiFiScan *scan, S32 setup )
 {
 	static const struct ColumnInfo columns[] = {
-		{ 65, "SSID", 0 },
-		{ 35, "Security", 0 },
+		{ 60, "SSID", 0 },
+		{ 40, "Security", 0 },
 		{ -1, NULL, 0 }
 	};
 
@@ -472,11 +500,11 @@ BuildControls( struct WiFiControls *controls, const struct USB2WiFiProfile *prof
 			LISTBROWSER_ColumnTitles, TRUE, LISTBROWSER_ColumnInfo, controls->Columns,
 			LISTBROWSER_Labels, & controls->NetworkRows, LISTBROWSER_Selected, selected,
 			LISTBROWSER_Top, selected < 0 ? 0 : selected,
-			LISTBROWSER_MinVisible, 6, TAG_END ), NULL );
+			LISTBROWSER_MinVisible, 6, TAG_END ), NULL, FALSE );
 
 		controls->SSID = AddControl( controls, NewObject( controls->StringInput, NULL,
 			GA_ID, WIFI_SSID, GA_RelVerify, TRUE, GA_TabCycle, TRUE, STRINGA_MaxChars, 33, STRINGA_MinVisible, 22,
-			STRINGA_TextVal, ssid, TAG_END ), "SSID" );
+			STRINGA_TextVal, ssid, TAG_END ), "SSID", FALSE );
 
 		if ( ( ! controls->Networks ) || ( ! controls->SSID ) )
 		{
@@ -489,23 +517,20 @@ BuildControls( struct WiFiControls *controls, const struct USB2WiFiProfile *prof
 		STRINGA_MaxChars, sizeof( controls->PasswordBuffer ), STRINGA_MinVisible, 22,
 		STRINGA_HookType, SHK_PASSWORD, STRINGA_Buffer, controls->PasswordBuffer,
 		STRINGA_UndoBuffer, controls->UndoBuffer, STRINGA_WorkBuffer, controls->WorkBuffer,
-		STRINGA_TextVal, "", STRINGA_DisablePopup, TRUE, STRINGA_AllowMarking, FALSE, TAG_END ), "Password" );
+		STRINGA_TextVal, "", STRINGA_DisablePopup, TRUE, STRINGA_AllowMarking, FALSE, TAG_END ), "Password", ! setup );
 
 	if ( ! controls->Password )
 	{
 		return ( FALSE );
 	}
 
-	button = AddControl( controls, NewObject( controls->Classes[WIFI_BUTTON], NULL,
-		GA_Text, "Connect", GA_ID, WIFI_CONNECT, GA_RelVerify, TRUE, TAG_END ), NULL );
-
-	if ( ( ! button ) || ( setup ) )
+	if ( ! setup )
 	{
-		return ( button != NULL );
+		return ( TRUE );
 	}
 
 	button = AddControl( controls, NewObject( controls->Classes[WIFI_BUTTON], NULL,
-		GA_Text, "Skip this boot", GA_ID, WIFI_CANCEL, GA_RelVerify, TRUE, TAG_END ), NULL );
+		GA_Text, "Connect", GA_ID, WIFI_CONNECT, GA_RelVerify, TRUE, TAG_END ), NULL, FALSE );
 
 	return ( button != NULL );
 }
@@ -591,6 +616,11 @@ ReadControls( const struct WiFiControls *controls, struct USB2WiFiProfile *profi
 	GetAttr( STRINGA_TextVal, controls->Password, & value );
 
 	password = value ? (const char *) value : "";
+
+	if ( ( ! setup ) && ( ! *password ) )
+	{
+		return ( USB2WIFI_BACK_TO_PICKER );
+	}
 
 	// A manually entered SSID must never inherit the password filled from a list row.
 	if ( ( controls->Autofill.Password[0] ) && ( ! strcmp( password, controls->Autofill.Password ) ) &&
@@ -701,8 +731,10 @@ UpdateNetworkRow( struct WiFiWindowInput *input )
 
 	if ( row )
 	{
+		NetworkSecurityLabel( controls->SecurityLabels[index], network->SecurityModes );
+
 		controls->ListBrowser->SetListBrowserNodeAttrs( row, LBNA_Column, 1,
-			LBNCA_Text, NetworkSecurityName( network->Security ), TAG_END );
+			LBNCA_Text, controls->SecurityLabels[index], TAG_END );
 	}
 	else if ( ! AddNetworkRow( controls, network, index ) )
 	{
@@ -743,11 +775,16 @@ HandleWindowInput( void *context )
 	struct USB2WiFiProfile *profile;
 	struct WiFiScan *scan;
 	struct Window *window;
+	struct InputEvent *keyEvent;
 
 	Object *object;
+	ULONG inputValue;
 	U32 event;
+	U32 key;
 	U16 code;
 	S32 setup;
+	S32 status;
+	S32 stringEvent;
 
 	input = context;
 	controls = input->Controls;
@@ -773,9 +810,31 @@ HandleWindowInput( void *context )
 			break;
 		}
 
-		if ( ( ( event & WMHI_CLASSMASK ) == WMHI_CLOSEWINDOW ) ||
-			( event == ( WMHI_GADGETUP | WIFI_CANCEL ) ) )
+		key = 0;
+		keyEvent = NULL;
+		stringEvent = ( event == ( WMHI_GADGETUP | WIFI_SSID ) ) || ( event == ( WMHI_GADGETUP | WIFI_PASSWORD ) );
+
+		if ( ( event & WMHI_CLASSMASK ) == WMHI_RAWKEY )
 		{
+			key = event & WMHI_KEYMASK;
+			inputValue = 0;
+
+			GetAttr( WINDOW_InputEvent, object, & inputValue );
+
+			keyEvent = (struct InputEvent *) inputValue;
+
+			if ( ( keyEvent ) && ( keyEvent->ie_Qualifier & IEQUALIFIER_REPEAT ) &&
+				( ( key == RAWKEY_ESC ) || ( key == RAWKEY_RETURN ) || ( key == RAWKEY_ENTER ) ) )
+			{
+				continue;
+			}
+		}
+
+		if ( ( ( event & WMHI_CLASSMASK ) == WMHI_CLOSEWINDOW ) ||
+			( key == RAWKEY_ESC ) || ( ( stringEvent ) && ( code == RAWKEY_ESC ) ) )
+		{
+			input->Result = setup ? USB2WIFI_MISSING : USB2WIFI_BACK_TO_PICKER;
+
 			return ( FALSE );
 		}
 
@@ -795,29 +854,16 @@ HandleWindowInput( void *context )
 			ActivatePassword( controls, object, window );
 		}
 
-		if ( ( ( event == ( WMHI_GADGETUP | WIFI_SSID ) ) || ( event == ( WMHI_GADGETUP | WIFI_PASSWORD ) ) ) &&
+		if ( ( stringEvent ) &&
 			( ( code == CURSORUP ) || ( code == CURSORDOWN ) ) )
 		{
 			MoveNetworkSelection( controls, profile, scan, object, window, code );
 		}
 
-		if ( ( setup ) && ( ( event & WMHI_CLASSMASK ) == WMHI_RAWKEY ) )
+		if ( setup )
 		{
-			struct InputEvent *keyEvent;
-
-			ULONG inputValue;
-			U32 key;
-
-			key = event & WMHI_KEYMASK;
-
 			if ( key == RAWKEY_TAB )
 			{
-				inputValue = 0;
-
-				GetAttr( WINDOW_InputEvent, object, & inputValue );
-
-				keyEvent = (struct InputEvent *) inputValue;
-
 				IDoMethod( object, WM_ACTIVATEGADGET,
 					( ( keyEvent ) && ( keyEvent->ie_Qualifier & ( IEQUALIFIER_LSHIFT | IEQUALIFIER_RSHIFT ) ) ) ?
 						controls->Password : controls->SSID );
@@ -828,11 +874,18 @@ HandleWindowInput( void *context )
 			}
 		}
 
-		if ( ( ( event == ( WMHI_GADGETUP | WIFI_CONNECT ) ) ||
-			( ( event == ( WMHI_GADGETUP | WIFI_PASSWORD ) ) && ( code == WIFI_ACCEPT_FIELD ) ) ) &&
-			( ReadControls( controls, profile, window, scan, setup, input->Action ) ) )
+		if ( ( event == ( WMHI_GADGETUP | WIFI_CONNECT ) ) ||
+			( ( event == ( WMHI_GADGETUP | WIFI_PASSWORD ) ) && ( code == WIFI_ACCEPT_FIELD ) ) ||
+			( ( ! setup ) && ( ( key == RAWKEY_RETURN ) || ( key == RAWKEY_ENTER ) ) ) )
 		{
-			input->Result = setup ? USB2WIFI_CONNECT_NOW : USB2WIFI_OK;
+			status = ReadControls( controls, profile, window, scan, setup, input->Action );
+
+			if ( ! status )
+			{
+				continue;
+			}
+
+			input->Result = setup ? USB2WIFI_CONNECT_NOW : status;
 
 			if ( setup )
 			{
@@ -846,6 +899,51 @@ HandleWindowInput( void *context )
 	}
 
 	return ( TRUE );
+}
+
+// --
+
+static void
+ReadAdapterTitle( U32 adapter, U32 unit, char *title )
+{
+	struct IORequest request;
+	struct USB2EthIFace *ethernet;
+
+	ULONG expected;
+
+	title[0] = 0;
+
+	if ( unit >= USB2_ETH_MAX_UNITS )
+	{
+		return;
+	}
+
+	memset( & request, 0, sizeof( request ) );
+
+	request.io_Message.mn_Length = sizeof( request );
+	expected = WiFi_AdapterProtocol( adapter );
+
+	if ( OpenDevice( USB2_ETH_DEVICE, USB2_ETH_BACKEND_UNIT, & request, 0 ) )
+	{
+		return;
+	}
+
+	if ( request.io_Device->dd_Library.lib_Revision >= USB2ETH_TITLE_REVISION )
+	{
+		ethernet = (APTR) GetInterface( (APTR) request.io_Device, "main", 1, NULL );
+
+		if ( ethernet )
+		{
+			if ( ethernet->GetAdapterTitle( unit, title ) != expected )
+			{
+				title[0] = 0;
+			}
+
+			DropInterface( (APTR) ethernet );
+		}
+	}
+
+	CloseDevice( & request );
 }
 
 // --
@@ -866,7 +964,10 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 	struct Window *window;
 
 	Object *object;
-	char title[120];
+	const char *adapterLabel;
+	const char *passwordLabel;
+	char adapterTitle[USB2ETH_TITLE_SIZE];
+	char title[192];
 	ULONG mask;
 	U32 index;
 	S32 preferredHeight;
@@ -890,6 +991,10 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 	screen = NULL;
 	result = USB2WIFI_ERROR;
 	mask = 0;
+
+	ReadAdapterTitle( adapter, unit, adapterTitle );
+
+	adapterLabel = adapterTitle[0] ? adapterTitle : ( adapter == USB2WIFI_RT2870 ? "RT2870" : "RTL8188EU" );
 
 	if ( ! WiFi_ObtainIntuition() )
 	{
@@ -926,7 +1031,7 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 
 	for( index = 0; index < WIFI_CLASSES; index++ )
 	{
-		if ( ( ! setup ) && ( index == WIFI_LISTBROWSER ) )
+		if ( ( ! setup ) && ( ( index == WIFI_LISTBROWSER ) || ( index == WIFI_BUTTON ) ) )
 		{
 			continue;
 		}
@@ -951,14 +1056,23 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 			goto done;
 		}
 
-		snprintf( title, sizeof( title ), "%s - %s - Unit #%ld",
+		snprintf( title, sizeof( title ), "%s - %s",
 			retry ? "Wi-Fi authentication did not complete" : "Wi-Fi Settings",
-			adapter == USB2WIFI_RT2870 ? "RT2870" : "RTL8188EU", (long) unit );
+			adapterLabel );
 	}
 	else
 	{
-		snprintf( title, sizeof( title ), "%s - %s", retry ? "Wi-Fi authentication did not complete" :
-			"Wi-Fi password required", profile->SSID );
+		passwordLabel = retry ? "Wi-Fi authentication did not complete" : "Wi-Fi password required";
+
+		if ( adapterTitle[0] )
+		{
+			snprintf( title, sizeof( title ), "%s - %s - %s", passwordLabel,
+				adapterLabel, profile->SSID );
+		}
+		else
+		{
+			snprintf( title, sizeof( title ), "%s - %s", passwordLabel, profile->SSID );
+		}
 	}
 
 	controls.StringInput = MakeClass( NULL, NULL, controls.Classes[WIFI_STRING], 0, 0 );
@@ -970,7 +1084,7 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 
 	controls.StringInput->cl_Dispatcher.h_Entry = StringInputDispatch;
 
-	if ( ( setup ) && ( retry ) )
+	if ( setup )
 	{
 		WiFi_RestoreScan( adapter, unit, & scan );
 	}
@@ -978,7 +1092,8 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 	controls.StringInput->cl_UserData = scan.Count;
 
 	controls.Layout = NewObject( controls.Classes[WIFI_LAYOUT], NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT, LAYOUT_SpaceInner, TRUE, LAYOUT_SpaceOuter, TRUE, TAG_END );
+		LAYOUT_Orientation, LAYOUT_ORIENT_VERT, LAYOUT_SpaceInner, TRUE, LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_VertAlignment, setup ? LAYOUT_ALIGN_TOP : LAYOUT_ALIGN_CENTER, TAG_END );
 
 	if ( ( ! controls.Layout ) || ( ! BuildControls( & controls, profile, & scan, setup ) ) )
 	{
@@ -989,7 +1104,7 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 
 	width = screen->Width - screen->WBorLeft - screen->WBorRight - 4;
 	height = screen->Height - screen->WBorTop - screen->WBorBottom - screen->BarHeight - 4;
-	preferredHeight = setup ? 220 : 84;
+	preferredHeight = setup ? 220 : 44;
 
 	if ( width < 1 )
 	{
@@ -1006,7 +1121,7 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 		WA_CloseGadget, TRUE, WA_DepthGadget, TRUE, WA_AutoAdjust, TRUE,
 		WA_InnerWidth, width < 440 ? width : 440,
 		WA_InnerHeight, height < preferredHeight ? height : preferredHeight,
-		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | ( setup ? IDCMP_RAWKEY : 0 ),
+		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_RAWKEY,
 		WINDOW_Layout, controls.Layout, WINDOW_Position, WPOS_CENTERSCREEN, TAG_END );
 
 	if ( ! object )
@@ -1055,7 +1170,7 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 		}
 
 		DebugPrintF( "USB2 Wi-Fi: opened the picker for %s unit %lu.\n",
-			adapter == USB2WIFI_RT2870 ? "RT2870" : "RTL8188EU", unit );
+			adapterLabel, unit );
 
 		scan.InputMask = mask;
 		scan.Update = HandleWindowInput;
@@ -1067,6 +1182,8 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 
 		goto done;
 	}
+
+	ActivatePassword( & controls, object, window );
 
 	while( HandleWindowInput( & input ) )
 	{
@@ -1134,7 +1251,7 @@ done:
 static S32
 SetupWindow( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 retry, U32 *action )
 {
-	if ( ( ! profile ) || ( ! action ) || ( ! WiFi_DeviceName( adapter ) ) ||
+	if ( ( ! profile ) || ( ! action ) || ( ! WiFi_AdapterProtocol( adapter ) ) ||
 		( ! memchr( profile->SSID, 0, sizeof( profile->SSID ) ) ) ||
 		( ! memchr( profile->Password, 0, sizeof( profile->Password ) ) ) ||
 		( profile->Security > USB2WIFI_WPA3 ) ||

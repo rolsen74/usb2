@@ -27,7 +27,7 @@ struct EditorLists
 {
 	struct List Networks;
 	struct List Adapters;
-	struct ColumnInfo NetworkColumns[4];
+	struct ColumnInfo NetworkColumns[3];
 	struct ColumnInfo AdapterColumns[5];
 	Object *NetworkBrowser;
 	Object *AdapterBrowser;
@@ -116,9 +116,8 @@ static S32
 BuildTabs( const struct ProfileEditor *editor, struct EditorLists *lists, Object *layout )
 {
 	static const char *const tabs[] = { "SSIDs", "Devices", NULL };
-	static const struct ColumnInfo networkColumns[] = { { 55, "SSID", 0 }, { 25, "Security", 0 },
-		{ 20, "Hidden", 0 }, { -1, NULL, 0 } };
-	static const struct ColumnInfo adapterColumns[] = { { 31, "Device filename", 0 }, { 23, "MAC or unit", 0 },
+	static const struct ColumnInfo networkColumns[] = { { 80, "SSID", 0 }, { 20, "Hidden", 0 }, { -1, NULL, 0 } };
+	static const struct ColumnInfo adapterColumns[] = { { 31, "Adapter name", 0 }, { 23, "MAC or unit", 0 },
 		{ 30, "SSID", 0 }, { 16, "Autoconnect", 0 }, { -1, NULL, 0 } };
 
 	Object *networks;
@@ -179,7 +178,6 @@ BuildFooter( const struct ProfileEditor *editor, Object *layout )
 	static const char *const labels[] = { "_Save", "_Use", "_Cancel" };
 
 	Object *row;
-	Object *spacer;
 	U32 index;
 
 	if ( ! WiFi_AddEditorChild( layout, NewObject( editor->Classes[EDITOR_SPACE], NULL,
@@ -189,7 +187,8 @@ BuildFooter( const struct ProfileEditor *editor, Object *layout )
 	}
 
 	row = WiFi_AddEditorChild( layout, NewObject( editor->Classes[EDITOR_LAYOUT], NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ, LAYOUT_EvenSize, TRUE, LAYOUT_SpaceInner, TRUE, TAG_END ), FixedHeight );
+		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ, LAYOUT_EvenSize, TRUE,
+		LAYOUT_SpaceInner, TRUE, LAYOUT_InnerSpacing, 12, TAG_END ), FixedHeight );
 
 	if ( ! row )
 	{
@@ -198,16 +197,6 @@ BuildFooter( const struct ProfileEditor *editor, Object *layout )
 
 	for ( index = 0; index < sizeof( labels ) / sizeof( *labels ); index++ )
 	{
-		if ( index )
-		{
-			spacer = NewObject( editor->Classes[EDITOR_SPACE], NULL, SPACE_Transparent, TRUE, TAG_END );
-
-			if ( ! WiFi_AddEditorChild( row, spacer, NULL ) )
-			{
-				return ( FALSE );
-			}
-		}
-
 		if ( ! WiFi_AddEditorChild( row, WiFi_EditorButton( editor, EDITOR_SAVE + index, labels[index] ), NULL ) )
 		{
 			return ( FALSE );
@@ -245,10 +234,9 @@ RefreshRows( const struct ProfileEditor *editor, struct EditorLists *lists, stru
 
 	for ( network = editor->Database.Networks; network; network = network->Next )
 	{
-		node = editor->ListBrowser->AllocListBrowserNode( 3, LBNA_UserData, network,
+		node = editor->ListBrowser->AllocListBrowserNode( 2, LBNA_UserData, network,
 			LBNA_Column, 0, LBNCA_CopyText, TRUE, LBNCA_Text, network->Profile.SSID,
-			LBNA_Column, 1, LBNCA_Text, WiFi_ProfileSecurityNames[network->Profile.Security],
-			LBNA_Column, 2, LBNCA_Text, ( network->Profile.Options & USB2WIFI_PROFILE_HIDDEN ) ? "Yes" : "No", TAG_END );
+			LBNA_Column, 1, LBNCA_Text, ( network->Profile.Options & USB2WIFI_PROFILE_HIDDEN ) ? "Yes" : "No", TAG_END );
 
 		if ( ! node )
 		{
@@ -353,8 +341,7 @@ RemoveEntry( struct ProfileDatabase *db, S32 device, APTR entry )
 
 		for ( adapter = db->Adapters; adapter; adapter = adapter->Next )
 		{
-			if ( ( adapter->Profile.Security == network->Profile.Security ) &&
-				( ! strcmp( adapter->Profile.SSID, network->Profile.SSID ) ) )
+			if ( ! strcmp( adapter->Profile.SSID, network->Profile.SSID ) )
 			{
 				return ( FALSE );
 			}

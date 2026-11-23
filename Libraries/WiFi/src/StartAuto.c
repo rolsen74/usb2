@@ -19,7 +19,6 @@ struct WiFiWorker
 {
 	struct DeathMessage Death;
 	struct WiFiWorker *Next;
-	const char *Device;
 	U32 Adapter;
 	U32 Unit;
 };
@@ -85,7 +84,7 @@ AutoProcess( void )
 
 	worker = FindTask( NULL )->tc_UserData;
 
-	return ( WiFi_Run( worker->Device, worker->Unit, FALSE ) );
+	return ( WiFi_Run( NULL, worker->Unit, FALSE, WiFi_AdapterProtocol( worker->Adapter ) ) );
 }
 
 // --
@@ -97,11 +96,7 @@ WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
 	struct Process *process;
 	struct Library *base;
 
-	const char *device;
-
-	device = WiFi_DeviceName( adapter );
-
-	if ( ! device )
+	if ( ! WiFi_AdapterProtocol( adapter ) )
 	{
 		return ( FALSE );
 	}
@@ -136,7 +131,6 @@ WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
 
 	worker->Next = Workers;
 	Workers = worker;
-	worker->Device = device;
 	worker->Adapter = adapter;
 	worker->Unit = unit;
 	worker->Death.dm_Msg.mn_Node.ln_Type = NT_MESSAGE;

@@ -14,17 +14,34 @@
 
 // --
 
+struct WiFiPromptWork
+{
+	struct USB2WiFiPrompt *Prompt;
+	U32 Adapter;
+	U32 Unit;
+};
+
+// --
+
 static S32
 PromptProcess( void )
 {
 	struct USB2WiFiPrompt *prompt;
+	struct WiFiPromptWork *work;
 	struct USB2WiFiProfile profile;
 	struct Task *task;
 
 	S32 cancelled;
+	U32 adapter;
+	U32 unit;
 
 	task = FindTask( NULL );
-	prompt = task->tc_UserData;
+	work = task->tc_UserData;
+	prompt = work->Prompt;
+	adapter = work->Adapter;
+	unit = work->Unit;
+
+	FreeVec( work );
 
 	ObtainSemaphore( & WiFiLock );
 
@@ -41,7 +58,7 @@ PromptProcess( void )
 
 		memcpy( profile.SSID, prompt->SSID, sizeof( profile.SSID ) );
 
-		prompt->Result = WiFi_Window( & profile, 0, 0, FALSE, prompt->Retry, & prompt->PasswordAction );
+		prompt->Result = WiFi_Window( & profile, adapter, unit, FALSE, prompt->Retry, & prompt->PasswordAction );
 
 		if ( prompt->Result == USB2WIFI_OK )
 		{
@@ -74,8 +91,19 @@ PromptProcess( void )
 // --
 
 S32
-WiFi_StartPrompt( struct USB2WiFiIFace *self __attribute__((unused)), struct USB2WiFiPrompt *prompt )
+WiFi_StartPrompt( struct USB2WiFiIFace *self, struct USB2WiFiPrompt *prompt )
 {
+	return ( WiFi_StartPromptForUnit( self, prompt, USB2WIFI_RTL8188, ~0U ) );
+}
+
+// --
+
+S32
+WiFi_StartPromptForUnit( struct USB2WiFiIFace *self __attribute__((unused)), struct USB2WiFiPrompt *prompt,
+	U32 adapter, U32 unit )
+{
+	struct WiFiPromptWork *work;
+
 	if ( ( ! prompt ) || ( ! prompt->Death.dm_Msg.mn_ReplyPort ) ||
 		( ! prompt->SSID[0] ) || ( ! memchr( prompt->SSID, 0, sizeof( prompt->SSID ) ) ) ||
 		( prompt->Security < USB2WIFI_WPA ) || ( prompt->Security > USB2WIFI_WPA3 ) )
@@ -83,6 +111,16 @@ WiFi_StartPrompt( struct USB2WiFiIFace *self __attribute__((unused)), struct USB
 		return ( FALSE );
 	}
 
+	work = AllocVecTags( sizeof( *work ), TAG_END );
+
+	if ( ! work )
+	{
+		return ( FALSE );
+	}
+
+	work->Prompt = prompt;
+	work->Adapter = adapter;
+	work->Unit = unit;
 	prompt->Result = USB2WIFI_MISSING;
 	prompt->Worker = NULL;
 	prompt->Cancelled = FALSE;
@@ -92,9 +130,16 @@ WiFi_StartPrompt( struct USB2WiFiIFace *self __attribute__((unused)), struct USB
 
 	memset( prompt->Password, 0, sizeof( prompt->Password ) );
 
-	return ( CreateNewProcTags( NP_Name, "USB2 Ethernet - Wi-Fi password",
-		NP_Entry, PromptProcess, NP_UserData, prompt, NP_Child, FALSE, NP_StackSize, 32768,
-		NP_NotifyOnDeathMessage, & prompt->Death, TAG_END ) != NULL );
+	if ( ! CreateNewProcTags( NP_Name, "USB2 Ethernet - Wi-Fi password",
+		NP_Entry, PromptProcess, NP_UserData, work, NP_Child, FALSE, NP_StackSize, 32768,
+		NP_NotifyOnDeathMessage, & prompt->Death, TAG_END ) )
+	{
+		FreeVec( work );
+
+		return ( FALSE );
+	}
+
+	return ( TRUE );
 }
 
 // --

@@ -1,4 +1,5 @@
 TYPE Interface
 TITLE "RT2870"
 DRIVER "eth_RT2870.Driver"
+ALIAS "usb2rt2870.device"
 DEVICE 0x07d1:0x3c09

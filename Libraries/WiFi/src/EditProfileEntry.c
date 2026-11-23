@@ -118,35 +118,44 @@ BuildFields( const struct ProfileEditor *editor, Object *layout, struct EntryFie
 
 	if ( adapter )
 	{
-		snprintf( unit, sizeof( unit ), "%lu", (unsigned long)( eth ? eth->Unit : 0 ) );
-
 		snprintf( channel, sizeof( channel ), "%u", (unsigned)profile->Channel );
 
-		fields->Device = AddString( editor, layout, "Device filename", eth ? eth->Device : "", WIFI_DEVICE_NAME_SIZE );
+		fields->Device = AddString( editor, layout, "Adapter name", eth ? eth->Device : "", WIFI_DEVICE_NAME_SIZE );
 
-		fields->Unit = AddString( editor, layout, "Unit", unit, sizeof( unit ) );
-
-		if ( ( ! fields->Device ) || ( ! fields->Unit ) )
+		if ( ! fields->Device )
 		{
 			return ( FALSE );
+		}
+
+		if ( ( ! eth ) || ( ! WiFi_HasStation( eth->Station ) ) )
+		{
+			snprintf( unit, sizeof( unit ), "%lu", (unsigned long)( eth ? eth->Unit : 0 ) );
+
+			fields->Unit = AddString( editor, layout, "Unit", unit, sizeof( unit ) );
+
+			if ( ! fields->Unit )
+			{
+				return ( FALSE );
+			}
 		}
 	}
 
 	fields->SSID = AddString( editor, layout, "SSID", profile->SSID, sizeof( profile->SSID ) );
 
-	fields->Security = AddField( editor, layout, NewObject( editor->Classes[EDITOR_CHOOSER], NULL,
-		GA_TabCycle, TRUE, CHOOSER_LabelArray, WiFi_ProfileSecurityNames, CHOOSER_Selected, profile->Security, TAG_END ), "Security" );
-
-	if ( ( ! fields->SSID ) || ( ! fields->Security ) )
+	if ( ! fields->SSID )
 	{
 		return ( FALSE );
 	}
 
 	if ( adapter )
 	{
+		fields->Security = AddField( editor, layout, NewObject( editor->Classes[EDITOR_CHOOSER], NULL,
+			GA_TabCycle, TRUE, CHOOSER_LabelArray, WiFi_ProfileSecurityNames,
+			CHOOSER_Selected, profile->Security, TAG_END ), "Last security" );
+
 		fields->Channel = AddString( editor, layout, "Last channel", channel, sizeof( channel ) );
 
-		if ( ! fields->Channel )
+		if ( ( ! fields->Security ) || ( ! fields->Channel ) )
 		{
 			return ( FALSE );
 		}
@@ -218,24 +227,6 @@ FieldNumber( Object *field, U32 limit, U32 *value )
 
 // --
 
-static U32
-DeviceType( const char *device )
-{
-	if ( ! strcasecmp( device, WiFi_DeviceName( USB2WIFI_RTL8188 ) ) )
-	{
-		return ( USB2WIFI_RTL8188 );
-	}
-
-	if ( ! strcasecmp( device, WiFi_DeviceName( USB2WIFI_RT2870 ) ) )
-	{
-		return ( USB2WIFI_RT2870 );
-	}
-
-	return ( UINT32_MAX );
-}
-
-// --
-
 static const char *
 StoreAdapter( struct ProfileDatabase *db, const struct EntryFields *fields, struct ProfileAdapter *entry,
 	struct USB2WiFiProfile *profile )
@@ -243,26 +234,34 @@ StoreAdapter( struct ProfileDatabase *db, const struct EntryFields *fields, stru
 	struct ProfileAdapter *match;
 
 	const char *device;
+	U32 adapter;
 	U32 unit;
 	U32 channel;
+
+	unit = 0;
 
 	device = FieldText( fields->Device );
 
 	if ( ( ! device[0] ) || ( strlen( device ) >= WIFI_DEVICE_NAME_SIZE )
-		|| ( ! FieldNumber( fields->Unit, UINT32_MAX, &unit ) )
 		|| ( ! FieldNumber( fields->Channel, UINT8_MAX, &channel ) ) )
 	{
-		return ( "Enter a device filename, unit and channel" );
+		return ( "Enter an adapter name and channel" );
+	}
+
+	if ( ( fields->Unit ) && ( ! FieldNumber( fields->Unit, UINT32_MAX, &unit ) ) )
+	{
+		return ( "Enter a unit number" );
 	}
 
 	profile->Channel = channel;
+	adapter = ( ( entry ) && ( WiFi_HasStation( entry->Station ) ) ) ? entry->Type : WiFi_ProfileDeviceType( device );
 
-	if ( ! WiFi_ProfileNetwork( db, profile, FALSE ) )
+	if ( ! WiFi_ProfileNetwork( db, profile->SSID, FALSE ) )
 	{
-		return ( "Add the SSID and security mode to Networks first" );
+		return ( "Add the SSID to the SSIDs tab first" );
 	}
 
-	if ( ! WiFi_ValidProfile( profile, DeviceType( device ) ) )
+	if ( ! WiFi_ValidProfile( profile, adapter ) )
 	{
 		return ( "The selected security mode or channel is invalid for this device" );
 	}
@@ -289,17 +288,9 @@ StoreAdapter( struct ProfileDatabase *db, const struct EntryFields *fields, stru
 
 	entry->Profile = *profile;
 	entry->Unit = unit;
+	entry->Type = adapter;
 
 	return ( NULL );
-}
-
-// --
-
-static S32
-ReferencesNetwork( const struct ProfileAdapter *adapter, const struct ProfileNetwork *network )
-{
-	return ( adapter->Profile.Security == network->Profile.Security &&
-		! strcmp( adapter->Profile.SSID, network->Profile.SSID ) );
 }
 
 // --
@@ -310,42 +301,31 @@ StoreNetwork( struct ProfileDatabase *db, struct ProfileNetwork *entry, struct U
 	struct ProfileNetwork *match;
 	struct ProfileAdapter *adapter;
 
-	if ( ! WiFi_ValidProfile( profile, UINT32_MAX ) )
+	if ( ! WiFi_ValidNetwork( profile ) )
 	{
-		return ( "Check the SSID and password for this security mode" );
+		return ( "Check the SSID and password" );
 	}
 
-	match = WiFi_ProfileNetwork( db, profile, FALSE );
+	match = WiFi_ProfileNetwork( db, profile->SSID, FALSE );
 
 	if ( ( match ) && ( match != entry ) )
 	{
-		return ( "That SSID and security mode already exist" );
+		return ( "That SSID already exists" );
 	}
 
 	if ( entry )
 	{
 		for ( adapter = db->Adapters; adapter; adapter = adapter->Next )
 		{
-			if ( ( ReferencesNetwork( adapter, entry ) ) && ( profile->Security == USB2WIFI_OPEN )
-				&& ( DeviceType( adapter->Device ) == USB2WIFI_RT2870 ) )
-			{
-				return ( "An RT2870 device references this network and requires security" );
-			}
-		}
-
-		for ( adapter = db->Adapters; adapter; adapter = adapter->Next )
-		{
-			if ( ReferencesNetwork( adapter, entry ) )
+			if ( ! strcmp( adapter->Profile.SSID, entry->Profile.SSID ) )
 			{
 				strcpy( adapter->Profile.SSID, profile->SSID );
-
-				adapter->Profile.Security = profile->Security;
 			}
 		}
 	}
 	else
 	{
-		entry = WiFi_ProfileNetwork( db, profile, TRUE );
+		entry = WiFi_ProfileNetwork( db, profile->SSID, TRUE );
 
 		if ( ! entry )
 		{
@@ -375,25 +355,29 @@ StoreEntry( struct ProfileDatabase *db, const struct EntryFields *fields, S32 ad
 	security = USB2WIFI_WPA2;
 	checked = FALSE;
 
-	GetAttr( CHOOSER_Selected, fields->Security, &security );
-
 	GetAttr( CHECKBOX_Checked, fields->Option, &checked );
 
 	text = FieldText( fields->SSID );
 
-	if ( ( ! text[0] ) || ( strlen( text ) >= sizeof( profile.SSID ) ) || ( security > USB2WIFI_WPA3 ) )
+	if ( ( ! text[0] ) || ( strlen( text ) >= sizeof( profile.SSID ) ) )
 	{
-		return ( "Enter an SSID and select a security mode" );
+		return ( "Enter an SSID" );
 	}
 
 	memset( &profile, 0, sizeof( profile ) );
 
 	strcpy( profile.SSID, text );
 
-	profile.Security = security;
-
 	if ( adapter )
 	{
+		GetAttr( CHOOSER_Selected, fields->Security, &security );
+
+		if ( security > USB2WIFI_WPA3 )
+		{
+			return ( "Select a security mode" );
+		}
+
+		profile.Security = security;
 		profile.Options = checked ? USB2WIFI_PROFILE_AUTO : 0;
 
 		return ( StoreAdapter( db, fields, entry, &profile ) );

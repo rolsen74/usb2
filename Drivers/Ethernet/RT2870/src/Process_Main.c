@@ -8,7 +8,9 @@
 
 // --
 
+#include <usb2wifi.h>
 #include "All.h"
+#include "WiFiCommand.h"
 
 // --
 
@@ -24,6 +26,11 @@ Process_Main( struct EthernetUnit *unit )
 
 	reg = unit->unit_USB_Register;
 	detached = FALSE;
+
+	if ( unit->unit_RxCheckReady )
+	{
+		Wireless_StartAuto( USB2WIFI_RT2870, unit->unit_UnitNr );
+	}
 
 	do
 	{

@@ -70,6 +70,23 @@ int error;
 				break;
 			}
 
+			case USB2Tag_FDriver_Alias:
+			{
+				if ( fdn->fdn_Alias )
+				{
+					MEM_FREEVEC( fdn->fdn_Alias );
+				}
+
+				fdn->fdn_Alias = MEM_PRINTF( "%s", tag->ti_Data );
+
+				if ( ! fdn->fdn_Alias )
+				{
+					goto bailout;
+				}
+
+				break;
+			}
+
 			case USB2Tag_FDriver_Driver_Filename:
 			{
 //				USBDEBUG( "FDriver_FileName ....... : %s", tag->ti_Data );

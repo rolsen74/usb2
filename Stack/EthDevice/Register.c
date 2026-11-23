@@ -12,6 +12,22 @@
 
 // --
 
+SEC_CODE static void
+CopyName( char *target, const char *source )
+{
+	U32 index;
+
+	if ( source )
+	{
+		for( index = 0; ( index < USB2ETH_TITLE_SIZE - 1 ) && ( source[index] ); index++ )
+		{
+			target[index] = source[index];
+		}
+	}
+}
+
+// --
+
 SEC_CODE struct USB2EthUnit *
 EthDevice_Register( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR adapter, ULONG *number )
 {
@@ -22,6 +38,24 @@ EthDevice_Register( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR
 
 SEC_CODE struct USB2EthUnit *
 EthDevice_RegisterAdapter( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR adapter, ULONG *number, ULONG type )
+{
+	return ( EthDevice_RegisterNamedAdapter( Self, ops, adapter, number, type, NULL ) );
+}
+
+// --
+
+SEC_CODE struct USB2EthUnit *
+EthDevice_RegisterNamedAdapter( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR adapter,
+	ULONG *number, ULONG type, const char *title )
+{
+	return ( EthDevice_RegisterClassAdapter( Self, ops, adapter, number, type, title, NULL, NULL ) );
+}
+
+// --
+
+SEC_CODE struct USB2EthUnit *
+EthDevice_RegisterClassAdapter( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR adapter,
+	ULONG *number, ULONG type, const char *title, const char *driver, const char *alias )
 {
 	struct USB2EthDevice *base;
 	struct USB2EthUnit *unit;
@@ -45,6 +79,14 @@ EthDevice_RegisterAdapter( struct USB2EthIFace *Self, const struct USB2EthOps *o
 		return ( NULL );
 	}
 
+	unit->Info.Type = type;
+
+	CopyName( unit->Info.Title, title );
+
+	CopyName( unit->Info.Driver, driver );
+
+	CopyName( unit->Info.Alias, alias );
+
 	IExec->ObtainSemaphore( & base->OpenLock );
 
 	IExec->ObtainSemaphore( & base->RouteLock );
@@ -62,7 +104,6 @@ EthDevice_RegisterAdapter( struct USB2EthIFace *Self, const struct USB2EthOps *o
 		unit->Ops = ops;
 		unit->Adapter = adapter;
 		unit->Number = index;
-		unit->Type = type;
 		*number = index;
 		base->Units[index] = unit;
 	}

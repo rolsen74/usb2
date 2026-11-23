@@ -29,6 +29,7 @@ enum
 	_SubClass,
 	_Protocol,
 	_Device,
+	_Alias,
 // _StackSize,
 // _Priority,
 // _Hotkey,
@@ -43,6 +44,7 @@ static struct CmdStruct Cmds[] =
 {
 	{ 5, "TITLE",		_Title		},
 	{ 6, "DRIVER",		_FNDriver	},
+	{ 5, "ALIAS",		_Alias		},
 	{ 4, "TYPE",		_Type		},
 	{ 5, "CLASS",		_Class		},
 	{ 8, "SUBCLASS",	_SubClass	},
@@ -557,6 +559,7 @@ S32 chr;
 
 				case _Title:
 				case _FNDriver:
+				case _Alias:
 				{
 					if ( ( mem[pos] ) && ( mem[pos] != '\n' ) && ( mem[pos] != '\r' ) )
 					{
@@ -602,6 +605,11 @@ S32 chr;
 							{
 								Tags[_FNDriver].ti_Tag  = USB2Tag_FDriver_Driver_Filename;
 								Tags[_FNDriver].ti_Data = (Tag) & mem[argstart];
+							}
+							else
+							{
+								Tags[_Alias].ti_Tag  = USB2Tag_FDriver_Alias;
+								Tags[_Alias].ti_Data = (Tag) & mem[argstart];
 							}
 //							else
 //							{

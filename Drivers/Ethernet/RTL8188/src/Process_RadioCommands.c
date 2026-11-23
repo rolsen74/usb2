@@ -75,7 +75,7 @@ Process_RadioCommands( struct EthernetUnit *unit )
 		}
 		else if ( ioreq->ios2_Req.io_Command == USB2WIRELESS_CMD_PROMPT )
 		{
-			Wireless_StartPassword( ioreq );
+			Wireless_StartPassword( ioreq, USB2WIFI_RTL8188, unit->unit_UnitNr );
 		}
 		else if ( ioreq->ios2_Req.io_Command == S2_SETKEY )
 		{

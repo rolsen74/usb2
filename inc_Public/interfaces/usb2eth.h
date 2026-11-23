@@ -20,7 +20,11 @@
 #define USB2_ETH_BACKEND_UNIT 0xffffffffUL
 #define USB2_ETH_MAX_UNITS 32
 #define USB2ETH_ADAPTER_REVISION 1
+#define USB2ETH_TITLE_REVISION 6
+#define USB2ETH_TITLE_SIZE 96
+#define USB2ETH_CLASS_REVISION 7
 
+/* Values used by existing driver and client pairs. The stack treats type as opaque. */
 enum USB2EthAdapterType
 {
 	USB2ETH_ADAPTER_UNKNOWN,
@@ -32,6 +36,14 @@ enum USB2EthAdapterType
 };
 
 struct USB2EthUnit;
+
+struct USB2EthAdapterInfo
+{
+	ULONG Type;
+	char Title[USB2ETH_TITLE_SIZE];
+	char Driver[USB2ETH_TITLE_SIZE];
+	char Alias[USB2ETH_TITLE_SIZE];
+};
 
 /*
  * Open USB2_ETH_BACKEND_UNIT with an IORequest and obtain "main" v1.
@@ -71,6 +83,20 @@ struct USB2EthIFace
 		const struct USB2EthOps *ops, APTR adapter, ULONG *number, ULONG type );
 	/* Pass a live open request to identify its adapter, or NULL to look up a unit number. */
 	ULONG APICALL ( *GetAdapter )( struct USB2EthIFace *Self, const struct IORequest *request, ULONG number );
+
+	/* These vectors require USB2ETH_TITLE_REVISION. title is copied on registration. */
+	struct USB2EthUnit *APICALL ( *RegisterNamedAdapter )( struct USB2EthIFace *Self,
+		const struct USB2EthOps *ops, APTR adapter, ULONG *number, ULONG type, const char *title );
+	/* Provide a title buffer of USB2ETH_TITLE_SIZE bytes. Returns the current adapter type. */
+	ULONG APICALL ( *GetAdapterTitle )( struct USB2EthIFace *Self, ULONG number, char *title );
+
+	/* These vectors require USB2ETH_CLASS_REVISION. Metadata strings are optional and copied. */
+	struct USB2EthUnit *APICALL ( *RegisterClassAdapter )( struct USB2EthIFace *Self,
+		const struct USB2EthOps *ops, APTR adapter, ULONG *number, ULONG type,
+		const char *title, const char *driver, const char *alias );
+	/* Copy metadata for a live open, even for registered adapters with type UNKNOWN. */
+	LONG APICALL ( *GetAdapterInfo )( struct USB2EthIFace *Self, const struct IORequest *request,
+		struct USB2EthAdapterInfo *info );
 };
 
 #endif

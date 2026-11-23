@@ -500,6 +500,9 @@ struct USB2_DriverMessage
 	struct USB2_Interface *			Interface;
 	struct USB2_Descriptor *		ConfigDescriptors;
 	struct USB2_Interface_Desc *	InterfaceDescriptor;
+	const char *					ClassTitle;	// Class TITLE, borrowed during driver entry
+	const char *					ClassDriver;	// Class DRIVER, borrowed during driver entry
+	const char *					ClassAlias;	// Optional class ALIAS, borrowed during driver entry
 };
 
 enum USB2_DriverStat
@@ -725,6 +728,7 @@ enum USB2HCDType
 
 #define USB2Tag_FDriver_VendorID		( USB2Tag_Dummy + 60 )	 // U16, zero matches any vendor
 #define USB2Tag_FDriver_DeviceID		( USB2Tag_Dummy + 61 )	 // U16, zero matches any product
+#define USB2Tag_FDriver_Alias			( USB2Tag_Dummy + 62 )	 // STR, optional adapter selector
 
 // -- + --
 // -- Register
