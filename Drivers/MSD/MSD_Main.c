@@ -24,18 +24,6 @@ SEC_CODE void MSD_Main( struct USBBase *usbbase, struct MSDDevice *msddev )
 	MSD_Main_1_Normal( usbbase, msddev );
 
 	// --
-	// Signal subtasks to shutdown
-//	__Signal( 	usbbase, in );
-
-	// --
-	// Stopping loop, wait for Resources to be released
-	MSD_Main_2_Stopping( usbbase, msddev );
-
-	// --
-	// Start shutdown
-//	__Shutdown( usbbase, in );
-
-	// --
 	// -- Exit
 
 	USBERROR( "MSD : MSD_Main : Leave" );

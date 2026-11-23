@@ -98,16 +98,16 @@
 #define OHCI_HCCA_PTR			0x18
 // #define OHCI_PERIOD_CURRENT_ED	0x1c
 #define OHCI_CONTROL_HEAD_ED	0x20
-// #define OHCI_CONTROL_CURRENT_ED	0x24
+#define OHCI_CONTROL_CURRENT_ED	0x24
 #define OHCI_BULK_HEAD_ED		0x28
-// #define OHCI_BULK_CURRENT_ED	0x2c
+#define OHCI_BULK_CURRENT_ED	0x2c
 // #define OHCI_DONE_HEAD			0x30
 #define OHCI_FM_INTERVAL		0x34
 #define  OHCI_GET_IVAL(s)		((s) & 0x3fff)
 // #define  OHCI_GET_FSMPS(s)		(((s) >> 16) & 0x7fff)
 #define  OHCI_FIT				0x80000000
 #define OHCI_FM_REMAINING		0x38
-// #define OHCI_FM_NUMBER			0x3c
+#define OHCI_FM_NUMBER			0x3c
 #define OHCI_PERIODIC_START		0x40
 // #define OHCI_LS_THRESHOLD		0x44
 #define OHCI_RH_DESCRIPTOR_A	0x48

@@ -46,12 +46,12 @@ SEC_CODE U32 EHCI_Reverse_Bits( U32 c, U32 nbits );
 #if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 
 SEC_CODE void	EHCI_Door_Bell_Init( struct USB2_HCDNode *hn, STR file );
-SEC_CODE void	EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn, STR file );
+SEC_CODE S32	EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn, STR file );
 
 #else
 
 SEC_CODE void	EHCI_Door_Bell_Init( struct USB2_HCDNode *hn );
-SEC_CODE void	EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn );
+SEC_CODE S32	EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn );
 
 #endif
 
@@ -95,7 +95,7 @@ SEC_CODE void	EHCI_Handler_HCD( struct USB2_HCDNode *hn, U32 mask );
 SEC_CODE U32	EHCI_Handler_Interrupt( struct ExceptionContext *Context, struct ExecBase *SysBase, PTR userData );
 SEC_CODE U32	EHCI_Handler_Reset( struct ExceptionContext *Context, struct ExecBase *SysBase, PTR userData );
 SEC_CODE void	EHCI_Periodic_Start( struct USB2_HCDNode *hn );
-SEC_CODE void	EHCI_Periodic_Stop( struct USB2_HCDNode *hn );
+SEC_CODE S32	EHCI_Periodic_Stop( struct USB2_HCDNode *hn );
 SEC_CODE S32	EHCI_Transfer_Check( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	EHCI_Transfer_Free( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 

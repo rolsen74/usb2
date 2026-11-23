@@ -413,6 +413,11 @@ __EndPointRes_ObtainList ( struct USBBase * usbbase, struct RealRegister * reg, 
 				goto bailout;
 			}
 
+			if ( ! mp )
+			{
+				epr->epr_ReplyOwner = request->req_MsgPort.ump_MsgPort.mp_SigTask;
+			}
+
 			request->req_Resource			= epr;
 			epr->epr_Public.IORequests[cnt] = &request->req_Public;
 

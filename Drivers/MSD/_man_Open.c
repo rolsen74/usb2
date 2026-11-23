@@ -41,6 +41,7 @@ struct MSDDisk *msddisk;
 	}
 
 	if (( msddisk )
+	&&	( ! msddisk->msddisk_MSDDev->msddev_Detached )
 	&&	( ioreq->io_Message.mn_Length ) 
 	&&	( ioreq->io_Message.mn_Length >= sizeof( struct IORequest )))
 	{
@@ -54,6 +55,7 @@ struct MSDDisk *msddisk;
 		ioreq->io_Error = 0;
 
 		msddisk->msddisk_OpenCnt++;
+		msddisk->msddisk_MSDDev->msddev_References++;
 	}
 	else
 	{

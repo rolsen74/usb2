@@ -59,7 +59,12 @@ UHCI_Isochronous_Remove ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 		return;
 	}
 
-	UHCI_Chip_Stop ( hn );
+	if ( ! UHCI_Chip_Stop ( hn ) )
+	{
+		USB2_HCD_RequestReset ( hn );
+
+		return;
+	}
 
 	for ( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
 	{
@@ -88,7 +93,10 @@ UHCI_Isochronous_Remove ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 
 	qh->pqh_linked = FALSE;
 
-	UHCI_Chip_Start ( hn );
+	if ( ! UHCI_Chip_Start ( hn ) )
+	{
+		USB2_HCD_RequestReset ( hn );
+	}
 }
 
 // --

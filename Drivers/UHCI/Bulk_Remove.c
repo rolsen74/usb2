@@ -61,7 +61,12 @@ UHCI_Bulk_Remove ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return;
 	}
 
-	UHCI_Chip_Stop ( hn );
+	if ( ! UHCI_Chip_Stop ( hn ) )
+	{
+		USB2_HCD_RequestReset ( hn );
+
+		return;
+	}
 
 	if ( req->req_Public.io_Error )
 	{
@@ -90,20 +95,27 @@ UHCI_Bulk_Remove ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		prev = prev->pqh_virt_next;
 	}
 
-	if ( prev )
+	if ( ! prev )
 	{
-		prev->qh_hlink		= qh->qh_hlink;
-		prev->pqh_virt_next = qh->pqh_virt_next;
+		USB2_HCD_RequestReset ( hn );
 
-		if ( hn->hn_HCD.UHCI.Last_End == qh )
-		{
-			hn->hn_HCD.UHCI.Last_End = prev;
-		}
+		return;
+	}
+
+	prev->qh_hlink = qh->qh_hlink;
+	prev->pqh_virt_next = qh->pqh_virt_next;
+
+	if ( hn->hn_HCD.UHCI.Last_End == qh )
+	{
+		hn->hn_HCD.UHCI.Last_End = prev;
 	}
 
 	qh->pqh_linked = FALSE;
 
-	UHCI_Chip_Start ( hn );
+	if ( ! UHCI_Chip_Start ( hn ) )
+	{
+		USB2_HCD_RequestReset ( hn );
+	}
 }
 
 // --

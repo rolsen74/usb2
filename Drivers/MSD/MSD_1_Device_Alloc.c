@@ -43,6 +43,7 @@ U32 lun;
 
 	msddev->msddev_StartMsg = msg;
 	msddev->msddev_MSDBase = usbbase->usb_MSDDevice;
+	msddev->msddev_References = 1;
 
 	// ---
 	// AbortIO MsgPort

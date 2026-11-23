@@ -53,9 +53,10 @@ SEC_CODE void OHCI_Bulk_Remove( struct USB2_HCDNode *hn, struct RealRequest *ior
 {
 struct OHCI_ED *last;
 struct OHCI_ED *ed;
+U32 control;
 U32 val;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+	struct USBBase *usbbase UNUSED = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Bulk_Remove" );
 
 
@@ -70,44 +71,30 @@ U32 val;
 		last = last->ped_virt_next;
 	}
 
-	// -- Stop Control
+	control = PCI_READLONG( OHCI_CONTROL );
 
-	val = PCI_READLONG( OHCI_COMMAND_STATUS );
-
-	if ( val & OHCI_BLF )
+	if ( ( ! last ) || ( ! ed ) || ( ! OHCI_PauseList( hn, control, OHCI_BLE ) ) )
 	{
-		val &= ~OHCI_BLF;
+		USB2_HCD_RequestReset( hn );
 
-		PCI_WRITELONG( OHCI_COMMAND_STATUS, val );
+		TASK_NAME_LEAVE();
 
-		while( PCI_READLONG( OHCI_COMMAND_STATUS ) & OHCI_BLF )
-		{
-			HCD_WAIT_MS( hn, 1 );		// Wait 1ms
-		}
+		return;
 	}
 
-	// -- Change Pointers so it Jump over ours
-	
-	last->ped_virt_next	= ed->ped_virt_next;
-	last->ed_nexted		= ed->ed_nexted;
+	last->ped_virt_next = ed->ped_virt_next;
+	last->ed_nexted = ed->ed_nexted;
 
-	// -- Restart Control
+	__asm__ volatile ( "sync" ::: "memory" );
 
-	val = PCI_READLONG( OHCI_COMMAND_STATUS );
-	
-	val |= OHCI_BLF;
-
-	PCI_WRITELONG( OHCI_COMMAND_STATUS, val );
-	
-	// --
-	// If it happens that oure ED is active,
-	// we need to wait 2ms (3 to be sure).
-
-	if (( LE_SWAP32( ed->ed_tailp ) & OHCI_HEADMASK )
-	!=	( LE_SWAP32( ed->ed_headp ) & OHCI_HEADMASK ))
+	if ( ( PCI_READLONG( OHCI_BULK_CURRENT_ED ) & OHCI_HEADMASK ) == ed->ped_self_phy )
 	{
-		HCD_WAIT_MS( hn, 3 );		// Wait 3ms
+		PCI_WRITELONG( OHCI_BULK_CURRENT_ED, LE_SWAP32( ed->ed_nexted ) );
 	}
+
+	PCI_WRITELONG( OHCI_COMMAND_STATUS, OHCI_BLF );
+
+	PCI_WRITELONG( OHCI_CONTROL, control );
 
 	// --
 	val = LE_SWAP32( ed->ed_headp );

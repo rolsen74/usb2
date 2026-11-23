@@ -21,7 +21,7 @@
 
 #define MSD_Device_Name		"usb2disk.device"
 #define MSD_Device_Version	1
-#define MSD_Device_Revision 1
+#define MSD_Device_Revision 2
 #define MSD_Device_Date		"23.11.2026"
 
 #ifdef MSD_DEBUG
@@ -202,6 +202,7 @@ struct MSDDevice
 	struct USB2_EPResource *	msddev_Res_Bulk_In;
 	struct USB2_EPResource *	msddev_Res_Control;
 	U32							msddev_Bulk_TagID;
+	U32							msddev_References;
 	U32							msddev_InterfaceNr;
 	U8							msddev_SubClass;
 
@@ -257,6 +258,7 @@ struct MSDDisk
 	U8 msddisk_InRecovery;
 	U8 msddisk_Announced;
 	U8 msddisk_Detached;
+	U8 msddisk_Released;
 #ifdef MSD_DEBUG
 	U8 msddisk_ReadLogged;
 #endif

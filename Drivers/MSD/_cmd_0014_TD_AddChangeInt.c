@@ -41,6 +41,17 @@ MSD_Cmd_0014_TD_AddChangeInt( struct USBBase *usbbase, struct IOStdReq *ioreq )
 	{
 	}
 
+	if ( ( ! registered ) && ( msddisk->msddisk_Detached ) )
+	{
+		SEMAPHORE_RELEASE( & msddisk->msddisk_MSDUnit_Semaphore );
+
+		ioreq->io_Error = TDERR_DiskChanged;
+
+		TASK_NAME_LEAVE();
+
+		return ( TRUE );
+	}
+
 	if ( ! registered )
 	{
 		NODE_ADDTAIL( & msddisk->msddisk_MSDUnit_ChangeList, ioreq );

@@ -32,6 +32,16 @@ S32 reply;
 			break;
 		}
 
+		if ( ( ! msddev->Running ) || ( msddev->msddev_Detached ) || ( msddev->msddev_Register->reg_Function->fkt_Detach ) )
+		{
+			ioreq->io_Actual = 0;
+			ioreq->io_Error = TDERR_DiskChanged;
+
+			MSGPORT_REPLYMSG( ioreq );
+
+			continue;
+		}
+
 		switch( ioreq->io_Command )
 		{
 			case /* 0002 */ CMD_READ:					reply = MSD_Cmd_0002_CMD_Read( usbbase, msddev, (PTR) ioreq ); break;

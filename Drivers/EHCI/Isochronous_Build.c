@@ -314,13 +314,6 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return ( TRUE );
 	}
 
-	if ( hn->hn_HCD.EHCI.IsoOrphan )
-	{
-		req->req_Public.io_Error = USB2Err_Host_NoBandWidth;
-
-		return ( TRUE );
-	}
-
 	if ( ( ! length ) || ( ! req->req_Public.io_Data ) || ( ! packet ) || ( packet > 1024 ) || ( mult > 3 )
 		 || ( ! ep->ep_Interval ) || ( ep->ep_Interval > 16 ) || ( hn->hn_HCD.EHCI.FrameList_Size <= 5 )
 		 || ( ( split ) && ( ( mult != 1 ) || ( packet > 1023 ) ) ) )

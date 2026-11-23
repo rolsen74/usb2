@@ -95,6 +95,11 @@ U32 status;
 		#ifdef DO_DEBUG
 		hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Bulk_Remove : Yikes NULL Pointer\n" );
 		#endif
+
+		USB2_HCD_RequestReset( hn );
+
+		TASK_NAME_LEAVE();
+
 		return;
 	}
 
@@ -106,10 +111,17 @@ U32 status;
 	// --
 	// Tell HW to Flush async prefetch pointers
 	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	EHCI_Door_Bell_Wait( hn, __FILE__ );
+	if ( ! EHCI_Door_Bell_Wait( hn, __FILE__ ) )
 	#else
-	EHCI_Door_Bell_Wait( hn );
+	if ( ! EHCI_Door_Bell_Wait( hn ) )
 	#endif
+	{
+		USB2_HCD_RequestReset( hn );
+
+		TASK_NAME_LEAVE();
+
+		return;
+	}
 
 	// - Save DataToggle and Ping state
 	// - Read Status after DoorBell

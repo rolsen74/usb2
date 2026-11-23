@@ -199,6 +199,18 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 
 	usbbase = (PTR)Self->Data.LibBase;
 
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+	ioreq = FindLiveRequest ( usbbase, request );
+
+	if ( ( ioreq ) && ( ioreq->req_PublicStat != IORS_User ) )
+	{
+		// The outstanding submission owns the message and its result.
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		return;
+	}
+
 	if ( request->io_Command == NSCMD_DEVICEQUERY )
 	{
 		if ( request->io_Message.mn_Length >= sizeof ( struct IOStdReq ) )
@@ -214,20 +226,9 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 	}
 	else
 	{
-		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
-
-		ioreq = FindLiveRequest ( usbbase, request );
-
 		if ( ! ioreq )
 		{
 			request->io_Error = IOERR_NOCMD;
-		}
-		else if ( ioreq->req_PublicStat != IORS_User )
-		{
-			// The outstanding submission owns the message and its result.
-			SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-
-			return;
 		}
 		else
 		{
@@ -290,19 +291,12 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 				return;
 			}
 		}
-
-		if ( ! ( request->io_Flags & IOF_QUICK ) )
-		{
-			MSGPORT_REPLYMSG ( request );
-		}
-
-		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-
-		return;
 	}
 
 	if ( ! ( request->io_Flags & IOF_QUICK ) )
 	{
 		MSGPORT_REPLYMSG ( request );
 	}
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 }

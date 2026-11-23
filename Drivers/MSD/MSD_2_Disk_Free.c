@@ -13,17 +13,34 @@
 
 // --
 
-SEC_CODE void MSD_Disk_Free( struct USBBase *usbbase UNUSED, struct MSDDisk *msddisk UNUSED )
+SEC_CODE void
+MSD_Disk_Free( struct USBBase *usbbase, struct MSDDisk *msddisk )
 {
-	TASK_NAME_ENTER( "MSD_Disk_Free" );
-	USBDEBUG( "MSD : MSD_Disk_Free" );
+	struct MSDBase *msdbase;
 
-	// --
+	S32 release;
+	U32 unit;
 
+	msdbase = msddisk->msddisk_MSDBase;
 
-	// --
+	SEMAPHORE_OBTAIN( & msdbase->msdbase_MSDDisk_Semaphore );
 
-	TASK_NAME_LEAVE();
+	unit = msddisk->msddisk_UnitNr;
+
+	if ( ( unit < MAX_MSD_UNITS ) && ( msdbase->msdbase_MSDDisk_Units[unit] == msddisk ) )
+	{
+		msdbase->msdbase_MSDDisk_Units[unit] = NULL;
+	}
+
+	msddisk->msddisk_Released = TRUE;
+	release = msddisk->msddisk_OpenCnt == 0;
+
+	SEMAPHORE_RELEASE( & msdbase->msdbase_MSDDisk_Semaphore );
+
+	if ( release )
+	{
+		MEM_FREEVEC( msddisk );
+	}
 }
 
 // --

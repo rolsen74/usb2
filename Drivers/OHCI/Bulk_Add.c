@@ -53,9 +53,8 @@ SEC_CODE void OHCI_Bulk_Add( struct USB2_HCDNode *hn, struct RealRequest *ioreq 
 {
 struct OHCI_ED *last;
 struct OHCI_ED *new;
-U32 val;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+	struct USBBase *usbbase UNUSED = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Bulk_Add" );
 
 	// -- Find Last Entry
@@ -67,35 +66,16 @@ U32 val;
 		last = last->ped_virt_next;
 	}
 
-	// -- Stop Control
-
-	val = PCI_READLONG( OHCI_COMMAND_STATUS );
-
-	if ( val & OHCI_BLF )
-	{
-		val &= ~OHCI_BLF;
-
-		PCI_WRITELONG( OHCI_COMMAND_STATUS, val );
-
-		while( PCI_READLONG( OHCI_COMMAND_STATUS ) & OHCI_BLF )
-		{
-			HCD_WAIT_MS( hn, 1 );		// Wait 1ms
-		}
-	}
-
-	// -- Link it
 	new = ioreq->req_HCD.OHCI.ED_Header;
-
-	last->ed_nexted = LE_SWAP32( new->ped_self_phy );
 	last->ped_virt_next = new;
 
-	// -- Restart Control
+	__asm__ volatile ( "sync" ::: "memory" );
 
-	val = PCI_READLONG( OHCI_COMMAND_STATUS );
+	last->ed_nexted = LE_SWAP32( new->ped_self_phy );
 
-	val |= OHCI_BLF;
+	__asm__ volatile ( "sync" ::: "memory" );
 
-	PCI_WRITELONG( OHCI_COMMAND_STATUS, val );
+	PCI_WRITELONG( OHCI_COMMAND_STATUS, OHCI_BLF );
 
 	// --
 	ioreq->req_PublicStat = IORS_HCD_Active;

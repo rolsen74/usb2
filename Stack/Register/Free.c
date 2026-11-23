@@ -13,6 +13,33 @@
 // --
 // Release all resource we can, for this Struct
 
+// The caller holds the stack lock.
+SEC_CODE static S32
+OwnsReplyPorts ( struct USBBase * usbbase, struct RealRegister * reg )
+{
+	struct RealEndPointResource * epr;
+	struct Task * task;
+
+	task = TASK_FIND ();
+
+	if ( ( reg->reg_MsgPort.ump_StructID == ID_USB2_MP ) && ( reg->reg_MsgPort.ump_MsgPort.mp_SigTask != task ) )
+	{
+		return ( FALSE );
+	}
+
+	for ( epr = reg->reg_EPRHeader.uh_Head; epr; epr = Node_Next ( epr ) )
+	{
+		if ( ( epr->epr_ReplyOwner ) && ( epr->epr_ReplyOwner != task ) )
+		{
+			return ( FALSE );
+		}
+	}
+
+	return ( TRUE );
+}
+
+// --
+
 SEC_CODE static void
 __Release ( struct USBBase * usbbase, struct RealRegister * reg )
 {
@@ -140,6 +167,12 @@ __Register_Free ( struct USBBase * usbbase, struct RealRegister * reg )
 	else if ( reg->reg_FreeMe )
 	{
 		fstat = FSTAT_Locked;
+	}
+	else if ( ! OwnsReplyPorts ( usbbase, reg ) )
+	{
+		usbbase->usb_IExec->DebugPrintF ( "USB2: unregister on the task owning the registration and reply ports\n" );
+
+		fstat = FSTAT_Error;
 	}
 	else
 	{

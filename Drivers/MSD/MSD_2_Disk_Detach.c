@@ -33,8 +33,21 @@ struct IOStdReq *ioreq;
 	//	--
 
 	msddev = msddisk->msddisk_MSDDev;
-	msddisk->msddisk_Detached = TRUE;
+	SEMAPHORE_OBTAIN( & msddisk->msddisk_MSDBase->msdbase_MSDDisk_Semaphore );
+
 	msddev->msddev_Detached = TRUE;
+
+	SEMAPHORE_RELEASE( & msddisk->msddisk_MSDBase->msdbase_MSDDisk_Semaphore );
+
+	SEMAPHORE_OBTAIN( & msddisk->msddisk_MSDUnit_Semaphore );
+
+	usbbase->usb_IExec->ObtainSemaphore( & msddisk->msddisk_StatSemaphore );
+
+	msddisk->msddisk_Detached = TRUE;
+
+	usbbase->usb_IExec->ReleaseSemaphore( & msddisk->msddisk_StatSemaphore );
+
+	SEMAPHORE_RELEASE( & msddisk->msddisk_MSDUnit_Semaphore );
 
 	MSDDEBUG( "MSD: unit %lu LUN %lu detached\n", msddisk->msddisk_UnitNr, msddisk->msddisk_Lun );
 

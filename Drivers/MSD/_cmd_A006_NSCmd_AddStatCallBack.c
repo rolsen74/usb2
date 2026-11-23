@@ -62,7 +62,7 @@ MSD_Cmd_A006_NSCmd_AddStatCallBack( struct USBBase *usbbase, struct IOStdReq *io
 		}
 	}
 
-	if ( msddisk->msddisk_MSDDev->msddev_Detached )
+	if ( ( msddisk->msddisk_Detached ) || ( msddisk->msddisk_MSDDev->msddev_Detached ) )
 	{
 		ioreq->io_Error = TDERR_DiskChanged;
 	}

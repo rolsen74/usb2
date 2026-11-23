@@ -19,6 +19,8 @@ struct USBBase *usbbase;	// USB Device
 struct MSDBase *MSDBase;	// MSD Device
 struct MSDDisk *msddisk;
 
+S32 queued;
+
 	TASK_NAME_ENTER( "MSD : MSD_Manager_BeginIO" );
 //	USBERROR( "MSD : MSD_Manager_BeginIO" );
 
@@ -115,15 +117,35 @@ struct MSDDisk *msddisk;
 		case /* C002 */ NSCMD_TD_SEEK64:
 		case /* C003 */ NSCMD_TD_FORMAT64:
 		{
-			if ( msddisk->msddisk_MsgPort_Begin )
+			SEMAPHORE_OBTAIN( & MSDBase->msdbase_MSDDisk_Semaphore );
+
+			queued = ( msddisk ) && ( ! msddisk->msddisk_MSDDev->msddev_Detached )
+				&& ( msddisk->msddisk_MsgPort_Begin );
+
+			if ( queued )
 			{
-				USBERROR( "MSD : MSD_Manager_BeginIO : IOReq %p", ioreq );
 				MSGPORT_PUTMSG( msddisk->msddisk_MsgPort_Begin, ioreq );
 			}
-			else
+
+			SEMAPHORE_RELEASE( & MSDBase->msdbase_MSDDisk_Semaphore );
+
+			if ( ! queued )
 			{
-				USBERROR( "MSD : MSD_Manager_BeginIO : MsgPort missing ($%04lx)", (U32) ioreq->io_Command );
-				ioreq->io_Error = IOERR_UNITBUSY;
+				if ( ioreq->io_Command == NSCMD_DEVICEQUERY )
+				{
+					MSD_Cmd_4000_NSCmd_DeviceQuery( usbbase, NULL, ioreq );
+				}
+				else if ( ( msddisk ) && ( ioreq->io_Command == TD_CHANGESTATE ) )
+				{
+					ioreq->io_Actual = 1;
+					ioreq->io_Error = 0;
+				}
+				else
+				{
+					ioreq->io_Actual = 0;
+					ioreq->io_Error = ( msddisk ) ? TDERR_DiskChanged : TDERR_BadUnitNum;
+				}
+
 				MSGPORT_REPLYMSG( ioreq );
 			}
 			break;

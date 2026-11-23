@@ -50,6 +50,7 @@ U8 type;
 	msddisk->msddisk_MSDDev = msddev;
 	msddisk->msddisk_MSDBase = msdbase;
 	msddisk->msddisk_GeoChangeCount = -1;
+	msddisk->msddisk_UnitNr = MAX_MSD_UNITS;
 
 	// --
 	// Inquire MSD Type
@@ -173,6 +174,7 @@ U8 type;
 	{
 		if ( ! msdbase->msdbase_MSDDisk_Units[ unit_nr ] )
 		{
+			msddisk->msddisk_UnitNr = unit_nr;
 			msdbase->msdbase_MSDDisk_Units[ unit_nr ] = msddisk;
 			break;
 		}
@@ -185,9 +187,6 @@ U8 type;
 		USBERROR( "MSD : MSD_Unit_Alloc : No free Unit slots" );
 		goto bailout;
 	}
-
-	// When we set UnitNr, it also means we have added it to Header
-	msddisk->msddisk_UnitNr = unit_nr;
 
 	// --
 

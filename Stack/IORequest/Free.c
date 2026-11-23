@@ -75,6 +75,13 @@ __IORequest_Free ( struct USBBase * usbbase, struct RealRequest * ioreq )
 	{
 		fstat = FSTAT_Null;
 	}
+	else if ( ( vstat == VSTAT_Okay ) && ( ioreq->req_MsgPort.ump_StructID == ID_USB2_MP )
+		  && ( ioreq->req_MsgPort.ump_MsgPort.mp_SigTask != TASK_FIND () ) )
+	{
+		usbbase->usb_IExec->DebugPrintF ( "USB2: free request on its reply-port task\n" );
+
+		fstat = FSTAT_Error;
+	}
 	else if ( vstat == VSTAT_Okay )
 	{
 		ioreq->req_FreeMe = TRUE;

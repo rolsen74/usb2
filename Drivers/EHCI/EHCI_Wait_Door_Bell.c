@@ -51,11 +51,11 @@
 
 #if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 
-SEC_CODE void EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn, STR file UNUSED )
+SEC_CODE S32 EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn, STR file UNUSED )
 
 #else
 
-SEC_CODE void EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn )
+SEC_CODE S32 EHCI_Door_Bell_Wait( struct USB2_HCDNode *hn )
 
 #endif
 
@@ -82,62 +82,41 @@ U32 adr;
 
 	#endif
 
-	// Set Wait Mask
-	mask = hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask | hn->hn_Delay_MsgPort.ump_Signal.sig_Signal_Mask ;
+	mask = hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask | hn->hn_Delay_MsgPort.ump_Signal.sig_Signal_Mask;
 
-	// Clear Signals
-//	TASK_SETSIGNAL( 0, mask );
+	// Clear an old acknowledgement before posting the next doorbell.
+	usbbase->usb_IExec->Disable();
 
-	// Set Timer
-	hn->hn_Delay_IOReq.Time.Microseconds	= 1000 * 100;
-	hn->hn_Delay_IOReq.Time.Seconds			= 0;
+	PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS, EHCI_STS_IAA );
 
-	// Ask for doorbell
-	adr	 = hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD;
-	val  = PCI_READLONG( adr );
-	val	|= EHCI_CMD_IAAD;
-	PCI_WRITELONG( adr, val );
+	TASK_SETSIGNAL( 0, mask );
 
-	// Start Timer
+	__asm__ volatile ( "sync" ::: "memory" );
+
+	adr = hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD;
+
+	val = PCI_READLONG( adr );
+
+	PCI_WRITELONG( adr, val | EHCI_CMD_IAAD );
+
+	usbbase->usb_IExec->Enable();
+
+	hn->hn_Delay_IOReq.Time.Microseconds = 100000;
+	hn->hn_Delay_IOReq.Time.Seconds = 0;
+
 	IO_SEND( & hn->hn_Delay_IOReq );
-
-	// Wait for Timer or Bell
-
-	#ifdef DO_DEBUG
 
 	mask = TASK_WAIT( mask );
 
 	IO_STOP( & hn->hn_Delay_IOReq );
 
-	struct ExecIFace *IExec = hn->hn_USBBase->usb_IExec;
-
-	/**/ if ( mask & hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask )
-	{
-		IExec->DebugPrintF( "Got Door Bell\n" );
-	}
-	else if ( mask & hn->hn_Delay_MsgPort.ump_Signal.sig_Signal_Mask )
-	{
-		IExec->DebugPrintF( "Door Bell Timed Out\n" );
-	}
-	else
-	{
-		IExec->DebugPrintF( "Door Bell : Unknown Flags : $%08lx\n", mask );
-	}
-
-	// Debug only
+	#ifdef DO_DEBUG
 	hn->hn_Delay_InUse = FALSE;
-
-	#else
-
-	TASK_WAIT( mask );
-
-	IO_STOP( & hn->hn_Delay_IOReq );
-
 	#endif
 
-	USBDEBUG( "EHCI_Door_Bell_Wait : Leave" );
-
 	TASK_NAME_LEAVE();
+
+	return ( ( mask & hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask ) != 0 );
 }
 
 // --

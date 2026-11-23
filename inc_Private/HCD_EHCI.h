@@ -361,7 +361,6 @@ struct _EHCI
 	U32								FrameList_Phyaddr;
 	struct EHCI_QH **				FrameList_ISlots;
 	struct EHCI_ITD **				IsoFrames;
-	struct EHCI_ITD *				IsoOrphan;
 	struct EHCI_ITD *				IsoRetired;
 	U32								IsoOutReports;
 	S32								BandWidth[ 256 ];		// hmm alloc mem instead? like ISlots

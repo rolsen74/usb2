@@ -52,7 +52,6 @@
 SEC_CODE void EHCI_Chip_Deinit( struct USB2_HCDNode *hn )
 {
 struct EHCI_QH *qh;
-struct EHCI_ITD *itd;
 
 U32 cnt;
 
@@ -61,13 +60,6 @@ U32 cnt;
 
 	// Cleanup runs only after the hardware has halted.
 	EHCI_Isochronous_Reap( hn, TRUE );
-
-	while ( ( itd = hn->hn_HCD.EHCI.IsoOrphan ) )
-	{
-		hn->hn_HCD.EHCI.IsoOrphan = itd->Next;
-
-		MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
-	}
 
 	// --
 

@@ -40,6 +40,8 @@ SEC_CODE void OHCI_Dump_TD(		struct USB2_HCDNode *hn, struct OHCI_TD *td );
 
 #endif
 
+SEC_CODE S32	OHCI_PauseList( struct USB2_HCDNode *hn, U32 control, U32 enable );
+
 SEC_CODE void	OHCI_Bulk_Add( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE S32	OHCI_Bulk_Build( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE U32	OHCI_Bulk_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq );

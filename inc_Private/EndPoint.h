@@ -59,6 +59,7 @@ struct RealEndPointResource
 	struct USB2_Node		   epr_Node;
 	U32						   epr_StructID;
 	U32						   epr_RequestCount;
+	struct Task *				   epr_ReplyOwner;
 	S32						   epr_Locks;
 	U16						   epr_Detach;
 	U16						   epr_FreeMe;

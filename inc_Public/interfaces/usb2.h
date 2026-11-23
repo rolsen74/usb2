@@ -39,11 +39,13 @@ struct USB2IFace
 
 	struct USB2_Register * APICALL ( *USB2_Reg_RegisterTags ) ( struct USB2IFace * Self, ... );
 	struct USB2_Register * APICALL ( *USB2_Reg_RegisterList ) ( struct USB2IFace * Self, struct TagItem * taglist );
+	// Unregister on the task owning the registration and its stack-allocated reply ports.
 	void				   APICALL ( *USB2_Reg_Unregister ) ( struct USB2IFace * Self, struct USB2_Register * reg );
 
 	struct USB2_EPResource * APICALL ( *USB2_EPRes_ObtainTags ) ( struct USB2IFace * Self, struct USB2_Register * reg, ... );
 	struct USB2_EPResource * APICALL ( *USB2_EPRes_ObtainList ) ( struct USB2IFace * Self, struct USB2_Register * reg,
 																  struct TagItem * taglist );
+	// Release a stack-allocated reply port on the task that obtained it.
 	void					 APICALL ( *USB2_EPRes_Release ) ( struct USB2IFace * Self, struct USB2_EPResource * epr );
 	U32						 APICALL ( *USB2_EPRes_Destall ) ( struct USB2IFace * Self, struct USB2_EPResource * epr );
 

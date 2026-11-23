@@ -375,7 +375,7 @@ __HCD_Add_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct R
 {
 	struct USB2_EndPointNode * ep;
 	S32						   handled;
-	// U32 val;
+	S32						   aborted;
 
 	TASK_NAME_ENTER ( "HCD : __HCD_Add_Request" );
 
@@ -411,6 +411,24 @@ __HCD_Add_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct R
 	}
 	else
 	{
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+		aborted = ( ioreq->req_AbortRequested ) && ( ioreq->req_AbortSubmission == ioreq->req_Submission );
+
+		// This also commits a queued request to dispatch.
+		ioreq->req_PublicStat = IORS_HCD;
+
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		if ( aborted )
+		{
+			ioreq->req_Public.io_Error = IOERR_ABORTED;
+
+			TASK_NAME_LEAVE ();
+
+			return ( TRUE );
+		}
+
 		handled = myAdd_Request ( usbbase, hn, ioreq );
 
 		if ( ( handled ) && ( ep->ep_Request_Active ) && ( ioreq->req_Public.io_Error == USB2Err_Host_NoBandWidth ) )

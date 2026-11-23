@@ -49,7 +49,7 @@
 
 // --
 
-SEC_CODE void EHCI_Periodic_Stop( struct USB2_HCDNode *hn )
+SEC_CODE S32 EHCI_Periodic_Stop( struct USB2_HCDNode *hn )
 {
 U32 waited;
 U32 val;
@@ -87,7 +87,11 @@ U32 delay;
 		waited += delay;
 	}
 
+	val = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS );
+
 	TASK_NAME_LEAVE();
+
+	return ( ! ( val & ( EHCI_STS_PSS | EHCI_STS_HCH ) ) );
 }
 
 // --
