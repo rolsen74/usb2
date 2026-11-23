@@ -9,8 +9,8 @@
 // --
 
 #include "usb2_all.h"
-
-extern char *idnames[MEMID_Last];
+#include "Page.h"
+#include <stdint.h>
 
 // --
 
@@ -44,44 +44,89 @@ SEC_CODE static inline void __Free_non_Aligned( struct USBBase *usbbase, struct 
 
 // --
 
-SEC_CODE static inline void __Free_Aligned( struct USBBase *usbbase UNUSED, struct Mem_HeaderNode *h, struct Mem_FreeNode *mem, U32 phyadr )
+SEC_CODE static void
+__Unlink_Free_Chunks( struct Mem_HeaderNode *h, struct Mem_PageNode *page )
 {
-struct Mem_PageNode *p;
+	struct Mem_FreeNode **link;
+	struct Mem_FreeNode *mem;
 
-	// Queue Memory
+	U32 size;
 
-	// Update Stats
+	size = page->mpn_Total * h->Mem.Align.Stride;
+	link = &h->mhn_Free_Nodes;
 
-	p = h->Mem.Align.Pages.uh_Head;
-
-	while( p )
+	while ( *link )
 	{
-		if (( p->mpn_Page_Adr_1 <= phyadr ) && ( phyadr < p->mpn_Page_Adr_2 ))
+		mem = *link;
+
+		if ( (uintptr_t)mem - (uintptr_t)page->mpn_Memory < size )
 		{
-			p->mpn_Free++;
-			break;
+			*link = mem->mfn_Next;
 		}
 		else
 		{
-			p = Node_Next(p);
+			link = &mem->mfn_Next;
 		}
 	}
+}
 
-	#ifdef DO_DEBUG
+// --
 
-	if ( ! p )
+SEC_CODE static struct Mem_PageNode *
+__Free_Aligned( struct USBBase *usbbase, struct Mem_HeaderNode *h, struct Mem_FreeNode *mem, U32 phyadr )
+{
+	struct Mem_PageNode *page;
+
+	U32 chunk;
+	U32 bit;
+
+	page = Memory_FindPage( h, mem, &chunk );
+
+	if ( ( ! page ) || ( phyadr != page->mpn_Physical + chunk * h->Mem.Align.Stride ) )
 	{
-		USBDEBUG( "__Free_Aligned : Page not found" );
+		USBERROR( "__Free_Aligned : Invalid DMA chunk %p, address $%08lx", mem, phyadr );
+
+		return ( NULL );
 	}
 
-	#endif
+	bit = 1UL << ( chunk % 32 );
 
-	// Init Mem Node
-	mem->mfn_Next = h->mhn_Free_Nodes;
+	if ( ! ( page->mpn_InUse[chunk / 32] & bit ) )
+	{
+		USBERROR( "__Free_Aligned : DMA chunk %p is already free", mem );
+
+		return ( NULL );
+	}
+
+	page->mpn_InUse[chunk / 32] &= ~bit;
+	page->mpn_Free++;
+
+	if ( page->mpn_Free == page->mpn_Total )
+	{
+		// Keep one idle backing allocation for small descriptors.
+		if ( ( ! h->Mem.Align.Free_Max ) ||
+			( ( h->Mem.Align.Idle_Chunks ) &&
+			  ( h->Mem.Align.Idle_Chunks + page->mpn_Total > h->Mem.Align.Free_Max ) ) )
+		{
+			__Unlink_Free_Chunks( h, page );
+
+			NODE_REMNODE( &h->Mem.Align.Pages, page );
+
+			return ( page );
+		}
+
+		h->Mem.Align.Idle_Chunks += page->mpn_Total;
+	}
+
+#ifdef DO_PANIC
+	MEM_SET( mem, 0x55, h->mhn_Mem_Size );
+#endif
+
 	mem->mfn_Addr = phyadr;
-
-	// Link
+	mem->mfn_Next = h->mhn_Free_Nodes;
 	h->mhn_Free_Nodes = mem;
+
+	return ( NULL );
 }
 
 // --
@@ -96,66 +141,43 @@ SEC_CODE void __Memory_Free( struct USBBase *usbbase, U32 memtype, PTR mem, U32 
 
 #endif
 {
-struct Mem_HeaderNode *h;
+	struct Mem_HeaderNode *h;
+	struct Mem_PageNode *released;
 
-	#if 0
-	#ifdef DO_DEBUG
+	U32 size;
 
-	STR memname = ( memtype < MEMID_Last ) ? idnames[memtype] : "Type";
-	USBDEBUG( "Free Mem                 : mem %p : %s (%ld) : (%s)", mem, memname, memtype, (file)?file:"<NULL>" );
-
-	#endif
-	#endif
-
-	if ( mem )
+	if ( ( ! mem ) || ( memtype >= MEMID_Last ) || ( ! usbbase->usb_Memory_Headers ) )
 	{
-		h = usbbase->usb_Memory_Headers;
-		h = & h[memtype] ;
-
-		// --
-
-		#ifdef DO_PANIC
-
-		if ( memtype >= MEMID_Last )
-		{
-			USBPANIC( "Illegal Memory Type %ld", memtype );
-		}
-
-		// --
-
-//		if ( memtype == MEMID_USBFunction )
-//		{
-//			static int hhhuu = 0x60;
-//			MEM_SET( mem, hhhuu++, h->mhn_Mem_Size );
-//			MEM_SET( mem, 0x60 + memtype, h->mhn_Mem_Size );
-//		}
-//		else
-		{
-			// We check for 0x55555555 pointers
-			MEM_SET( mem, 0x55, h->mhn_Mem_Size );
-		}		
-
-		#endif
-
-		// --
-
-		SEMAPHORE_OBTAIN( & h->mhn_Semaphore );
-
-		if ( h->mhn_Align > 1 )
-		{
-			// do alignment
-//			#warning fix me -- this is just a test
-			__Free_Aligned( usbbase, h, mem, phyadr );
-		}
-		else
-		{
-			// not aligned
-//			#warning fix me -- this is just a test
-			__Free_non_Aligned( usbbase, h, mem, phyadr );
+		return;
 	}
 
-		SEMAPHORE_RELEASE( & h->mhn_Semaphore );
+	h = &usbbase->usb_Memory_Headers[memtype];
+
+	SEMAPHORE_OBTAIN( &h->mhn_Semaphore );
+
+	if ( h->mhn_Align > 1 )
+	{
+		size = h->Mem.Align.Real_Size;
+
+		released = __Free_Aligned( usbbase, h, mem, phyadr );
+
+		SEMAPHORE_RELEASE( &h->mhn_Semaphore );
+
+		if ( released )
+		{
+			Memory_ReleasePage( usbbase, released, size );
+		}
+
+		return;
 	}
+
+#ifdef DO_PANIC
+	MEM_SET( mem, 0x55, h->mhn_Mem_Size );
+#endif
+
+	__Free_non_Aligned( usbbase, h, mem, phyadr );
+
+	SEMAPHORE_RELEASE( &h->mhn_Semaphore );
 }
 
 // --

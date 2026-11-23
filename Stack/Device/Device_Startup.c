@@ -285,13 +285,13 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 	ASYNC_INIT ( &usbbase->usb_HCDASync, NULL );
 
 	usbbase->usb_CPU_CacheSize = 32;
-	usbbase->usb_CPU_PageSize  = 4096;
+	usbbase->usb_Exec_PageSize  = 4096;
 	usbbase->usb_CPU_Type	   = CPUTYPE_UNKNOWN;
 
 	IExpansion = usbbase->usb_IExpansion;
 	IExpansion->GetMachineInfoTags ( GMIT_Machine, &usbbase->usb_MachineType, TAG_END );
 
-	IExec->GetCPUInfoTags ( GCIT_CacheLineSize, &usbbase->usb_CPU_CacheSize, GCIT_CPUPageSize, &usbbase->usb_CPU_PageSize,
+	IExec->GetCPUInfoTags ( GCIT_CacheLineSize, &usbbase->usb_CPU_CacheSize, GCIT_ExecPageSize, &usbbase->usb_Exec_PageSize,
 							GCIT_Model, &usbbase->usb_CPU_Type, TAG_END );
 
 	// --

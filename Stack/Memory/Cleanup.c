@@ -9,6 +9,7 @@
 // --
 
 #include "usb2_all.h"
+#include "Page.h"
 
 extern char *idnames[MEMID_Last];
 
@@ -33,19 +34,18 @@ struct Mem_PageNode *node;
 
 		if ( node->mpn_Free == node->mpn_Total )
 		{
-			IExec->DebugPrintF( " --> Buffer %p : Size %ld\n", node->mpn_Memory, h->Mem.Align.Real_Size );
-			IExec->UnlockMem( node->mpn_Memory, h->Mem.Align.Real_Size );
-			IExec->FreeVec( node->mpn_Memory );
-			node->mpn_Memory = NULL;
+			IExec->DebugPrintF( " --> Buffer %p : Size %lu\n", node->mpn_Memory, h->Mem.Align.Real_Size );
+
+			Memory_ReleasePage( usbbase, node, h->Mem.Align.Real_Size );
 		}
 		else
 		{
-			USBDEBUG( "__Cleanup_Aligned : Unable to free Page Buffer : Chunks (%ld/%ld)\n", node, node->mpn_Free, node->mpn_Total );
+			IExec->DebugPrintF( " --> Buffer %p still in use : Free chunks %lu/%lu\n",
+				node->mpn_Memory, node->mpn_Free, node->mpn_Total );
+
+			MEM_FREEVEC( node );
 		}
 
-		IExec->DebugPrintF( " --> Page   %p : Chunks %ld/%ld\n", node, node->mpn_Free, node->mpn_Total );
-		MEM_FREEVEC( node );
-		// --
 		node = next;
 	}
 }

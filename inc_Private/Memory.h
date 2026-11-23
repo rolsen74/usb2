@@ -87,10 +87,13 @@ struct Mem_HeaderNode1 // non aligned mem
 	S32					  Total_Count;
 };
 
-struct Mem_HeaderNode2 // alligned mem
+struct Mem_HeaderNode2 // aligned DMA memory
 {
 	struct USB2_Header Pages;
-	U32				   Real_Size;
+	U32 Real_Size;
+	U32 Stride;
+	U32 Free_Max;
+	U32 Idle_Chunks;
 };
 
 struct Mem_HeaderNode
@@ -110,11 +113,11 @@ struct Mem_HeaderNode
 struct Mem_PageNode
 {
 	struct USB2_Node mpn_Node;
-	S32				 mpn_Free;		 // Free Chunks
-	S32				 mpn_Total;		 // Total Chunks
-	PTR				 mpn_Memory;	 // Virtual Memory Address
-	U32				 mpn_Page_Adr_1; // Start Physical Address
-	U32				 mpn_Page_Adr_2; // End   Physical Address
+	PTR mpn_Memory;
+	U32 mpn_Physical;
+	U32 mpn_Free;
+	U32 mpn_Total;
+	U32 mpn_InUse[];
 };
 
 /***************************************************************************/

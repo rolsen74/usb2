@@ -77,6 +77,7 @@ SEC_RWDATA char *idnames[MEMID_Last] =
 	[MEMID_USBSetupData]			= "MEMID_USBSetupData",
 	[MEMID_HCD_20k]					= "MEMID_HCD_20k",
 	[MEMID_HCD_4k]					= "MEMID_HCD_4k",
+	[MEMID_HCD_8k]					= "MEMID_HCD_8k",
 
 	// EHCI
 	[MEMID_EHCI_QH]					= "MEMID_EHCI_QH",
@@ -95,73 +96,75 @@ SEC_RWDATA char *idnames[MEMID_Last] =
 
 };
 
-SEC_CODE S32 __Memory_Setup( struct USBBase *usbbase )
+SEC_CODE S32
+__Memory_Setup( struct USBBase *usbbase )
 {
-const struct myMemList *l;
-struct Mem_HeaderNode *mhn;
-struct Mem_HeaderNode *h;
-S32 retval;
-U32 size;
-U32 cnt;
+	const struct myMemList *l;
+	struct Mem_HeaderNode *mhn;
+	struct Mem_HeaderNode *h;
 
-	retval = FALSE;
+	U64 stride;
+	U64 real_size;
+	U32 chunk_align;
+	U32 page_size;
+	U32 cnt;
+
+	page_size = usbbase->usb_Exec_PageSize;
+
+	if ( ( ! page_size ) || ( page_size & ( page_size - 1 ) ) )
+	{
+		USBERROR( "__Memory_Setup : Invalid Exec page size %lu", page_size );
+
+		return ( FALSE );
+	}
 
 	mhn = MEM_ALLOCVEC( sizeof( struct Mem_HeaderNode ) * MEMID_Last, TRUE );
 
 	if ( ! mhn )
 	{
-		USBERROR( "Error: Allocating memory" );
-		goto bailout;
+		USBERROR( "__Memory_Setup : Could not allocate pool headers" );
+
+		return ( FALSE );
+	}
+
+	for ( cnt = 0; cnt < MEMID_Last; cnt++ )
+	{
+		l = &TheMemList[cnt];
+		h = &mhn[cnt];
+
+		SEMAPHORE_INIT( &h->mhn_Semaphore );
+
+		h->mhn_Align = l->Align;
+		h->mhn_Mem_Size = MAX( l->Size, sizeof( struct Mem_FreeNode ) );
+
+		if ( h->mhn_Align > 1 )
+		{
+			chunk_align = MAX( l->Align, __alignof__( struct Mem_FreeNode ) );
+			stride = ( (U64)h->mhn_Mem_Size + chunk_align - 1 ) & ~( (U64)chunk_align - 1 );
+			real_size = ( stride + page_size - 1 ) & ~( (U64)page_size - 1 );
+
+			if ( ( l->Align & ( l->Align - 1 ) ) || ( real_size > 0xffffffffULL ) )
+			{
+				USBERROR( "__Memory_Setup : Invalid geometry for pool %lu", cnt );
+
+				MEM_FREEVEC( mhn );
+
+				return ( FALSE );
+			}
+
+			h->Mem.Align.Stride = (U32)stride;
+			h->Mem.Align.Real_Size = (U32)real_size;
+			h->Mem.Align.Free_Max = l->Max;
+		}
+		else
+		{
+			h->Mem.Normal.Free_Max = l->Max;
+		}
 	}
 
 	usbbase->usb_Memory_Headers = mhn;
 
-	for( cnt=0 ; cnt<MEMID_Last ; cnt++ )
-	{
-		l = & TheMemList[cnt] ;
-		h = & mhn[cnt] ;
-
-		size = MAX( l->Size, sizeof( struct Mem_FreeNode ) );
-
-		// as long as we allocate 4k pages and inhibit cache we are okay
-		// but if we stop that, we also need to make sure we support cpu cache line size
-		// Like ..  align = MAX( l->Align , CPU Cache Line )
-
-		SEMAPHORE_INIT( & h->mhn_Semaphore );
-		h->mhn_Align		= l->Align;
-		h->mhn_Mem_Size		= size;
-
-		if ( h->mhn_Align > 1 )
-		{
-			// do alignment
-
-			h->Mem.Align.Real_Size  = usbbase->usb_CPU_PageSize + size - 1;
-			h->Mem.Align.Real_Size /= usbbase->usb_CPU_PageSize;
-			h->Mem.Align.Real_Size *= usbbase->usb_CPU_PageSize;
-		}
-		else
-		{
-			// not aligned
-
-			h->Mem.Normal.Free_Max = l->Max;
-		}
-
-//		node->Mem_Size		= ml->Size;
-//		node->Mem_Alignment = ml->Align;
-//		node->Mem_Name		= ml->Name;
-//		node->MaxFree		= ml->Max;
-//		node->CanFree		= (( ml->Align <= 1 ) || ( usbbase->usb_CPU_PageSize / 2 < ml->Size )) ? TRUE : FALSE;
-
-//		node->RealSize  = usbbase->usb_CPU_PageSize + ml->Size - 1;
-//		node->RealSize /= usbbase->usb_CPU_PageSize;
-//		node->RealSize *= usbbase->usb_CPU_PageSize;
-	}
-
-	retval = TRUE;
-
-bailout:
-
-	return( retval );
+	return ( TRUE );
 }
 
 // --

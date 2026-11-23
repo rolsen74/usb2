@@ -61,7 +61,7 @@ struct USBBase
 
 	// --
 
-	U32 usb_CPU_PageSize;
+	U32 usb_Exec_PageSize;
 	U32 usb_CPU_CacheSize;
 	U32 usb_CPU_Type;
 	U32 usb_MachineType;

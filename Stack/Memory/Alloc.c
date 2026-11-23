@@ -9,8 +9,8 @@
 // --
 
 #include "usb2_all.h"
-
-extern char *idnames[MEMID_Last];
+#include "Page.h"
+#include <stdint.h>
 
 // --
 
@@ -35,143 +35,138 @@ struct Mem_FreeNode *mem;
 
 // --
 
-SEC_CODE static inline void __Add_Aligned( struct USBBase *usbbase, struct Mem_HeaderNode *h )
+SEC_CODE static void
+__Add_Aligned( struct USBBase *usbbase, struct Mem_HeaderNode *h )
 {
-struct Mem_PageNode *mpn;
-struct Mem_FreeNode *tmp;
-struct ExecIFace *IExec;
-struct MMUIFace *IMMU;
-U32 rsize;	// Real Buffer Size
-PTR stack;
-U32 size;	// Chunk Size (inside buffer)
-U32 loop;
-PTR mem;
-U32 phy;
-U32 cnt;
+	struct Mem_PageNode *page;
+	struct Mem_FreeNode *chunk;
+	struct ExecIFace *IExec;
+	struct MMUIFace *IMMU;
 
-	IMMU  = usbbase->usb_IMMU;
+	PTR stack;
+	PTR mem;
+	U32 alignment;
+	U32 size;
+	U32 stride;
+	U32 count;
+	U32 index;
+	U32 offset;
+	U64 physical;
+
+	size = h->Mem.Align.Real_Size;
+	stride = h->Mem.Align.Stride;
+	count = size / stride;
+	alignment = MAX( usbbase->usb_Exec_PageSize, h->mhn_Align );
 	IExec = usbbase->usb_IExec;
-	stack = IExec->SuperState();
-	rsize = h->Mem.Align.Real_Size;
+	IMMU = usbbase->usb_IMMU;
 
-//	USBDEBUG( "AddMem: Realsize %lu", rsize );
+	page = MEM_ALLOCVEC( sizeof( *page ) + ( ( count + 31 ) / 32 ) * sizeof( U32 ), TRUE );
 
-	#ifdef DO_DEBUG
-
-	if ( rsize & 0x00000FFFUL )
+	if ( ! page )
 	{
-		USBPANIC( "__Add_Aligned : Invalid Real Size $%08lx (%lu)", rsize, rsize );
+		return;
 	}
 
-	#endif
-
-	// --
-	// Memory Aligned Allocations
-
-	mpn = MEM_ALLOCVEC( sizeof( struct Mem_PageNode ), TRUE );
-
-//	USBDEBUG( "AddMem: mpn %p", mpn );
-
-	if ( ! mpn )
-	{
-		USBDEBUG( "__Add_Aligned : 1 : Error allocating memory" );
-		goto bailout;
-	}
-
-	// --
-
-	mem = IExec->AllocVecTags( rsize,
-		AVT_PhysicalAlignment, usbbase->usb_CPU_PageSize,
-		AVT_Alignment, usbbase->usb_CPU_PageSize,
+	mem = IExec->AllocVecTags( size,
+		AVT_PhysicalAlignment, alignment,
+		AVT_Alignment, alignment,
 		AVT_Type, MEMF_SHARED,
 		AVT_Contiguous, TRUE,
 		AVT_Lock, TRUE,
-		TAG_END
-	);
+		TAG_END );
 
-//	USBDEBUG( "AddMem: mem %p", mem );
+	page->mpn_Memory = mem;
 
 	if ( ! mem )
 	{
-		USBERROR( "__Add_Aligned : 2 : Error allocating memory" );
-		MEM_FREEVEC( mpn );
 		goto bailout;
 	}
 
-	// -- Link Page, so its tracked
+	stack = IExec->SuperState();
 
-//	USBDEBUG( "AddMem: AddTail" );
+	physical = (uintptr_t)IMMU->GetPhysicalAddress( mem );
 
-	NODE_ADDTAIL( & h->Mem.Align.Pages, mpn );
-	mpn->mpn_Memory = mem;
-
-	// -- Disable Cahce for Memory page(s) and get real Physical Address
-
-//	USBDEBUG( "AddMem: Clear Cache %p:%08lx", mem, rsize-1 );
-
-	IExec->CacheClearE(	mem, rsize, CACRF_ClearD | CACRF_ClearI );
-
-//	USBDEBUG( "AddMem: Set Page Flags %p:%08lx", mem, rsize-1 );
-
-	IMMU->SetMemoryAttrs( mem, rsize, MEMATTRF_READ_WRITE|MEMATTRF_CACHEINHIBIT );
-
-//	USBDEBUG( "AddMem: Invalite Cache" );
-
-	IExec->CacheClearE(	mem, rsize, CACRF_InvalidateD );
-
-//	USBDEBUG( "AddMem: Get Phy" );
-
-	phy = (U32) IMMU->GetPhysicalAddress( mem );
-
-//	USBDEBUG( "AddMem: phy $%08lx", phy );
-
-	// --
-
-	size = (( h->mhn_Mem_Size + h->mhn_Align - 1 ) / h->mhn_Align ) * h->mhn_Align;
-
-//	USBDEBUG( "AddMem: size %lu", size );
-
-	loop = rsize / size;
-
-	mpn->mpn_Total = loop;
-	mpn->mpn_Page_Adr_1 = phy;
-	mpn->mpn_Page_Adr_2 = phy + rsize;
-
-//	USBDEBUG( "AddMem: loops %lu", loop );
-
-	// -- Insert Nodes into Header
-
-	for( cnt=0 ; cnt<loop ; cnt++ )
+	if ( ( ! physical ) || ( physical & ( alignment - 1 ) ) ||
+		( (uintptr_t)mem & ( alignment - 1 ) ) || ( physical > 0xffffffffULL - ( size - 1 ) ) )
 	{
-		tmp = (PTR) ( ((U32)mem) + ( size * cnt ) );
-		tmp->mfn_Next = h->mhn_Free_Nodes;
-		tmp->mfn_Addr = phy + ( size * cnt );
-
-		// This is slow, and should not be needed if AVT_Contiguous is honored
-//		tmp->mfm_Addr = (U32) IMMU->GetPhysicalAddress( tmp );
-
-//		USBDEBUG( "AddMem: cnt %lu, tmp $%08lx, phy $%08lx, Calc Phy $%08lx", cnt, tmp, tmp->mfm_Addr, phy + ( size * cnt ) );
-
-		// Throw away 'Phy 0' Node
-
-		if ( tmp->mfn_Addr )
+		if ( stack )
 		{
-			h->mhn_Free_Nodes = tmp;
-			mpn->mpn_Free++;
+			IExec->UserState( stack );
 		}
-		#ifdef DO_DEBUG
-		else
-		{
-			USBDEBUG( "__Add_Aligned : 3 : Throwing away 'Phy 0' Node" );
-		}
-		#endif
+
+		USBERROR( "__Add_Aligned : Invalid DMA allocation at %p", mem );
+
+		goto bailout;
 	}
+
+	IExec->CacheClearE( mem, size, CACRF_ClearD | CACRF_ClearI );
+
+	IMMU->SetMemoryAttrs( mem, size, MEMATTRF_READ_WRITE | MEMATTRF_CACHEINHIBIT );
+
+	IExec->CacheClearE( mem, size, CACRF_InvalidateD );
+
+	if ( stack )
+	{
+		IExec->UserState( stack );
+	}
+
+	page->mpn_Physical = (U32)physical;
+	page->mpn_Total = count;
+	page->mpn_Free = count;
+	h->Mem.Align.Idle_Chunks += count;
+
+	NODE_ADDTAIL( &h->Mem.Align.Pages, page );
+
+	for ( index = 0; index < count; index++ )
+	{
+		offset = index * stride;
+		chunk = (PTR)( (U8 *)mem + offset );
+		chunk->mfn_Addr = page->mpn_Physical + offset;
+		chunk->mfn_Next = h->mhn_Free_Nodes;
+		h->mhn_Free_Nodes = chunk;
+	}
+
+	return;
 
 bailout:
 
-	IExec->UserState( stack );
+	Memory_ReleasePage( usbbase, page, size );
+}
 
-	return;
+// --
+
+SEC_CODE static S32
+__Take_Aligned( struct Mem_HeaderNode *h, struct Mem_FreeNode *mem )
+{
+	struct Mem_PageNode *page;
+
+	U32 chunk;
+	U32 bit;
+
+	page = Memory_FindPage( h, mem, &chunk );
+
+	if ( ! page )
+	{
+		return ( FALSE );
+	}
+
+	bit = 1UL << ( chunk % 32 );
+
+	if ( ( page->mpn_InUse[chunk / 32] & bit ) || ( ! page->mpn_Free ) ||
+		( mem->mfn_Addr != page->mpn_Physical + chunk * h->Mem.Align.Stride ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( page->mpn_Free == page->mpn_Total )
+	{
+		h->Mem.Align.Idle_Chunks -= page->mpn_Total;
+	}
+
+	page->mpn_InUse[chunk / 32] |= bit;
+	page->mpn_Free--;
+
+	return ( TRUE );
 }
 
 // --
@@ -186,122 +181,66 @@ SEC_CODE PTR __Memory_Alloc( struct USBBase *usbbase, U32 memtype, S32 clear )
 
 #endif
 {
-struct Mem_HeaderNode *h;
-struct Mem_FreeNode *mem;
-struct Mem_PageNode *p;
-U32 adr;
+	struct Mem_HeaderNode *h;
+	struct Mem_FreeNode *mem;
 
-	mem = NULL;
-
-	#ifdef DO_DEBUG
-
-	if ( memtype >= MEMID_Last )
+	if ( ( memtype >= MEMID_Last ) || ( ! usbbase->usb_Memory_Headers ) )
 	{
-		USBDEBUG( "__Memory_Alloc : Illegal Memory Type %ld", memtype );
-		goto bailout;
+		return ( NULL );
 	}
 
-	#endif 
+	h = &usbbase->usb_Memory_Headers[memtype];
 
-	// --
+	SEMAPHORE_OBTAIN( &h->mhn_Semaphore );
 
-	h = usbbase->usb_Memory_Headers;
-	h = & h[memtype] ;
-
-	SEMAPHORE_OBTAIN( & h->mhn_Semaphore );
-
-	mem = h->mhn_Free_Nodes;
-
-	if ( ! mem )
+	if ( ! h->mhn_Free_Nodes )
 	{
-		// Add Memory
-
 		if ( h->mhn_Align > 1 )
 		{
-			// do alignment
 			__Add_Aligned( usbbase, h );
 		}
 		else
 		{
-			// not aligned
 			__Add_non_Aligned( usbbase, h );
 		}
-
-		mem = h->mhn_Free_Nodes;
 	}
+
+	mem = h->mhn_Free_Nodes;
 
 	if ( mem )
 	{
 		if ( h->mhn_Align <= 1 )
 		{
-			// not aligned
 			h->Mem.Normal.Free_Count--;
 
-			#ifdef DO_DEBUG
-
+#ifdef DO_DEBUG
 			if ( h->Mem.Normal.Free_Count < 0 )
 			{
-				USBDEBUG( "__Memory_Alloc : 1 : Error Negative Free Count (%ld)", h->Mem.Normal.Free_Count );
+				USBDEBUG( "__Memory_Alloc : Negative free count in pool %lu", memtype );
 			}
-
-			#endif
+#endif
 		}
-		else
+		else if ( ! __Take_Aligned( h, mem ) )
 		{
-			p = h->Mem.Align.Pages.uh_Head;
+			USBERROR( "__Memory_Alloc : Invalid free chunk in pool %lu", memtype );
 
-			adr = ((struct Mem_FreeNode *)mem)->mfn_Addr;
-
-			while( p )
-			{
-				if (( p->mpn_Page_Adr_1 <= adr ) && ( adr < p->mpn_Page_Adr_2 ))
-				{
-					p->mpn_Free--;
-					break;
-				}
-				else
-				{
-					p = Node_Next(p);
-				}
-			}
-
-			#ifdef DO_DEBUG
-
-			if ( ! p )
-			{
-				USBDEBUG( "__Memory_Alloc : 2 : Page not found" );
-			}
-			else if ( p->mpn_Free < 0 )
-			{
-				USBDEBUG( "__Memory_Alloc : 3 : Error Negative Free Count (%ld)", p->mpn_Free );
-			}
-
-			#endif
+			mem = NULL;
 		}
 
-		h->mhn_Free_Nodes = mem->mfn_Next;
+		if ( mem )
+		{
+			h->mhn_Free_Nodes = mem->mfn_Next;
+		}
 	}
 
-	SEMAPHORE_RELEASE( & h->mhn_Semaphore );
+	SEMAPHORE_RELEASE( &h->mhn_Semaphore );
 
-	if (( mem ) && ( clear ))
+	if ( ( mem ) && ( clear ) )
 	{
-		// This may be slow, so clear outside lock
 		MEM_SET( mem, 0, h->mhn_Mem_Size );
 	}
 
-	#ifdef DO_DEBUG
-
-bailout:
-
-	{
-//		char *_name = ( memtype < MEMID_Last ) ? idnames[memtype] : "Type";
-//		USBDEBUG( "Alloc Mem                : Mem %p : %s (%ld) : Clear %ld : (%s) :", mem, _name, memtype, clear, (file)?file:"<NULL>" );
-	}
-
-	#endif
-
-	return( mem );
+	return ( mem );
 }
 
 // --

@@ -274,6 +274,7 @@ SRCS		+= Stack/Master/Master.c
 SRCS		+= Stack/Memory/Alloc.c
 SRCS		+= Stack/Memory/Cleanup.c
 SRCS		+= Stack/Memory/Free.c
+SRCS		+= Stack/Memory/Page.c
 SRCS		+= Stack/Memory/Setup.c
 SRCS		+= Stack/Misc/ASync_Add.c
 SRCS		+= Stack/Misc/ASync_Free.c
