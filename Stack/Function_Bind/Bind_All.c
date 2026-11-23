@@ -22,6 +22,8 @@ Next_Enumerated( struct USBBase *usbbase, struct RealFunctionNode *previous )
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_Fkt_Semaphore );
 
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 	if ( previous )
 	{
 		node = previous->fkt_GlobalNode.un_Next;
@@ -37,8 +39,8 @@ Next_Enumerated( struct USBBase *usbbase, struct RealFunctionNode *previous )
 	{
 		fn = node->un_Data;
 
-		// The hub sets this after the function has completed enumeration.
-		if ( ( fn->fkt_HUB_Data ) && ( ! fn->fkt_Detach ) &&
+		if ( ( FUNCTION_VALID( fn ) == VSTAT_Okay ) && ( fn->fkt_HUB_Data ) &&
+			( fn->fkt_Initialized ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) &&
 			( FUNCTION_LOCK( fn ) == LSTAT_Okay ) )
 		{
 			break;
@@ -47,6 +49,8 @@ Next_Enumerated( struct USBBase *usbbase, struct RealFunctionNode *previous )
 		fn = NULL;
 		node = node->un_Next;
 	}
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	SEMAPHORE_RELEASE( & usbbase->usb_Fkt_Semaphore );
 
@@ -64,7 +68,7 @@ USB2_Bind_Enumerated( struct USBBase *usbbase )
 
 	while ( fn )
 	{
-		FUNCTION_BIND( fn, fn->fkt_ASync );
+		FUNCTION_BIND( fn, fn->fkt_DriverASync );
 
 		fn = Next_Enumerated( usbbase, fn );
 	}

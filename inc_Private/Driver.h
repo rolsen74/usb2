@@ -52,6 +52,7 @@ struct USB2_DriverNode
 	// dn_Task :: When a Driver Task get started via Bind
 	struct USB2_ASync *			dn_ASync;
 	struct USB2_FktDriverNode * dn_Class;
+	struct USB2_FktDriverNode * dn_EarlyClass;
 	// --
 
 	STR							  dn_Filename; // FileName of the Driver
@@ -63,6 +64,7 @@ struct USB2_DriverNode
 	BPTR						  dn_OldDir;
 	U8							  dn_DirChanged;
 	U8							  dn_WorkerPinned;
+	U8							  dn_ExternalReady;
 	struct RealDriverMessage	  dn_Message; // Public .. not used for HCDs
 	U32 ( *dn_Entry ) ( struct USBBase * usbbase, struct USB2_DriverMessage * msg );
 };

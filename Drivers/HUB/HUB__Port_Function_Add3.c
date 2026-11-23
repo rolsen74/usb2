@@ -111,13 +111,19 @@ U32 adr;
 	{
 		USBDEBUG( "555 OKAY 444 : FN    %p", fn );
 
-		fn->fkt_HUB_Data = in->HUB_ID;
+		SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+		fn->fkt_DriverASync = & in->ASync_Drivers;
 		in->PortFunctions[port] = fn;
+		fn->fkt_HUB_Data = in->HUB_ID;
+
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
 		error = FALSE;
 
 		// Try and Bind Function to a Driver
 		// We don't care if there is a driver for it
-		FUNCTION_BIND( fn, & in->ASync_Drivers );
+		FUNCTION_BIND( fn, fn->fkt_DriverASync );
 	}
 	else
 	{

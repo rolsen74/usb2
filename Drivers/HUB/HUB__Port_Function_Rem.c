@@ -68,8 +68,12 @@ struct RealFunctionNode *fn;
 
 	if (( fn ) && ( fn->fkt_HUB_Data == in->HUB_ID ))
 	{
+		SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 		in->PortFunctions[port] = NULL;
 		fn->fkt_HUB_Data = 0;
+
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 		USBDEBUG( "HUB__Port_Function_Rem      : FN    %p : HUB_ID $%08lx : Port #%lu", fn, in->HUB_ID, port );
 

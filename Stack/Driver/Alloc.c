@@ -14,11 +14,11 @@
 
 #if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 
-SEC_CODE struct USB2_DriverNode *__Driver_Alloc( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as UNUSED, STR file UNUSED )
+SEC_CODE struct USB2_DriverNode *__Driver_Alloc( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as, STR file UNUSED )
 
 #else
 
-SEC_CODE struct USB2_DriverNode *__Driver_Alloc( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as UNUSED )
+SEC_CODE struct USB2_DriverNode *__Driver_Alloc( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as )
 
 #endif
 
@@ -42,6 +42,7 @@ S32 error;
 	}
 
 	dn->dn_StructID = ID_USB2_DN;
+	dn->dn_ASync = as;
 
 	// --
 

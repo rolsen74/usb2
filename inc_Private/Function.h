@@ -24,6 +24,7 @@ struct RealFunctionNode
 	U16								fkt_FreeMe;
 //	struct USB2_TaskNode *			fkt_Task; 
 	struct USB2_ASync *				fkt_ASync;
+	struct USB2_ASync *				fkt_DriverASync;				// Published by the hub for the function lifetime
 	// --
 	S32								fkt_ActiveIOReq;
 	struct USB2_Semaphore			fkt_Semaphore;

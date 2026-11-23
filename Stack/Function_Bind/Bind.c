@@ -21,6 +21,13 @@ enum DriverDeviceMatch
 	DriverMatch_ID
 };
 
+struct DriverSearch
+{
+	struct USB2_FktDriverNode *After;
+	struct USB2_FktDriverNode *Early;
+	S32 ExternalReady;
+};
+
 // --
 
 SEC_CODE static enum DriverDeviceMatch
@@ -181,7 +188,11 @@ DriverWorkerFree ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in
 
 	if ( dn->dn_WorkerPinned )
 	{
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
 		dn->dn_FreeMe = TRUE;
+
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 		DRIVER_UNLOCK ( dn );
 	}
@@ -239,12 +250,87 @@ DiscardDriver ( struct USBBase * usbbase, struct USB2_DriverNode * dn )
 
 // --
 
-// Class records are immutable until the workers and scanner have stopped.
-SEC_CODE static S32
-ClassAvailable ( struct USBBase * usbbase, const struct USB2_FktDriverNode * fdn )
+// The class registry is locked throughout each search.
+SEC_CODE static void
+InitDriverSearch ( struct USBBase * usbbase, struct DriverSearch * search, const struct USB2_DriverNode * previous )
 {
-	return ( ( ! fdn->fdn_Detach ) && ( ( ! fdn->fdn_Driver_Filename )
-			 || ( ( usbbase->usb_FrontendsReady ) && ( usbbase->usb_ClassesReady ) ) ) );
+	search->After = NULL;
+	search->Early = NULL;
+	search->ExternalReady = ( usbbase->usb_FrontendsReady ) && ( usbbase->usb_ClassesReady );
+
+	if ( previous )
+	{
+		if ( ( search->ExternalReady ) && ( ! previous->dn_ExternalReady ) )
+		{
+			// Start at the first newly eligible class and keep the early stopping point.
+			search->Early = previous->dn_Class;
+		}
+		else
+		{
+			search->After = previous->dn_Class;
+			search->Early = previous->dn_EarlyClass;
+		}
+	}
+}
+
+// --
+
+SEC_CODE static S32
+TryDriverClass ( struct DriverSearch * search, const struct USB2_FktDriverNode * fdn )
+{
+	if ( search->After )
+	{
+		if ( search->After == fdn )
+		{
+			search->After = NULL;
+		}
+
+		return ( FALSE );
+	}
+
+	if ( search->Early == fdn )
+	{
+		search->Early = NULL;
+
+		return ( FALSE );
+	}
+
+	// Before the early cursor, only file-backed classes are new candidates.
+	return ( ( ! fdn->fdn_Detach ) && ( ( fdn->fdn_Driver_Filename ) ? search->ExternalReady : ! search->Early ) );
+}
+
+// --
+
+SEC_CODE static struct USB2_DriverNode *
+AllocDriver ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_FktDriverNode * fdn,
+			  struct USB2_ASync * as, const struct DriverSearch * search )
+{
+	struct USB2_DriverMessage * msg;
+	struct USB2_DriverNode * dn;
+
+	dn = DRIVER_ALLOC ( fn, as );
+
+	if ( ! dn )
+	{
+		return ( NULL );
+	}
+
+	dn->dn_Class = fdn;
+	dn->dn_EarlyClass = search->Early;
+	dn->dn_ExternalReady = search->ExternalReady;
+	dn->dn_Entry = fdn->fdn_Entry;
+	dn->dn_Filename = fdn->fdn_Driver_Filename;
+	msg = &dn->dn_Message.rdm_Public;
+	msg->IUSB2 = usbbase->usb_IUSB2;
+	msg->VendorID = LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID );
+	msg->DeviceID = LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID );
+	msg->Function = (PTR)fn;
+	msg->ConfigDescriptors = (PTR)fn->fkt_Config_Desc_Buf;
+	msg->ClassTitle = fdn->fdn_Title;
+	msg->ClassDriver = fdn->fdn_Driver_Filename;
+	msg->ClassAlias = fdn->fdn_Alias;
+
+	return ( dn );
 }
 
 // --
@@ -261,7 +347,7 @@ BindClasses ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB
 			  struct USB2_DriverNode * previous )
 {
 	struct USB2_DriverNode * bound;
-	struct USB2_FktDriverNode * after;
+	struct DriverSearch search;
 
 	enum FDSTAT stat;
 	S32 available;
@@ -290,18 +376,13 @@ BindClasses ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB
 		return ( FDSTAT_Not_Found );
 	}
 
-	after = previous ? previous->dn_Class : NULL;
-	stat = FDSTAT_Not_Found;
+	InitDriverSearch ( usbbase, &search, previous );
 
-	if ( ( ! after ) || ( after->fdn_Type == USB2Val_FDriver_Device ) )
-	{
-		stat = _Check_for_Devices ( usbbase, fn, as, after );
-	}
+	stat = _Check_for_Devices ( usbbase, fn, as, &search );
 
 	if ( stat == FDSTAT_Not_Found )
 	{
-		stat = _Check_for_Functions ( usbbase, fn, as,
-			( ( after ) && ( after->fdn_Type == USB2Val_FDriver_Function ) ) ? after : NULL );
+		stat = _Check_for_Functions ( usbbase, fn, as, &search );
 	}
 
 	if ( stat == FDSTAT_Not_Found )

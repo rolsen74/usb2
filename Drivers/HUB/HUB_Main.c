@@ -68,8 +68,13 @@ struct USB2_Node *n;
 			{
 				USBINFO( "HUB_Main__Free_FNs                :  2 : FN    %p : Release own HUB lock", fn );
 
+				SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 				in->PortFunctions[ fn->fkt_PortNr ] = NULL;
 				fn->fkt_HUB_Data = 0;
+
+				SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
 				FUNCTION_UNLOCK( fn );
 			}
 
