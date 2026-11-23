@@ -408,7 +408,7 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 
 	if ( ! HCD_CONTROLLERS_START () )
 	{
-		USBERROR ( "Error starting HCD Task" );
+		IExec->DebugPrintF ( "USB2: controller startup failed, releasing startup resources\n" );
 		goto bailout;
 	}
 

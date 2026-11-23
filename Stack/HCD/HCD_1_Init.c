@@ -24,11 +24,13 @@ struct USB2_HCDNode *hn;
 struct intern *in;
 S32 retval;
 S32 undo;
+const char *stage;
 
 	retval = FALSE;
 	undo = FALSE;
 	hn = userdata;
 	in = in_ptr;
+	stage = "validate controller";
 
 	USBDEBUG( "__myInit (HCD)           : Enter : HN %p", hn );
 	TASK_NAME_ENTER( "HCD : __myInit" );
@@ -58,6 +60,8 @@ S32 undo;
 
 	USBDEBUG( "__myInit (HCD)           : 1" );
 
+	stage = "set up messages and timer";
+
 	if ( ! __Init_1_Misc( usbbase, hn, in ))
 	{
 		USBDEBUG( "__myInit (HCD)           : __Init_1_Misc() Failed" );
@@ -68,6 +72,8 @@ S32 undo;
 
 	if ( hn->HCD_Functions.Chip_Preinit )
 	{
+		stage = "read controller capabilities";
+
 		if ( ! hn->HCD_Functions.Chip_Preinit( hn ))
 		{
 			USBDEBUG( "__myInit (HCD)           : Chip_Preinit() Failed" );
@@ -79,6 +85,8 @@ S32 undo;
 
 	if ( hn->HCD_Functions.Chip_Reset )
 	{
+		stage = "reset controller";
+
 		if ( ! hn->HCD_Functions.Chip_Reset( hn ))
 		{
 			USBDEBUG( "__myInit (HCD)           : Chip_Reset() Failed" );
@@ -90,6 +98,8 @@ S32 undo;
 
 	if ( hn->HCD_Functions.Chip_Alloc )
 	{
+		stage = "allocate controller resources";
+
 		if ( ! hn->HCD_Functions.Chip_Alloc( hn ))
 		{
 			USBDEBUG( "__myInit (HCD)           : Chip_Alloc() Failed" );
@@ -98,6 +108,8 @@ S32 undo;
 	}
 
 	USBDEBUG( "__myInit (HCD)           : 5" );
+
+	stage = "install interrupt and reset handlers";
 
 	if ( ! __Init_1_Add_Int( usbbase, hn ))
 	{
@@ -109,6 +121,8 @@ S32 undo;
 
 	if ( hn->HCD_Functions.Chip_Init )
 	{
+		stage = "initialize controller";
+
 		if ( ! hn->HCD_Functions.Chip_Init( hn ))
 		{
 			USBDEBUG( "__myInit (HCD)           : Chip_Init() Failed" );
@@ -120,6 +134,7 @@ S32 undo;
 
 	if ( hn->HCD_Functions.Chip_Start )
 	{
+		stage = "start controller";
 		hn->hn_DMAActive = TRUE;
 
 		if ( ! hn->HCD_Functions.Chip_Start( hn ) )
@@ -130,6 +145,8 @@ S32 undo;
 	}
 
 	USBDEBUG( "__myInit (HCD)           : 8" );
+
+	stage = "allocate root hub";
 
 	if ( ! __Init_1_Add_HUB( usbbase, hn, in ))
 	{
@@ -152,6 +169,11 @@ S32 undo;
 	retval = TRUE;
 
 bailout:
+
+	if ( ! retval )
+	{
+		usbbase->usb_IExec->DebugPrintF( "USB2: HCD startup could not %s\n", stage );
+	}
 
 	if (( ! retval ) && ( undo ))
 	{

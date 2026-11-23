@@ -92,13 +92,13 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 
 			if ( myIS_TASKRETURN_ERR ( stat ) )
 			{
-				USBERROR ( "__HCD_Controllers_Start   : 1.1 : Failed to start HCD Task (Stat $%08lx)", stat );
+				IExec->DebugPrintF ( "USB2: HCD %lu %s worker startup failed ($%08lx)\n", hn->hn_HCDIndex, name, (U32)stat );
 				break;
 			}
 
 			if ( ( ! tn ) || ( TASK_VALID ( tn ) != VSTAT_Okay ) )
 			{
-				USBERROR ( "__HCD_Controllers_Start   : 1.2 : Failed to start HCD Task (TN %p)", tn );
+				IExec->DebugPrintF ( "USB2: HCD %lu %s has no valid worker\n", hn->hn_HCDIndex, name );
 				break;
 			}
 
@@ -111,7 +111,7 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 			// well we may fall throu Main and exit.. just checking its still running
 			if ( ! running )
 			{
-				USBERROR ( "__HCD_Controllers_Start   :  2 : Error Task not Running" );
+				IExec->DebugPrintF ( "USB2: HCD %lu %s worker stopped during startup\n", hn->hn_HCDIndex, name );
 				break;
 			}
 
@@ -139,7 +139,7 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 
 			if ( ! stat )
 			{
-				USBERROR ( "__HCD_Controllers_Start   :  3 : Error Function Init Failed" );
+				IExec->DebugPrintF ( "USB2: HCD %lu %s root hub initialization failed\n", hn->hn_HCDIndex, name );
 				break;
 			}
 
@@ -156,7 +156,7 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 
 			if ( ! stat )
 			{
-				USBERROR ( "__HCD_Controllers_Start   : Error: HN    Start 3" );
+				IExec->DebugPrintF ( "USB2: HCD %lu %s root hub binding failed\n", hn->hn_HCDIndex, name );
 				break;
 			}
 

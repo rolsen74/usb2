@@ -55,7 +55,11 @@
 
 SEC_CODE U32 EHCI_Handler_Reset( struct ExceptionContext *Context UNUSED, struct ExecBase *SysBase UNUSED, PTR userData )
 {
-struct USB2_HCDNode *hn;
+	struct USB2_HCDNode *hn;
+	struct USBBase *usbbase;
+
+	U32 count;
+	U32 base;
 
 	TASK_NAME_ENTER( "EHCI : EHCI_Handler_Reset" );
 
@@ -65,11 +69,49 @@ struct USB2_HCDNode *hn;
 
 	hn = (PTR) userData;
 
-	if (( hn ) && ( hn->hn_HCD.EHCI.CapLength ))
+	if ( ( hn ) && ( hn->hn_HCD.EHCI.CapLength ) )
 	{
-		/* Halt controller */
-		PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD, 0x00 );
-		PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD, EHCI_CMD_HCRESET );
+		usbbase = hn->hn_USBBase;
+		base = hn->hn_HCD.EHCI.CapLength;
+
+		PCI_WRITELONG( base + EHCI_USBINTR, 0 );
+
+		PCI_WRITELONG( base + EHCI_USBCMD, 0 );
+
+		// The reset callback runs under Forbid, so poll without waiting for I/O.
+		for( count = 0; count < 100; count++ )
+		{
+			if ( PCI_READLONG( base + EHCI_USBSTS ) & EHCI_STS_HCH )
+			{
+				break;
+			}
+
+			MISC_MICRODELAY( 1000 );
+		}
+
+		if ( count == 100 )
+		{
+			usbbase->usb_IExec->DebugPrintF( "USB2: EHCI HCD %lu did not halt before reboot\n", hn->hn_HCDIndex );
+		}
+		else
+		{
+			PCI_WRITELONG( base + EHCI_USBCMD, EHCI_CMD_HCRESET );
+
+			for( count = 0; count < 100; count++ )
+			{
+				if ( ! ( PCI_READLONG( base + EHCI_USBCMD ) & EHCI_CMD_HCRESET ) )
+				{
+					break;
+				}
+
+				MISC_MICRODELAY( 1000 );
+			}
+
+			if ( count == 100 )
+			{
+				usbbase->usb_IExec->DebugPrintF( "USB2: EHCI HCD %lu did not complete reset before reboot\n", hn->hn_HCDIndex );
+			}
+		}
 	}
 
 	TASK_NAME_LEAVE();
