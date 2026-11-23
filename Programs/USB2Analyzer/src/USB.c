@@ -382,20 +382,22 @@ S32 rebuild;
 
 	rebuild = FALSE;
 
-	parent = FktNode_Find( & DeviceTreeUSBList, msg->nm_Data.nm_Function.nm_Parent_ID );
-
-	if ( ! parent )
-	{
-		DebugPrintF( "Parent Node not found\n" );
-		goto bailout;
-	}
-
 	switch( msg->nm_Command )
 	{
 		case USBNC_Adding:
 		{
 			if ( FktNode_Find( & DeviceTreeUSBList, msg->nm_ID ) )
 			{
+				break;
+			}
+
+			parent = FktNode_Find( & DeviceTreeUSBList, msg->nm_Data.nm_Function.nm_Parent_ID );
+
+			if ( ! parent )
+			{
+				DebugPrintF( "USB2Analyzer: Cannot add device %llu, parent %llu is missing\n",
+					(unsigned long long) msg->nm_ID,
+					(unsigned long long) msg->nm_Data.nm_Function.nm_Parent_ID );
 				break;
 			}
 
@@ -568,20 +570,26 @@ S32 rebuild;
 		{
 			node = FktNode_Find( & DeviceTreeUSBList, msg->nm_ID );
 
-			if ( ( node ) && ( parent->Functions ) &&
+			// Removing a hub also removes all descendants from this tree.
+			if ( ! node )
+			{
+				break;
+			}
+
+			parent = FktNode_Find( & DeviceTreeUSBList, msg->nm_Data.nm_Function.nm_Parent_ID );
+
+			if ( ( parent ) && ( parent->Functions ) &&
 				( node->Port >= 1 ) && ( node->Port <= parent->Ports ) &&
 				( parent->Functions[node->Port-1] == node ) )
 			{
 				parent->Functions[ node->Port-1 ] = NULL;
 			}
 
-			if ( node )
-			{
-				Remove( (PTR) node );
-				FktNode_Delete( node );
+			Remove( (PTR) node );
 
-				rebuild = TRUE;
-			}
+			FktNode_Delete( node );
+
+			rebuild = TRUE;
 			break;
 		}
 
@@ -590,8 +598,6 @@ S32 rebuild;
 			break;
 		}
 	}
-
-bailout:
 
 	return(	rebuild );
 }
