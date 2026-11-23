@@ -13,7 +13,9 @@
 #define AUDIO_PACKET_COUNT 256
 #define AUDIO_BATCH_US 32000U
 #define AUDIO_WRITE_BATCH_US 16000U
-#define AUDIO_WRITE_REQUESTS 2
+#define AUDIO_STREAM_REQUESTS 2
+#define AUDIO_XHCI_PACKET_COUNT 254U
+#define AUDIO_CLOCK_PROBE_LIMIT 4U
 #define AUDIO_READ_TIMEOUT ( 5U * 1000000U )
 #define AUDIO_EMPTY_BATCH_LIMIT 4
 #define AUDIO_IO_ABORT 0x80
@@ -46,6 +48,24 @@ struct AudioBase
 	struct AudioUnit *Units[AUDIO_MAX_UNITS];
 };
 
+struct AudioWrite
+{
+	struct IOStdReq *Request;
+	U32 Queued;
+	U32 Done;
+	U32 Actual;
+};
+
+struct AudioReadBatch
+{
+	U16 PacketLengths[AUDIO_PACKET_COUNT];
+	U32 Offset;
+	U32 Bytes;
+	U32 Missed;
+	S8 Error;
+	U8 Pending;
+};
+
 struct AudioUnit
 {
 	struct AudioContext *Context;
@@ -56,6 +76,10 @@ struct AudioUnit
 	struct MsgPort *BeginPort;
 	struct IOStdReq *ReadActive;
 	const U8 *RateDescriptor;
+	const U8 *ParseNext;
+	struct AudioWrite Writes[AUDIO_STREAM_REQUESTS];
+	struct AudioWrite *WriteOwners[AUDIO_STREAM_REQUESTS];
+	struct AudioReadBatch Reads[AUDIO_STREAM_REQUESTS];
 	struct AudioFormat Format;
 	struct AudioGain Gain;
 	U32 UnitNr;
@@ -65,23 +89,28 @@ struct AudioUnit
 	U32 PacketCount;
 	U32 IntervalUS;
 	U32 SingleSplitRate;
-	U32 BufferedBytes;
+	U32 ReadHead;
+	U32 ReadCount;
+	U32 ReadSlots;
+	U32 WriteHead;
+	U32 WriteCount;
+	U32 WriteSlot;
 	U32 EmptyBatches;
 	U32 EmptyFailedPackets;
-	U32 BufferOffset;
-	U32 WriteQueued;
-	U32 WriteBytes[AUDIO_WRITE_REQUESTS];
-	U32 WriteLostBytes;
+	U32 WriteBytes[AUDIO_STREAM_REQUESTS];
 	U32 WritePhase;
-	U16 IsoPacketLengths[AUDIO_PACKET_COUNT];
-	U16 WritePacketLengths[AUDIO_WRITE_REQUESTS][AUDIO_PACKET_COUNT];
+	U16 WritePacketLengths[AUDIO_STREAM_REQUESTS][AUDIO_PACKET_COUNT];
+	U16 ClockKeys[AUDIO_CLOCK_PROBE_LIMIT];
+	U32 ClockRates[AUDIO_CLOCK_PROBE_LIMIT];
+	U32 ClockProbes;
 	U8 InterfaceNr;
 	U8 Protocol;
 	U8 AltNr;
 	U8 EndPoint;
 	U8 Detached;
 	U8 Released;
-	U8 ReadPending;
+	U8 ReadDiscontinuity;
+	U8 ResetStream;
 	U8 ActiveAlt;
 	U8 FrequencyControl;
 	U8 RatePending;
@@ -109,14 +138,16 @@ SEC_CODE void Audio_FindGain( struct AudioUnit *unit, U32 configSize );
 SEC_CODE void Audio_GainCommand( struct AudioUnit *unit, struct IOStdReq *ioreq );
 SEC_CODE void Audio_Read_Start( struct AudioUnit *unit );
 SEC_CODE void Audio_Read_Done( struct AudioUnit *unit );
-SEC_CODE void Audio_Read_Reply( struct AudioUnit *unit, S8 error );
+SEC_CODE S8 Audio_Read_Reply( struct AudioUnit *unit, S8 error );
 SEC_CODE void Audio_Read_Buffered( struct AudioUnit *unit );
+SEC_CODE void Audio_Read_Stop( struct AudioUnit *unit );
 SEC_CODE void Audio_Write_Start( struct AudioUnit *unit );
 SEC_CODE void Audio_Write_Done( struct AudioUnit *unit );
-SEC_CODE void Audio_Write_Stop( struct AudioUnit *unit );
+SEC_CODE S8 Audio_Write_Reply( struct AudioUnit *unit, S8 error );
+SEC_CODE void Audio_Write_Stop( struct AudioUnit *unit, S8 error );
+SEC_CODE void Audio_Write_Account( struct AudioUnit *unit, U32 slot );
 SEC_CODE void Audio_Begin( struct AudioUnit *unit );
 SEC_CODE void Audio_Abort( struct AudioUnit *unit );
-SEC_CODE void Audio_IO_Stop( struct USB2_IORequest *ioreq );
 
 SEC_CODE struct AudioBase *Audio_Manager_Init( struct AudioBase *base, PTR seglist, struct ExecIFace *IExec );
 SEC_CODE U32 Audio_Manager_Obtain( struct DeviceManagerInterface *Self );

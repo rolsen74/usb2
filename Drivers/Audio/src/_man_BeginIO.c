@@ -18,6 +18,21 @@ struct AudioUnit *unit;
 
 	base = (PTR) Self->Data.LibBase;
 	unit = (PTR) ioreq->io_Unit;
+
+	if ( ioreq->io_Message.mn_Length < sizeof( *ioreq ) )
+	{
+		ioreq->io_Error = IOERR_BADLENGTH;
+
+		if ( ! ( ioreq->io_Flags & IOF_QUICK ) )
+		{
+			ioreq->io_Message.mn_Node.ln_Type = NT_MESSAGE;
+
+			ReplyMsg( (PTR) ioreq );
+		}
+
+		return;
+	}
+
 	ioreq->io_Flags &= ~( IOF_QUICK | AUDIO_IO_ABORT );
 	ioreq->io_Error = 0;
 	ioreq->io_Actual = 0;

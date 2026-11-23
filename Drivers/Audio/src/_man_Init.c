@@ -16,8 +16,9 @@ SEC_CODE struct AudioBase *Audio_Manager_Init( struct AudioBase *base, PTR segli
 	base->Library.lib_Node.ln_Type = NT_DEVICE;
 	base->Library.lib_Node.ln_Name = (STR) AUDIO_DEVICE_NAME;
 	base->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
-	base->Library.lib_Version = 1;
-	base->Library.lib_Revision = 0;
+	base->Library.lib_Version = AUDIO_DEVICE_VERSION;
+	base->Library.lib_Revision = AUDIO_DEVICE_REVISION;
+	base->Library.lib_IdString = AUDIO_DEVICE_ID;
 	base->SegList = seglist;
 
 	return ( base );

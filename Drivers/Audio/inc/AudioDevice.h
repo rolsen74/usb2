@@ -9,6 +9,9 @@
 #define DRIVERS_AUDIO_DEVICE_H
 
 #define AUDIO_DEVICE_NAME "usb2audio.device"
+#define AUDIO_DEVICE_VERSION 1
+#define AUDIO_DEVICE_REVISION 1
+#define AUDIO_DEVICE_ID AUDIO_DEVICE_NAME " 1.1 (23.11.2026)"
 #define AUDIO_CMD_QUERY 0x8000
 // CMD_SET_RATE takes one native U32 in Hz while no read or write is active.
 #define AUDIO_CMD_SET_RATE 0x8001
@@ -17,6 +20,8 @@
 #define AUDIO_CMD_SET_GAIN 0x8003
 // CHECK_RATE validates a native U32 rate in Hz without changing the stream.
 #define AUDIO_CMD_CHECK_RATE 0x8004
+// QUEUE_WRITE accepts a second write while the first is active.
+#define AUDIO_CMD_QUEUE_WRITE 0x8005
 #define AUDIO_ENCODING_PCM_S16LE 1
 #define AUDIO_PLAYBACK_UNIT_BASE 16
 #define AUDIO_MAX_UNITS 32
@@ -24,6 +29,7 @@
 #define AUDIO_ERR_RATE_SETUP (-41)
 #define AUDIO_ERR_NO_PACKETS (-42)
 #define AUDIO_ERR_SHORT_WRITE (-43)
+#define AUDIO_ERR_SHORT_READ (-44)
 
 struct AudioFormat
 {

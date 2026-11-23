@@ -21,6 +21,7 @@ struct __ohci
 	struct OHCI_ITD * IsoHead;
 	struct OHCI_ED *  Start_Header;
 	U32				  Start_Slot;
+	U32				  IsoNextFrame;
 };
 
 struct __uhci

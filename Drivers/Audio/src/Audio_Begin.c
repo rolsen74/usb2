@@ -17,7 +17,7 @@ Audio_RateCommand( struct AudioUnit *unit, struct IOStdReq *ioreq )
 	U32 rate;
 	U32 previous;
 
-	if ( ( ioreq->io_Command == AUDIO_CMD_SET_RATE ) && ( unit->ReadActive ) )
+	if ( ( ioreq->io_Command == AUDIO_CMD_SET_RATE ) && ( ( unit->ReadActive ) || ( unit->WriteCount ) ) )
 	{
 		ioreq->io_Error = IOERR_UNITBUSY;
 
@@ -51,8 +51,8 @@ Audio_RateCommand( struct AudioUnit *unit, struct IOStdReq *ioreq )
 
 	if ( ( rate != previous ) || ( ! unit->RateValid ) )
 	{
-		unit->BufferedBytes = 0;
-		unit->BufferOffset = 0;
+		Audio_Read_Stop( unit );
+
 		unit->WritePhase = 0;
 
 		if ( ! Audio_Frequency( unit, rate ) )
@@ -75,10 +75,30 @@ Audio_RateCommand( struct AudioUnit *unit, struct IOStdReq *ioreq )
 SEC_CODE void
 Audio_Begin( struct AudioUnit *unit )
 {
-struct IOStdReq *ioreq;
+	struct IOStdReq *ioreq;
+	struct AudioWrite *write;
+
+	S32 reset;
+	U32 index;
 
 	while(( ioreq = (PTR) GetMsg( unit->BeginPort ) ))
 	{
+		ObtainSemaphore( & unit->Base->Semaphore );
+
+		reset = unit->ResetStream;
+		unit->ResetStream = FALSE;
+
+		ReleaseSemaphore( & unit->Base->Semaphore );
+
+		if ( reset )
+		{
+			Audio_Read_Stop( unit );
+
+			Audio_Read_Reply( unit, IOERR_ABORTED );
+
+			Audio_Write_Stop( unit, IOERR_ABORTED );
+		}
+
 		if ( ioreq->io_Flags & AUDIO_IO_ABORT )
 		{
 			ioreq->io_Error = IOERR_ABORTED;
@@ -107,7 +127,7 @@ struct IOStdReq *ioreq;
 		{
 			Audio_GainCommand( unit, ioreq );
 		}
-		else if ( ioreq->io_Command == ( ( unit->EndPoint & EPADR_Dir_Mask ) ? CMD_READ : CMD_WRITE ) )
+		else if ( ( unit->EndPoint & EPADR_Dir_Mask ) && ( ioreq->io_Command == CMD_READ ) )
 		{
 			if ( ( unit->ReadActive ) || ( ! unit->RateValid ) )
 			{
@@ -118,7 +138,7 @@ struct IOStdReq *ioreq;
 			{
 				ioreq->io_Error = IOERR_BADLENGTH;
 			}
-			else if ( ( ioreq->io_Command == CMD_READ ) && ( unit->RatePending ) &&
+			else if ( ( unit->RatePending ) &&
 				( ! Audio_Frequency( unit, unit->Format.SampleRate ) ) )
 			{
 				ioreq->io_Error = AUDIO_ERR_RATE_SETUP;
@@ -127,23 +147,42 @@ struct IOStdReq *ioreq;
 			{
 				unit->ReadActive = ioreq;
 				unit->DataUsed = 0;
-				unit->WriteQueued = 0;
-				unit->WriteLostBytes = 0;
+				unit->ReadDiscontinuity = FALSE;
 				unit->EmptyBatches = 0;
 				unit->EmptyFailedPackets = 0;
+				unit->RatePending = FALSE;
 
-				if ( ioreq->io_Command == CMD_READ )
-				{
-					unit->RatePending = FALSE;
+				Audio_Read_Buffered( unit );
 
-					Audio_Read_Buffered( unit );
+				Audio_Read_Start( unit );
 
-					Audio_Read_Start( unit );
-				}
-				else
-				{
-					Audio_Write_Start( unit );
-				}
+				continue;
+			}
+		}
+		else if ( ( ! ( unit->EndPoint & EPADR_Dir_Mask ) ) &&
+			( ( ioreq->io_Command == CMD_WRITE ) || ( ioreq->io_Command == AUDIO_CMD_QUEUE_WRITE ) ) )
+		{
+			if ( ( ! unit->RateValid ) || ( unit->WriteCount == AUDIO_STREAM_REQUESTS ) ||
+				( ( unit->WriteCount ) && ( ioreq->io_Command == CMD_WRITE ) ) )
+			{
+				ioreq->io_Error = IOERR_UNITBUSY;
+			}
+			else if ( ( ! ioreq->io_Data ) || ( ! ioreq->io_Length ) ||
+				( ioreq->io_Length % ( unit->Format.Channels * 2 ) ) )
+			{
+				ioreq->io_Error = IOERR_BADLENGTH;
+			}
+			else
+			{
+				index = ( unit->WriteHead + unit->WriteCount ) % AUDIO_STREAM_REQUESTS;
+				write = & unit->Writes[index];
+				write->Request = ioreq;
+				write->Queued = 0;
+				write->Done = 0;
+				write->Actual = 0;
+				unit->WriteCount++;
+
+				Audio_Write_Start( unit );
 
 				continue;
 			}
@@ -153,7 +192,16 @@ struct IOStdReq *ioreq;
 			ioreq->io_Error = IOERR_NOCMD;
 		}
 
+		ObtainSemaphore( & unit->Base->Semaphore );
+
+		if ( ioreq->io_Flags & AUDIO_IO_ABORT )
+		{
+			ioreq->io_Error = IOERR_ABORTED;
+		}
+
 		ReplyMsg( (PTR) ioreq );
+
+		ReleaseSemaphore( & unit->Base->Semaphore );
 	}
 }
 

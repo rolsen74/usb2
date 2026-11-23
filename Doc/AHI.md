@@ -1,6 +1,6 @@
 # USB2 AHI Playback
 
-`usb2.audio` plays audio through the first playback unit of
+`usb2.audio` plays audio through the first available playback unit of
 [`usb2audio.device`](Audio.md). It sets the AHI mixer to the USB playback
 unit's sample rate and uses the **USB2: 16-bit stereo playback** mode.
 
@@ -28,7 +28,7 @@ hardware remain unverified.
 16-bit stereo AHI output. Bluetooth2 encodes the AHI mixer output as SBC
 while the application is playing.
 
-1. Install Bluetooth2 1.18 and Bluetooth.Driver 1.15. Copy
+1. Install Bluetooth2 1.23 and cls_Bluetooth.Driver 1.20. Copy
    `Devs/AHI/bluetooth2.audio` and `Devs/AudioModes/Bluetooth2` from the
    USB2 archive to the corresponding directories under `DEVS:`, then reboot.
 2. Run `USB2BluetoothTest GUI UNIT=0` with version 0.20 or later,

@@ -409,6 +409,13 @@ PreviewAudio_Stop( struct PreviewAudio *audio )
 {
 	CloseAudioStream( & audio->Input );
 
+	if ( audio->ShortReads )
+	{
+		Printf( "Preview audio lost USB intervals in %lu buffers.\n", audio->ShortReads );
+
+		audio->ShortReads = 0;
+	}
+
 	CloseMonitor( audio );
 
 	FinishRecording( audio );
@@ -881,7 +888,8 @@ PreviewAudio_Update( struct PreviewAudio *audio )
 	bytes = input->Request->io_Actual;
 	wanted = input->Frames * input->Format.Channels * 2;
 
-	if ( ( error ) || ( ! bytes ) || ( bytes > wanted ) || ( bytes % ( input->Format.Channels * 2 ) ) )
+	if ( ( ( error ) && ( error != AUDIO_ERR_SHORT_READ ) ) || ( ! bytes ) ||
+		( bytes > wanted ) || ( bytes % ( input->Format.Channels * 2 ) ) )
 	{
 		Printf( "Preview audio input stopped (error %ld, %lu bytes).\n", error, bytes );
 
@@ -890,6 +898,11 @@ PreviewAudio_Update( struct PreviewAudio *audio )
 		PreviewAudio_Stop( audio );
 
 		return;
+	}
+
+	if ( error == AUDIO_ERR_SHORT_READ )
+	{
+		audio->ShortReads++;
 	}
 
 	// Keep the microphone running while converting and saving the previous chunk.

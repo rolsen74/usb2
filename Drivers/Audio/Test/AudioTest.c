@@ -510,7 +510,11 @@ S32 error;
 		goto free_samples;
 	}
 
-	if ( ioreq->io_Error )
+	if ( ioreq->io_Error == AUDIO_ERR_SHORT_READ )
+	{
+		Printf( "Some USB audio intervals were lost. Saving the PCM received.\n" );
+	}
+	else if ( ioreq->io_Error )
 	{
 		Printf( "Capture failed: %ld, %ld bytes received\n",
 			(S32) ioreq->io_Error, ioreq->io_Actual );

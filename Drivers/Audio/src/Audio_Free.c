@@ -27,13 +27,9 @@ struct AudioBase *base;
 	unit->Detached = TRUE;
 	ReleaseSemaphore( & base->Semaphore );
 
-	if ( unit->ReadPending )
-	{
-		Audio_IO_Stop( unit->Stream->IORequests[0] );
-		unit->ReadPending = FALSE;
-	}
+	Audio_Read_Stop( unit );
 
-	Audio_Write_Stop( unit );
+	Audio_Write_Stop( unit, IOERR_ABORTED );
 
 	Audio_Read_Reply( unit, IOERR_ABORTED );
 

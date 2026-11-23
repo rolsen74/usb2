@@ -23,9 +23,7 @@ struct AudioUnit *unit;
 
 	if ( unit )
 	{
-		unit->BufferedBytes = 0;
-		unit->BufferOffset = 0;
-		unit->WritePhase = 0;
+		unit->ResetStream = TRUE;
 		unit->OpenCount--;
 		base->Library.lib_OpenCnt--;
 		ioreq->io_Unit = NULL;

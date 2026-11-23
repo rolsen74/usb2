@@ -54,6 +54,7 @@ struct PreviewAudio
 	U32 MonitorLengths[PREVIEW_MONITOR_BUFFERS];
 	U32 MonitorRead;
 	U32 MonitorCount;
+	U32 ShortReads;
 	U32 ShortWrites;
 	U32 Written;
 	U32 Volume;

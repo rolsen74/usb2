@@ -16,65 +16,41 @@ SEC_CODE void
 Audio_Write_Done( struct AudioUnit *unit )
 {
 	struct USB2_IORequest *ioreq;
-	struct IOStdReq *write;
+	struct AudioWrite *write;
 
-	U32 frameBytes;
-	U32 actual;
 	U32 slot;
-	U32 bytes;
 
 	while(( ioreq = (PTR) GetMsg( unit->Stream->MsgPort ) ))
 	{
-		slot = ioreq == unit->Stream->IORequests[0] ? 0 : 1;
-		bytes = unit->WriteBytes[slot];
-		unit->WriteBytes[slot] = 0;
-		write = unit->ReadActive;
+		slot = ( ioreq == unit->Stream->IORequests[0] ) ? 0 : 1;
 
-		if ( ! write )
-		{
-			continue;
-		}
-
-		if ( write->io_Flags & AUDIO_IO_ABORT )
-		{
-			Audio_Write_Stop( unit );
-
-			unit->WritePhase = 0;
-
-			Audio_Read_Reply( unit, IOERR_ABORTED );
-
-			continue;
-		}
+		Audio_Write_Account( unit, slot );
 
 		if ( ioreq->io_Error != USB2Err_NoError )
 		{
 			AUDIO_TRACE( "unit %lu endpoint $%02lx write failed, USB error %ld, bytes %lu\n",
 				unit->UnitNr, (U32) unit->EndPoint, (S32) ioreq->io_Error, ioreq->io_Actual );
 
-			Audio_Write_Stop( unit );
+			Audio_Write_Stop( unit, ioreq->io_Error );
 
-			unit->WritePhase = 0;
-
-			Audio_Read_Reply( unit, ioreq->io_Error );
-
-			continue;
+			return;
 		}
 
-		if ( ioreq->io_Actual != bytes )
+		while( unit->WriteCount )
 		{
-			AUDIO_TRACE( "unit %lu endpoint $%02lx wrote %lu of %lu USB bytes\n",
-				unit->UnitNr, (U32) unit->EndPoint, ioreq->io_Actual, bytes );
+			write = & unit->Writes[unit->WriteHead];
 
-			frameBytes = unit->Format.Channels * 2;
-			actual = MIN( ioreq->io_Actual, bytes );
-			unit->WriteLostBytes += bytes - ( actual - actual % frameBytes );
-		}
+			if ( write->Done != write->Request->io_Length )
+			{
+				break;
+			}
 
-		unit->DataUsed += bytes;
+			if ( Audio_Write_Reply( unit, 0 ) == IOERR_ABORTED )
+			{
+				Audio_Write_Stop( unit, IOERR_ABORTED );
 
-		if ( unit->DataUsed == write->io_Length )
-		{
-			Audio_Read_Reply( unit, unit->WriteLostBytes ? AUDIO_ERR_SHORT_WRITE : 0 );
+				return;
+			}
 		}
 	}
 

@@ -11,6 +11,66 @@
 
 // --
 
+static S32
+Audio_Activate( struct AudioUnit *unit )
+{
+	AUDIO_TRACE( "interface %lu alt %lu endpoint $%02lx, %lu Hz, packet %lu bytes, interval %lu us\n",
+		(U32) unit->InterfaceNr, (U32) unit->AltNr, (U32) unit->EndPoint,
+		unit->Format.SampleRate, unit->PacketBytes, unit->IntervalUS );
+
+	if ( ! USB2_Ifc_SetAlt( unit->Register, unit->StartMsg->Interface, unit->AltNr ) )
+	{
+		AUDIO_TRACE( "interface %lu could not select alt %lu\n", (U32) unit->InterfaceNr, (U32) unit->AltNr );
+
+		return ( FALSE );
+	}
+
+	unit->ActiveAlt = TRUE;
+
+	if ( ( unit->Protocol == AUDIO_PROTOCOL_UAC2 ) && ( Audio_ClockRate( unit ) != unit->Format.SampleRate ) )
+	{
+		AUDIO_TRACE( "interface %lu clock rate changed after selecting the alternate setting\n", (U32) unit->InterfaceNr );
+
+		return ( FALSE );
+	}
+
+	unit->RatePending = ( unit->FrequencyControl ) && ( unit->EndPoint & EPADR_Dir_Mask ) &&
+		( unit->RateDescriptor[7] == 1 );
+
+	if ( ( unit->SingleSplitRate ) && ( Audio_Frequency( unit, unit->SingleSplitRate ) ) )
+	{
+		unit->Format.SampleRate = unit->SingleSplitRate;
+	}
+	else if ( ( ! unit->RatePending ) && ( ! Audio_Frequency( unit, unit->Format.SampleRate ) ) )
+	{
+		AUDIO_TRACE( "interface %lu sample rate setup failed\n", (U32) unit->InterfaceNr );
+
+		return ( FALSE );
+	}
+
+	unit->RateValid = TRUE;
+
+	unit->Stream = USB2_EPRes_ObtainTags( unit->Register,
+		USB2Tag_EPRes_InterfaceNr, unit->InterfaceNr,
+		USB2Tag_EPRes_EndPointNr, unit->EndPoint,
+		USB2Tag_EPRes_BufferSize, unit->PacketBytes * unit->PacketCount,
+		USB2Tag_EPRes_NrOfIORequest, ( unit->EndPoint & EPADR_Dir_Mask ) ? unit->ReadSlots : AUDIO_STREAM_REQUESTS,
+		USB2Tag_EPRes_AllowShortPackets, TRUE,
+		TAG_END
+	);
+
+	if ( ! unit->Stream )
+	{
+		AUDIO_TRACE( "interface %lu could not obtain endpoint $%02lx\n", (U32) unit->InterfaceNr, (U32) unit->EndPoint );
+
+		return ( FALSE );
+	}
+
+	return ( TRUE );
+}
+
+// --
+
 SEC_CODE struct AudioUnit *
 Audio_Alloc( struct AudioContext *ctx, struct USB2_DriverMessage *msg )
 {
@@ -20,6 +80,7 @@ struct USB2_EPResource *control;
 
 U32 index;
 U32 limit;
+U32 confirmations;
 
 	base = ctx->Device;
 	unit = AllocVecTags( sizeof( struct AudioUnit ), AVT_ClearWithValue, 0, TAG_END );
@@ -70,61 +131,32 @@ U32 limit;
 		goto bailout;
 	}
 
-	if ( ! Audio_Parse( unit ) )
+	confirmations = 0;
+
+	while( ( confirmations < AUDIO_CLOCK_PROBE_LIMIT ) && ( Audio_Parse( unit ) ) )
 	{
-		AUDIO_TRACE( "interface %lu has no usable PCM16 alternate setting\n", (U32) unit->InterfaceNr );
+		if ( unit->Protocol == AUDIO_PROTOCOL_UAC2 )
+		{
+			confirmations++;
+		}
 
-		goto bailout;
+		if ( Audio_Activate( unit ) )
+		{
+			break;
+		}
+
+		// Retry only with a confirmed return to the idle alternate.
+		if ( ! USB2_Ifc_SetAlt( unit->Register, msg->Interface, 0 ) )
+		{
+			goto bailout;
+		}
+
+		unit->ActiveAlt = FALSE;
 	}
-
-	AUDIO_TRACE( "interface %lu alt %lu endpoint $%02lx, %lu Hz, packet %lu bytes, interval %lu us\n",
-		(U32) unit->InterfaceNr, (U32) unit->AltNr, (U32) unit->EndPoint,
-		unit->Format.SampleRate, unit->PacketBytes, unit->IntervalUS );
-
-	if ( ! USB2_Ifc_SetAlt( unit->Register, msg->Interface, unit->AltNr ) )
-	{
-		AUDIO_TRACE( "interface %lu could not select alt %lu\n", (U32) unit->InterfaceNr, (U32) unit->AltNr );
-
-		goto bailout;
-	}
-
-	unit->ActiveAlt = TRUE;
-
-	if ( ( unit->Protocol == AUDIO_PROTOCOL_UAC2 ) && ( Audio_ClockRate( unit ) != unit->Format.SampleRate ) )
-	{
-		AUDIO_TRACE( "interface %lu clock rate changed after selecting the alternate setting\n", (U32) unit->InterfaceNr );
-
-		goto bailout;
-	}
-
-	unit->RatePending = ( unit->FrequencyControl ) && ( unit->EndPoint & EPADR_Dir_Mask ) &&
-		( unit->RateDescriptor[7] == 1 );
-
-	if ( ( unit->SingleSplitRate ) && ( Audio_Frequency( unit, unit->SingleSplitRate ) ) )
-	{
-		unit->Format.SampleRate = unit->SingleSplitRate;
-	}
-	else if ( ( ! unit->RatePending ) && ( ! Audio_Frequency( unit, unit->Format.SampleRate ) ) )
-	{
-		AUDIO_TRACE( "interface %lu sample rate setup failed\n", (U32) unit->InterfaceNr );
-
-		goto bailout;
-	}
-
-	unit->RateValid = TRUE;
-
-	unit->Stream = USB2_EPRes_ObtainTags( unit->Register,
-		USB2Tag_EPRes_InterfaceNr, unit->InterfaceNr,
-		USB2Tag_EPRes_EndPointNr, unit->EndPoint,
-		USB2Tag_EPRes_BufferSize, unit->PacketBytes * unit->PacketCount,
-		USB2Tag_EPRes_NrOfIORequest, ( unit->EndPoint & EPADR_Dir_Mask ) ? 1 : AUDIO_WRITE_REQUESTS,
-		USB2Tag_EPRes_AllowShortPackets, TRUE,
-		TAG_END
-	);
 
 	if ( ! unit->Stream )
 	{
-		AUDIO_TRACE( "interface %lu could not obtain endpoint $%02lx\n", (U32) unit->InterfaceNr, (U32) unit->EndPoint );
+		AUDIO_TRACE( "interface %lu has no usable PCM16 alternate setting\n", (U32) unit->InterfaceNr );
 
 		goto bailout;
 	}

@@ -142,7 +142,7 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 			phases = splitOut ? 8 : 1;
 			latest = horizon - 1 - ( count - 1 ) * step - ( split ? 7 : 0 );
 		}
-		else if ( splitOut )
+		else
 		{
 			// Queue the continuation if its next frame cannot safely be linked.
 			return ( FALSE );

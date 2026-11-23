@@ -18,6 +18,7 @@ OHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 {
 	struct USBBase *usbbase;
 	struct USB2_EndPointNode *ep;
+	struct RealRequest *active;
 	struct OHCI_ED *ed;
 	struct OHCI_ITD **link;
 	struct OHCI_ITD *itd;
@@ -35,6 +36,7 @@ OHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 
 	usbbase = hn->hn_USBBase;
 	ep = req->req_EndPoint;
+	active = ep->ep_Request_Active;
 	length = req->req_Public.io_Length;
 	packet = ep->ep_MaxPacketSize;
 	in = req->req_Public.io_Command == CMD_READ;
@@ -47,7 +49,8 @@ OHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 		return ( TRUE );
 	}
 
-	if ( hn->hn_HCD.OHCI.Isoc_Head->ped_virt_next )
+	if ( ( hn->hn_HCD.OHCI.Isoc_Head->ped_virt_next ) &&
+		( ( ! active ) || ( active->req_HCD.OHCI.ED_Header != hn->hn_HCD.OHCI.Isoc_Head->ped_virt_next ) ) )
 	{
 		req->req_Public.io_Error = USB2Err_Host_NoBandWidth;
 

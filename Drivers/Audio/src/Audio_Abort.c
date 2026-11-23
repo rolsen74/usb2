@@ -11,22 +11,30 @@
 
 // --
 
-SEC_CODE void Audio_Abort( struct AudioUnit *unit )
+SEC_CODE void
+Audio_Abort( struct AudioUnit *unit )
 {
+	struct AudioWrite *write;
+
+	U32 index;
+
 	if ( ( unit->ReadActive ) && ( unit->ReadActive->io_Flags & AUDIO_IO_ABORT ) )
 	{
-		if ( unit->ReadPending )
-		{
-			Audio_IO_Stop( unit->Stream->IORequests[0] );
-			unit->ReadPending = FALSE;
-		}
-
-		Audio_Write_Stop( unit );
+		Audio_Read_Stop( unit );
 
 		Audio_Read_Reply( unit, IOERR_ABORTED );
-		unit->BufferedBytes = 0;
-		unit->BufferOffset = 0;
-		unit->WritePhase = 0;
+	}
+
+	for( index = 0; index < unit->WriteCount; index++ )
+	{
+		write = & unit->Writes[( unit->WriteHead + index ) % AUDIO_STREAM_REQUESTS];
+
+		if ( write->Request->io_Flags & AUDIO_IO_ABORT )
+		{
+			Audio_Write_Stop( unit, IOERR_ABORTED );
+
+			break;
+		}
 	}
 }
 

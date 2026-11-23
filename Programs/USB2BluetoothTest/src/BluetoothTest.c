@@ -31,6 +31,11 @@ ReportHCIError( enum BTHCIResult result, const struct BTHCIError *error )
 
 			break;
 
+		case BT_HCI_CONTROLLER_BUSY:
+			Printf( "The Bluetooth controller is busy.\n" );
+
+			break;
+
 		case BT_HCI_COMMAND_ERROR:
 			Printf( "HCI command $%04lx returned status $%02lx.\n",
 				(ULONG) error->Opcode, (ULONG) error->Status );

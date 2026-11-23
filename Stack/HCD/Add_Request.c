@@ -336,12 +336,25 @@ __HCD_Request_CanStart ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	command = ioreq->req_Public.io_Command;
 
 	// Keep one batch ahead when the driver supplies individual packet results.
-	if ( ( ep->ep_Request_ActiveNext ) || ( ! hn->hn_IsEHCI ) || ( ep->ep_Type != EPATT_Type_Isochronous )
+	if ( ( ep->ep_Request_ActiveNext ) || ( ep->ep_Type != EPATT_Type_Isochronous )
 		 || ( active->req_Public.io_Command != command )
-		 || ( ! ( ( ( speed == USBSPEED_High ) && ( command == CMD_READ ) )
-				  || ( ( speed == USBSPEED_Full ) && ( command == CMD_WRITE ) ) ) )
-		 || ( ! active->req_Public.io_IsoPacketLengths ) || ( ! ioreq->req_Public.io_IsoPacketLengths ) || ( ! ep->ep_Interval )
-		 || ( ep->ep_Interval > 16 ) )
+		 || ( ! active->req_Public.io_IsoPacketLengths ) || ( ! ioreq->req_Public.io_IsoPacketLengths )
+		 || ( ! ep->ep_Interval ) || ( ep->ep_Interval > 16 ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( ! hn->hn_IsEHCI )
+	{
+		return ( ( speed == USBSPEED_Full ) && ( ( hn->hn_HCDType == HCDTYPE_OHCI )
+			|| ( hn->hn_HCDType == HCDTYPE_SAM440 ) || ( hn->hn_HCDType == HCDTYPE_SAM460 ) )
+			&& ( ( command == CMD_READ ) || ( command == CMD_WRITE ) )
+			&& ( ioreq->req_Public.io_IsoPacketCount <= ( 16380U >> ( ep->ep_Interval - 1 ) ) )
+			&& ( active->req_Public.io_IsoPacketCount <= ( 16380U >> ( ep->ep_Interval - 1 ) ) ) );
+	}
+
+	if ( ( ( speed != USBSPEED_High ) && ( speed != USBSPEED_Full ) ) ||
+		( ( command != CMD_READ ) && ( command != CMD_WRITE ) ) )
 	{
 		return ( FALSE );
 	}

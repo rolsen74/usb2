@@ -4,6 +4,11 @@ The Audio driver exposes `usb2audio.device` for USB Audio
 Class 1.0 mono and stereo PCM16. Capture units start at 0 and playback units
 start at 16. Use `AUDIO_CMD_QUERY` to get the selected format. `CMD_READ`
 and `CMD_WRITE` transfer interleaved little-endian PCM in whole sample frames.
+`AUDIO_CMD_QUEUE_WRITE` accepts up to two playback requests and replies in
+submission order. Aborting an active queued write stops the pending playback
+queue and returns the completed PCM byte count for each request.
+`AUDIO_ERR_SHORT_READ` reports lost USB intervals. `io_Actual` still counts
+valid PCM in the buffer, which may contain a discontinuity.
 The driver selects the first usable alternate setting and checks the rate
 against its USB service interval and packet capacity. With no read or write
 active, `AUDIO_CMD_SET_RATE` takes a native `U32` rate in Hz supported by
@@ -56,7 +61,9 @@ multiple start-splits. It falls back to the initial rate if the device
 rejects the preferred rate. EHCI can schedule two playback batches
 in succession on the same endpoint. A missed isochronous slot can still
 produce a short write (`-43`). The completed byte count excludes missed
-samples.
+samples. The USB AHI player continues with the next buffer after a short
+write. The stack can schedule two audio transfers on the same endpoint on
+EHCI and OHCI. High-speed xHCI capture uses at most 254 intervals per request.
 
 ## USB Audio Class 2.0
 

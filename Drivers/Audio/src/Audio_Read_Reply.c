@@ -11,24 +11,37 @@
 
 // --
 
-SEC_CODE void Audio_Read_Reply( struct AudioUnit *unit, S8 error )
+SEC_CODE S8
+Audio_Read_Reply( struct AudioUnit *unit, S8 error )
 {
-struct IOStdReq *ioreq;
+	struct IOStdReq *ioreq;
 
 	ioreq = unit->ReadActive;
 
 	if ( ! ioreq )
 	{
-		return;
+		return ( error );
 	}
 
 	unit->ReadActive = NULL;
-	ioreq->io_Error = error;
-	ioreq->io_Actual = unit->DataUsed - unit->WriteLostBytes;
+
+	ObtainSemaphore( & unit->Base->Semaphore );
+
+	if ( ioreq->io_Flags & AUDIO_IO_ABORT )
+	{
+		error = IOERR_ABORTED;
+	}
+
+	ioreq->io_Error = ( ! error && unit->ReadDiscontinuity ) ? AUDIO_ERR_SHORT_READ : error;
+	ioreq->io_Actual = unit->DataUsed;
 	unit->DataUsed = 0;
-	unit->WriteLostBytes = 0;
+	unit->ReadDiscontinuity = FALSE;
 
 	ReplyMsg( (PTR) ioreq );
+
+	ReleaseSemaphore( & unit->Base->Semaphore );
+
+	return ( error );
 }
 
 // --

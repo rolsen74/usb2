@@ -13,15 +13,15 @@
 // --
 
 SEC_CODE void
-Audio_Write_Stop( struct AudioUnit *unit )
+Audio_Write_Stop( struct AudioUnit *unit, S8 error )
 {
 	struct USB2_IORequest *ioreq;
 
 	U32 slot;
 
-	for ( slot = 0; slot < AUDIO_WRITE_REQUESTS; slot++ )
+	for( slot = 0; slot < AUDIO_STREAM_REQUESTS; slot++ )
 	{
-		if ( unit->WriteBytes[slot] )
+		if ( unit->WriteOwners[slot] )
 		{
 			ioreq = unit->Stream->IORequests[slot];
 
@@ -32,14 +32,21 @@ Audio_Write_Stop( struct AudioUnit *unit )
 		}
 	}
 
-	for ( slot = 0; slot < AUDIO_WRITE_REQUESTS; slot++ )
+	for( slot = 0; slot < AUDIO_STREAM_REQUESTS; slot++ )
 	{
-		if ( unit->WriteBytes[slot] )
+		if ( unit->WriteOwners[slot] )
 		{
 			WaitIO( (PTR) unit->Stream->IORequests[slot] );
 
-			unit->WriteBytes[slot] = 0;
+			Audio_Write_Account( unit, slot );
 		}
+	}
+
+	unit->WritePhase = 0;
+
+	while( unit->WriteCount )
+	{
+		Audio_Write_Reply( unit, error );
 	}
 }
 

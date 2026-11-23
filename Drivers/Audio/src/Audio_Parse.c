@@ -121,6 +121,42 @@ Audio_Rate_Valid( struct AudioUnit *unit, U32 sample_rate )
 
 // --
 
+static U32
+Audio_ProbeClock( struct AudioUnit *unit, U32 config_size, U8 terminal, U8 endpoint )
+{
+	U32 index;
+	U16 key;
+
+	if ( ! Audio_FindClock( unit, config_size, terminal, endpoint ) )
+	{
+		return ( 0 );
+	}
+
+	key = ( (U16) unit->ClockInterface << 8 ) | unit->ClockEntity;
+
+	for( index = 0; index < unit->ClockProbes; index++ )
+	{
+		if ( unit->ClockKeys[index] == key )
+		{
+			return ( unit->ClockRates[index] );
+		}
+	}
+
+	if ( unit->ClockProbes == AUDIO_CLOCK_PROBE_LIMIT )
+	{
+		return ( 0 );
+	}
+
+	unit->ClockKeys[index] = key;
+	unit->ClockProbes++;
+
+	unit->ClockRates[index] = Audio_ClockRate( unit );
+
+	return ( unit->ClockRates[index] );
+}
+
+// --
+
 SEC_CODE S32
 Audio_Parse( struct AudioUnit *unit )
 {
@@ -133,12 +169,16 @@ U32 config_size;
 U32 length;
 U32 rate;
 U32 packet;
+U32 candidate_packet;
 U32 speed;
 U32 hcd;
 U32 interval;
 U32 transactions;
 S32 uac2;
+S32 ehci;
+S32 ohci;
 U8 endpoint;
+U8 descriptor_endpoint;
 U8 alt;
 U8 active;
 U8 pcm;
@@ -181,13 +221,22 @@ U8 endpoints;
 		return ( FALSE );
 	}
 
-	remaining = config_size;
-	data = (PTR) config;
+	hcd = HCDTYPE_Last;
+
+	USB2_Attr_Get( unit->StartMsg->Function->FKT_ID, USB2Tag_Attr_HCDType, & hcd, sizeof( hcd ) );
+
+	ehci = ( hcd == HCDTYPE_EHCI ) || ( hcd == HCDTYPE_P5020 ) ||
+		( hcd == HCDTYPE_P5040 ) || ( hcd == HCDTYPE_TABOR ) ||
+		( ( hcd == HCDTYPE_SAM460 ) && ( speed == USBSPEED_High ) );
+	ohci = ( hcd == HCDTYPE_OHCI ) || ( hcd == HCDTYPE_SAM440 ) || ( hcd == HCDTYPE_SAM460 );
+	data = unit->ParseNext ? unit->ParseNext : (PTR) config;
+	remaining = config_size - ( data - (const U8 *) config );
 	rate = 0;
 	packet = 0;
 	interval = 0;
 	format = NULL;
 	endpoint = 0;
+	descriptor_endpoint = 0;
 	alt = 0;
 	active = FALSE;
 	pcm = FALSE;
@@ -216,15 +265,12 @@ U8 endpoints;
 			{
 				if ( uac2 )
 				{
-					if ( Audio_FindClock( unit, config_size, terminal, endpoint ) )
-					{
-						rate = Audio_ClockRate( unit );
+					rate = Audio_ProbeClock( unit, config_size, terminal, endpoint );
 
-						if ( ( (U64) rate * interval < 1000000U ) ||
-							( (U64) rate * interval > (U64) ( packet / ( channels * 2 ) ) * 1000000U ) )
-						{
-							rate = 0;
-						}
+					if ( ( (U64) rate * interval < 1000000U ) ||
+						( (U64) rate * interval > (U64) ( packet / ( channels * 2 ) ) * 1000000U ) )
+					{
+						rate = 0;
 					}
 				}
 				else
@@ -234,6 +280,8 @@ U8 endpoints;
 
 				if ( rate )
 				{
+					unit->ParseNext = data;
+
 					break;
 				}
 			}
@@ -258,6 +306,7 @@ U8 endpoints;
 			interval = 0;
 			format = NULL;
 			endpoint = 0;
+			descriptor_endpoint = 0;
 			pcm = FALSE;
 			frequency = FALSE;
 			terminal = 0;
@@ -300,18 +349,17 @@ U8 endpoints;
 			S32 no_feedback;
 			U8 sync;
 
-			endpoint = 0;
-			frequency = FALSE;
+			descriptor_endpoint = ( length >= 3 ) ? data[2] : 0;
 
-			if ( ( length >= ( uac2 ? 7U : 9U ) ) &&
+			if ( ( ! endpoint ) && ( length >= ( uac2 ? 7U : 9U ) ) &&
 				( data[2] & 0x0f ) && ( data[6] >= 1 ) && ( data[6] <= 8 ) &&
 				( ( data[3] & 0x33 ) == EPATT_Type_Isochronous ) )
 			{
 				sync = data[3] & 0x0c;
 				no_feedback = uac2 ? ( endpoints == 1 ) : ( ! data[8] );
-				packet = (U32) data[4] | ( (U32) data[5] << 8 );
-				transactions = ( packet >> 11 ) & 3;
-				packet &= 0x7ff;
+				candidate_packet = (U32) data[4] | ( (U32) data[5] << 8 );
+				transactions = ( candidate_packet >> 11 ) & 3;
+				candidate_packet &= 0x7ff;
 
 				// Some full-speed outputs omit the sync type and use fixed-size packets.
 				fixed_packet = FALSE;
@@ -319,22 +367,22 @@ U8 endpoints;
 				if ( ( ! uac2 ) && ( ! sync ) && ( speed == USBSPEED_Full ) &&
 					( data[6] == 1 ) && ( format ) && ( format[7] == 1 ) )
 				{
-					fixed_packet = ( Audio_Rate24( format + 8 ) * format[4] * 2 == packet * 1000U );
+					fixed_packet = ( Audio_Rate24( format + 8 ) * format[4] * 2 == candidate_packet * 1000U );
 				}
 
-				if ( ( packet ) && ( transactions <= 2 ) &&
-					( ( ( speed == USBSPEED_High ) && ( packet <= 1024 ) ) ||
-					  ( ( speed == USBSPEED_Full ) && ( packet <= 1023 ) && ( ! transactions ) ) ) &&
+				if ( ( candidate_packet ) && ( transactions <= 2 ) &&
+					( ( ( speed == USBSPEED_High ) && ( candidate_packet <= 1024 ) ) ||
+					  ( ( speed == USBSPEED_Full ) && ( candidate_packet <= 1023 ) && ( ! transactions ) ) ) &&
 					( ( data[2] & EPADR_Dir_Mask ) ||
 					  ( ( no_feedback ) && ( ( sync >= 0x08 ) || ( fixed_packet ) ) ) ) )
 				{
 					endpoint = data[2];
-					packet *= transactions + 1;
+					packet = candidate_packet * ( transactions + 1 );
 					interval = ( speed == USBSPEED_High ? 125U : 1000U ) << ( data[6] - 1 );
 				}
 			}
 		}
-		else if ( ( ! uac2 ) && ( active ) && ( endpoint ) &&
+		else if ( ( ! uac2 ) && ( active ) && ( endpoint ) && ( descriptor_endpoint == endpoint ) &&
 			( data[1] == 0x25 ) && ( length >= 4 ) && ( data[2] == 0x01 ) )
 		{
 			frequency = data[3] & 1;
@@ -353,8 +401,12 @@ U8 endpoints;
 	unit->EndPoint = endpoint;
 	unit->PacketBytes = packet;
 	unit->IntervalUS = interval;
-	unit->PacketCount = MAX( 1U, MIN( AUDIO_PACKET_COUNT,
+	unit->PacketCount = MAX( 1U, MIN( ( hcd == HCDTYPE_XHCI ) ? AUDIO_XHCI_PACKET_COUNT : AUDIO_PACKET_COUNT,
 		( ( endpoint & EPADR_Dir_Mask ) ? AUDIO_BATCH_US : AUDIO_WRITE_BATCH_US ) / interval ) );
+	unit->ReadSlots = ( ohci || ehci ) ? AUDIO_STREAM_REQUESTS : 1;
+	unit->SingleSplitRate = 0;
+	unit->GainEntity = 0;
+	unit->GainValid = FALSE;
 	unit->FrequencyControl = frequency;
 	unit->RateDescriptor = uac2 ? NULL : format;
 	unit->Format.Encoding = AUDIO_ENCODING_PCM_S16LE;
@@ -371,17 +423,12 @@ U8 endpoints;
 	{
 		Audio_FindGain( unit, config_size );
 	}
-	else if ( ( ! uac2 ) && ( speed == USBSPEED_Full ) && ( frequency ) &&
+	else if ( ( ! uac2 ) && ( ehci ) && ( speed == USBSPEED_Full ) && ( frequency ) &&
 		( (U64) rate * interval > (U64) ( AUDIO_SPLIT_PAYLOAD / ( channels * 2 ) ) * 1000000U ) )
 	{
-		if ( ( USB2_Attr_Get( unit->StartMsg->Function->FKT_ID, USB2Tag_Attr_HCDType,
-			& hcd, sizeof( hcd ) ) == sizeof( hcd ) ) &&
-			( ( hcd == HCDTYPE_EHCI ) || ( hcd == HCDTYPE_P5020 ) || ( hcd == HCDTYPE_P5040 ) ) )
-		{
-			// A single start-split avoids needing a second microframe to deliver the packet.
-			unit->SingleSplitRate = Audio_SelectRate( format, MIN( packet, AUDIO_SPLIT_PAYLOAD ),
-				interval, frequency, TRUE );
-		}
+		// A single start-split avoids needing a second microframe to deliver the packet.
+		unit->SingleSplitRate = Audio_SelectRate( format, MIN( packet, AUDIO_SPLIT_PAYLOAD ),
+			interval, frequency, TRUE );
 	}
 
 	return ( TRUE );

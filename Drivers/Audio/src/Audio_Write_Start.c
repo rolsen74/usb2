@@ -16,7 +16,7 @@ SEC_CODE void
 Audio_Write_Start( struct AudioUnit *unit )
 {
 	struct USB2_IORequest *ioreq;
-	struct IOStdReq *write;
+	struct AudioWrite *write;
 
 	U64 samples;
 	U32 framesize;
@@ -24,52 +24,65 @@ Audio_Write_Start( struct AudioUnit *unit )
 	U32 index;
 	U32 bytes;
 	U32 offset;
+	U32 request;
 
-	write = unit->ReadActive;
-
-	if ( ( unit->Detached ) || ( ! write ) || ( write->io_Flags & AUDIO_IO_ABORT ) )
+	if ( unit->Detached )
 	{
 		return;
 	}
 
 	framesize = unit->Format.Channels * 2;
 
-	for ( slot = 0; ( slot < AUDIO_WRITE_REQUESTS ) && ( unit->WriteQueued < write->io_Length ); slot++ )
+	for( request = 0; request < unit->WriteCount; request++ )
 	{
-		if ( unit->WriteBytes[slot] )
+		write = & unit->Writes[( unit->WriteHead + request ) % AUDIO_STREAM_REQUESTS];
+
+		if ( write->Request->io_Flags & AUDIO_IO_ABORT )
 		{
-			continue;
+			return;
 		}
 
-		ioreq = unit->Stream->IORequests[slot];
-		offset = unit->WriteQueued;
-
-		ioreq->io_Command = CMD_WRITE;
-		ioreq->io_Data = unit->Stream->Buffers[slot];
-		ioreq->io_AllowShortPackets = FALSE;
-		ioreq->io_IsoPacketLengths = unit->WritePacketLengths[slot];
-		ioreq->io_TimeOut = AUDIO_READ_TIMEOUT;
-
-		for( index = 0; ( index < unit->PacketCount ) &&
-			( unit->WriteQueued < write->io_Length ); index++ )
+		while( write->Queued < write->Request->io_Length )
 		{
-			samples = (U64) unit->Format.SampleRate * unit->IntervalUS + unit->WritePhase;
-			bytes = ( samples / 1000000U ) * framesize;
-			unit->WritePhase = samples % 1000000U;
-			bytes = MIN( bytes, write->io_Length - unit->WriteQueued );
-			unit->WritePacketLengths[slot][index] = bytes;
+			slot = unit->WriteSlot;
 
-			CopyMem( (U8 *) write->io_Data + unit->WriteQueued,
-				(U8 *) ioreq->io_Data + index * unit->PacketBytes, bytes );
+			if ( unit->WriteOwners[slot] )
+			{
+				return;
+			}
 
-			unit->WriteQueued += bytes;
+			ioreq = unit->Stream->IORequests[slot];
+			offset = write->Queued;
+			ioreq->io_Command = CMD_WRITE;
+			ioreq->io_Actual = 0;
+			ioreq->io_Data = unit->Stream->Buffers[slot];
+			ioreq->io_AllowShortPackets = FALSE;
+			ioreq->io_IsoPacketLengths = unit->WritePacketLengths[slot];
+			ioreq->io_TimeOut = AUDIO_READ_TIMEOUT;
+
+			for( index = 0; ( index < unit->PacketCount ) &&
+				( write->Queued < write->Request->io_Length ); index++ )
+			{
+				samples = (U64) unit->Format.SampleRate * unit->IntervalUS + unit->WritePhase;
+				bytes = ( samples / 1000000U ) * framesize;
+				unit->WritePhase = samples % 1000000U;
+				bytes = MIN( bytes, write->Request->io_Length - write->Queued );
+				unit->WritePacketLengths[slot][index] = bytes;
+
+				CopyMem( (U8 *) write->Request->io_Data + write->Queued,
+					(U8 *) ioreq->io_Data + index * unit->PacketBytes, bytes );
+
+				write->Queued += bytes;
+			}
+
+			ioreq->io_Length = index * unit->PacketBytes;
+			ioreq->io_IsoPacketCount = index;
+			unit->WriteBytes[slot] = write->Queued - offset;
+			unit->WriteOwners[slot] = write;
+			unit->WriteSlot = ( slot + 1 ) % AUDIO_STREAM_REQUESTS;
+
+			SendIO( (PTR) ioreq );
 		}
-
-		ioreq->io_Length = index * unit->PacketBytes;
-		ioreq->io_IsoPacketCount = index;
-		unit->WriteBytes[slot] = unit->WriteQueued - offset;
-
-		SendIO( (PTR) ioreq );
 	}
 }
 

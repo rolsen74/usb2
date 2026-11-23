@@ -33,14 +33,18 @@ U32 mask;
 			{
 				if ( msg->nm_Command == USBNC_Detached )
 				{
+					ObtainSemaphore( & unit->Base->Semaphore );
+
 					unit->Detached = TRUE;
+
+					ReleaseSemaphore( & unit->Base->Semaphore );
 				}
 
 				ReplyMsg( (PTR) msg );
 			}
 		}
 
-		if ( unit->Detached )
+		if ( ( unit->Detached ) || ( mask & SIGBREAKF_CTRL_C ) )
 		{
 			break;
 		}
@@ -61,11 +65,6 @@ U32 mask;
 			{
 				Audio_Write_Done( unit );
 			}
-		}
-
-		if ( mask & SIGBREAKF_CTRL_C )
-		{
-			unit->Detached = TRUE;
 		}
 	}
 }

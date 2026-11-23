@@ -24,13 +24,13 @@
 #include <interfaces/bluetooth2.h>
 
 #define DRIVER_NAME "bluetooth2.audio"
-#define DRIVER_ID DRIVER_NAME " 6.0 (21.11.2026)\r\n"
+#define DRIVER_ID DRIVER_NAME " 6.1 (23.11.2026)\r\n"
 #define WORKER_NAME "Bluetooth2 AHI playback"
 #define OUTPUT_NAME "Bluetooth A2DP"
 #define DEFAULT_RATE 48000
 #else
 #define DRIVER_NAME "usb2.audio"
-#define DRIVER_ID DRIVER_NAME " 6.0 (18.11.2026)\r\n"
+#define DRIVER_ID DRIVER_NAME " 6.1 (23.11.2026)\r\n"
 #define WORKER_NAME "USB2 AHI playback"
 #define OUTPUT_NAME "USB audio"
 #define DEFAULT_RATE 48000
@@ -59,6 +59,8 @@ struct Playback
 	ULONG Unit;
 	ULONG PCMOffset;
 	ULONG PCMLength;
+#else
+	ULONG WriteDepth;
 #endif
 	U8 *Mix;
 	U8 *PCM;
@@ -69,7 +71,7 @@ struct Playback
 // --
 
 static ULONG
-MixPlayback( struct Playback *play )
+MixPlayback( struct Playback *play, U8 *pcm )
 {
 	struct AHIAudioCtrlDrv *audio;
 
@@ -79,7 +81,6 @@ MixPlayback( struct Playback *play )
 	int32 left;
 	int32 right;
 	WORD *mix;
-	U8 *pcm;
 	BOOL stereo;
 
 	audio = play->Audio;
@@ -108,7 +109,6 @@ MixPlayback( struct Playback *play )
 	Permit();
 
 	mix = (APTR) play->Mix;
-	pcm = play->PCM;
 
 	for( index = 0; index < frames; index++ )
 	{
@@ -140,43 +140,105 @@ MixPlayback( struct Playback *play )
 #include "BluetoothPlayback.c"
 #else
 static void
-Playback_Run( struct Playback *play )
+Playback_Run( struct Playback *play, struct IOStdReq *next )
 {
+	struct IOStdReq *requests[2];
 	struct IOStdReq *io;
 
+	ULONG depth;
+	ULONG count;
+	ULONG head;
+	ULONG slot;
 	ULONG length;
-	ULONG signals;
+	ULONG mask;
+	ULONG bufferBytes;
+	BOOL sourceEnded;
 
-	io = play->Request;
+	requests[0] = play->Request;
+	requests[1] = next;
+	depth = next ? 2 : 1;
+	count = 0;
+	head = 0;
+	sourceEnded = FALSE;
+	mask = 1UL << play->Request->io_Message.mn_ReplyPort->mp_SigBit;
+	bufferBytes = play->Audio->ahiac_MaxBuffSamples * play->Format.Channels * 2;
 
 	while( ! ( SetSignal( 0, 0 ) & SIGBREAKF_CTRL_C ) )
 	{
-		length = MixPlayback( play );
+		while( ( count < depth ) && ( ! sourceEnded ) )
+		{
+			slot = ( head + count ) % depth;
+			io = requests[slot];
+			io->io_Data = play->PCM + slot * bufferBytes;
 
-		if ( ! length )
+			length = MixPlayback( play, io->io_Data );
+
+			if ( ! length )
+			{
+				sourceEnded = TRUE;
+
+				break;
+			}
+
+			io->io_Command = ( depth == 2 ) ? AUDIO_CMD_QUEUE_WRITE : CMD_WRITE;
+			io->io_Length = length;
+			count++;
+
+			SendIO( (APTR) io );
+		}
+
+		if ( ! count )
 		{
 			break;
 		}
 
-		io->io_Command = CMD_WRITE;
-		io->io_Data = play->PCM;
-		io->io_Length = length;
+		io = requests[head];
 
-		SendIO( (APTR) io );
+		if ( ! CheckIO( (APTR) io ) )
+		{
+			if ( Wait( SIGBREAKF_CTRL_C | mask ) & SIGBREAKF_CTRL_C )
+			{
+				break;
+			}
 
-		signals = Wait( SIGBREAKF_CTRL_C | ( 1UL << io->io_Message.mn_ReplyPort->mp_SigBit ) );
+			continue;
+		}
+
+		WaitIO( (APTR) io );
+
+		head = ( head + 1 ) % depth;
+		count--;
+
+		if ( io->io_Error == AUDIO_ERR_SHORT_WRITE )
+		{
+			continue;
+		}
+
+		if ( ( io->io_Error ) || ( io->io_Actual != io->io_Length ) )
+		{
+			DebugPrintF( "USB2 AHI: playback stopped, error %ld, wrote %lu of %lu bytes.\n",
+				(LONG) io->io_Error, io->io_Actual, io->io_Length );
+
+			break;
+		}
+	}
+
+	for( slot = 0; slot < count; slot++ )
+	{
+		io = requests[( head + slot ) % depth];
 
 		if ( ! CheckIO( (APTR) io ) )
 		{
 			AbortIO( (APTR) io );
 		}
+	}
 
-		WaitIO( (APTR) io );
+	while( count )
+	{
+		WaitIO( (APTR) requests[head] );
 
-		if ( ( signals & SIGBREAKF_CTRL_C ) || ( io->io_Error ) || ( io->io_Actual != io->io_Length ) )
-		{
-			break;
-		}
+		head = ( head + 1 ) % depth;
+		count--;
 	}
 }
 #endif
@@ -190,6 +252,7 @@ Playback_Entry( void )
 	struct Playback *play;
 #ifndef BLUETOOTH_AHI
 	struct MsgPort *port;
+	struct IOStdReq *next;
 #endif
 
 	task = FindTask( NULL );
@@ -199,11 +262,18 @@ Playback_Entry( void )
 
 #ifdef BLUETOOTH_AHI
 	play->Worker = task;
-	play->Started = TRUE;
 
 	Signal( play->Parent, play->StartMask );
 
-	Playback_Run( play );
+	if ( ! ( Wait( SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_D ) & SIGBREAKF_CTRL_C ) )
+	{
+		Playback_Run( play );
+
+		if ( ! play->Started )
+		{
+			Signal( play->Parent, play->StartMask );
+		}
+	}
 #else
 	port = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
@@ -218,7 +288,26 @@ Playback_Entry( void )
 
 	if ( port )
 	{
-		Playback_Run( play );
+		next = NULL;
+
+		if ( play->WriteDepth == 2 )
+		{
+			next = AllocSysObjectTags( ASOT_IOREQUEST, ASOIOR_Size, sizeof( *next ),
+				ASOIOR_ReplyPort, port, TAG_END );
+
+			if ( next )
+			{
+				next->io_Device = play->Request->io_Device;
+				next->io_Unit = play->Request->io_Unit;
+			}
+		}
+
+		Playback_Run( play, next );
+
+		if ( next )
+		{
+			FreeSysObject( ASOT_IOREQUEST, next );
+		}
 
 		play->Request->io_Message.mn_ReplyPort = play->CallerPort;
 
@@ -283,6 +372,8 @@ AHI_Start( struct AHIsubIFace *self, ULONG flags, struct AHIAudioCtrlDrv *audio 
 	struct Process *process;
 
 	LONG signal;
+	ULONG pcmBytes;
+	BOOL ready;
 
 	play = audio->ahiac_DriverData;
 
@@ -311,14 +402,20 @@ AHI_Start( struct AHIsubIFace *self, ULONG flags, struct AHIAudioCtrlDrv *audio 
 		return ( AHIE_NOMEM );
 	}
 
+	pcmBytes = audio->ahiac_MaxBuffSamples * play->Format.Channels * 2;
+#ifndef BLUETOOTH_AHI
+	pcmBytes *= play->WriteDepth;
+#endif
+
 	play->Mix = AllocVecTags( audio->ahiac_BuffSize, TAG_END );
 
-	play->PCM = AllocVecTags( audio->ahiac_MaxBuffSamples * play->Format.Channels * 2, TAG_END );
+	play->PCM = AllocVecTags( pcmBytes, TAG_END );
 
 	play->Parent = FindTask( NULL );
 	play->StartMask = 1UL << signal;
 	play->Started = FALSE;
 	process = NULL;
+	ready = FALSE;
 
 	if ( ( play->Mix ) && ( play->PCM ) )
 	{
@@ -332,16 +429,30 @@ AHI_Start( struct AHIsubIFace *self, ULONG flags, struct AHIAudioCtrlDrv *audio 
 	if ( process )
 	{
 		Wait( play->StartMask );
+
+#ifdef BLUETOOTH_AHI
+		ready = WaitBluetoothStartup( play );
+#else
+		ready = play->Started;
+#endif
 	}
 
-	FreeSignal( signal );
-
-	if ( ! play->Started )
+	if ( ! ready )
 	{
 		AHI_Stop( self, AHISF_PLAY, audio );
 
+		SetSignal( 0, play->StartMask );
+
+		FreeSignal( signal );
+
+#ifdef BLUETOOTH_AHI
+		return ( process ? AHIE_UNKNOWN : AHIE_NOMEM );
+#else
 		return ( AHIE_NOMEM );
+#endif
 	}
+
+	FreeSignal( signal );
 
 	return ( AHIE_OK );
 }
@@ -408,6 +519,51 @@ AHI_Free( struct AHIsubIFace *self, struct AHIAudioCtrlDrv *audio )
 
 // --
 
+#ifndef BLUETOOTH_AHI
+static BOOL
+OpenUSBPlayback( struct Playback *play )
+{
+	struct IOStdReq *io;
+
+	ULONG unit;
+
+	io = play->Request;
+
+	for( unit = AUDIO_PLAYBACK_UNIT_BASE; unit < AUDIO_MAX_UNITS; unit++ )
+	{
+		if ( OpenDevice( AUDIO_DEVICE_NAME, unit, (APTR) io, 0 ) )
+		{
+			io->io_Device = NULL;
+
+			continue;
+		}
+
+		io->io_Command = AUDIO_CMD_QUERY;
+		io->io_Data = & play->Format;
+		io->io_Length = sizeof( play->Format );
+
+		if ( ( ! DoIO( (APTR) io ) ) && ( io->io_Actual == sizeof( play->Format ) ) &&
+			( play->Format.Encoding == AUDIO_ENCODING_PCM_S16LE ) &&
+			( ( play->Format.Channels == 1 ) || ( play->Format.Channels == 2 ) ) )
+		{
+			play->WriteDepth = ( io->io_Device->dd_Library.lib_Version > 1 ||
+				( ( io->io_Device->dd_Library.lib_Version == 1 ) &&
+				  ( io->io_Device->dd_Library.lib_Revision >= 1 ) ) ) ? 2 : 1;
+
+			return ( TRUE );
+		}
+
+		CloseDevice( (APTR) io );
+
+		io->io_Device = NULL;
+	}
+
+	return ( FALSE );
+}
+#endif
+
+// --
+
 static ULONG
 AHI_Alloc( struct AHIsubIFace *self, struct TagItem *tags UNUSED, struct AHIAudioCtrlDrv *audio )
 {
@@ -461,20 +617,7 @@ AHI_Alloc( struct AHIsubIFace *self, struct TagItem *tags UNUSED, struct AHIAudi
 		goto failed;
 	}
 #else
-	if ( OpenDevice( AUDIO_DEVICE_NAME, AUDIO_PLAYBACK_UNIT_BASE, (APTR) play->Request, 0 ) )
-	{
-		play->Request->io_Device = NULL;
-
-		goto failed;
-	}
-
-	play->Request->io_Command = AUDIO_CMD_QUERY;
-	play->Request->io_Data = & play->Format;
-	play->Request->io_Length = sizeof( play->Format );
-
-	if ( ( DoIO( (APTR) play->Request ) ) || ( play->Request->io_Actual != sizeof( play->Format ) ) ||
-		( play->Format.Encoding != AUDIO_ENCODING_PCM_S16LE ) ||
-		( ( play->Format.Channels != 1 ) && ( play->Format.Channels != 2 ) ) )
+	if ( ! OpenUSBPlayback( play ) )
 	{
 		goto failed;
 	}
@@ -663,7 +806,7 @@ Library_Init( struct AHIBase *base, BPTR seglist, struct ExecIFace *exec )
 	base->Library.lib_Node.ln_Name = DRIVER_NAME;
 	base->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
 	base->Library.lib_Version = 6;
-	base->Library.lib_Revision = 0;
+	base->Library.lib_Revision = 1;
 	base->Library.lib_IdString = DRIVER_ID;
 
 	return ( base );
@@ -709,6 +852,8 @@ static const struct TagItem InitTags[] =
 	{ CLT_NoLegacyIFace, TRUE },
 	{ TAG_END, 0 }
 };
+
+static const USED char VersionTag[] = "\0$VER: " DRIVER_ID;
 
 static const USED struct Resident Resident =
 {
