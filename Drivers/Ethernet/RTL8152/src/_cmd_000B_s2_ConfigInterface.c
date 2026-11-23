@@ -51,11 +51,11 @@ s2_ConfigInterface( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	Schedule_RxIOReq( unit );
 
-	Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ONLINE | S2EVENT_CONFIGCHANGED, TRUE );
+	SignalSanaEvent( unit, S2EVENT_ONLINE | S2EVENT_CONFIGCHANGED, TRUE );
 
 bailout:
 
-	IExec->ReplyMsg( (APTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 
 }
 

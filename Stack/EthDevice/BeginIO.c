@@ -20,6 +20,7 @@ EthDevice_BeginIO( struct DeviceManagerInterface *Self, struct IORequest *reques
 	struct ExecIFace *IExec;
 
 	const U16 *commands;
+	S32 detached;
 
 	base = (PTR) Self->Data.LibBase;
 	IExec = base->USB->usb_IExec;
@@ -27,64 +28,35 @@ EthDevice_BeginIO( struct DeviceManagerInterface *Self, struct IORequest *reques
 	IExec->ObtainSemaphore( & base->RouteLock );
 
 	unit = (PTR) request->io_Unit;
-
-	if ( request->io_Command == NSCMD_DEVICEQUERY )
-	{
-		commands = unit ? unit->Ops->Commands : NULL;
-
-		if ( ( ! unit ) && ( base->Units[0] ) )
-		{
-			commands = base->Units[0]->Ops->Commands;
-		}
-
-		IExec->ReleaseSemaphore( & base->RouteLock );
-
-		EthDevice_Query( (PTR) request, commands );
-
-		goto reply;
-	}
-
-	if ( ( unit ) && ( unit->Detached ) )
-	{
-		IExec->ReleaseSemaphore( & base->RouteLock );
-
-		if ( request->io_Message.mn_Length >= sizeof( struct IOSana2Req ) )
-		{
-			((struct IOSana2Req *) request)->ios2_WireError = S2WERR_UNIT_DISCONNECTED;
-		}
-
-		request->io_Error = S2ERR_OUTOFSERVICE;
-
-		goto reply;
-	}
+	commands = unit ? unit->Ops->Commands : NULL;
+	detached = unit && unit->Detached;
 
 	IExec->ReleaseSemaphore( & base->RouteLock );
 
-	if ( unit )
+	if ( request->io_Command == NSCMD_DEVICEQUERY )
 	{
-		if ( request->io_Message.mn_Length >= sizeof( struct IOSana2Req ) )
-		{
-			unit->Ops->Begin( unit->Adapter, (PTR) request );
-
-			return;
-		}
-
-		request->io_Error = IOERR_BADLENGTH;
+		EthDevice_Query( (PTR) request, commands );
 	}
-	else if ( request->io_Message.mn_Length >= sizeof( struct IOSana2Req ) )
+	else if ( request->io_Message.mn_Length < sizeof( struct IOSana2Req ) )
 	{
-		struct IOSana2Req *sana;
+		request->io_Error = EthDevice_KnowsCommand( commands, request->io_Command ) ? IOERR_BADLENGTH : IOERR_NOCMD;
+	}
+	else if ( ( unit ) && ( ! detached ) )
+	{
+		unit->Ops->Begin( unit->Adapter, (PTR) request );
 
-		sana = (PTR) request;
+		return;
+	}
+	else if ( EthDevice_KnowsCommand( commands, request->io_Command ) )
+	{
+		((struct IOSana2Req *) request)->ios2_WireError = detached ? S2WERR_UNIT_DISCONNECTED : S2WERR_UNIT_OFFLINE;
 		request->io_Error = S2ERR_OUTOFSERVICE;
-		sana->ios2_WireError = S2WERR_UNIT_OFFLINE;
 	}
 	else
 	{
 		request->io_Error = IOERR_NOCMD;
 	}
 
-reply:
 	if ( ! ( request->io_Flags & IOF_QUICK ) )
 	{
 		IExec->ReplyMsg( (PTR) request );

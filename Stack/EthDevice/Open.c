@@ -38,6 +38,12 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 	usbbase = base->USB;
 	IExec = usbbase->usb_IExec;
 	error = IOERR_OPENFAIL;
+
+	if ( request->io_Message.mn_Length < sizeof( struct IORequest ) )
+	{
+		return ( IOERR_BADLENGTH );
+	}
+
 	request->io_Unit = NULL;
 
 	#ifdef USB2_BIND_DEBUG
@@ -52,11 +58,6 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 			number, caller->tc_Node.ln_Name ? caller->tc_Node.ln_Name : "(unnamed task)" );
 	}
 	#endif
-
-	if ( request->io_Message.mn_Length < sizeof( struct IORequest ) )
-	{
-		goto bailout;
-	}
 
 	if ( ( number != USB2_ETH_BACKEND_UNIT ) && ( ! USB2_FullBoot_Wait( usbbase ) ) )
 	{
@@ -123,14 +124,9 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 
 			IExec->ReleaseSemaphore( & base->RouteLock );
 		}
-
-		goto unlock;
 	}
 
-	if ( number != 0 )
-	{
-		goto unlock;
-	}
+	goto unlock;
 
 metadata:
 	IExec->ObtainSemaphore( & base->RouteLock );

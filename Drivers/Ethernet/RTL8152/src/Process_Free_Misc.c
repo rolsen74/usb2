@@ -15,16 +15,15 @@
 void
 unit_Process_FreeMisc( struct devUnit *unit )
 {
-	struct AbortIOMessage *abort;
 	struct IORequest *request;
 
-	AbortReqOnList( & unit->unit_RxList, NULL, S2WERR_UNIT_OFFLINE );
+	AbortReqOnList( unit, & unit->unit_RxList, NULL, S2WERR_UNIT_OFFLINE );
 
-	AbortReqOnList( & unit->unit_TxList, NULL, S2WERR_UNIT_OFFLINE );
+	AbortReqOnList( unit, & unit->unit_TxList, NULL, S2WERR_UNIT_OFFLINE );
 
-	AbortReqOnList( & unit->unit_EventsList, NULL, S2WERR_UNIT_OFFLINE );
+	AbortReqOnList( unit, & unit->unit_EventsList, NULL, S2WERR_UNIT_OFFLINE );
 
-	AbortReqOnList( & unit->unit_SampleList, NULL, S2WERR_UNIT_OFFLINE );
+	AbortReqOnList( unit, & unit->unit_SampleList, NULL, S2WERR_UNIT_OFFLINE );
 
 	Sana2_FreeList( & unit->unit_MulticastRanges );
 
@@ -32,25 +31,13 @@ unit_Process_FreeMisc( struct devUnit *unit )
 
 	Sana2_FreeList( & unit->unit_MultiCastList );
 
-	if ( unit->unit_AbortIOMsgPort )
-	{
-		while(( abort = (PTR) IExec->GetMsg( unit->unit_AbortIOMsgPort ) ))
-		{
-			IExec->FreeVec( abort );
-		}
-
-		IExec->FreeSysObject( ASOT_PORT, unit->unit_AbortIOMsgPort );
-
-		unit->unit_AbortIOMsgPort = NULL;
-	}
-
 	if ( unit->unit_BeginIOMsgPort )
 	{
 		while(( request = (PTR) IExec->GetMsg( unit->unit_BeginIOMsgPort ) ))
 		{
 			request->io_Error = IOERR_ABORTED;
 
-			IExec->ReplyMsg( (PTR) request );
+			ReplySanaRequest( unit, (PTR) request );
 		}
 
 		IExec->FreeSysObject( ASOT_PORT, unit->unit_BeginIOMsgPort );

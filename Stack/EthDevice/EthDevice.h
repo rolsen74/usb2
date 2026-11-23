@@ -22,6 +22,7 @@ struct USB2EthUnit
 	const struct USB2EthOps *Ops;
 	PTR Adapter;
 	U32 Number;
+	ULONG RegistrationID;
 	U32 Opens;
 	U8 Detached;
 	struct USB2EthAdapterInfo Info;
@@ -33,6 +34,7 @@ struct USB2EthDevice
 	struct USBBase *USB;
 	struct SignalSemaphore OpenLock;
 	struct SignalSemaphore RouteLock;
+	ULONG NextRegistrationID;
 	struct USB2EthUnit *Units[USB2_ETH_MAX_UNITS];
 };
 
@@ -41,6 +43,7 @@ SEC_CODE S32 EthDevice_Open( struct DeviceManagerInterface *Self, struct IOReque
 SEC_CODE PTR EthDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request );
 SEC_CODE void EthDevice_BeginIO( struct DeviceManagerInterface *Self, struct IORequest *request );
 SEC_CODE void EthDevice_AbortIO( struct DeviceManagerInterface *Self, struct IORequest *request );
+SEC_CODE S32 EthDevice_KnowsCommand( const U16 *commands, U16 command );
 SEC_CODE void EthDevice_Query( struct IOStdReq *request, const U16 *commands );
 SEC_CODE struct USB2EthUnit *EthDevice_Register( struct USB2EthIFace *Self,
 	const struct USB2EthOps *ops, PTR adapter, ULONG *number );
@@ -56,6 +59,8 @@ SEC_CODE struct USB2EthUnit *EthDevice_RegisterClassAdapter( struct USB2EthIFace
 	const char *title, const char *driver, const char *alias );
 SEC_CODE LONG EthDevice_GetAdapterInfo( struct USB2EthIFace *Self, const struct IORequest *request,
 	struct USB2EthAdapterInfo *info );
+
+SEC_CODE ULONG EthDevice_GetRegistrationID( struct USB2EthIFace *Self, const struct IORequest *request, ULONG number );
 
 #endif
 

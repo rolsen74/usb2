@@ -13,6 +13,32 @@
 
 // --
 
+static S32
+StartSanaRequest( struct devUnit *unit, struct IOSana2Req *request )
+{
+	struct SanaRequest *submission;
+
+	S32 start;
+
+	IExec->ObtainSemaphore( & unit->unit_DispatchLock );
+
+	submission = FindSanaRequest( unit, request );
+
+	start = FALSE;
+
+	if ( submission )
+	{
+		submission->Started = TRUE;
+		start = ! submission->Cancelled;
+	}
+
+	IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
+
+	return ( start );
+}
+
+// --
+
 void
 Handle_BeginIOMessages( struct devUnit *unit )
 {
@@ -20,6 +46,13 @@ struct IOSana2Req *ioreq;
 
 	while(( ioreq = (APTR) IExec->GetMsg( unit->unit_BeginIOMsgPort )))
 	{
+		if ( ! StartSanaRequest( unit, ioreq ) )
+		{
+			ReplySanaRequest( unit, ioreq );
+
+			continue;
+		}
+
 		ioreq->ios2_Req.io_Error = 0;
 
 		switch( ioreq->ios2_Req.io_Command )
@@ -128,7 +161,7 @@ struct IOSana2Req *ioreq;
 			case S2_DELMULTICASTADDRESSES:
 				Sana2_MulticastRange( & unit->unit_MulticastRanges, ioreq );
 
-				IExec->ReplyMsg( (PTR) ioreq );
+				ReplySanaRequest( unit, (PTR) ioreq );
 
 				break;
 
@@ -137,7 +170,7 @@ struct IOSana2Req *ioreq;
 			case S2_GETTYPESTATS:
 				Sana2_TrackType( & unit->unit_TrackedTypes, ioreq );
 
-				IExec->ReplyMsg( (PTR) ioreq );
+				ReplySanaRequest( unit, (PTR) ioreq );
 
 				break;
 
@@ -198,7 +231,7 @@ struct IOSana2Req *ioreq;
             {
 				SHOWMSG( "Unknown Command (%04lx) -- This should really not chould happen", ioreq->ios2_Req.io_Command );
 				ioreq->ios2_Req.io_Error = IOERR_NOCMD;
-				IExec->ReplyMsg( (APTR) ioreq );
+				ReplySanaRequest( unit, (PTR) ioreq );
 				break;
 			}
 		}

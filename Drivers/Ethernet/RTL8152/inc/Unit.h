@@ -39,6 +39,8 @@ struct devUnit
 
 	int					unit_Running;
 	U8 unit_AcceptIO;
+	U8 unit_Exclusive;
+	struct List unit_Requests;
 	struct SignalSemaphore unit_DispatchLock;
 
 	uint16					unit_ChipVersion;
@@ -62,8 +64,6 @@ struct devUnit
 	struct MsgPort *		unit_BeginIOMsgPort;
 	U32					unit_BeginIOMsgPortBit;
 
-	struct MsgPort *		unit_AbortIOMsgPort;
-	U32					unit_AbortIOMsgPortBit;
 
 	struct USB2IFace *unit_IUSB2;
 	struct USB2_Interface *unit_USBInterface;
@@ -109,15 +109,18 @@ void unit_Process_FreeUSB( struct devUnit *unit );
 void unit_Process_MainLoop( struct devUnit *unit );
 void Handle_BeginIOMessages( struct devUnit *unit );
 void Handle_AbortIOMessages( struct devUnit *unit );
+struct SanaRequest *FindSanaRequest( struct devUnit *unit, const struct IOSana2Req *request );
+void ReplySanaRequest( APTR adapter, struct IOSana2Req *request );
+void SignalSanaEvent( struct devUnit *unit, U32 events, int return_all );
 void Handle_USBFunction( struct devUnit *unit );
 void Handle_BulkInMessages( struct devUnit *unit );
 void Handle_BulkOutMessages( struct devUnit *unit );
 struct IONode *AllocIONode( struct USB2_EPResource *resource, U32 index );
-void FreeIONode( struct IONode *node );
+void FreeIONode( struct devUnit *unit, struct IONode *node );
 void AbortPacketIO( struct devUnit *unit );
 void Schedule_RxIOReq( struct devUnit *unit );
 void Schedule_TxIOReq( struct devUnit *unit );
-S32 AbortReqOnList( struct List *list, struct IOSana2Req *abort_ioreq, U32 wire_error );
+S32 AbortReqOnList( struct devUnit *unit, struct List *list, struct IOSana2Req *abort_ioreq, U32 wire_error );
 void ReadPacket( struct devUnit *unit, U8 *data, U32 length );
 int Copy_To_Buffer( struct devUnit *unit, struct IOSana2Req *ioreq, APTR buffer );
 int SendPacket( struct devUnit *unit, struct IONode *node );

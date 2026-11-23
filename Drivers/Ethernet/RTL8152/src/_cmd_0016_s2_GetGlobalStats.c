@@ -30,7 +30,7 @@ s2_GetGlobalStats( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	Sana2_GetGlobalStats( ioreq, & stats );
 
-	IExec->ReplyMsg( (APTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 }
 
 // --

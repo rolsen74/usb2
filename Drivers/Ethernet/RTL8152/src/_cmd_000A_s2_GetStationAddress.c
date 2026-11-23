@@ -19,7 +19,7 @@ s2_GetStationAddress( struct devUnit *unit, struct IOSana2Req *ioreq )
 	memcpy( & ioreq->ios2_SrcAddr[0], & unit->unit_CurrentAddress[0], 6 );
 	memcpy( & ioreq->ios2_DstAddr[0], & unit->unit_DefaultAddress[0], 6 );
 
-	IExec->ReplyMsg( (APTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 	
 }
 

@@ -22,22 +22,22 @@ unit_Process_FreeUSB( struct devUnit *unit )
 
 	while(( node = (PTR) IExec->RemHead( & unit->unit_USBBulkInActiveList ) ))
 	{
-		FreeIONode( node );
+		FreeIONode( unit, node );
 	}
 
 	while(( node = (PTR) IExec->RemHead( & unit->unit_USBBulkOutActiveList ) ))
 	{
-		FreeIONode( node );
+		FreeIONode( unit, node );
 	}
 
 	while(( node = (PTR) IExec->RemHead( & unit->unit_USBBulkInFreeList ) ))
 	{
-		FreeIONode( node );
+		FreeIONode( unit, node );
 	}
 
 	while(( node = (PTR) IExec->RemHead( & unit->unit_USBBulkOutFreeList ) ))
 	{
-		FreeIONode( node );
+		FreeIONode( unit, node );
 	}
 
 	if ( unit->unit_USBBulkIn )

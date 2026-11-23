@@ -23,6 +23,7 @@
 #define USB2ETH_TITLE_REVISION 6
 #define USB2ETH_TITLE_SIZE 96
 #define USB2ETH_CLASS_REVISION 7
+#define USB2ETH_REGISTRATION_REVISION 8
 
 /* Values used by existing driver and client pairs. The stack treats type as opaque. */
 enum USB2EthAdapterType
@@ -97,6 +98,8 @@ struct USB2EthIFace
 	/* Copy metadata for a live open, even for registered adapters with type UNKNOWN. */
 	LONG APICALL ( *GetAdapterInfo )( struct USB2EthIFace *Self, const struct IORequest *request,
 		struct USB2EthAdapterInfo *info );
+	/* Since USB2ETH_REGISTRATION_REVISION. Zero means no live registration. */
+	ULONG APICALL ( *GetRegistrationID )( struct USB2EthIFace *Self, const struct IORequest *request, ULONG number );
 };
 
 #endif

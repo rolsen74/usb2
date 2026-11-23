@@ -39,7 +39,7 @@ bailout:
 
 	if ( ioreq )
 	{
-		IExec->ReplyMsg( (APTR) ioreq );
+		ReplySanaRequest( unit, (PTR) ioreq );
 	}
 
 }

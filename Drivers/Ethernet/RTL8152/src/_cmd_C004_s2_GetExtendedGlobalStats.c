@@ -37,7 +37,7 @@ s2_GetExtendedGlobalStats( struct devUnit *unit, struct IOSana2Req *ioreq )
 	// The Ethernet driver does not maintain session timestamps.
 	Sana2_GetExtendedGlobalStats( ioreq, & stats, offsetof( struct Sana2ExtDeviceStats, s2xds_LastConnected ) );
 
-	IExec->ReplyMsg( (PTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 }
 
 // --

@@ -26,6 +26,7 @@
 #define USB2WIFI_RETRY_PICKER_REVISION 18
 #define USB2WIFI_EDITOR_REVISION 24
 #define USB2WIFI_TITLED_PROMPT_REVISION 30
+#define USB2WIFI_REGISTRATION_REVISION 44
 #define USB2WIFI_RTL8188 0
 #define USB2WIFI_RT2870 1
 
@@ -93,6 +94,7 @@ struct USB2WiFiIFace
 	int32_t APICALL (*EditProfiles)( struct USB2WiFiIFace *self );
 	int32_t APICALL (*StartPromptForUnit)( struct USB2WiFiIFace *self, struct USB2WiFiPrompt *prompt,
 		uint32_t adapter, uint32_t unit );
+	int32_t APICALL (*ClaimRegistration)( struct USB2WiFiIFace *self, uint32_t adapter, uint32_t unit, uint32_t registration );
 };
 
 #endif

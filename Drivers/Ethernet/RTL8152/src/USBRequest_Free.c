@@ -13,7 +13,7 @@
 // --
 
 void
-FreeIONode( struct IONode *node )
+FreeIONode( struct devUnit *unit, struct IONode *node )
 {
 	if ( node->Active )
 	{
@@ -27,7 +27,7 @@ FreeIONode( struct IONode *node )
 		node->Sana2IOReq->ios2_Req.io_Error = IOERR_ABORTED;
 		node->Sana2IOReq->ios2_WireError = S2WERR_GENERIC_ERROR;
 
-		IExec->ReplyMsg( (PTR) node->Sana2IOReq );
+		ReplySanaRequest( unit, (PTR) node->Sana2IOReq );
 	}
 
 	IExec->FreeVec( node );

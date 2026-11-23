@@ -33,9 +33,11 @@ extern struct MsgPort *WiFiWorkerPort;
 struct WiFiScan;
 
 S32 WiFi_WorkersActive( void );
-S32 WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected );
+S32 WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected, ULONG registration );
 ULONG WiFi_AdapterProtocol( U32 adapter );
-S32 WiFi_UnitClaimed( U32 adapter, U32 unit );
+S32 WiFi_LiveRegistration( U32 unit, ULONG *registration );
+ULONG WiFi_ClaimedRegistration( U32 adapter, U32 unit );
+S32 WiFi_UnitClaimed( U32 adapter, U32 unit, ULONG registration );
 void WiFi_FindPassword( struct USB2WiFiProfile *network );
 void WiFi_RememberScan( U32 adapter, U32 unit, const struct WiFiScan *scan );
 void WiFi_RestoreScan( U32 adapter, U32 unit, struct WiFiScan *scan );

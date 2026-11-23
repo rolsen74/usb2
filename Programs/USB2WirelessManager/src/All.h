@@ -104,6 +104,7 @@ struct AutoWiFi
 	struct USB2WiFiProfile Profile;
 	U32 Adapter;
 	U32 Unit;
+	ULONG Registration;
 	S32 Claimed;
 	S32 SetupConnect;
 	S32 Linked;
@@ -116,6 +117,7 @@ struct AutoWiFi
 struct Wireless
 {
 	struct AutoWiFi *Auto;
+	ULONG Registration;
 	struct IOSana2Req *Command;
 	struct IOSana2Req *Receive;
 	struct TimeRequest *Timer;
@@ -178,13 +180,13 @@ typedef S32 (*FrameMatch)( struct Wireless *wireless, const U8 *frame, U32 lengt
 
 S32 Wireless_PromptPassword( struct Wireless *wireless, U32 *action );
 enum WirelessResult WiFi_Passphrase( struct Wireless *wireless, char *input, char **password, U32 *length );
-S32 WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected );
+S32 WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected, ULONG registration );
 void WiFi_Connected( struct Wireless *wireless, U32 channel );
 S32 Run_Wireless( struct Wireless *wireless, U32 channel, U32 maxChannel, S32 open, S32 auth, S32 associate );
 S32 Valid_Password( const char *password, U32 minimum );
 S32 Wireless_Open( struct Wireless *wireless );
 void Wireless_Reset_Options( struct Wireless *wireless );
-ULONG Wireless_ResolveAdapter( const char *selector, ULONG number );
+ULONG Wireless_ResolveAdapter( const char *selector, ULONG number, ULONG *registration );
 void Wireless_Close( struct Wireless *wireless );
 S32 Wireless_Command( struct Wireless *wireless, U16 command );
 S32 Wireless_Set_Options( struct Wireless *wireless, U32 channel, const U8 *bssid, U16 aid,
@@ -198,7 +200,7 @@ U32 Wireless_ProbeRequest( struct Wireless *wireless, U8 *frame );
 S32 Wireless_Match_Beacon( struct Wireless *wireless, const U8 *frame, U32 length );
 void Wireless_Report_Scan( const struct Wireless *wireless );
 void Wireless_Report_Networks( const struct WiFiScan *scan );
-S32 Wireless_ScanSiS163U( U32 unit, U32 channel );
+S32 Wireless_ScanSiS163U( U32 unit, U32 channel, ULONG registration );
 void Wireless_Report_Security( const struct Wireless *wireless );
 enum WirelessResult Wireless_Authenticate( struct Wireless *wireless );
 enum WirelessResult Wireless_Associate( struct Wireless *wireless, const U8 *associationIE, U32 associationLength );

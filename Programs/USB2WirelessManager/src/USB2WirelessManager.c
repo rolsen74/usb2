@@ -14,7 +14,7 @@
 
 #ifndef USB2WIFI_EMBEDDED
 static const char version[] __attribute__((used)) =
-	"\0$VER: USB2WirelessManager 0.40 (23.11.2026)";
+	"\0$VER: USB2WirelessManager 0.41 (23.11.2026)";
 #endif
 
 // --
@@ -291,6 +291,7 @@ main( int argc, char **argv __attribute__((unused)) )
 	LONG maxChannel;
 	LONG channel;
 	LONG unit;
+	ULONG registration;
 	S32 rt2870;
 	S32 result;
 
@@ -325,7 +326,7 @@ main( int argc, char **argv __attribute__((unused)) )
 
 			result = RETURN_FAIL;
 		}
-		else if ( Wireless_ResolveAdapter( device, unit ) != USB2ETH_ADAPTER_SIS163U )
+		else if ( Wireless_ResolveAdapter( device, unit, &registration ) != USB2ETH_ADAPTER_SIS163U )
 		{
 			fprintf( stderr, "No matching SiS163U adapter on %s unit %ld.\n", WIRELESS_DEVICE, unit );
 
@@ -333,7 +334,7 @@ main( int argc, char **argv __attribute__((unused)) )
 		}
 		else
 		{
-			result = Wireless_ScanSiS163U( unit, channel );
+			result = Wireless_ScanSiS163U( unit, channel, registration );
 		}
 
 		FreeArgs( args );
@@ -355,7 +356,7 @@ main( int argc, char **argv __attribute__((unused)) )
 		}
 		else
 		{
-			result = WiFi_Run( device, unit, values[12] != 0, USB2ETH_ADAPTER_UNKNOWN );
+			result = WiFi_Run( device, unit, values[12] != 0, USB2ETH_ADAPTER_UNKNOWN, 0 );
 		}
 
 		FreeArgs( args );
@@ -383,7 +384,7 @@ main( int argc, char **argv __attribute__((unused)) )
 	wireless.UseSAE = wireless.AllowWPA3;
 	channel = values[3] ? *(const LONG *) values[3] : 0;
 	unit = values[4] ? *(const LONG *) values[4] : 0;
-	wireless.AdapterType = ( unit >= 0 ) ? Wireless_ResolveAdapter( device, unit ) : USB2ETH_ADAPTER_UNKNOWN;
+	wireless.AdapterType = ( unit >= 0 ) ? Wireless_ResolveAdapter( device, unit, &wireless.Registration ) : USB2ETH_ADAPTER_UNKNOWN;
 	rt2870 = wireless.AdapterType == USB2ETH_ADAPTER_RT2870;
 	wireless.ScanRT2870 = rt2870;
 	maxChannel = rt2870 ? 13 : WIRELESS_MAX_CHANNEL;

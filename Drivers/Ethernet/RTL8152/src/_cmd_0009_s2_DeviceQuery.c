@@ -14,7 +14,7 @@
 // --
 
 void
-s2_DeviceQuery( struct devUnit *unit UNUSED, struct IOSana2Req *ioreq )
+s2_DeviceQuery( struct devUnit *unit, struct IOSana2Req *ioreq )
 {
 	struct Sana2DeviceQuery *s2_query;
 	static const struct Sana2DeviceQuery info =
@@ -61,7 +61,7 @@ s2_DeviceQuery( struct devUnit *unit UNUSED, struct IOSana2Req *ioreq )
 
 bailout:
 
-	IExec->ReplyMsg( (APTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 
 }
 

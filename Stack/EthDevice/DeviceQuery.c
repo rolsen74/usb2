@@ -12,7 +12,7 @@
 
 // --
 
-// Commands common to the wired and wireless backends.
+// Baseline command set for discovery without a bound adapter.
 SEC_RODATA static const U16 EthernetCommands[] =
 {
 	NSCMD_DEVICEQUERY,
@@ -42,6 +42,27 @@ SEC_RODATA static const U16 EthernetCommands[] =
 	S2_SANA2HOOK,
 	0
 };
+
+// --
+
+SEC_CODE S32
+EthDevice_KnowsCommand( const U16 *commands, U16 command )
+{
+	if ( ! commands )
+	{
+		commands = EthernetCommands;
+	}
+
+	while ( *commands )
+	{
+		if ( *commands++ == command )
+		{
+			return ( TRUE );
+		}
+	}
+
+	return ( FALSE );
+}
 
 // --
 

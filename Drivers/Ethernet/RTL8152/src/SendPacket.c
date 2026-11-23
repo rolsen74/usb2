@@ -44,7 +44,7 @@ SendPacket( struct devUnit *unit, struct IONode *node )
 		request->ios2_Req.io_Error = S2ERR_NO_RESOURCES;
 		request->ios2_WireError = S2WERR_BUFF_ERROR;
 
-		Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_BUFF, TRUE );
+		SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_BUFF, TRUE );
 
 		return ( FALSE );
 	}

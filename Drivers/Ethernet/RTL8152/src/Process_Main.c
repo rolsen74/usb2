@@ -23,7 +23,6 @@ U32 mask;
 			| SIGBREAKF_CTRL_C
 			| unit->unit_USBRegister->Stack_MsgPortBit
 			| unit->unit_BeginIOMsgPortBit
-			| unit->unit_AbortIOMsgPortBit
 			| unit->unit_USBBulkIn->MsgPortBit
 			| unit->unit_USBBulkOut->MsgPortBit
 
@@ -46,11 +45,6 @@ U32 mask;
 		if ( mask & unit->unit_BeginIOMsgPortBit )
 		{
 			Handle_BeginIOMessages( unit );
-		}
-
-		/* Handle Messages from Network Stack */
-		if ( mask & unit->unit_AbortIOMsgPortBit )
-		{
 			Handle_AbortIOMessages( unit );
 		}
 
@@ -72,7 +66,7 @@ U32 mask;
 	{
 		unit->unit_Online = FALSE;
 
-		Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_OFFLINE, TRUE );
+		SignalSanaEvent( unit, S2EVENT_OFFLINE, TRUE );
 	}
 }
 

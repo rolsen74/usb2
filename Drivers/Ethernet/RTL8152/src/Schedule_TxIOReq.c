@@ -42,7 +42,7 @@ struct IONode *node;
 		{
 			node->Sana2IOReq = NULL;
 
-			IExec->ReplyMsg( (PTR) ioreq );
+			ReplySanaRequest( unit, (PTR) ioreq );
 
 			IExec->AddTail( & unit->unit_USBBulkOutFreeList, & node->Node );
 		}

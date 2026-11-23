@@ -21,6 +21,7 @@ struct WiFiWorker
 	struct WiFiWorker *Next;
 	U32 Adapter;
 	U32 Unit;
+	ULONG Registration;
 };
 
 static struct WiFiWorker *Workers;
@@ -84,7 +85,7 @@ AutoProcess( void )
 
 	worker = FindTask( NULL )->tc_UserData;
 
-	return ( WiFi_Run( NULL, worker->Unit, FALSE, WiFi_AdapterProtocol( worker->Adapter ) ) );
+	return ( WiFi_Run( NULL, worker->Unit, FALSE, WiFi_AdapterProtocol( worker->Adapter ), worker->Registration ) );
 }
 
 // --
@@ -96,7 +97,14 @@ WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
 	struct Process *process;
 	struct Library *base;
 
+	ULONG registration;
+
 	if ( ! WiFi_AdapterProtocol( adapter ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( ! WiFi_LiveRegistration( unit, &registration ) )
 	{
 		return ( FALSE );
 	}
@@ -107,13 +115,13 @@ WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
 
 	for ( worker = Workers; worker; worker = worker->Next )
 	{
-		if ( ( worker->Adapter == adapter ) && ( worker->Unit == unit ) )
+		if ( ( worker->Adapter == adapter ) && ( worker->Unit == unit ) && ( worker->Registration == registration ) )
 		{
 			break;
 		}
 	}
 
-	if ( ( worker ) || ( WiFi_UnitClaimed( adapter, unit ) ) )
+	if ( ( worker ) || ( WiFi_UnitClaimed( adapter, unit, registration ) ) )
 	{
 		ReleaseSemaphore( &WiFiLock );
 
@@ -133,6 +141,7 @@ WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
 	Workers = worker;
 	worker->Adapter = adapter;
 	worker->Unit = unit;
+	worker->Registration = registration;
 	worker->Death.dm_Msg.mn_Node.ln_Type = NT_MESSAGE;
 	worker->Death.dm_Msg.mn_ReplyPort = WiFiWorkerPort;
 	worker->Death.dm_Msg.mn_Length = sizeof( worker->Death );

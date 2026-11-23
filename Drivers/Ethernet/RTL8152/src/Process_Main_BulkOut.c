@@ -60,7 +60,7 @@ Handle_BulkOutMessages( struct devUnit *unit )
 		}
 		else
 		{
-			Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE, TRUE );
+			SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE, TRUE );
 
 			request->ios2_Req.io_Error = S2ERR_TX_FAILURE;
 			request->ios2_WireError = S2WERR_GENERIC_ERROR;
@@ -71,7 +71,7 @@ Handle_BulkOutMessages( struct devUnit *unit )
 			}
 		}
 
-		IExec->ReplyMsg( (PTR) request );
+		ReplySanaRequest( unit, (PTR) request );
 
 		IExec->AddTail( & unit->unit_USBBulkOutFreeList, & node->Node );
 	}

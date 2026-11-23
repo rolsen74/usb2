@@ -24,6 +24,7 @@ struct WiFiClaim
 	struct WiFiScan *Scan;
 	U32 Adapter;
 	U32 Unit;
+	ULONG Registration;
 };
 
 static struct WiFiClaim *Claims;
@@ -109,12 +110,14 @@ ReadStation( U32 adapter, U32 unit, U8 *station, char *title, S32 *unique )
 	struct USB2EthAdapterInfo info;
 
 	UWORD revision;
+	ULONG registration;
 	U32 wanted;
 	U32 i;
 	U32 matches;
 	S32 found;
 
 	wanted = WiFi_AdapterProtocol( adapter );
+	registration = WiFi_ClaimedRegistration( adapter, unit );
 	found = FALSE;
 	*unique = FALSE;
 	title[0] = 0;
@@ -141,7 +144,9 @@ ReadStation( U32 adapter, U32 unit, U8 *station, char *title, S32 *unique )
 
 			if ( ethernet )
 			{
-				if ( ethernet->GetAdapter( &request.ios2_Req, unit ) == wanted )
+				if ( ( ethernet->GetAdapter( &request.ios2_Req, unit ) == wanted ) &&
+					( ( ! registration ) || ( ( revision >= USB2ETH_REGISTRATION_REVISION ) &&
+						( ethernet->GetRegistrationID( &request.ios2_Req, unit ) == registration ) ) ) )
 				{
 					request.ios2_Req.io_Command = S2_GETSTATIONADDRESS;
 
@@ -475,15 +480,19 @@ WiFi_Connected( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter,
 // --
 
 static struct WiFiClaim **
-FindClaim( U32 adapter, U32 unit )
+FindOwnedClaim( U32 adapter, U32 unit )
 {
 	struct WiFiClaim **link;
+	struct Task *owner;
 
-	link = &Claims;
+	owner = FindTask( NULL );
 
-	while ( ( *link ) && ( ( (*link)->Adapter != adapter ) || ( (*link)->Unit != unit ) ) )
+	for ( link = &Claims; *link; link = &(*link)->Next )
 	{
-		link = &(*link)->Next;
+		if ( ( (*link)->Adapter == adapter ) && ( (*link)->Unit == unit ) && ( (*link)->Owner == owner ) )
+		{
+			break;
+		}
 	}
 
 	return ( link );
@@ -491,11 +500,40 @@ FindClaim( U32 adapter, U32 unit )
 
 // --
 
-S32
-WiFi_UnitClaimed( U32 adapter, U32 unit )
+ULONG
+WiFi_ClaimedRegistration( U32 adapter, U32 unit )
 {
+	struct WiFiClaim *claim;
+
+	ULONG registration;
+
+	ObtainSemaphore( &WiFiLock );
+
+	claim = *FindOwnedClaim( adapter, unit );
+	registration = claim ? claim->Registration : 0;
+
+	ReleaseSemaphore( &WiFiLock );
+
+	return ( registration );
+}
+
+// --
+
+S32
+WiFi_UnitClaimed( U32 adapter, U32 unit, ULONG registration )
+{
+	struct WiFiClaim *claim;
+
 	// Caller holds WiFiLock.
-	return ( *FindClaim( adapter, unit ) != NULL );
+	for ( claim = Claims; claim; claim = claim->Next )
+	{
+		if ( ( claim->Adapter == adapter ) && ( claim->Unit == unit ) && ( claim->Registration == registration ) )
+		{
+			return ( TRUE );
+		}
+	}
+
+	return ( FALSE );
 }
 
 // --
@@ -512,7 +550,7 @@ WiFi_RememberScan( U32 adapter, U32 unit, const struct WiFiScan *scan )
 
 	ObtainSemaphore( &WiFiLock );
 
-	claim = *FindClaim( adapter, unit );
+	claim = *FindOwnedClaim( adapter, unit );
 
 	if ( ( claim ) && ( claim->Owner == FindTask( NULL ) ) )
 	{
@@ -541,7 +579,7 @@ WiFi_RestoreScan( U32 adapter, U32 unit, struct WiFiScan *scan )
 
 	ObtainSemaphore( &WiFiLock );
 
-	claim = *FindClaim( adapter, unit );
+	claim = *FindOwnedClaim( adapter, unit );
 
 	if ( ( claim ) && ( claim->Scan ) && ( claim->Owner == FindTask( NULL ) ) )
 	{
@@ -556,11 +594,13 @@ WiFi_RestoreScan( U32 adapter, U32 unit, struct WiFiScan *scan )
 // --
 
 static S32
-WiFi_Claim( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 unit )
+WiFi_ClaimRegistration( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 unit, U32 registration )
 {
 	struct WiFiClaim *claim;
 
-	if ( ! WiFi_AdapterProtocol( adapter ) )
+	ULONG live;
+
+	if ( ( ! WiFi_AdapterProtocol( adapter ) ) || ( ! WiFi_LiveRegistration( unit, &live ) ) || ( live != registration ) )
 	{
 		return ( FALSE );
 	}
@@ -576,10 +616,11 @@ WiFi_Claim( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32
 
 	claim->Adapter = adapter;
 	claim->Unit = unit;
+	claim->Registration = registration;
 
 	ObtainSemaphore( &WiFiLock );
 
-	if ( WiFi_UnitClaimed( adapter, unit ) )
+	if ( ( *FindOwnedClaim( adapter, unit ) ) || ( WiFi_UnitClaimed( adapter, unit, registration ) ) )
 	{
 		ReleaseSemaphore( &WiFiLock );
 
@@ -598,6 +639,21 @@ WiFi_Claim( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32
 
 // --
 
+static S32
+WiFi_Claim( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
+{
+	ULONG registration;
+
+	if ( ! WiFi_LiveRegistration( unit, &registration ) )
+	{
+		return ( FALSE );
+	}
+
+	return ( WiFi_ClaimRegistration( self, adapter, unit, registration ) );
+}
+
+// --
+
 static void
 WiFi_Unclaim( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U32 unit )
 {
@@ -606,7 +662,7 @@ WiFi_Unclaim( struct USB2WiFiIFace *self __attribute__((unused)), U32 adapter, U
 
 	ObtainSemaphore( &WiFiLock );
 
-	link = FindClaim( adapter, unit );
+	link = FindOwnedClaim( adapter, unit );
 
 	claim = *link;
 
@@ -648,5 +704,6 @@ const APTR WiFiVectors[] = //
 		WiFi_SetupRetry,	   //
 		WiFi_EditProfiles,	   //
 		WiFi_StartPromptForUnit, //
+		WiFi_ClaimRegistration, //
 		(APTR)-1			   //
 	};

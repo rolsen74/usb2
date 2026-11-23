@@ -18,7 +18,8 @@ extern struct ExecIFace *IExec;
 // --
 
 int32
-Sana2_AbortPending( struct List *list, struct IORequest *request, APTR opener, int32 error, uint32 wire )
+Sana2_AbortPendingWithReply( struct List *list, struct IORequest *request, APTR opener, int32 error,
+	uint32 wire, Sana2Reply reply, APTR context )
 {
 	struct IOSana2Req *ioreq;
 	struct IOSana2Req *next;
@@ -41,7 +42,14 @@ Sana2_AbortPending( struct List *list, struct IORequest *request, APTR opener, i
 			ioreq->ios2_Req.io_Error = error;
 			ioreq->ios2_WireError = wire;
 
-			IExec->ReplyMsg( (APTR) ioreq );
+			if ( reply )
+			{
+				reply( context, ioreq );
+			}
+			else
+			{
+				IExec->ReplyMsg( (APTR) ioreq );
+			}
 
 			aborted++;
 
@@ -55,6 +63,14 @@ Sana2_AbortPending( struct List *list, struct IORequest *request, APTR opener, i
 	}
 
 	return ( aborted );
+}
+
+// --
+
+int32
+Sana2_AbortPending( struct List *list, struct IORequest *request, APTR opener, int32 error, uint32 wire )
+{
+	return ( Sana2_AbortPendingWithReply( list, request, opener, error, wire, NULL, NULL ) );
 }
 
 // --

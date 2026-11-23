@@ -14,7 +14,7 @@
 // --
 
 void
-s2_Sana2Hook( struct devUnit *unit UNUSED, struct IOSana2Req *ioreq )
+s2_Sana2Hook( struct devUnit *unit, struct IOSana2Req *ioreq )
 {
 	struct BufferManagement *bm;
 
@@ -29,7 +29,7 @@ s2_Sana2Hook( struct devUnit *unit UNUSED, struct IOSana2Req *ioreq )
 		bm->bm_CopyFromBuffTag = S2_CopyFromBuff;
 	}
 
-	IExec->ReplyMsg( (PTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 }
 
 // --

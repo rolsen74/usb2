@@ -43,6 +43,10 @@ void Sana2_UpdateThroughput( struct List *list, uint32 sent, uint32 received );
 #define SANA2_COMMON_EVENTS ( S2EVENT_ONLINE | S2EVENT_OFFLINE | S2EVENT_ERROR | \
 	S2EVENT_HARDWARE | S2EVENT_RX | S2EVENT_TX | S2EVENT_BUFF )
 
+typedef void (*Sana2Reply)( APTR context, struct IOSana2Req *request );
+int32 Sana2_AbortPendingWithReply( struct List *list, struct IORequest *request, APTR opener,
+	int32 error, uint32 wire, Sana2Reply reply, APTR context );
+void Sana2_SignalEventWithReply( struct List *list, uint32 events, int return_all, Sana2Reply reply, APTR context );
 int32 Sana2_AbortPending( struct List *list, struct IORequest *request, APTR opener, int32 error, uint32 wire );
 int Sana2_QueueEvent( struct List *list, struct IOSana2Req *ioreq, uint32 current, uint32 supported );
 void Sana2_SignalEvent( struct List *list, uint32 events, int return_all );

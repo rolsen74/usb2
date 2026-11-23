@@ -22,7 +22,7 @@ s2_OnEvent( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	if ( ! Sana2_QueueEvent( & unit->unit_EventsList, ioreq, current, SANA2_COMMON_EVENTS | S2EVENT_CONFIGCHANGED ) )
 	{
-		IExec->ReplyMsg( (PTR) ioreq );
+		ReplySanaRequest( unit, (PTR) ioreq );
 	}
 }
 

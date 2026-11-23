@@ -14,11 +14,11 @@
 // --
 
 void
-Cmd_Invalid( struct devUnit *unit UNUSED, struct IOSana2Req *ioreq )
+Cmd_Invalid( struct devUnit *unit, struct IOSana2Req *ioreq )
 {
 	ioreq->ios2_Req.io_Error = IOERR_NOCMD;
 
-	IExec->ReplyMsg( (APTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 
 }
 

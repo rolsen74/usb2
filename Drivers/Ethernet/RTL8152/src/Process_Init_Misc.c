@@ -51,20 +51,6 @@ int retval;
 
 	// --
 
-	unit->unit_AbortIOMsgPort = IExec->AllocSysObjectTags( ASOT_PORT,
-		TAG_END
-	);
-
-	if ( unit->unit_AbortIOMsgPort == NULL )
-	{
-		SHOWMSG( "Error Creating AbortIO MsgPort" );
-		goto bailout;
-	}
-
-	unit->unit_AbortIOMsgPortBit = 1UL << unit->unit_AbortIOMsgPort->mp_SigBit;
-
-	// --
-
     retval = TRUE;
 
 bailout:

@@ -30,7 +30,7 @@ Cmd_Flush( struct devUnit *unit, struct IOSana2Req *ioreq )
 		ioreq->ios2_Req.io_Error = S2ERR_BAD_ARGUMENT;
 	}
 
-	IExec->ReplyMsg( (APTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 
 }
 

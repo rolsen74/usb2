@@ -109,6 +109,7 @@ ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action, S32 fromP
 
 	wireless.Auto = wifi;
 	wireless.UnitNumber = wifi->Unit;
+	wireless.Registration = wifi->Registration;
 	wireless.DeviceName = device;
 	wireless.SSID = wifi->Profile.SSID;
 	wireless.SSIDLength = strlen( wifi->Profile.SSID );
@@ -150,7 +151,7 @@ ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action, S32 fromP
 // --
 
 S32
-WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected )
+WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected, ULONG registration )
 {
 	struct AutoWiFi wifi;
 	struct Library *base;
@@ -164,10 +165,11 @@ WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected )
 
 	memset( & wifi, 0, sizeof( wifi ) );
 
-	type = Wireless_ResolveAdapter( device, unit );
+	type = Wireless_ResolveAdapter( device, unit, &wifi.Registration );
 
 	if ( ( ( type != USB2ETH_ADAPTER_RT2870 ) && ( type != USB2ETH_ADAPTER_RTL8188 ) ) ||
-		( ( expected != USB2ETH_ADAPTER_UNKNOWN ) && ( expected != type ) ) )
+		( ( expected != USB2ETH_ADAPTER_UNKNOWN ) && ( expected != type ) ) ||
+		( ( registration ) && ( registration != wifi.Registration ) ) )
 	{
 		fprintf( stderr, "No matching RTL8188 or RT2870 adapter on %s unit %lu.\n",
 			WIRELESS_DEVICE, (unsigned long) unit );
@@ -207,7 +209,19 @@ WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected )
 	wifi.Adapter = ( type == USB2ETH_ADAPTER_RT2870 ) ? USB2WIFI_RT2870 : USB2WIFI_RTL8188;
 	wifi.Unit = unit;
 
-	wifi.Claimed = wifi.Interface->Claim( wifi.Adapter, unit );
+	if ( base->lib_Revision >= USB2WIFI_REGISTRATION_REVISION )
+	{
+		wifi.Claimed = wifi.Interface->ClaimRegistration( wifi.Adapter, unit, wifi.Registration );
+	}
+	else if ( ! wifi.Registration )
+	{
+		wifi.Claimed = wifi.Interface->Claim( wifi.Adapter, unit );
+	}
+	else
+	{
+		fprintf( stderr, "Install LIBS:%s 1.44 or later.\n", USB2WIFI_NAME );
+		goto done;
+	}
 
 	if ( ! wifi.Claimed )
 	{

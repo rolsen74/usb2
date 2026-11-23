@@ -969,6 +969,7 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 	char adapterTitle[USB2ETH_TITLE_SIZE];
 	char title[192];
 	ULONG mask;
+	ULONG registration;
 	U32 index;
 	S32 preferredHeight;
 	S32 width;
@@ -1176,7 +1177,16 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 		scan.Update = HandleWindowInput;
 		scan.Context = & input;
 
-		result = WiFi_PickNetwork( adapter, unit, & scan );
+		registration = WiFi_ClaimedRegistration( adapter, unit );
+
+		if ( ( registration ) || ( WiFi_LiveRegistration( unit, &registration ) ) )
+		{
+			result = WiFi_PickNetwork( adapter, unit, registration, & scan );
+		}
+		else
+		{
+			result = USB2WIFI_MISSING;
+		}
 
 		result = ( result == USB2WIFI_OK ) ? input.Result : result;
 

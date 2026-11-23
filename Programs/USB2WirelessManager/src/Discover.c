@@ -70,7 +70,7 @@ WaitForPicker( struct Wireless *wireless, struct WiFiScan *scan )
 // --
 
 S32
-WiFi_PickNetwork( U32 adapter, U32 unit, struct WiFiScan *scan )
+WiFi_PickNetwork( U32 adapter, U32 unit, U32 registration, struct WiFiScan *scan )
 {
 	static const U8 empty[WIRELESS_ADDR_SIZE] = { 0 };
 	struct Wireless wireless;
@@ -85,6 +85,7 @@ WiFi_PickNetwork( U32 adapter, U32 unit, struct WiFiScan *scan )
 	scan->Changed = 0;
 	wireless.ScanNetworks = scan;
 	wireless.UnitNumber = unit;
+	wireless.Registration = registration;
 	wireless.ScanRT2870 = adapter == USB2WIFI_RT2870;
 	wireless.AdapterType = wireless.ScanRT2870 ? USB2ETH_ADAPTER_RT2870 : USB2ETH_ADAPTER_RTL8188;
 	wireless.SSID = "";
@@ -149,7 +150,7 @@ WiFi_PickNetwork( U32 adapter, U32 unit, struct WiFiScan *scan )
 #else
 
 S32
-Wireless_ScanSiS163U( U32 unit, U32 channel )
+Wireless_ScanSiS163U( U32 unit, U32 channel, ULONG registration )
 {
 	struct Wireless wireless;
 	struct WiFiScan scan;
@@ -165,6 +166,7 @@ Wireless_ScanSiS163U( U32 unit, U32 channel )
 	memset( & scan, 0, sizeof( scan ) );
 
 	wireless.AdapterType = USB2ETH_ADAPTER_SIS163U;
+	wireless.Registration = registration;
 	wireless.UnitNumber = unit;
 	wireless.ScanNetworks = & scan;
 	wireless.SSID = "";

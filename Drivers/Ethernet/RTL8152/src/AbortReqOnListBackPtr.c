@@ -14,7 +14,7 @@
 // --
 
 S32
-AbortReqOnListBackPtr( struct devUnit *unit UNUSED, struct List *list, struct BufferManagement *back_ptr, U32 wire_error )
+AbortReqOnListBackPtr( struct devUnit *unit, struct List *list, struct BufferManagement *back_ptr, U32 wire_error )
 {
 struct IOSana2Req *ioreq;
 struct IOSana2Req *next;
@@ -37,7 +37,7 @@ U32 num_aborted;
 				S2ERR_OUTOFSERVICE : IOERR_ABORTED;
 			ioreq->ios2_WireError = wire_error;
 
-			IExec->ReplyMsg( (APTR) ioreq );
+			ReplySanaRequest( unit, (PTR) ioreq );
 
 			num_aborted++;
 		}

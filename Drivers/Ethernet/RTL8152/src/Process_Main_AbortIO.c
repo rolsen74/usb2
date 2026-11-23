@@ -15,20 +15,38 @@
 void
 Handle_AbortIOMessages( struct devUnit *unit )
 {
-	struct AbortIOMessage *msg;
+	struct SanaRequest *submission;
 	struct IOSana2Req *ioreq;
 	struct IONode *node;
 
-	while(( msg = (PTR) IExec->GetMsg( unit->unit_AbortIOMsgPort ) ))
+	while ( TRUE )
 	{
-		ioreq = msg->ioreq;
+		ioreq = NULL;
 
-		IExec->FreeVec( msg );
+		IExec->ObtainSemaphore( & unit->unit_DispatchLock );
 
-		if ( ( AbortReqOnList( & unit->unit_RxList, ioreq, 0 ) ) ||
-			( AbortReqOnList( & unit->unit_TxList, ioreq, 0 ) ) ||
-			( AbortReqOnList( & unit->unit_EventsList, ioreq, 0 ) ) ||
-			( AbortReqOnList( & unit->unit_SampleList, ioreq, 0 ) ) )
+		for ( submission = (PTR) IExec->GetHead( & unit->unit_Requests ); submission;
+			submission = (PTR) IExec->GetSucc( & submission->Node ) )
+		{
+			if ( ( submission->Started ) && ( submission->Cancelled ) && ( ! submission->AbortHandled ) )
+			{
+				submission->AbortHandled = TRUE;
+				ioreq = submission->Request;
+				break;
+			}
+		}
+
+		IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
+
+		if ( ! ioreq )
+		{
+			break;
+		}
+
+		if ( ( AbortReqOnList( unit, & unit->unit_RxList, ioreq, 0 ) ) ||
+			( AbortReqOnList( unit, & unit->unit_TxList, ioreq, 0 ) ) ||
+			( AbortReqOnList( unit, & unit->unit_EventsList, ioreq, 0 ) ) ||
+			( AbortReqOnList( unit, & unit->unit_SampleList, ioreq, 0 ) ) )
 		{
 			continue;
 		}

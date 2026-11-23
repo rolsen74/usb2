@@ -18,7 +18,7 @@ s2_AddMultiCastAddress( struct devUnit *unit, struct IOSana2Req *ioreq )
 {
 	Sana2_MulticastAddress( & unit->unit_MultiCastList, ioreq, S2WERR_GENERIC_ERROR );
 
-	IExec->ReplyMsg( (PTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 }
 
 // --

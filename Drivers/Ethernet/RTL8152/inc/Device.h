@@ -17,10 +17,13 @@
 
 /**************************************************************************/
 
-struct AbortIOMessage
+struct SanaRequest
 {
-	struct Message		msg;
-	struct IOSana2Req *	ioreq;
+	struct Node Node;
+	struct IOSana2Req *Request;
+	U8 Started;
+	U8 Cancelled;
+	U8 AbortHandled;
 };
 
 /**************************************************************************/

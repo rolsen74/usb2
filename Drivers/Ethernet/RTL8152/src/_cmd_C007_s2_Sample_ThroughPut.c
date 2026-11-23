@@ -20,7 +20,7 @@ s2_Sample_ThroughPut( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	if ( ! Sana2_QueueThroughput( & unit->unit_SampleList, ioreq, ITimer, TRUE ) )
 	{
-		IExec->ReplyMsg( (PTR) ioreq );
+		ReplySanaRequest( unit, (PTR) ioreq );
 	}
 }
 

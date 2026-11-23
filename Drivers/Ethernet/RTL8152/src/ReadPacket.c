@@ -121,7 +121,7 @@ ReadPacket( struct devUnit *unit, U8 *data, U32 length )
 
 	if ( ! Copy_To_Buffer( unit, ioreq, data + header ) )
 	{
-		Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF, TRUE );
+		SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF, TRUE );
 
 		ioreq->ios2_Req.io_Error = S2ERR_NO_RESOURCES;
 		ioreq->ios2_WireError = S2WERR_BUFF_ERROR;
@@ -136,7 +136,7 @@ ReadPacket( struct devUnit *unit, U8 *data, U32 length )
 		Sana2_AccountType( & unit->unit_TrackedTypes, packet_type, length - 14, TRUE, FALSE );
 	}
 
-	IExec->ReplyMsg( (PTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 }
 
 // --

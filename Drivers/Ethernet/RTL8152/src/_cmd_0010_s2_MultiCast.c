@@ -23,7 +23,7 @@ s2_MultiCast( struct devUnit *unit, struct IOSana2Req *ioreq )
 		ioreq->ios2_Req.io_Error= S2ERR_BAD_ADDRESS;
 		ioreq->ios2_WireError	= S2WERR_BAD_MULTICAST;
 
-		IExec->ReplyMsg( (APTR) ioreq );
+		ReplySanaRequest( unit, (PTR) ioreq );
 		goto bailout;
 	}
 

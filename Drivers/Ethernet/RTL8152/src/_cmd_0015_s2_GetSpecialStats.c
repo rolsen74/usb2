@@ -25,7 +25,7 @@ s2_GetSpecialStats( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	Sana2_GetSpecialStats( ioreq, & record );
 
-	IExec->ReplyMsg( (PTR) ioreq );
+	ReplySanaRequest( unit, (PTR) ioreq );
 }
 
 // --

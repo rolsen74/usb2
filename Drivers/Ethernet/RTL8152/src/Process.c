@@ -50,6 +50,8 @@ EthClass_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *
 
 	IExec->InitSemaphore( & unit->unit_DispatchLock );
 
+	IExec->NewList( & unit->unit_Requests );
+
 	unit->unit_IUSB2 = msg->IUSB2;
 	unit->unit_USBInterface = msg->Interface;
 	registered = FALSE;

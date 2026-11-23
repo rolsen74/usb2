@@ -16,9 +16,9 @@
 #define DEVNAME		"eth_SiS163U.Driver"
 
 #define VERSION		1
-#define REVISION	16
+#define REVISION	17
 #define DATE		"23.11.2026"
-#define VERS		DEVNAME " 1.16"
+#define VERS		DEVNAME " 1.17"
 #define VSTRING		VERS " (" DATE ")\r\n"
 #define VERSTAG		"\0$VER: " VERS " (" DATE ")"
 

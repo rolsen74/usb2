@@ -104,6 +104,13 @@ EthDevice_RegisterClassAdapter( struct USB2EthIFace *Self, const struct USB2EthO
 		unit->Ops = ops;
 		unit->Adapter = adapter;
 		unit->Number = index;
+
+		if ( ! ++base->NextRegistrationID )
+		{
+			base->NextRegistrationID++;
+		}
+
+		unit->RegistrationID = base->NextRegistrationID;
 		*number = index;
 		base->Units[index] = unit;
 	}

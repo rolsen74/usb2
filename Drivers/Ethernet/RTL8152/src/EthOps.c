@@ -18,7 +18,7 @@ extern const UWORD EthClass_Commands[];
 // --
 
 static LONG
-Open_Adapter( APTR adapter, struct IOSana2Req *request, ULONG flags UNUSED )
+Open_Adapter( APTR adapter, struct IOSana2Req *request, ULONG flags )
 {
 	struct devUnit *unit;
 	struct BufferManagement *opener;
@@ -31,9 +31,16 @@ Open_Adapter( APTR adapter, struct IOSana2Req *request, ULONG flags UNUSED )
 
 	opener = NULL;
 
-	if ( unit->unit_AcceptIO )
+	if ( ( unit->unit_AcceptIO ) && ( ! unit->unit_Exclusive ) && ( ! ( flags & SANA2OPF_PROM ) ) &&
+		( ( ! unit->unit_Base.unit_OpenCnt ) || ( ! ( flags & SANA2OPF_MINE ) ) ) )
 	{
 		opener = IExec->AllocVecTags( sizeof( *opener ), AVT_Clear, 0, TAG_END );
+
+		if ( opener )
+		{
+			unit->unit_Base.unit_OpenCnt++;
+			unit->unit_Exclusive = ( flags & SANA2OPF_MINE ) != 0;
+		}
 	}
 
 	IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
@@ -60,8 +67,21 @@ Open_Adapter( APTR adapter, struct IOSana2Req *request, ULONG flags UNUSED )
 // --
 
 static void
-Close_Adapter( APTR adapter UNUSED, struct IOSana2Req *request )
+Close_Adapter( APTR adapter, struct IOSana2Req *request )
 {
+	struct devUnit *unit;
+
+	unit = adapter;
+
+	IExec->ObtainSemaphore( & unit->unit_DispatchLock );
+
+	if ( ! --unit->unit_Base.unit_OpenCnt )
+	{
+		unit->unit_Exclusive = FALSE;
+	}
+
+	IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
+
 	IExec->FreeVec( request->ios2_BufferManagement );
 
 	request->ios2_BufferManagement = NULL;
@@ -73,6 +93,7 @@ static void
 Begin_Adapter( APTR adapter, struct IOSana2Req *request )
 {
 	struct devUnit *unit;
+	struct SanaRequest *submission;
 
 	unit = adapter;
 	request->ios2_Req.io_Flags &= ~IOF_QUICK;
@@ -82,17 +103,38 @@ Begin_Adapter( APTR adapter, struct IOSana2Req *request )
 
 	if ( unit->unit_AcceptIO )
 	{
-		IExec->PutMsg( unit->unit_BeginIOMsgPort, (PTR) request );
+		if ( FindSanaRequest( unit, request ) )
+		{
+			IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
 
-		IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
+			return;
+		}
 
-		return;
+		submission = IExec->AllocVecTags( sizeof( *submission ), AVT_Clear, 0, TAG_END );
+
+		if ( submission )
+		{
+			submission->Request = request;
+
+			IExec->AddTail( & unit->unit_Requests, & submission->Node );
+
+			IExec->PutMsg( unit->unit_BeginIOMsgPort, (PTR) request );
+
+			IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
+
+			return;
+		}
+
+		request->ios2_Req.io_Error = S2ERR_NO_RESOURCES;
+		request->ios2_WireError = S2WERR_GENERIC_ERROR;
+	}
+	else
+	{
+		request->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
+		request->ios2_WireError = S2WERR_UNIT_DISCONNECTED;
 	}
 
 	IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
-
-	request->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
-	request->ios2_WireError = S2WERR_UNIT_DISCONNECTED;
 
 	IExec->ReplyMsg( (PTR) request );
 }
@@ -102,32 +144,23 @@ Begin_Adapter( APTR adapter, struct IOSana2Req *request )
 static void
 Abort_Adapter( APTR adapter, struct IOSana2Req *request )
 {
-	struct AbortIOMessage *msg;
 	struct devUnit *unit;
+	struct SanaRequest *submission;
 
 	unit = adapter;
 
-	msg = IExec->AllocVecTags( sizeof( *msg ), AVT_Clear, 0, TAG_END );
-
-	if ( ! msg )
-	{
-		return;
-	}
-
 	IExec->ObtainSemaphore( & unit->unit_DispatchLock );
 
-	if ( ( unit->unit_AcceptIO ) && ( ! IExec->CheckIO( (PTR) request ) ) )
+	submission = unit->unit_AcceptIO ? FindSanaRequest( unit, request ) : NULL;
+
+	if ( submission )
 	{
-		msg->ioreq = request;
+		submission->Cancelled = TRUE;
 
-		IExec->PutMsg( unit->unit_AbortIOMsgPort, (PTR) msg );
-
-		msg = NULL;
+		IExec->Signal( unit->unit_BeginIOMsgPort->mp_SigTask, unit->unit_BeginIOMsgPortBit );
 	}
 
 	IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
-
-	IExec->FreeVec( msg );
 }
 
 // --

@@ -14,12 +14,14 @@
 // --
 
 static void
-Read_Adapter( const struct IORequest *request, struct USB2EthAdapterInfo *info )
+Read_Adapter( const struct IORequest *request, struct USB2EthAdapterInfo *info, ULONG *registration )
 {
 	struct USB2EthIFace *ethernet;
 	UWORD revision;
 
 	memset( info, 0, sizeof( *info ) );
+
+	*registration = 0;
 
 	revision = request->io_Device->dd_Library.lib_Revision;
 
@@ -38,6 +40,16 @@ Read_Adapter( const struct IORequest *request, struct USB2EthAdapterInfo *info )
 				info->Type = ethernet->GetAdapter( request, 0 );
 			}
 
+			if ( revision >= USB2ETH_REGISTRATION_REVISION )
+			{
+				*registration = ethernet->GetRegistrationID( request, 0 );
+
+				if ( ! *registration )
+				{
+					info->Type = USB2ETH_ADAPTER_UNKNOWN;
+				}
+			}
+
 			DropInterface( (APTR) ethernet );
 		}
 	}
@@ -46,10 +58,12 @@ Read_Adapter( const struct IORequest *request, struct USB2EthAdapterInfo *info )
 // --
 
 ULONG
-Wireless_ResolveAdapter( const char *selector, ULONG number )
+Wireless_ResolveAdapter( const char *selector, ULONG number, ULONG *registration )
 {
 	struct IOSana2Req request;
 	struct USB2EthAdapterInfo info;
+
+	*registration = 0;
 
 	memset( & request, 0, sizeof( request ) );
 
@@ -60,7 +74,7 @@ Wireless_ResolveAdapter( const char *selector, ULONG number )
 		return ( USB2ETH_ADAPTER_UNKNOWN );
 	}
 
-	Read_Adapter( & request.ios2_Req, & info );
+	Read_Adapter( & request.ios2_Req, & info, registration );
 
 	CloseDevice( & request.ios2_Req );
 
@@ -82,6 +96,7 @@ Wireless_Open( struct Wireless *wireless )
 {
 	struct USB2EthAdapterInfo info;
 
+	ULONG registration;
 	S32 error;
 
 	wireless->CommandPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
@@ -137,9 +152,10 @@ Wireless_Open( struct Wireless *wireless )
 
 	wireless->DeviceOpen = TRUE;
 
-	Read_Adapter( & wireless->Command->ios2_Req, & info );
+	Read_Adapter( & wireless->Command->ios2_Req, & info, &registration );
 
-	if ( ( info.Type == USB2ETH_ADAPTER_UNKNOWN ) || ( info.Type != wireless->AdapterType ) )
+	if ( ( info.Type == USB2ETH_ADAPTER_UNKNOWN ) || ( info.Type != wireless->AdapterType ) ||
+		( ( wireless->Registration ) && ( wireless->Registration != registration ) ) )
 	{
 		fprintf( stderr, "%s unit %lu has no matching Wi-Fi adapter.\n",
 			WIRELESS_DEVICE, (unsigned long) wireless->UnitNumber );
