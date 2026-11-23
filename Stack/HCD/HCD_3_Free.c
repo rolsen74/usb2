@@ -40,9 +40,15 @@ struct intern *in;
 
 	// --
 
-	while ( ! HCD_StopDMA( hn ) )
+	if ( ! HCD_StopDMA( hn ) )
 	{
-		HCD_WAIT_MS( hn, 1000 );
+		usbbase->usb_IExec->DebugPrintF( "USB2: HCD %lu has not stopped DMA, retaining resources\n", hn->hn_HCDIndex );
+
+		do
+		{
+			HCD_WAIT_MS( hn, 1000 );
+		}
+		while ( ! HCD_StopDMA( hn ) );
 	}
 
 	__Free_3_Rem_HUB( usbbase, hn, in );

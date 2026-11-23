@@ -123,6 +123,7 @@ struct USB2_TaskNode
 	enum TaskType  tn_Type;
 	PTR			   tn_Owner; // Points to a struct like 'struct USB2_HCDNode' see Type
 	U8			   tn_StopRequested;
+	char		   tn_Name[32];
 };
 
 // --
@@ -148,9 +149,6 @@ struct USB2_TaskMsg
 	struct CmdHeader tm_Cmd; //
 	// --
 	U32					   tm_StructID;
-	S32					   tm_Locks;
-	U16					   tm_Detach;
-	U16					   tm_FreeMe;
 	struct USB2_TaskNode * tm_Task;
 	struct USB2_ASync *	   tm_ASync;
 	// --
@@ -164,16 +162,14 @@ struct USB2_TaskMsg
 	PTR						  tm_UserData;	   //
 	enum TaskType			  tm_Type;		   // enum TaskType
 	struct USB2_HCDNode *	  tm_HCD;		   // hn
-	struct USB2_DriverNode *  tm_Driver;	   // dn
-	struct RealFunctionNode * tm_Function;	   // fn
 	struct USB2_TaskNode **	  tm_Get_TaskNode; // User ptr where to store TN
 	// --
 
 	STR				   tm_Name;
-	PTR				   tm_Data;
 	struct TimeRequest tm_TimeRequest;
 	// --
 	S8 tm_TimeReq_Active;
+	U8 tm_StopReported;
 	//	S8								tm_Wait;			// TASK_STOP_TN() wait for Shutdown?
 	S8 tm_Wait_For_Term; // TASK_START() wait untell finish
 };

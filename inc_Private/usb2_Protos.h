@@ -333,8 +333,6 @@ USB2_CREATEFUNC( void,							Task_ReallocSignal,			struct USBBase *usbbase, stru
 
 USB2_CREATEFUNC( struct USB2_TaskMsg *,			TaskMsg_Alloc,				struct USBBase *usbbase, STR file );
 USB2_CREATEFUNC( enum FSTAT,					TaskMsg_Free,				struct USBBase *usbbase, struct USB2_TaskMsg *tm, STR file );
-USB2_CREATEFUNC( enum LSTAT,					TaskMsg_Lock,				struct USBBase *usbbase, struct USB2_TaskMsg *tm, STR file );
-USB2_CREATEFUNC( void,							TaskMsg_Unlock,				struct USBBase *usbbase, struct USB2_TaskMsg *tm, STR file );
 USB2_CREATEFUNC( enum VSTAT,					TaskMsg_Valid,				struct USBBase *usbbase, struct USB2_TaskMsg *tm, STR file );
 
 // -- Register
@@ -496,8 +494,6 @@ USB2_CREATEFUNC( void,							Task_ReallocSignal,			struct USBBase *usbbase, stru
 
 USB2_CREATEFUNC( struct USB2_TaskMsg *,			TaskMsg_Alloc,				struct USBBase *usbbase );
 USB2_CREATEFUNC( enum FSTAT,					TaskMsg_Free,				struct USBBase *usbbase, struct USB2_TaskMsg *tm );
-USB2_CREATEFUNC( enum LSTAT,					TaskMsg_Lock,				struct USBBase *usbbase, struct USB2_TaskMsg *tm );
-USB2_CREATEFUNC( void,							TaskMsg_Unlock,				struct USBBase *usbbase, struct USB2_TaskMsg *tm );
 USB2_CREATEFUNC( enum VSTAT,					TaskMsg_Valid,				struct USBBase *usbbase, struct USB2_TaskMsg *tm );
 
 // -- Register

@@ -20,9 +20,11 @@ __Stopping( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct intern *in 
 	U32 mask;
 	U32 wait;
 	S32 stopped;
+	S32 warned;
 
 	wait = SIGBREAKF_CTRL_D | in->Tick_MsgPort.ump_Signal.sig_Signal_Mask;
 	stopped = FALSE;
+	warned = FALSE;
 
 	while ( TRUE )
 	{
@@ -35,11 +37,20 @@ __Stopping( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct intern *in 
 			HCD_REPLY( ioreq );
 		}
 
-		if ( ( ! stopped ) && ( HCD_StopDMA( hn ) ) )
+		if ( ! stopped )
 		{
-			DrainStoppedTransfers( usbbase, hn, USB2Err_Device_Detached );
+			stopped = HCD_StopDMA( hn );
 
-			stopped = TRUE;
+			if ( stopped )
+			{
+				DrainStoppedTransfers( usbbase, hn, USB2Err_Device_Detached );
+			}
+			else if ( ! warned )
+			{
+				usbbase->usb_IExec->DebugPrintF( "USB2: HCD %lu has not stopped DMA, retaining resources\n", hn->hn_HCDIndex );
+
+				warned = TRUE;
+			}
 		}
 
 		if ( ( stopped ) && ( hn->hn_HUB_ASync.ua_Counter <= 0 ) && ( __Shutdown( usbbase, hn ) ) )

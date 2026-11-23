@@ -27,7 +27,6 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 	PTR					   user_data;
 	STR					   task_name;
 	STR					   org_name;
-	char				   worker_name[32];
 	U32					   name_len;
 	U32					   stat;
 	S32					   wait;
@@ -67,16 +66,16 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 	{
 		name_len = sizeof ( "USB ' " ) - 1;
 
-		MEM_COPY ( "USB ' ", worker_name, name_len );
+		MEM_COPY ( "USB ' ", tn->tn_Name, name_len );
 
-		while ( ( name_len < sizeof ( worker_name ) - sizeof ( " ' driver" ) ) && ( *task_name ) )
+		while ( ( name_len < sizeof ( tn->tn_Name ) - sizeof ( " ' driver" ) ) && ( *task_name ) )
 		{
-			worker_name[name_len++] = *task_name++;
+			tn->tn_Name[name_len++] = *task_name++;
 		}
 
-		MEM_COPY ( " ' driver", &worker_name[name_len], sizeof ( " ' driver" ) );
+		MEM_COPY ( " ' driver", &tn->tn_Name[name_len], sizeof ( " ' driver" ) );
 
-		self->tc_Node.ln_Name = worker_name;
+		self->tc_Node.ln_Name = tn->tn_Name;
 	}
 
 	// --
@@ -244,7 +243,7 @@ bailout:
 	}
 
 	// --
-	// Restore the original name before the stack buffer goes out of scope.
+	// Restore the original name before releasing the task node.
 
 	self->tc_Node.ln_Name = org_name;
 
@@ -284,9 +283,14 @@ CmdStart_Process ( void )
 {
 	struct USB2_TaskMsg * tm;
 	struct ExecIFace *	  IExec;
+	struct Task *		  self;
 
 	IExec = USB2_GetExecIFace ();
-	tm	  = (PTR)( IExec->FindTask ( NULL )->tc_UserData );
+
+	self = IExec->FindTask ( NULL );
+
+	tm = (PTR)self->tc_UserData;
+	self->tc_UserData = NULL;
 
 	CmdStart_Entry ( tm );
 }

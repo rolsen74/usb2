@@ -65,6 +65,12 @@ __Task_Stop_TN ( struct USBBase * usbbase, struct USB2_TaskNode * tn )
 
 	usbbase->usb_IExec->Enable ();
 
+	if ( task )
+	{
+		usbbase->usb_IExec->DebugPrintF ( "USB2: requested stop for '%s' without a tracking message\n",
+			tn->tn_Name[0] ? tn->tn_Name : "USB worker" );
+	}
+
 	TASK_UNLOCK ( tn );
 }
 
