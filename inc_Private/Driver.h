@@ -56,6 +56,7 @@ struct USB2_DriverNode
 	STR								dn_Filename;		// FileName of the Driver
 	struct USB2_HCDNode *			dn_HCD;				// Should always be valid
 	struct RealFunctionNode *		dn_Function;		// Valid for Dev/Fkt/Ifc not HCDs
+	struct USB2_InterfaceHeader *	dn_Interface;
 	struct RealDriverMessage		dn_Message;			// Public .. not used for HCDs
 	U32							( * dn_Entry )  ( struct USBBase *usbbase, struct USB2_DriverMessage *msg );
 };

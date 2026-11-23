@@ -94,6 +94,7 @@ SEC_CODE static S32 _Start_Interface(
 	struct RealFunctionNode *fn,
 	struct USB2_FktDriverNode *fdn,
 	struct USB2_InterfaceHeader *ih,
+	struct USB2_Interface_Desc *ifcdsc,
 	struct USB2_ASync *as )
 {
 struct USB2_DriverNode *dn;
@@ -106,6 +107,11 @@ U32 retval;
 	USBDEBUG( "_Start_Interface" );
 
 	retval = TASK_Return_Stack_Error;
+
+	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner ) )
+	{
+		goto bailout;
+	}
 
 	dn = DRIVER_ALLOC( fn, as );
 
@@ -136,34 +142,16 @@ U32 retval;
 	dn->dn_Message.rdm_Public.ClassDriver = fdn->fdn_Driver_Filename;
 	dn->dn_Message.rdm_Public.ClassAlias = fdn->fdn_Alias;
 	
-	// --
-
-	if ( INTERFACE_VALIDHEADER(ih) != VSTAT_Okay )
+	if ( INTERFACE_LOCKHEADER( ih ) != LSTAT_Okay )
 	{
-		USBERROR( "_Start_Interface : Interface Header Valid error (%p)", ih );
+		DRIVER_FREE( dn );
+
 		goto bailout;
 	}
 
-	#ifdef DO_DEBUG
-
-	if ( ! ih->ih_Active )
-	{
-		USBPANIC( "_Start_Interface : ih_Active not set" );
-	}
-
-	#endif
-
-	if ( ih->ih_Owner )
-	{
-		// Allready claimed
-//		USBERROR( "Skipping Interface (claimed) : IH    %p", ih );
-		goto bailout;
-	}
-
-//	USBERROR( "Found Interface (possible) : IH    %p", ih );
-
+	dn->dn_Interface = ih;
 	dn->dn_Message.rdm_Public.Interface = (PTR) & ih->ih_Public ;
-	dn->dn_Message.rdm_Public.InterfaceDescriptor = (PTR) ih->ih_Active->in_Descriptor;
+	dn->dn_Message.rdm_Public.InterfaceDescriptor = ifcdsc;
 
 	// -- Start Driver
 
@@ -258,7 +246,11 @@ _Check_Interface( struct USBBase *usbbase, struct RealFunctionNode *fn,
 
 	S32 stat;
 
-	ifcdsc = ih->ih_Active ? ih->ih_Active->in_Descriptor : NULL;
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	ifcdsc = ( ih->ih_Active ) ? ih->ih_Active->in_Descriptor : NULL;
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	if ( ! ifcdsc )
 	{
@@ -298,7 +290,7 @@ _Check_Interface( struct USBBase *usbbase, struct RealFunctionNode *fn,
 				continue;
 			}
 
-			stat = _Start_Interface( usbbase, fn, fdn, ih, as );
+			stat = _Start_Interface( usbbase, fn, fdn, ih, ifcdsc, as );
 
 			#ifdef USB2_BIND_DEBUG
 			if ( fdn->fdn_Driver_Filename )
@@ -330,17 +322,24 @@ _Check_Interface( struct USBBase *usbbase, struct RealFunctionNode *fn,
 static enum FDSTAT _Check_for_Interfaces( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as )
 {
 struct USB2_InterfaceHeader *ih;
+struct USB2_InterfaceHeader *interfaces[256];
 struct USB2_InterfaceGroup *ig;
 struct USB2_ConfigNode *cn;
 enum FDSTAT stat;
 
+U32 count;
+U32 index;
+
 	USBDEBUG( "_Check_for_Interfaces: 1" );
 
 	stat = FDSTAT_Not_Found;
+	count = 0;
+
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
 	cn = fn->fkt_Config_Active;
 
-	if ( cn )
+	if ( ( cn ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) )
 	{
 		ig = cn->cfg_InterfaceGroups.uh_Head;
 
@@ -351,9 +350,9 @@ enum FDSTAT stat;
 
 			while( INTERFACE_VALIDHEADER(ih) == VSTAT_Okay )
 			{
-				if ( _Check_Interface( usbbase, fn, ih, as ))
+				if ( INTERFACE_LOCKHEADER( ih ) == LSTAT_Okay )
 				{
-					stat = FDSTAT_Found;
+					interfaces[count++] = ih;
 				}
 
 				ih = Node_Next( ih );
@@ -361,6 +360,20 @@ enum FDSTAT stat;
 
 			ig = Node_Next( ig );
 		}
+	}
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+	for( index = 0; index < count; index++ )
+	{
+		ih = interfaces[index];
+
+		if ( _Check_Interface( usbbase, fn, ih, as ) )
+		{
+			stat = FDSTAT_Found;
+		}
+
+		INTERFACE_UNLOCKHEADER( ih );
 	}
 
 	return( stat );

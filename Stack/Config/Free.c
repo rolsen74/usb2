@@ -122,6 +122,11 @@ enum FSTAT fstat;
 		cn->cfg_Function = NULL;
 	}
 
+	if ( cn->cfg_String )
+	{
+		MEM_FREEVEC( cn->cfg_String );
+	}
+
 	// --
 
 	MEMORY_FREE( MEMID_USBConfig, cn, 0 );

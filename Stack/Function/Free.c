@@ -23,6 +23,7 @@ struct USB2_InterfaceNode *in2;
 struct USB2_InterfaceNode *in;
 struct USB2_EndPointNode *ep2;
 struct USB2_EndPointNode *ep;
+struct USB2_EndPointNode **array;
 struct USB2_ConfigNode *cn2;
 struct USB2_ConfigNode *cn;
 struct RealRequest *ioreq;
@@ -30,6 +31,15 @@ struct RealRequest *ioreq;
 	USBDEBUG( "__Release                : FN    %p : 1", fn );
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	if ( ( fn->fkt_Config_Active ) && ( fn->fkt_Address < 128 ) )
+	{
+		array = fn->fkt_HCD->hn_EndPoint_Array;
+
+		MEM_SET( & array[fn->fkt_Address * 32], 0, 32 * sizeof( *array ) );
+	}
+
+	fn->fkt_Config_Active = NULL;
 
 	USBDEBUG( "__Release                : FN    %p : 2", fn );
 
@@ -51,8 +61,6 @@ struct RealRequest *ioreq;
 
 		ig = cn->cfg_InterfaceGroups.uh_Head;
 
-		USBDEBUG( "ig : %p, Locks %ld", ig, ig->ig_Locks );
-
 		while( ig )
 		{
 			USBDEBUG( "ig : %p, Locks %ld", ig, ig->ig_Locks );
@@ -63,10 +71,10 @@ struct RealRequest *ioreq;
 
 			ih = ig->ig_Group.uh_Head;
 
-			USBDEBUG( "ih : %p, Locks %ld", ih, ih->ih_Locks );
-
 			while( ih )
 			{
+				ih->ih_Active = NULL;
+
 				USBDEBUG( "ih : %p, Locks %ld", ih, ih->ih_Locks );
 
 				ih2 = Node_Next( ih );
@@ -74,8 +82,6 @@ struct RealRequest *ioreq;
 				// --
 
 				in = ih->ih_AltSettings.uh_Head;
-
-				USBDEBUG( "in : %p, Locks %ld", in, in->in_Locks );
 
 				while( in )
 				{
@@ -86,8 +92,6 @@ struct RealRequest *ioreq;
 					// --
 
 					ep = in->in_EndPoints.uh_Head;
-
-					USBDEBUG( "ep : %p, Locks %ld", ep, ep->ep_Locks );
 
 					while( ep )
 					{
@@ -232,12 +236,6 @@ struct RealRequest *ioreq;
 		else
 		{
 			USBDEBUG( "cn : %p - Freed", cn );
-
-			if ( fn->fkt_Config_Active == cn )
-			{
-				USBDEBUG( "__Release : Clearing fkt_Config_Active %p", cn );
-				fn->fkt_Config_Active = NULL;
-			}
 		}
 
 		// --
@@ -305,11 +303,15 @@ enum FSTAT fstat;
 
 	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
 	{
+		SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 		if ( ! fn->fkt_FreeMe )
 		{
 			USBINFO( "Marking FN %p FreeMe", fn );
 			fn->fkt_FreeMe = TRUE;
 		}
+
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 		if ( ! fn->fkt_ActiveIOReq )
 		{
@@ -383,6 +385,12 @@ enum FSTAT fstat;
 
 	// --
 
+	SEMAPHORE_OBTAIN( & usbbase->usb_Fkt_Semaphore );
+
+	NODE_REMNODE( & usbbase->usb_Fkt_Header, & fn->fkt_GlobalNode );
+
+	SEMAPHORE_RELEASE( & usbbase->usb_Fkt_Semaphore );
+
 	hn = fn->fkt_HCD;
 
 	if ( hn )
@@ -415,15 +423,16 @@ enum FSTAT fstat;
 		fn->fkt_DeviceDescriptor = NULL;
 	}
 
+	if ( fn->fkt_Config_Desc_Buf )
+	{
+		MEM_FREEIOBUFFER( fn->fkt_Config_Desc_Buf );
+	}
+
 	if ( fn->fkt_ASync )
 	{
 		ASYNC_SUB( fn->fkt_ASync );
 		fn->fkt_ASync = NULL;
 	}
-
-	SEMAPHORE_OBTAIN(	& usbbase->usb_Fkt_Semaphore );
-	NODE_REMNODE(		& usbbase->usb_Fkt_Header, & fn->fkt_GlobalNode );
-	SEMAPHORE_RELEASE(	& usbbase->usb_Fkt_Semaphore );
 
 	MEMORY_FREE( MEMID_USBFunction, fn, 0 );
 

@@ -48,11 +48,19 @@ struct USB2_ConfigNode *cn;
 
 	// --
 
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 	cn = fn->fkt_Config_Active;
 
-	if ( CONFIG_LOCK(cn) != LSTAT_Okay )
+	if ( ( ! cn ) || ( CONFIG_LOCK( cn ) != LSTAT_Okay ) )
 	{
 		cn = NULL;
+	}
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+	if ( ! cn )
+	{
 		USBDEBUG( "Config Lock Failed" );
 		goto bailout;
 	}

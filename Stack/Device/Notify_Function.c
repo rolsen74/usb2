@@ -57,9 +57,11 @@ USB2_Notify_Function( struct USBBase *usbbase, struct RealFunctionNode *fn, U32 
 
 	if ( command == USBNC_Adding )
 	{
+		SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 		cn = fn->fkt_Config_Active;
 
-		if ( cn )
+		if ( ( cn ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) )
 		{
 			for ( node = usbbase->usb_Notify_Header.uh_Head; node; node = Node_Next( node ) )
 			{
@@ -103,6 +105,8 @@ USB2_Notify_Function( struct USBBase *usbbase, struct RealFunctionNode *fn, U32 
 				}
 			}
 		}
+
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 	}
 
 	SEMAPHORE_RELEASE( & usbbase->usb_Notify_Semaphore );

@@ -27,7 +27,8 @@ struct USB2_InterfaceHeader *ih;
 	while( node )
 	{
 		fn = node->un_Data;
-		cn = fn ? fn->fkt_Config_Active : NULL;
+		cn = ( ( fn ) && ( fn->fkt_Initialized ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) ) ?
+			fn->fkt_Config_Active : NULL;
 		ig = cn ? cn->cfg_InterfaceGroups.uh_Head : NULL;
 
 		while( ig )
@@ -228,6 +229,8 @@ U32 cnt;
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_Fkt_Semaphore );
 
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 	cnt = 0;
 
 	// Functions are added to Head of list
@@ -330,6 +333,8 @@ U32 cnt;
 
 		_myIFC_GetPrev( & fn, & ig, & ih );
 	}
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	SEMAPHORE_RELEASE( & usbbase->usb_Fkt_Semaphore );
 

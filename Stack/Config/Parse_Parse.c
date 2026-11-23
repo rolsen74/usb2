@@ -77,24 +77,95 @@ U32 nr;
 // --
 // Parse Config Descriptor and build internal Structions
 
+SEC_CODE static S32
+ValidEndPointSize( U32 speed, const struct USB2_EndPoint_Desc *ep )
+{
+	U32 raw;
+	U32 size;
+	U32 type;
+	U32 limit;
+
+	raw = LE_SWAP16( ep->MaxPacketSize );
+	size = raw & 0x7ff;
+	type = ep->Attributes & EPATT_Type_Mask;
+	limit = 1024;
+
+	if ( speed == USBSPEED_Low )
+	{
+		if ( ( type != EPATT_Type_Control ) && ( type != EPATT_Type_Interrupt ) )
+		{
+			return ( FALSE );
+		}
+
+		limit = 8;
+	}
+	else if ( speed == USBSPEED_Full )
+	{
+		limit = ( type == EPATT_Type_Isochronous ) ? 1023 : 64;
+	}
+	else if ( speed == USBSPEED_High )
+	{
+		if ( type == EPATT_Type_Control )
+		{
+			limit = 64;
+		}
+		else if ( type == EPATT_Type_Bulk )
+		{
+			limit = 512;
+		}
+	}
+
+	if ( ( speed == USBSPEED_High ) &&
+		( ( type == EPATT_Type_Isochronous ) || ( type == EPATT_Type_Interrupt ) ) )
+	{
+		if ( ( raw & 0xe000 ) || ( ( raw & 0x1800 ) == 0x1800 ) )
+		{
+			return ( FALSE );
+		}
+	}
+	else if ( raw != size )
+	{
+		return ( FALSE );
+	}
+
+	return ( ( size <= limit ) && ( ( size ) || ( type == EPATT_Type_Isochronous ) ) );
+}
+
+// --
+
 SEC_CODE static S32 __Parse( struct USBBase *usbbase, struct RealFunctionNode *fn )
 {
 struct USB2_InterfaceHeader *ih;
+struct USB2_InterfaceGroup *ig;
 struct USB2_Interface_Desc *ifcdsc;
 struct USB2_EndPoint_Desc *epdsc;
 struct USB2_InterfaceNode *in;
+struct USB2_InterfaceNode *alt;
 struct USB2_EndPointNode *ep;
 struct USB2_Config_Desc *cfgdsc;
 struct USB2_Descriptor *dsc;
 struct USB2_ConfigNode *cn;
 S32 retval;
 S32 len;
+U32 slot;
+U32 mask;
+U32 endpoints;
+U32 owners[32];
 
 	retval	= FALSE;
 	dsc		= fn->fkt_Config_Desc_Buf;
 	len		= fn->fkt_Config_Desc_Size;
 	cn		= NULL;
 	in		= NULL;
+	endpoints = 0;
+
+	if ( ( ! dsc ) || ( len < (S32) sizeof( *cfgdsc ) ) ||
+		( dsc->DescriptorType != DSCTYPE_Configuration ) )
+	{
+		return ( FALSE );
+	}
+
+	MEM_SET( owners, 0, sizeof( owners ) );
 
 	while(( dsc ) && ( len > 1 ))
 	{
@@ -116,7 +187,15 @@ S32 len;
 					goto bailout;
 				}
 
-				in = NULL;
+				cfgdsc = (PTR) dsc;
+
+				if ( ( cn ) || ( LE_SWAP16( cfgdsc->TotalLength ) != len ) ||
+					( ! cfgdsc->ConfigurationValue ) )
+				{
+					USBERROR( "__Parse: Invalid configuration header" );
+					goto bailout;
+				}
+
 				cn = CONFIG_ALLOC(fn);
 
 				if ( ! cn )
@@ -125,7 +204,6 @@ S32 len;
 					goto bailout;
 				}
 
-				cfgdsc = (PTR) dsc;
 				cn->cfg_Descriptor = cfgdsc;
 				cn->cfg_Number = cfgdsc->ConfigurationValue;
 
@@ -172,6 +250,15 @@ S32 len;
 					goto bailout;
 				}
 
+				for( alt = ih->ih_AltSettings.uh_Head; alt; alt = Node_Next( alt ) )
+				{
+					if ( alt->in_AltNumber == ifcdsc->AlternateSetting )
+					{
+						USBERROR( "__Parse: Duplicate alternate setting" );
+						goto bailout;
+					}
+				}
+
 				in = INTERFACE_ALLOCNODE(ih);
 
 				if ( ! in )
@@ -183,7 +270,9 @@ S32 len;
 				in->in_Descriptor	= ifcdsc;
 				in->in_AltNumber	= ifcdsc->AlternateSetting;
 
-				if ( ! ih->ih_Active )
+				endpoints = 0;
+
+				if ( ! in->in_AltNumber )
 				{
 					ih->ih_Active		= in;
 					ih->ih_AltNumber	= in->in_AltNumber;
@@ -210,6 +299,27 @@ S32 len;
 				}
 
 				epdsc = (PTR) dsc;
+				slot = EPADR_Dir_Number( epdsc->EndPointAddress );
+
+				if ( ( ! slot ) || ( epdsc->EndPointAddress & 0x70 ) ||
+					( ! ValidEndPointSize( fn->fkt_Speed, epdsc ) ) )
+				{
+					USBERROR( "__Parse: Invalid endpoint descriptor" );
+					goto bailout;
+				}
+
+				slot += ( epdsc->EndPointAddress & EPADR_Dir_Mask ) ? 0 : 16;
+				mask = 1UL << slot;
+
+				if ( ( endpoints & mask ) || ( ( owners[slot] ) &&
+					( owners[slot] != (U32) in->in_Descriptor->InterfaceNumber + 1 ) ) )
+				{
+					USBERROR( "__Parse: Conflicting endpoint address" );
+					goto bailout;
+				}
+
+				endpoints |= mask;
+				owners[slot] = (U32) in->in_Descriptor->InterfaceNumber + 1;
 
 				ep = ENDPOINT_ALLOC( fn, in, epdsc );
 
@@ -220,6 +330,17 @@ S32 len;
 				}
 
 				NODE_ADDTAIL( & in->in_EndPoints, ep );
+				break;
+			}
+
+			case DSCTYPE_Interface_Association:
+			{
+				if ( dsc->Length < sizeof( struct USB2_Association_Desc ) )
+				{
+					USBERROR( "__Parse: Short interface association descriptor" );
+					goto bailout;
+				}
+
 				break;
 			}
 
@@ -237,6 +358,17 @@ S32 len;
 	{
 		USBERROR( "__Parse: Trailing descriptor byte" );
 		goto bailout;
+	}
+
+	for( ig = cn->cfg_InterfaceGroups.uh_Head; ig; ig = Node_Next( ig ) )
+	{
+		ih = ig->ig_Group.uh_Head;
+
+		if ( ! ih->ih_Active )
+		{
+			USBERROR( "__Parse: Interface has no alternate zero" );
+			goto bailout;
+		}
 	}
 
 	retval = TRUE;

@@ -189,6 +189,8 @@ struct USB2_Node *n;
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_Fkt_Semaphore );
 
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 	fn = NULL;
 
 	n = usbbase->usb_Fkt_Header.uh_Tail;
@@ -212,6 +214,12 @@ struct USB2_Node *n;
 					while( ih )
 					{
 						in = ih->ih_Active;
+
+						if ( ! in )
+						{
+							ih = Node_Next( ih );
+							continue;
+						}
 
 						msg = MEMORY_ALLOC( MEMID_NotifyMessage, TRUE );
 
@@ -251,6 +259,8 @@ struct USB2_Node *n;
 
 		n = n->un_Prev;
 	}
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	SEMAPHORE_RELEASE( & usbbase->usb_Fkt_Semaphore );
 }

@@ -93,6 +93,10 @@ SEC_CODE S32 __Function_Bind( struct USBBase *usbbase, struct RealFunctionNode *
 enum FDSTAT stat;
 S32 retval;
 
+	#ifdef USB2_BIND_DEBUG
+	U32 config;
+	#endif
+
 //	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Bind : FN    %p\n##\n\n", fn );
 
 	// --
@@ -116,9 +120,15 @@ S32 retval;
 		#ifdef USB2_BIND_DEBUG
 		if ( fn->fkt_DeviceDescriptor )
 		{
+			SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+			config = ( fn->fkt_Config_Active ) ? fn->fkt_Config_Active->cfg_Number : 0;
+
+			SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
 			usbbase->usb_IExec->DebugPrintF( "USB2 bind: %04lX:%04lX address %lu, active configuration %lu, owner %p\n",
 				(U32) LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ), (U32) LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ),
-				(U32) fn->fkt_Address, fn->fkt_Config_Active ? fn->fkt_Config_Active->cfg_Number : 0, fn->fkt_Owner );
+				(U32) fn->fkt_Address, config, fn->fkt_Owner );
 		}
 		#endif
 

@@ -234,6 +234,15 @@ U32 to;
 
 	// ---
 
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	if ( ( ! fn ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) )
+	{
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+		goto bailout;
+	}
+
 	/**/ if (( ep ) && ( epnr == 0 ))
 	{
 //		USBDEBUG( "__EndPointRes_ObtainList : 4 : Use Control EP 1" );
@@ -322,14 +331,19 @@ U32 to;
 
 //	USBDEBUG( "__EndPointRes_ObtainList : 7 :" );
 
-	if ( ENDPOINT_VALID(epn) != VSTAT_Okay )
+	if ( ( ! epn ) || ( ENDPOINT_LOCK(epn) != LSTAT_Okay ) )
 	{
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
 		USBERROR( "__EndPointRes_ObtainList : EndPoint Node not found : EP    %p", epn );
 		goto bailout;
 	}
 
+	epr->epr_EndPoint = epn;
 	epr->epr_Public.EndPoint = (PTR) epn;
 	epr->epr_Public.EndPointMax = epn->ep_MaxPacketSize;
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	// ---
 

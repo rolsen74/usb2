@@ -11,6 +11,24 @@
 
 // --
 
+static struct USB2_InterfaceNode *
+FindAlternate( struct USB2_InterfaceHeader *ih, U32 alternate )
+{
+	struct USB2_InterfaceNode *in;
+
+	for( in = ih->ih_AltSettings.uh_Head; in; in = Node_Next( in ) )
+	{
+		if ( in->in_AltNumber == alternate )
+		{
+			break;
+		}
+	}
+
+	return ( in );
+}
+
+// --
+
 static S32 _main_Ifc_SetAlt( struct USB2IFace *Self, struct USB2_Register *pubreg, struct USB2_Interface *ifc, U32 alt )
 {
 struct USB2_InterfaceHeader *ih;
@@ -62,24 +80,25 @@ S32 result;
 	}
 
 	SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
-	in = ih->ih_AltSettings.uh_Head;
 
-	while( ( in ) && ( in->in_AltNumber != alt ) )
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner != reg ) )
 	{
-		in = Node_Next( in );
+		goto unlock;
 	}
+
+	in = FindAlternate( ih, alt );
 
 	if ( ! in )
 	{
-		SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
-		goto bailout;
+		goto unlock;
 	}
 
 	if ( ih->ih_Active == in )
 	{
-		SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
 		result = TRUE;
-		goto bailout;
+		goto unlock;
 	}
 
 	old = ih->ih_Active;
@@ -89,12 +108,13 @@ S32 result;
 	{
 		if ( ( ep->ep_Request_Active ) || ( ep->ep_Request_Queue.uh_Head ) )
 		{
-			SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
-			goto bailout;
+			goto unlock;
 		}
 
 		ep = Node_Next( ep );
 	}
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
 
@@ -119,6 +139,22 @@ S32 result;
 	}
 
 	SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
+
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner != reg ) )
+	{
+		goto unlock;
+	}
+
+	in = FindAlternate( ih, alt );
+
+	if ( ! in )
+	{
+		goto unlock;
+	}
+
+	old = ih->ih_Active;
 	array = fn->fkt_HCD->hn_EndPoint_Array;
 	offset = fn->fkt_Address * 32;
 	ep = ( old ) ? old->in_EndPoints.uh_Head : NULL;
@@ -148,8 +184,13 @@ S32 result;
 		ep = Node_Next( ep );
 	}
 
-	SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
 	result = TRUE;
+
+unlock:
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+	SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
 
 bailout:
 	INTERFACE_UNLOCKHEADER( ih );

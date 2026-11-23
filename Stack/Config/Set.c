@@ -12,74 +12,28 @@
 
 // --
 
-SEC_CODE static void __Update( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ConfigNode *cfgnode )
+SEC_CODE static S32
+__Update( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ConfigNode *cfgnode )
 {
-struct USB2_InterfaceHeader *ih;
-struct USB2_Interface_Desc *ifcdsc;
-struct USB2_InterfaceGroup *ig;
-struct USB2_InterfaceNode *in;
-struct USB2_EndPointNode **array;
-struct USB2_EndPointNode *ep;
-struct USB2_ConfigNode *cn;
-struct RealRequest *ioreq;
-U32 offset;
+	struct USB2_InterfaceHeader *ih;
+	struct USB2_InterfaceGroup *ig;
+	struct USB2_InterfaceNode *in;
+	struct USB2_EndPointNode **array;
+	struct USB2_EndPointNode *ep;
+
+	U32 offset;
 
 	SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
 
-	// From now on the Device has switched Settings
-	// so we have to force a config change...
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
-	cn = fn->fkt_Config_Active;
-
-	if ( cn )
+	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( fn->fkt_Config_Active ) )
 	{
-		ig = cn->cfg_InterfaceGroups.uh_Head;
-		
-		while( ig )
-		{
-			ih = ig->ig_Group.uh_Head;
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
-			while( ih )
-			{
-				in = ih->ih_Active;
+		SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
 
-				if ( in )
-				{
-					ep = in->in_EndPoints.uh_Head;
-
-					while( ep )
-					{
-						// Mark EndPoint as Disabled
-						ep->ep_Active = FALSE;
-
-						// Clear Queued IORequest first
-						// Aborting the active will result in starting next queued
-						while( TRUE )
-						{
-							ioreq = ep->ep_Request_Queue.uh_Head;
-
-							if ( ! ioreq )
-							{
-								break;
-							}
-
-							IO_STOP( ioreq );
-						}
-
-						while ( ep->ep_Request_Active )
-						{
-							IO_STOP( ep->ep_Request_Active );
-						}
-
-						ep = Node_Next( ep );
-					}
-				}
-
-				ih = Node_Next( ih );
-			}
-
-			ig = Node_Next( ig );
-		}
+		return ( FALSE );
 	}
 
 	// --
@@ -96,7 +50,7 @@ U32 offset;
 	array	= fn->fkt_HCD->hn_EndPoint_Array;
 	offset	= fn->fkt_Address * 32;
 
-	MEM_SET( & array[offset], 0, 32*4 );
+	MEM_SET( & array[offset], 0, 32 * sizeof( *array ) );
 
 	array[offset+ 0] = fn->fkt_ControlEndPoint;
 	array[offset+16] = fn->fkt_ControlEndPoint;
@@ -113,11 +67,8 @@ U32 offset;
 
 		while( ih )
 		{
-			in		= ih->ih_AltSettings.uh_Head;
-			ifcdsc	= in->in_Descriptor;
-
-			ih->ih_Active		= in;
-			ih->ih_AltNumber	= ifcdsc->AlternateSetting;
+			in = ih->ih_Active;
+			ih->ih_AltNumber	= in->in_AltNumber;
 			ih->ih_Owner		= NULL;
 
 			ep = in->in_EndPoints.uh_Head;
@@ -144,7 +95,11 @@ U32 offset;
 		ig = Node_Next( ig );
 	}
 
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
 	SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
+
+	return ( TRUE );
 }
 
 // --
@@ -172,9 +127,11 @@ SEC_CODE S32 __Config_Set(
 struct USB2_ConfigNode *cn;
 struct USB2_SetupData sd;
 S32 retval;
+S32 locked;
 //U8 data[1];
 
 	retval = FALSE;
+	locked = FALSE;
 
 	#if 0
 	{
@@ -198,43 +155,42 @@ S32 retval;
 	}
 	#endif
 
-	// -- Early Check
-	if (( fn->fkt_Detach ) || ( fn->fkt_FreeMe ))
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) )
 	{
-		USBDEBUG( "__Config_Set             : Error Funtion Detached" );
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
 		goto bailout;
 	}
 
-	// Find Config Nr
+	// Enumeration fetches and validates one configuration.
 	cn = fn->fkt_Configs.uh_Head;
 
-	while(cn)
+	if ( ( ! cn ) || ( cn->cfg_Number != CfgNr ) )
 	{
-		if ( cn->cfg_Number == CfgNr )
-		{
-			break;
-		}
-		else
-		{
-			cn = Node_Next( cn );
-		}
-	}
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
-	if ( CONFIG_VALID(cn) != VSTAT_Okay )
-	{
-		USBDEBUG( "__Config_Set             : Config not found" );
 		goto bailout;
 	}
 
-	// Allready Active??
-	if ( fn->fkt_Config_Active == cn )
+	if ( fn->fkt_Config_Active )
 	{
-		retval = TRUE;
-		USBDEBUG( "__Config_Set             : Config allready active" );
+		retval = fn->fkt_Config_Active == cn;
+
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
 		goto bailout;
 	}
 
-	// --
+	locked = CONFIG_LOCK( cn ) == LSTAT_Okay;
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+	if ( ! locked )
+	{
+		goto bailout;
+	}
 
 	USBDEBUG( "__Config_Set             : Switching to Config nr #%lu", CfgNr );
 
@@ -308,12 +264,14 @@ S32 retval;
 	}
 	#endif
 
-	// must not fail
-	__Update( usbbase, fn, cn );
-
-	retval = TRUE;
+	retval = __Update( usbbase, fn, cn );
 
 bailout:
+
+	if ( locked )
+	{
+		CONFIG_UNLOCK( cn );
+	}
 
 	#if 0
 	{

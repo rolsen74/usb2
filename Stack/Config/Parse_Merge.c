@@ -12,130 +12,98 @@
 
 // --
 
-SEC_CODE static S32 __Merge( struct USBBase *usbbase, struct RealFunctionNode *fn )
+SEC_CODE static S32
+__Merge( struct USBBase *usbbase, struct RealFunctionNode *fn )
 {
-struct USB2_Association_Desc *adsc;
-struct USB2_InterfaceHeader *ih;
-struct USB2_InterfaceGroup *ig2;
-struct USB2_InterfaceGroup *ig;
-struct USB2_ConfigNode *cfgnode;
-struct USB2_Descriptor *dsc;
-struct USB2_ConfigNode *cn;
-S32 retval;
-S32 len;
-S32 cnt;
+	struct USB2_InterfaceGroup *groups[256];
+	struct USB2_Association_Desc *association;
+	struct USB2_InterfaceHeader *ih;
+	struct USB2_InterfaceGroup *member;
+	struct USB2_InterfaceGroup *group;
+	struct USB2_ConfigNode *config;
+	struct USB2_Descriptor *desc;
 
-	retval = FALSE;
+	U32 first;
+	U32 end;
+	U32 index;
+	S32 remaining;
 
-	if (( fn->fkt_Class	== 0xef )
-	&&	( fn->fkt_SubClass == 0x02 )
-	&&	( fn->fkt_Protocol	== 0x01 ))
+	if ( ( fn->fkt_Class != 0xef ) || ( fn->fkt_SubClass != 0x02 ) || ( fn->fkt_Protocol != 0x01 ) )
 	{
-		USBDEBUG( "Merge Groups" );
+		return ( TRUE );
+	}
 
-		dsc		= fn->fkt_Config_Desc_Buf;
-		len		= fn->fkt_Config_Desc_Size;
-		cfgnode	= NULL;
+	config = fn->fkt_Configs.uh_Head;
+	desc = fn->fkt_Config_Desc_Buf;
+	remaining = fn->fkt_Config_Desc_Size;
 
-		while(( dsc ) && ( len > 1 ))
+	MEM_SET( groups, 0, sizeof( groups ) );
+
+	for( group = config->cfg_InterfaceGroups.uh_Head; group; group = Node_Next( group ) )
+	{
+		ih = group->ig_Group.uh_Head;
+		groups[ih->ih_Number] = group;
+	}
+
+	// The first pass checked the length of every record.
+	while( remaining )
+	{
+		if ( desc->DescriptorType == DSCTYPE_Interface_Association )
 		{
-			switch( dsc->DescriptorType )
+			association = (PTR) desc;
+			first = association->FirstInterface;
+			end = first + association->InterfaceCount;
+
+			if ( ( first == end ) || ( end > sizeof( groups ) / sizeof( *groups ) ) )
 			{
-				case DSCTYPE_Configuration:
+				USBERROR( "__Merge: Invalid association range" );
+
+				return ( FALSE );
+			}
+
+			for( index = first; index < end; index++ )
+			{
+				if ( ! groups[index] )
 				{
-					cn = fn->fkt_Configs.uh_Head;
+					USBERROR( "__Merge: Missing or already associated interface %lu", index );
 
-					while( CONFIG_VALID(cn) == VSTAT_Okay )
-					{
-						if ( cn->cfg_Number == ((struct USB2_Config_Desc *)dsc)->ConfigurationValue )
-						{
-							break;
-						}
-						else
-						{
-							cn = Node_Next( cn );
-						}
-					}
-
-					cfgnode = cn;
-					break;
-				}
-
-				case DSCTYPE_Interface_Association:
-				{
-					if ( CONFIG_VALID(cfgnode) != VSTAT_Okay )
-					{
-						USBDEBUG( "NULL Pointer" );
-						break;
-					}
-
-					adsc = (PTR) dsc;
-
-					ig = cfgnode->cfg_InterfaceGroups.uh_Head;
-
-					while( INTERFACE_VALIDGROUP(ig) == VSTAT_Okay )
-					{
-						ih = ig->ig_Group.uh_Head;
-
-						if ( ih->ih_Number == adsc->FirstInterface )
-						{
-							break;
-						}
-						else
-						{
-							ig = Node_Next( ig );
-						}
-					}
-
-					if ( INTERFACE_VALIDGROUP(ig) != VSTAT_Okay )
-					{
-						USBDEBUG( "Inferface number #%ld not found", adsc->FirstInterface );
-						break;
-					}
-
-					ig->ig_Class	= adsc->FunctionClass;
-					ig->ig_SubClass	= adsc->FunctionSubClass;
-					ig->ig_Protocol	= adsc->FunctionProtocol;
-
-					for( cnt=1 ; cnt<adsc->InterfaceCount ; cnt++ )
-					{
-						ig2 = Node_Next( ig );
-
-						if ( INTERFACE_VALIDGROUP(ig2) != VSTAT_Okay )
-						{
-							USBDEBUG( "Unexpected NULL Pointer" );
-							break;
-						}
-
-						NODE_REMNODE( & cfgnode->cfg_InterfaceGroups, ig2 );
-
-						while(( ih = NODE_REMHEAD( & ig2->ig_Group )))
-						{
-							INTERFACE_UNLOCKGROUP( ih->ih_Group );
-							ih->ih_Group = ig;
-							INTERFACE_LOCKGROUP( ih->ih_Group );
-
-							NODE_ADDTAIL( & ig->ig_Group, ih );
-						}
-						
-						INTERFACE_FREEGROUP( ig2 );
-					}
-					break;
+					return ( FALSE );
 				}
 			}
 
-			len -= dsc->Length;
-			dsc  = DESC_NEXT_DESC( dsc );
+			group = groups[first];
+			groups[first] = NULL;
+			group->ig_Class = association->FunctionClass;
+			group->ig_SubClass = association->FunctionSubClass;
+			group->ig_Protocol = association->FunctionProtocol;
+
+			for( index = first + 1; index < end; index++ )
+			{
+				member = groups[index];
+				groups[index] = NULL;
+				ih = member->ig_Group.uh_Head;
+
+				NODE_REMNODE( & config->cfg_InterfaceGroups, member );
+
+				NODE_REMNODE( & member->ig_Group, ih );
+
+				INTERFACE_LOCKGROUP( group );
+
+				INTERFACE_UNLOCKGROUP( member );
+
+				ih->ih_Group = group;
+
+				NODE_ADDTAIL( & group->ig_Group, ih );
+
+				INTERFACE_FREEGROUP( member );
+			}
 		}
 
-		USBDEBUG( "Merge Groups Done" );
+		remaining -= desc->Length;
+		desc = (PTR) ( (U8 *) desc + desc->Length );
 	}
 
-	retval = TRUE;
-
-//bailout:
-
-	return( retval );
+	return ( TRUE );
 }
 
 // --

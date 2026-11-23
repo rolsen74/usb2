@@ -62,6 +62,7 @@ struct RealEndPointResource
 	U16								epr_FreeMe; 
 	struct USB2_EPResource			epr_Public;
  	struct RealRegister *			epr_Register;
+	struct USB2_EndPointNode *		epr_EndPoint;
 
 //	S32								epr_Delete;
 //	struct MsgPort					epr_MsgPort;

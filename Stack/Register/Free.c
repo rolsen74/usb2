@@ -79,32 +79,28 @@ struct USB2_ConfigNode *cn;
 
 	if (( fn ) && ( FUNCTION_VALID(fn) == VSTAT_Okay ))
 	{
-		// Again only Active Config ??
- 		cn = fn->fkt_Config_Active;
+		SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
 
- 		if (( cn ) && ( CONFIG_VALID(cn) == VSTAT_Okay ))
- 		{
- 			ig = cn->cfg_InterfaceGroups.uh_Head;
+		SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
- 			while( ig )
- 			{
- 				ih = ig->ig_Group.uh_Head;
-
- 				while( ih )
- 				{
- 					if ( ih->ih_Owner == reg )
- 					{
+		// A detached configuration can still contain claimed interfaces.
+		for( cn = fn->fkt_Configs.uh_Head; cn; cn = Node_Next( cn ) )
+		{
+			for( ig = cn->cfg_InterfaceGroups.uh_Head; ig; ig = Node_Next( ig ) )
+			{
+				for( ih = ig->ig_Group.uh_Head; ih; ih = Node_Next( ih ) )
+				{
+					if ( ih->ih_Owner == reg )
+					{
 						INTERFACE_DECLAIMHEADER( reg, ih );
- 					}
+					}
+				}
+			}
+		}
 
-//	reg_EPRHeader
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
- 					ih = Node_Next( ih );
- 				}
-
- 				ig = Node_Next( ig );
- 			}
- 		}
+		SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
 
 		if ( fn->fkt_Owner == reg )
 		{

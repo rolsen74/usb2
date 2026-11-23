@@ -69,7 +69,12 @@ U32 index;
 		ioreq->req_DoingDestall = FALSE;
 		index = LE_SWAP16( ioreq->req_Public.io_SetupData->Index );
 
+		SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 		if (( ioreq->req_PublicStat == IORS_HCD_Active )
+		&&	( ! fn->fkt_Detach )
+		&&	( ! fn->fkt_FreeMe )
+		&&	( fn->fkt_Address < 128 )
 		&&	( ioreq->req_Public.io_Error == USB2Err_NoError ))
 		{
 			offset = ( fn->fkt_Address * 32 ) + ( index & 0x0f );
@@ -105,6 +110,8 @@ U32 index;
 		{
 			usbbase->usb_IExec->DebugPrintF( "[%s] Destalled Failed -- Addr %ld -- EP $%02lx\n", usbbase->usb_IExec->FindTask(NULL)->tc_Node.ln_Name, fn->fkt_Address, index );
 		}
+
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 	}
 
 	// --

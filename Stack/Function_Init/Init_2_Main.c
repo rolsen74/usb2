@@ -35,6 +35,8 @@ struct RealFunctionNode *fn;
 struct USB2_IORequest *ioreq;
 struct USB2_SetupData *sd;
 struct RealRegister *reg;
+struct USB2_ConfigNode *config;
+U32 cfgval;
 
 	fn = userdata;
 
@@ -172,12 +174,15 @@ struct RealRegister *reg;
 
 //	usbbase->usb_IExec->DebugPrintF( "\n##\n## YAY8 -- Set Config\n##\n\n" );
 
-	// Get Config Nr from First Config Desc
-	// this looks hacky .. find a better way or atleast check if its a cn-desc
-	U32 cfgval = ((struct USB2_Config_Desc *)fn->fkt_Config_Desc_Buf)->ConfigurationValue;
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	config = fn->fkt_Configs.uh_Head;
+	cfgval = config ? config->cfg_Number : 0;
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	// Set Config
-	if ( ! CONFIG_SET( fn, (PTR) ioreq, cfgval ))
+	if ( ( ! cfgval ) || ( ! CONFIG_SET( fn, (PTR) ioreq, cfgval ) ) )
 	{
 		USBERROR( "Error: Set Config failed" );
 		goto bailout;

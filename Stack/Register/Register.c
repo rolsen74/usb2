@@ -12,9 +12,59 @@
 
 // --
 
+SEC_CODE static struct USB2_InterfaceHeader *
+LockPublishedInterface( struct USBBase *usbbase, const struct USB2_Interface *ifc )
+{
+	struct USB2_InterfaceHeader *ih;
+	struct USB2_InterfaceHeader *found;
+	struct USB2_InterfaceGroup *ig;
+	struct USB2_ConfigNode *config;
+	struct RealFunctionNode *fn;
+	struct USB2_Node *node;
+
+	found = NULL;
+
+	SEMAPHORE_OBTAIN( & usbbase->usb_Fkt_Semaphore );
+
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	for( node = usbbase->usb_Fkt_Header.uh_Head; ( node ) && ( ! found ); node = Node_Next( node ) )
+	{
+		fn = node->un_Data;
+		config = ( fn ) ? fn->fkt_Config_Active : NULL;
+
+		if ( ( ! config ) || ( ! fn->fkt_Initialized ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) )
+		{
+			continue;
+		}
+
+		for( ig = config->cfg_InterfaceGroups.uh_Head; ( ig ) && ( ! found ); ig = Node_Next( ig ) )
+		{
+			for( ih = ig->ig_Group.uh_Head; ih; ih = Node_Next( ih ) )
+			{
+				if ( ( & ih->ih_Public == ifc ) && ( INTERFACE_LOCKHEADER( ih ) == LSTAT_Okay ) )
+				{
+					found = ih;
+					break;
+				}
+			}
+		}
+	}
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+	SEMAPHORE_RELEASE( & usbbase->usb_Fkt_Semaphore );
+
+	return ( found );
+}
+
+// --
+
 SEC_CODE struct RealRegister *__Register_RegisterList( struct USBBase *usbbase, struct TagItem *taglist )
 {
 struct USB2_InterfaceHeader *ih;
+struct USB2_InterfaceHeader *pinned;
+const struct USB2_Interface *ifc;
 struct USB2_DriverMessage *msg;
 struct RealFunctionNode *fn;
 struct RealRegister *reg;
@@ -37,6 +87,8 @@ struct USB2_ConfigNode *cn;
 	msg		= NULL;
 	fn		= NULL;
 	ih		= NULL;
+	ifc		= NULL;
+	pinned	= NULL;
 	error	= TRUE;
 //	dev		= FALSE;
 	title	= NULL;
@@ -52,6 +104,7 @@ struct USB2_ConfigNode *cn;
 				msg = (PTR) tag->ti_Data;
 				fn  = NULL;
 				ih = NULL;
+				ifc = NULL;
 				break;
 			}
 
@@ -59,6 +112,7 @@ struct USB2_ConfigNode *cn;
 			{
 				msg = NULL;
 				ih = NULL;
+				ifc = NULL;
 				
 				if ( FUNCTION_VALID( (PTR) tag->ti_Data ) == VSTAT_Okay )
 				{
@@ -75,25 +129,9 @@ struct USB2_ConfigNode *cn;
 
 			case USB2Tag_Reg_Interface:
 			{
-				struct USB2_InterfaceHeader *tmp_ih = NULL;
 				msg = NULL;
 				fn = NULL;
-
-				if ( tag->ti_Data )
-				{
-					tmp_ih = (PTR) ( (char *) tag->ti_Data - offsetof( struct USB2_InterfaceHeader, ih_Public ));
-				}
-
-				if ( INTERFACE_VALIDHEADER( tmp_ih ) == VSTAT_Okay )
-				{
-					USBINFO( "USB2Tag_Reg_Interface.....: %p", tmp_ih );
-					ih = (PTR) tmp_ih;
-				}
-				else
-				{
-					USBERROR( "USB2Tag_Reg_Interface ...... : Invalid %p IH Node", tag->ti_Data );
-					ih = NULL;
-				}
+				ifc = (PTR) tag->ti_Data;
 				break;
 			}
 
@@ -119,6 +157,13 @@ struct USB2_ConfigNode *cn;
 				break;
 			}
 		}
+	}
+
+	if ( ifc )
+	{
+		pinned = LockPublishedInterface( usbbase, ifc );
+
+		ih = pinned;
 	}
 
 	if (( ! msg ) && ( ! fn ) && ( ! ih ))
@@ -305,6 +350,11 @@ bailout:
 	{
 		REGISTER_UNREGISTER( reg );
 		reg = NULL;
+	}
+
+	if ( pinned )
+	{
+		INTERFACE_UNLOCKHEADER( pinned );
 	}
 
 //	USBDEBUG( "Register_RegisterList: 99" );

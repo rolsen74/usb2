@@ -148,6 +148,11 @@ enum FSTAT fstat;
 
 	// --
 
+	if ( dn->dn_Interface )
+	{
+		INTERFACE_UNLOCKHEADER( dn->dn_Interface );
+	}
+
 	if ( dn->dn_Function )
 	{
 		FUNCTION_UNLOCK( dn->dn_Function );

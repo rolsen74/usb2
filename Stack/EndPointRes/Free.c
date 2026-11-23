@@ -210,6 +210,11 @@ S32 pos;
 
 	// --
 
+	if ( epr->epr_EndPoint )
+	{
+		ENDPOINT_UNLOCK( epr->epr_EndPoint );
+	}
+
 	reg = epr->epr_Register;
 
 	if ( reg )

@@ -23,6 +23,8 @@ S32 retval;
 
 	retval = FALSE;
 
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 	if (( fn->fkt_Detach ) || ( fn->fkt_FreeMe ))
 	{
 		USBDEBUG( "__Config_Parse : Error Funtion Detached" );
@@ -48,6 +50,8 @@ S32 retval;
 	retval = TRUE;
 
 bailout:
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	return( retval );
 }
