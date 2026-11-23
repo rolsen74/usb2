@@ -82,11 +82,13 @@ struct RealRequest
 	//	struct USB2_ASync *				req_ASync;
 	// --
 
-	struct RealFunctionNode *  req_Function;
-	struct USB2_EndPointNode * req_EndPoint;
-	struct USB2_MsgPort		   req_MsgPort;
-	struct TimeRequest		   req_TimerIOReq;
-	enum IORStat			   req_PublicStat;
+	struct RealFunctionNode *	  req_Function;
+	struct USB2_InterfaceHeader * req_AltHeader;
+	U8							  req_AltApplied;
+	struct USB2_EndPointNode *	  req_EndPoint;
+	struct USB2_MsgPort			  req_MsgPort;
+	struct TimeRequest			  req_TimerIOReq;
+	enum IORStat				  req_PublicStat;
 
 	U8 req_TimerAdded;
 	U8 req_DoingDestall;

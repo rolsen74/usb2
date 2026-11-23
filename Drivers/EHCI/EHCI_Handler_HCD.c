@@ -51,51 +51,57 @@
 // This function get called when one of our Signals get triggerd.
 // I merged then old function HCD_CHECK_TRANSFERS()
 
-SEC_CODE void EHCI_Handler_HCD( struct USB2_HCDNode *hn, U32 mask UNUSED )
+SEC_CODE void
+EHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask UNUSED )
 {
-struct RealFunctionNode *fn;
-struct RealRequest *ioreq;
-struct RealRequest *next;
+	struct RealFunctionNode * fn;
+	struct RealRequest *	  ioreq;
+	struct RealRequest *	  next;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "EHCI : EHCI_Handler_HCD" );
-	USBDEBUG( "EHCI_Handler_HCD         : Mask $%08lx", mask );
+	struct USBBase * usbbase = hn->hn_USBBase;
+	TASK_NAME_ENTER ( "EHCI : EHCI_Handler_HCD" );
+	USBDEBUG ( "EHCI_Handler_HCD         : Mask $%08lx", mask );
 
-//	if ( mask & (
-//		hn->hn_HCD.EHCI.Signal_EI.sig_Signal_Mask | 	// Error Int
-//		hn->hn_HCD.EHCI.Signal_INT.sig_Signal_Mask | 	// Normal Int
-//		hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask ))	// ASync advance
+	//	if ( mask & (
+	//		hn->hn_HCD.EHCI.Signal_EI.sig_Signal_Mask | 	// Error Int
+	//		hn->hn_HCD.EHCI.Signal_INT.sig_Signal_Mask | 	// Normal Int
+	//		hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask ))	// ASync advance
 	{
 		ioreq = hn->hn_Active_Transfer_List.uh_Head;
-		USBDEBUG( "EHCI_Handler_HCD         : IOReq %p", ioreq );
+		USBDEBUG ( "EHCI_Handler_HCD         : IOReq %p", ioreq );
 
-		while( ioreq )
+		while ( ioreq )
 		{
-			next = Node_Next( ioreq );
-			fn = ioreq->req_Function;
+			next = Node_Next ( ioreq );
+			fn	 = ioreq->req_Function;
 
 			// --
 			// Check if IOReq is done, either error or finished
 			// if done, it gets replyed.
- 
-			SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
 
-			HCD_TRANSFER_CHECK( hn, ioreq, FALSE );
+			if ( FUNCTION_LOCK ( fn ) == LSTAT_Okay )
+			{
+				SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
-			SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
+				HCD_TRANSFER_CHECK ( hn, ioreq, FALSE );
+
+				SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
+
+				FUNCTION_UNLOCK ( fn );
+			}
 
 			// --
 
 			ioreq = next;
-			USBDEBUG( "EHCI_Handler_HCD         : IOReq %p", ioreq );
+			USBDEBUG ( "EHCI_Handler_HCD         : IOReq %p", ioreq );
 		}
 	}
-//	else
-//	{
-//		USBDEBUG( "EHCI_Handler_HCD         : Unsupported Signal $%08lx", mask );
-//	}
+	//	else
+	//	{
+	//		USBDEBUG( "EHCI_Handler_HCD         : Unsupported Signal $%08lx", mask );
+	//	}
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 }
 
 // --

@@ -51,42 +51,48 @@
 
 // --
 
-SEC_CODE void OHCI_Handler_HCD( struct USB2_HCDNode *hn, U32 mask UNUSED )
+SEC_CODE void
+OHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask UNUSED )
 {
-struct RealFunctionNode *fn;
-struct RealRequest *ioreq;
-struct RealRequest *next;
+	struct RealFunctionNode * fn;
+	struct RealRequest *	  ioreq;
+	struct RealRequest *	  next;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "OHCI : OHCI_Handler_HCD" );
+	struct USBBase * usbbase = hn->hn_USBBase;
+	TASK_NAME_ENTER ( "OHCI : OHCI_Handler_HCD" );
 
 	{
 		ioreq = hn->hn_Active_Transfer_List.uh_Head;
-		USBDEBUG( "OHCI_Handler_HCD         : IOReq %p", ioreq );
+		USBDEBUG ( "OHCI_Handler_HCD         : IOReq %p", ioreq );
 
-		while( ioreq )
+		while ( ioreq )
 		{
-			next = Node_Next( ioreq );
-			fn = ioreq->req_Function;
+			next = Node_Next ( ioreq );
+			fn	 = ioreq->req_Function;
 
 			// --
 			// Check if IOReq is done, either error or finished
 			// if done, it gets replyed.
- 
-			SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
 
-			HCD_TRANSFER_CHECK( hn, ioreq, FALSE );
+			if ( FUNCTION_LOCK ( fn ) == LSTAT_Okay )
+			{
+				SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
-			SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
+				HCD_TRANSFER_CHECK ( hn, ioreq, FALSE );
+
+				SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
+
+				FUNCTION_UNLOCK ( fn );
+			}
 
 			// --
 
 			ioreq = next;
-			USBDEBUG( "OHCI_Handler_HCD         : IOReq %p", ioreq );
+			USBDEBUG ( "OHCI_Handler_HCD         : IOReq %p", ioreq );
 		}
 	}
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 }
 
 // --

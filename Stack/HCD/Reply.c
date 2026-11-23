@@ -32,7 +32,17 @@ __HCD_Reply ( struct USBBase * usbbase UNUSED, struct RealRequest * ioreq )
 	if ( IOREQUEST_LOCK ( ioreq ) == LSTAT_Okay )
 	{
 		//		usbbase->usb_IExec->DebugPrintF( "__HCD_Reply              : IOReq %p : Locks %2ld : Stat %ld : Task %p :\n",
-		//ioreq, ioreq->req_Locks, ioreq->req_PublicStat, usbbase->usb_IExec->FindTask(NULL) );
+		// ioreq, ioreq->req_Locks, ioreq->req_PublicStat, usbbase->usb_IExec->FindTask(NULL) );
+
+		if ( ioreq->req_AbortQueued )
+		{
+			// The HCD owns both dispatch and completion of the abort message.
+			usbbase->usb_IExec->Remove ( &ioreq->req_AbortMessage.mn_Node );
+
+			ioreq->req_AbortQueued = FALSE;
+
+			IOREQUEST_UNLOCK ( ioreq );
+		}
 
 		IOREQUEST_ACTIVE_SUB ( ioreq );
 

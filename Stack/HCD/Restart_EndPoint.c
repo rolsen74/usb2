@@ -12,72 +12,52 @@
 
 // --
 
-SEC_CODE void __HCD_Restart_EndPoint( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct USB2_EndPointNode *ep )
+SEC_CODE void
+__HCD_Restart_EndPoint ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct USB2_EndPointNode * ep )
 {
-struct RealFunctionNode *fn;
-struct RealRequest *ioreq;
-S32 again;
+	struct RealFunctionNode * fn;
+	struct RealRequest *	  ioreq;
 
-	TASK_NAME_ENTER( "HCD : __HCD_Restart_EndPoint" );
+	fn = ep->ep_Function;
 
-	/*
-	** Restart Next if any is queued
-	*/
+	SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
-	again = TRUE;
-
-	while( again )
+	while ( ( ioreq = ep->ep_Request_Queue.uh_Head ) )
 	{
-		again = FALSE;
+		if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ep->ep_Detach ) || ( ep->ep_FreeMe ) )
+		{
+			NODE_REMNODE ( &ep->ep_Request_Queue, ioreq );
 
-		// --
+			ioreq->req_Public.io_Error = USB2Err_Device_Detached;
 
-		ioreq = ep->ep_Request_Queue.uh_Head;
-
-		if ( ( ! ioreq ) || ( ! __HCD_Request_CanStart( hn, ioreq ) ) )
+			HCD_REPLY ( ioreq );
+		}
+		else if ( ( ep->ep_Interface ) && ( ep->ep_Interface->in_Parent->ih_Changing ) )
 		{
 			break;
 		}
 
-		ioreq = NODE_REMHEAD( & ep->ep_Request_Queue );
-
-		if ( ioreq )
+		else
 		{
-			fn = ioreq->req_Function;
-
-			SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
-
-			#ifdef DO_DEBUG
-
-			if ( FUNCTION_VALID(fn) != VSTAT_Okay )
+			if ( ! __HCD_Request_CanStart ( hn, ioreq ) )
 			{
-				USBPANIC( "myEHCI_EndPoint_Restart : IOReq %p : Invalid fn %p", ioreq, fn );
+				break;
 			}
 
-			#endif
+			NODE_REMNODE ( &ep->ep_Request_Queue, ioreq );
 
-			if ( HCD_ADD_REQUEST( hn, ioreq ))
+			if ( ! HCD_ADD_REQUEST ( hn, ioreq ) )
 			{
-//				__HCD_Transfer_Remove( usbbase, hn, ioreq );
-				HCD_TRANSFER_REMOVE( hn, ioreq );
-
-
-//				// Send back to user
-//				ioreq->req_PublicStat = IORS_User;
-//				MSGPORT_REPLYMSG(ioreq);
-//				IOREQUEST_ACTIVE_SUB( ioreq );
-
-				HCD_REPLY(ioreq);
-				ioreq = NULL;
-
-				again = TRUE;
+				break;
 			}
 
-			SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
+			HCD_TRANSFER_REMOVE ( hn, ioreq );
+
+			HCD_REPLY ( ioreq );
 		}
 	}
 
-	TASK_NAME_LEAVE();
+	SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
 }
 
 // --

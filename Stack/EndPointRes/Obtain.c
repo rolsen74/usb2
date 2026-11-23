@@ -14,98 +14,100 @@
 
 #if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 
-SEC_CODE struct USB2_EPResource *__EndPointRes_ObtainList( struct USBBase *usbbase, STR file UNUSED, struct RealRegister *reg, struct TagItem *taglist )
+SEC_CODE struct USB2_EPResource *
+__EndPointRes_ObtainList ( struct USBBase * usbbase, STR file UNUSED, struct RealRegister * reg, struct TagItem * taglist )
 
 #else
 
-SEC_CODE struct USB2_EPResource *__EndPointRes_ObtainList( struct USBBase *usbbase, struct RealRegister *reg, struct TagItem *taglist )
+SEC_CODE struct USB2_EPResource *
+__EndPointRes_ObtainList ( struct USBBase * usbbase, struct RealRegister * reg, struct TagItem * taglist )
 
 #endif
 
 {
-struct RealEndPointResource *epr;
-struct USB2_InterfaceHeader *ih;
-struct USB2_InterfaceGroup *ig;
-struct USB2_InterfaceNode *in;
-struct USB2_EndPointNode *epn;
-struct RealFunctionNode *fn;
-struct USB2_ConfigNode *cn;
-struct TagItem *tag;
-struct MsgPort *mp;
-U32 shortp;
-U32 eptype;
-U32 addzp;
-U32 epdir;
-U32 error;
-U32 ifcnr;
-U32 epnr;
-U32 cnt;
-U32 noi;
-U32 dir;
-U32 ep;
-S32 bs;
-U32 to;
+	struct RealEndPointResource * epr;
+	struct USB2_InterfaceHeader * ih;
+	struct USB2_InterfaceGroup *  ig;
+	struct USB2_InterfaceNode *	  in;
+	struct USB2_EndPointNode *	  epn;
+	struct RealFunctionNode *	  fn;
+	struct USB2_ConfigNode *	  cn;
+	struct TagItem *			  tag;
+	struct MsgPort *			  mp;
+	U32							  shortp;
+	U32							  eptype;
+	U32							  addzp;
+	U32							  epdir;
+	U32							  error;
+	U32							  ifcnr;
+	U32							  epnr;
+	U32							  cnt;
+	U32							  noi;
+	U32							  dir;
+	U32							  ep;
+	S32							  bs;
+	U32							  to;
 
 	// --
 
-//	USBDEBUG( "__EndPointRes_ObtainList : REG   %p : (%s)", reg, (file)?file:"<NULL>" );
-//	USBDEBUG( "__EndPointRes_ObtainList" );
+	//	USBDEBUG( "__EndPointRes_ObtainList : REG   %p : (%s)", reg, (file)?file:"<NULL>" );
+	//	USBDEBUG( "__EndPointRes_ObtainList" );
 
 	// --
 
-	error	= TRUE;
-	eptype	= EPATT_Type_Control;
-	epdir	= EPDIR_Both;
-	epnr	= 0;		// EndPoint Number
-	epn		= NULL;
-	ep		= TRUE;
-	ifcnr	= -1U;		// Interface Nr or -1 for unset
-	noi		= 1;		// Number of IORequest
-	bs		= 0;		// Buffer Size
-	to		= 0;		// TimeOut in Seconds
-	mp		= NULL;		// (user) MsgPort
-	addzp	= -1U;		// Add Zero Packet (if needed on write)
-	shortp	= -1U;		// Allow short Packets (read)
+	error  = TRUE;
+	eptype = EPATT_Type_Control;
+	epdir  = EPDIR_Both;
+	epnr   = 0; // EndPoint Number
+	epn	   = NULL;
+	ep	   = TRUE;
+	ifcnr  = -1U;  // Interface Nr or -1 for unset
+	noi	   = 1;	   // Number of IORequest
+	bs	   = 0;	   // Buffer Size
+	to	   = 0;	   // TimeOut in Seconds
+	mp	   = NULL; // (user) MsgPort
+	addzp  = -1U;  // Add Zero Packet (if needed on write)
+	shortp = -1U;  // Allow short Packets (read)
 
 	// --
-	
-	epr = ENDPOINTRES_ALLOC();
+
+	epr = ENDPOINTRES_ALLOC ();
 
 	if ( ! epr )
 	{
-		USBERROR( "__EndPointRes_ObtainList : Error allocating memory" );
+		USBERROR ( "__EndPointRes_ObtainList : Error allocating memory" );
 		goto bailout;
 	}
 
 	// --
 
-	if ( REGISTER_LOCK( reg ) != LSTAT_Okay )
+	if ( REGISTER_LOCK ( reg ) != LSTAT_Okay )
 	{
-		USBERROR( "__EndPointRes_ObtainList : Invalid REG %p", reg );
+		USBERROR ( "__EndPointRes_ObtainList : Invalid REG %p", reg );
 		goto bailout;
 	}
 
 	epr->epr_Register = reg;
-//	USBDEBUG( "--> : ADD 1 : EPR   %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
-	NODE_ADDTAIL( & reg->reg_EPRHeader, & epr->epr_Node );
+	//	USBDEBUG( "--> : ADD 1 : EPR   %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
+	NODE_ADDTAIL ( &reg->reg_EPRHeader, &epr->epr_Node );
 
 	// --
 
-//	USBDEBUG( "__EndPointRes_ObtainList : 2 :" );
+	//	USBDEBUG( "__EndPointRes_ObtainList : 2 :" );
 
 	fn = reg->reg_Function;
 
-	while(( tag = MISC_NEXTTAGITEM( & taglist )))
+	while ( ( tag = MISC_NEXTTAGITEM ( &taglist ) ) )
 	{
 		switch ( tag->ti_Tag )
 		{
-			// -- IORequest settings
+				// -- IORequest settings
 
 			case USB2Tag_EPRes_MsgPort:
 			{
-				mp = (PTR) tag->ti_Data;
+				mp = (PTR)tag->ti_Data;
 
-//				USBERROR( "USB2Tag_EPRes_MsgPort .. : %p", mp );
+				//				USBERROR( "USB2Tag_EPRes_MsgPort .. : %p", mp );
 				break;
 			}
 
@@ -113,7 +115,7 @@ U32 to;
 			{
 				bs = tag->ti_Data;
 
-//				USBERROR( "USB2Tag_EPRes_BufferSize  : %ld", bs );
+				//				USBERROR( "USB2Tag_EPRes_BufferSize  : %ld", bs );
 				break;
 			}
 
@@ -121,7 +123,7 @@ U32 to;
 			{
 				to = tag->ti_Data;
 
-//				USBERROR( "USB2Tag_EPRes_TimeOut ... : %lu ms", to );
+				//				USBERROR( "USB2Tag_EPRes_TimeOut ... : %lu ms", to );
 				break;
 			}
 
@@ -130,56 +132,56 @@ U32 to;
 				// Zero is valid
 				noi = tag->ti_Data;
 
-//				USBERROR( "USB2Tag_EPRes_NrOfIOReq . : %lu", noi );
+				//				USBERROR( "USB2Tag_EPRes_NrOfIOReq . : %lu", noi );
 				break;
 			}
 
-			// -- Interface Nr is required for anything but Control
+				// -- Interface Nr is required for anything but Control
 
-			case USB2Tag_EPRes_InterfaceNr :
+			case USB2Tag_EPRes_InterfaceNr:
 			{
 				ifcnr = ( tag->ti_Data & 0xff );
 
-//				USBERROR( "USB2Tag_EPRes_InterfaceNr : %lu", ifcnr );
+				//				USBERROR( "USB2Tag_EPRes_InterfaceNr : %lu", ifcnr );
 				break;
 			}
 
-			// -- Use Direct EndPoint Nr
+				// -- Use Direct EndPoint Nr
 
 			case USB2Tag_EPRes_EndPointNr:
 			{
 				epnr = tag->ti_Data;
-				ep = TRUE;
+				ep	 = TRUE;
 
 				// Note:
 				//  watch out .. ep_Number must be 0x0F
 				//  but this tag also have 0x80 for Direction
 
-//				USBERROR( "USB2Tag_EPRes_EndPointNr : %lu", epnr );
+				//				USBERROR( "USB2Tag_EPRes_EndPointNr : %lu", epnr );
 				break;
 			}
 
-			// -- Find EndPoint from Type and Direction
+				// -- Find EndPoint from Type and Direction
 
 			case USB2Tag_EPRes_EPType:
 			{
 				eptype = ( tag->ti_Data & EPATT_Type_Mask );
-				ep = FALSE;
+				ep	   = FALSE;
 
 				if ( eptype == EPATT_Type_Control )
 				{
 					epdir = EPDIR_Both;
 				}
 
-//				USBERROR( "EndPoint Type ........... : %lu ($%02lx)", eptype, tag->ti_Data );
+				//				USBERROR( "EndPoint Type ........... : %lu ($%02lx)", eptype, tag->ti_Data );
 				break;
 			}
 
 			case USB2Tag_EPRes_EPDirection:
 			{
 				ep = FALSE;
-				
-				if (( tag->ti_Data & EPADR_Dir_Mask ) == EPADR_Dir_In )
+
+				if ( ( tag->ti_Data & EPADR_Dir_Mask ) == EPADR_Dir_In )
 				{
 					epdir = EPDIR_In;
 				}
@@ -188,92 +190,92 @@ U32 to;
 					epdir = EPDIR_Out;
 				}
 
-//				USBERROR( "EndPoint Direction ...... : %lu ($%02lx)", epdir, tag->ti_Data );
+				//				USBERROR( "EndPoint Direction ...... : %lu ($%02lx)", epdir, tag->ti_Data );
 				break;
 			}
 
 			case USB2Tag_EPRes_AddZeroPacket:
 			{
-				addzp = ( tag->ti_Data ) ? TRUE : FALSE ;
+				addzp = ( tag->ti_Data ) ? TRUE : FALSE;
 
-//				USBERROR( "USB2Tag_EPRes_AddZeroPacket %ld", addzp );
+				//				USBERROR( "USB2Tag_EPRes_AddZeroPacket %ld", addzp );
 				break;
 			}
 
-			// --
+				// --
 
 			case USB2Tag_EPRes_AllowShortPackets:
 			{
-				shortp = ( tag->ti_Data ) ? TRUE : FALSE ;
+				shortp = ( tag->ti_Data ) ? TRUE : FALSE;
 
-//				USBERROR( "USB2Tag_EPRes_ShortPackets %ld", shortp );
+				//				USBERROR( "USB2Tag_EPRes_ShortPackets %ld", shortp );
 				break;
 			}
 
 			default:
 			{
-				USBERROR( "__EndPointRes_ObtainList : Unknown tag [%08lx:%08lx]", tag->ti_Tag, tag->ti_Data );
+				USBERROR ( "__EndPointRes_ObtainList : Unknown tag [%08lx:%08lx]", tag->ti_Tag, tag->ti_Data );
 				break;
 			}
 		}
 	}
 
-//	USBDEBUG( "__EndPointRes_ObtainList : 3 :" );
+	//	USBDEBUG( "__EndPointRes_ObtainList : 3 :" );
 
 	// ---
 
-	#ifdef DO_PANIC
+#ifdef DO_PANIC
 
-	if ( FUNCTION_VALID(fn) != VSTAT_Okay )
+	if ( FUNCTION_VALID ( fn ) != VSTAT_Okay )
 	{
-		USBERROR( "__EndPointRes_ObtainList : NULL Pointer" );
+		USBERROR ( "__EndPointRes_ObtainList : NULL Pointer" );
 		goto bailout;
 	}
 
-	#endif
+#endif
 
 	// ---
 
-	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	if ( ( ! fn ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) )
 	{
-		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 		goto bailout;
 	}
 
-	/**/ if (( ep ) && ( epnr == 0 ))
+	/**/ if ( ( ep ) && ( epnr == 0 ) )
 	{
-//		USBDEBUG( "__EndPointRes_ObtainList : 4 : Use Control EP 1" );
-//		USBERROR( "EndPoint Type ........... : 1 (Control)" );
+		//		USBDEBUG( "__EndPointRes_ObtainList : 4 : Use Control EP 1" );
+		//		USBERROR( "EndPoint Type ........... : 1 (Control)" );
 
 		epn = fn->fkt_ControlEndPoint;
 	}
-	else if (( ep == FALSE ) && ( eptype == EPATT_Type_Control ))
+	else if ( ( ep == FALSE ) && ( eptype == EPATT_Type_Control ) )
 	{
-//		USBDEBUG( "__EndPointRes_ObtainList : 5 : Use " );
-//		USBERROR( "EndPoint Type ........... : 2 (Control)" );
+		//		USBDEBUG( "__EndPointRes_ObtainList : 5 : Use " );
+		//		USBERROR( "EndPoint Type ........... : 2 (Control)" );
 
 		epn = fn->fkt_ControlEndPoint;
 	}
 	else
 	{
-//		USBDEBUG( "__EndPointRes_ObtainList : 6 :" );
+		//		USBDEBUG( "__EndPointRes_ObtainList : 6 :" );
 
 		cn = fn->fkt_Config_Active;
 		ig = ( cn ) ? cn->cfg_InterfaceGroups.uh_Head : NULL;
 
 		epn = NULL;
 
-		while( ig )
+		while ( ig )
 		{
 			ih = ig->ig_Group.uh_Head;
 
-			while( ih )
+			while ( ih )
 			{
-				if ((( ih->ih_Owner == reg ) || ( fn->fkt_Owner == reg ))
-				&& (( ifcnr == -1U ) || ( ifcnr == ih->ih_Number )))
+				if ( ( ! ih->ih_Changing ) && ( ( ih->ih_Owner == reg ) || ( fn->fkt_Owner == reg ) )
+					 && ( ( ifcnr == -1U ) || ( ifcnr == ih->ih_Number ) ) )
 				{
 					in = ih->ih_Active;
 
@@ -281,32 +283,31 @@ U32 to;
 
 					if ( ep )
 					{
-						while( epn )
+						while ( epn )
 						{
-							dir = ( epnr & EPADR_Dir_Mask ) ? EPDIR_In : EPDIR_Out ;
+							dir = ( epnr & EPADR_Dir_Mask ) ? EPDIR_In : EPDIR_Out;
 
-							if (( epn->ep_Number == EPADR_Dir_Number(epnr) )
-							&&	( epn->ep_Direction == dir ))
+							if ( ( epn->ep_Number == EPADR_Dir_Number ( epnr ) ) && ( epn->ep_Direction == dir ) )
 							{
 								break;
 							}
 							else
 							{
-								epn = Node_Next( epn );
+								epn = Node_Next ( epn );
 							}
 						}
 					}
 					else
 					{
-						while( epn )
+						while ( epn )
 						{
-							if (( epn->ep_Type == eptype ) && ( epn->ep_Direction == epdir ))
+							if ( ( epn->ep_Type == eptype ) && ( epn->ep_Direction == epdir ) )
 							{
 								break;
 							}
 							else
 							{
-								epn = Node_Next( epn );
+								epn = Node_Next ( epn );
 							}
 						}
 					}
@@ -317,7 +318,7 @@ U32 to;
 					break;
 				}
 
-				ih = Node_Next( ih );
+				ih = Node_Next ( ih );
 			}
 
 			if ( epn )
@@ -325,65 +326,90 @@ U32 to;
 				break;
 			}
 
-			ig = Node_Next( ig );
+			ig = Node_Next ( ig );
 		}
 	}
 
-//	USBDEBUG( "__EndPointRes_ObtainList : 7 :" );
+	//	USBDEBUG( "__EndPointRes_ObtainList : 7 :" );
 
-	if ( ( ! epn ) || ( ENDPOINT_LOCK(epn) != LSTAT_Okay ) )
+	if ( ( ! epn ) || ( ENDPOINT_LOCK ( epn ) != LSTAT_Okay ) )
 	{
-		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
-		USBERROR( "__EndPointRes_ObtainList : EndPoint Node not found : EP    %p", epn );
+		USBERROR ( "__EndPointRes_ObtainList : EndPoint Node not found : EP    %p", epn );
 		goto bailout;
 	}
 
-	epr->epr_EndPoint = epn;
-	epr->epr_Public.EndPoint = (PTR) epn;
+	epr->epr_EndPoint			= epn;
+	epr->epr_Public.EndPoint	= (PTR)epn;
 	epr->epr_Public.EndPointMax = epn->ep_MaxPacketSize;
 
-	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 	// ---
 
 	if ( noi )
 	{
+		if ( noi >= (U32)-1 / sizeof ( PTR ) )
+		{
+			goto bailout;
+		}
+
+		epr->epr_RequestCount = noi;
+
 		// Alloc Array -- Not the IORequests
-		epr->epr_Public.IORequests = MEM_ALLOCVEC( sizeof(PTR) * ( noi + 1 ), TRUE );
+		epr->epr_Public.IORequests = MEM_ALLOCVEC ( sizeof ( PTR ) * ( noi + 1 ), TRUE );
 
 		if ( ! epr->epr_Public.IORequests )
 		{
-			USBERROR( "__EndPointRes_ObtainList : Error allocaing memory" );
+			USBERROR ( "__EndPointRes_ObtainList : Error allocaing memory" );
 			goto bailout;
 		}
 
 		// Alloc Array -- Not the buffers
-		epr->epr_Public.Buffers = MEM_ALLOCVEC( sizeof(PTR) * ( noi + 1 ), TRUE );
+		epr->epr_Public.Buffers = MEM_ALLOCVEC ( sizeof ( PTR ) * ( noi + 1 ), TRUE );
 
 		if ( ! epr->epr_Public.Buffers )
 		{
-			USBERROR( "__EndPointRes_ObtainList : Error allocaing memory" );
+			USBERROR ( "__EndPointRes_ObtainList : Error allocaing memory" );
 			goto bailout;
 		}
 
 		if ( bs < 0 )
 		{
-			switch( bs )
+			switch ( bs )
 			{
-				case USB2Val_BufferSize_MaxPacketSize:		bs = epn->ep_MaxPacketSize * 1;		break;
-				case USB2Val_BufferSize_MaxPacketSize_2:	bs = epn->ep_MaxPacketSize * 2;		break;
-				case USB2Val_BufferSize_MaxPacketSize_4:	bs = epn->ep_MaxPacketSize * 4;		break;
-				case USB2Val_BufferSize_MaxPacketSize_8:	bs = epn->ep_MaxPacketSize * 8;		break;
-				case USB2Val_BufferSize_MaxPacketSize_16:	bs = epn->ep_MaxPacketSize * 16;	break;
-				case USB2Val_BufferSize_MaxPacketSize_32:	bs = epn->ep_MaxPacketSize * 32;	break;
-				case USB2Val_BufferSize_MaxPacketSize_64:	bs = epn->ep_MaxPacketSize * 64;	break;
-				case USB2Val_BufferSize_MaxPacketSize_128:	bs = epn->ep_MaxPacketSize * 128;	break;
-				case USB2Val_BufferSize_MaxPacketSize_256:	bs = epn->ep_MaxPacketSize * 256;	break;
-				
+				case USB2Val_BufferSize_MaxPacketSize:
+					bs = epn->ep_MaxPacketSize * 1;
+					break;
+				case USB2Val_BufferSize_MaxPacketSize_2:
+					bs = epn->ep_MaxPacketSize * 2;
+					break;
+				case USB2Val_BufferSize_MaxPacketSize_4:
+					bs = epn->ep_MaxPacketSize * 4;
+					break;
+				case USB2Val_BufferSize_MaxPacketSize_8:
+					bs = epn->ep_MaxPacketSize * 8;
+					break;
+				case USB2Val_BufferSize_MaxPacketSize_16:
+					bs = epn->ep_MaxPacketSize * 16;
+					break;
+				case USB2Val_BufferSize_MaxPacketSize_32:
+					bs = epn->ep_MaxPacketSize * 32;
+					break;
+				case USB2Val_BufferSize_MaxPacketSize_64:
+					bs = epn->ep_MaxPacketSize * 64;
+					break;
+				case USB2Val_BufferSize_MaxPacketSize_128:
+					bs = epn->ep_MaxPacketSize * 128;
+					break;
+				case USB2Val_BufferSize_MaxPacketSize_256:
+					bs = epn->ep_MaxPacketSize * 256;
+					break;
+
 				default:
 				{
-					USBERROR( "__EndPointRes_ObtainList : Error invalid Buffer size (%ld)", bs );
+					USBERROR ( "__EndPointRes_ObtainList : Error invalid Buffer size (%ld)", bs );
 					goto bailout;
 				}
 			}
@@ -391,24 +417,21 @@ U32 to;
 
 		epr->epr_Public.BufferSize = bs;
 
-		for( cnt=0 ; cnt<noi ; cnt++ )
+		for ( cnt = 0; cnt < noi; cnt++ )
 		{
 			// if mp == NULL then alloc ioreq will create the msgport
-			epr->epr_Public.IORequests[cnt] = (PTR) IOREQUEST_ALLOCTAGS(
-//				USB2Tag_ShortPackets, sp,
+			epr->epr_Public.IORequests[cnt] = (PTR)IOREQUEST_ALLOCTAGS (
+				//				USB2Tag_ShortPackets, sp,
 				( shortp == -1U ) ? TAG_IGNORE : USB2Tag_IOReq_AllowShortPackets, shortp,
-				( addzp == -1U ) ? TAG_IGNORE : USB2Tag_IOReq_AddZeroPacket, addzp,
-				USB2Tag_IOReq_EndPoint, epn,
-				USB2Tag_IOReq_MsgPort, mp,
-				USB2Tag_IOReq_TimeOut, to,
-				TAG_END
-			);
+				( addzp == -1U ) ? TAG_IGNORE : USB2Tag_IOReq_AddZeroPacket, addzp, USB2Tag_IOReq_EndPoint, epn,
+				USB2Tag_IOReq_MsgPort, mp, USB2Tag_IOReq_TimeOut, to, TAG_END );
 
-//			USBDEBUG( "__EndPointRes_ObtainList : EPR   %p : IOReq %p : Pos %ld", epr, epr->epr_Public.IORequests, cnt );
+			//			USBDEBUG( "__EndPointRes_ObtainList : EPR   %p : IOReq %p : Pos %ld", epr, epr->epr_Public.IORequests,
+			//cnt );
 
 			if ( ! epr->epr_Public.IORequests[cnt] )
 			{
-				USBERROR( "__EndPointRes_ObtainList : Error creating IORequest" );
+				USBERROR ( "__EndPointRes_ObtainList : Error creating IORequest" );
 				goto bailout;
 			}
 
@@ -417,40 +440,40 @@ U32 to;
 
 			if ( bs )
 			{
-//				USBDEBUG( "__EndPointRes_ObtainList : BufferSize %ld", bs );
+				//				USBDEBUG( "__EndPointRes_ObtainList : BufferSize %ld", bs );
 
 				// Clear is proberly not needed but why not to make sure
-				epr->epr_Public.Buffers[cnt] = MEM_ALLOCIOBUFFER( bs, TRUE );
+				epr->epr_Public.Buffers[cnt] = MEM_ALLOCIOBUFFER ( bs, TRUE );
 
 				if ( ! epr->epr_Public.Buffers[cnt] )
 				{
-					USBERROR( "__EndPointRes_ObtainList : Error allocating memory" );
+					USBERROR ( "__EndPointRes_ObtainList : Error allocating memory" );
 					goto bailout;
 				}
 
-				epr->epr_Public.IORequests[cnt]->io_Data	= epr->epr_Public.Buffers[cnt];
-				epr->epr_Public.IORequests[cnt]->io_Length	= bs;
+				epr->epr_Public.IORequests[cnt]->io_Data   = epr->epr_Public.Buffers[cnt];
+				epr->epr_Public.IORequests[cnt]->io_Length = bs;
 			}
 		}
 	}
 
 	// --
 
-//	USBDEBUG( "__EndPointRes_ObtainList : 8 :" );
+	//	USBDEBUG( "__EndPointRes_ObtainList : 8 :" );
 
-	#ifdef DO_PANIC
+#ifdef DO_PANIC
 
 	if ( ( noi ) && ( ! epr->epr_Public.IORequests ) )
 	{
-		USBPANIC( "__EndPointRes_ObtainList : NULL Pointer 1" );
+		USBPANIC ( "__EndPointRes_ObtainList : NULL Pointer 1" );
 	}
 
 	if ( ( noi ) && ( ! epr->epr_Public.IORequests[0] ) )
 	{
-		USBPANIC( "__EndPointRes_ObtainList : NULL Pointer 2" );
+		USBPANIC ( "__EndPointRes_ObtainList : NULL Pointer 2" );
 	}
 
-	#endif
+#endif
 
 	if ( noi )
 	{
@@ -468,12 +491,12 @@ U32 to;
 
 	if ( epn->ep_Type == EPATT_Type_Control )
 	{
-//		epr->epr_Public.SetupData	= MEM_ALLOCIOBUFFER( sizeof( struct USB2_SetupData ), FALSE );
-		epr->epr_Public.SetupData = SETUPDATA_ALLOC();
+		//		epr->epr_Public.SetupData	= MEM_ALLOCIOBUFFER( sizeof( struct USB2_SetupData ), FALSE );
+		epr->epr_Public.SetupData = SETUPDATA_ALLOC ();
 
 		if ( ! epr->epr_Public.SetupData )
 		{
-			USBERROR( "__EndPointRes_ObtainList : Error allocating memory" );
+			USBERROR ( "__EndPointRes_ObtainList : Error allocating memory" );
 			goto bailout;
 		}
 	}
@@ -488,28 +511,29 @@ bailout:
 	{
 		if ( error )
 		{
-			USBDEBUG( "__EndPointRes_ObtainList : 1 : EPR   %p (new) : REG %p :", NULL, reg );
+			USBDEBUG ( "__EndPointRes_ObtainList : 1 : EPR   %p (new) : REG %p :", NULL, reg );
 
-			if ( REGISTER_VALID( epr->epr_Register ) == VSTAT_Okay )
+			if ( REGISTER_VALID ( epr->epr_Register ) == VSTAT_Okay )
 			{
-				NODE_REMNODE( & reg->reg_EPRHeader, & epr->epr_Node );
-				REGISTER_UNLOCK( reg );
+				NODE_REMNODE ( &reg->reg_EPRHeader, &epr->epr_Node );
+				REGISTER_UNLOCK ( reg );
 				epr->epr_Register = NULL;
 			}
 
-			ENDPOINTRES_FREE( epr );
-			return( NULL );
+			ENDPOINTRES_FREE ( epr );
+			return ( NULL );
 		}
 		else
 		{
-			USBDEBUG( "__EndPointRes_ObtainList : 2 : EPR   %p (new) : ERP %p (public) : REG %p :", epr, & epr->epr_Public, reg );
-			return( & epr->epr_Public );
+			USBDEBUG ( "__EndPointRes_ObtainList : 2 : EPR   %p (new) : ERP %p (public) : REG %p :", epr, &epr->epr_Public,
+					   reg );
+			return ( &epr->epr_Public );
 		}
 	}
 	else
 	{
-		USBDEBUG( "__EndPointRes_ObtainList : 3 : EPR   %p (new) : REG   %p :", NULL, reg );
-		return( NULL );
+		USBDEBUG ( "__EndPointRes_ObtainList : 3 : EPR   %p (new) : REG   %p :", NULL, reg );
+		return ( NULL );
 	}
 }
 
@@ -517,43 +541,45 @@ bailout:
 
 #if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 
-SEC_CODE struct USB2_EPResource * VARARGS68K __EndPointRes_ObtainTags( struct USBBase *usbbase, STR file, struct RealRegister *reg, ... )
+SEC_CODE struct USB2_EPResource * VARARGS68K
+__EndPointRes_ObtainTags ( struct USBBase * usbbase, STR file, struct RealRegister * reg, ... )
 
 #else
 
-SEC_CODE struct USB2_EPResource * VARARGS68K __EndPointRes_ObtainTags( struct USBBase *usbbase, struct RealRegister *reg, ... )
+SEC_CODE struct USB2_EPResource * VARARGS68K
+__EndPointRes_ObtainTags ( struct USBBase * usbbase, struct RealRegister * reg, ... )
 
 #endif
 
 {
-struct USB2_EPResource *epr;
-va_list ap;
+	struct USB2_EPResource * epr;
+	va_list					 ap;
 
-	TASK_NAME_ENTER( "__EndPointRes_ObtainTags" );
+	TASK_NAME_ENTER ( "__EndPointRes_ObtainTags" );
 
-//	USBDEBUG( "__EndPointRes_ObtainTags : REG   %p : (%s)", reg, (file)?file:"<NULL>" );
+	//	USBDEBUG( "__EndPointRes_ObtainTags : REG   %p : (%s)", reg, (file)?file:"<NULL>" );
 
-	if ( REGISTER_LOCK( reg ) == LSTAT_Okay )
+	if ( REGISTER_LOCK ( reg ) == LSTAT_Okay )
 	{
-		va_start( ap, reg );
+		va_start ( ap, reg );
 
-		epr = ENDPOINTRES_OBTAINLIST( reg, va_getlinearva( ap, struct TagItem * ));
+		epr = ENDPOINTRES_OBTAINLIST ( reg, va_getlinearva ( ap, struct TagItem * ) );
 
-		va_end( ap );
+		va_end ( ap );
 
-		REGISTER_UNLOCK( reg );
+		REGISTER_UNLOCK ( reg );
 	}
 	else
 	{
-		USBERROR( "__EndPointRes_ObtainTags : Error Locking : REG %p : (%s)", reg, (file)?file:"<NULL>" );
+		USBERROR ( "__EndPointRes_ObtainTags : Error Locking : REG %p : (%s)", reg, ( file ) ? file : "<NULL>" );
 		epr = NULL;
 	}
 
-//	USBDEBUG( "__EndPointRes_ObtainTags : REG   %p : EPR   %p (new)", reg, epr );
+	//	USBDEBUG( "__EndPointRes_ObtainTags : REG   %p : EPR   %p (new)", reg, epr );
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( epr );
+	return ( epr );
 }
 
 // --

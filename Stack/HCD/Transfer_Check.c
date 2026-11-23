@@ -19,27 +19,28 @@
 ** If the IORequest is done appropiate removale code is called.
 */
 
-SEC_CODE S32 __HCD_Transfer_Check( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct RealRequest *ioreq, U32 Force )
+SEC_CODE S32
+__HCD_Transfer_Check ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealRequest * ioreq, U32 Force )
 {
-struct USB2_EndPointNode *ep;
-S32 remove;
+	struct USB2_EndPointNode * ep;
+	S32						   remove;
 
-	TASK_NAME_ENTER( "HCD : __HCD_Transfer_Check : 1 :" );
-	USBDEBUG( "__HCD_Transfer_Check     : IOReq %p : Force %ld", ioreq, Force );
+	TASK_NAME_ENTER ( "HCD : __HCD_Transfer_Check : 1 :" );
+	USBDEBUG ( "__HCD_Transfer_Check     : IOReq %p : Force %ld", ioreq, Force );
 
-	#ifdef DO_DEBUG
+#ifdef DO_DEBUG
 
-	if ( HCD_VALID( hn ) != VSTAT_Okay )
+	if ( HCD_VALID ( hn ) != VSTAT_Okay )
 	{
-		USBPANIC( "__HCD_Transfer_Check     : Invalid hn %p", hn );
+		USBPANIC ( "__HCD_Transfer_Check     : Invalid hn %p", hn );
 	}
 
-	if ( IOREQUEST_VALID(ioreq) != VSTAT_Okay )
+	if ( IOREQUEST_VALID ( ioreq ) != VSTAT_Okay )
 	{
-		USBPANIC( "__HCD_Transfer_Check     : Invalid ioreq %p", ioreq );
+		USBPANIC ( "__HCD_Transfer_Check     : Invalid ioreq %p", ioreq );
 	}
 
-	#endif
+#endif
 
 	if ( Force )
 	{
@@ -47,69 +48,88 @@ S32 remove;
 	}
 	else
 	{
-		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 2" );
+		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 2" );
 
 		if ( hn->HCD_Functions.Transfer_Check )
 		{
-			remove = hn->HCD_Functions.Transfer_Check( hn, ioreq );
+			remove = hn->HCD_Functions.Transfer_Check ( hn, ioreq );
 		}
 		else
 		{
-			USBDEBUG( "__HCD_Transfer_Check     : Transfer_Check : Implement me" );
+			USBDEBUG ( "__HCD_Transfer_Check     : Transfer_Check : Implement me" );
 			remove = FALSE;
 		}
 	}
 
 	if ( remove )
 	{
-		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 3" );
+		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 3" );
 
-		USBDEBUG( "__HCD_Transfer_Check     : Removing IOReq %p", ioreq );
+		USBDEBUG ( "__HCD_Transfer_Check     : Removing IOReq %p", ioreq );
 
 		// the EP is no longer valid in IOReq after
 		// HCD_Remove_Transfer, so get it now
 		ep = ioreq->req_EndPoint;
 
-		// --
-
-		#ifdef DO_DEBUG
-
-		if ( ENDPOINT_VALID(ep) != VSTAT_Okay )
+		if ( ENDPOINT_LOCK ( ep ) != LSTAT_Okay )
 		{
-			USBPANIC( "__HCD_Transfer_Check     : Invalid ep %p", ep );
+			TASK_NAME_LEAVE ();
+
+			return ( FALSE );
 		}
 
-		#endif
+		// --
+
+#ifdef DO_DEBUG
+
+		if ( ENDPOINT_VALID ( ep ) != VSTAT_Okay )
+		{
+			USBPANIC ( "__HCD_Transfer_Check     : Invalid ep %p", ep );
+		}
+
+#endif
 
 		// --
 
-		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 4" );
+		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 4" );
 
 		// Remove node from Active TransferList
-		NODE_REMNODE( & hn->hn_Active_Transfer_List, ioreq );
+		NODE_REMNODE ( &hn->hn_Active_Transfer_List, ioreq );
 
-		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 5" );
+		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 5" );
 
-		HCD_TRANSFER_REMOVE( hn, ioreq );
+		HCD_TRANSFER_REMOVE ( hn, ioreq );
 
-		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 6" );
+		if ( ( ioreq->req_AltHeader ) && ( ioreq->req_Public.io_Error == USB2Err_NoError ) )
+		{
+			ioreq->req_AltApplied = TRUE;
 
-		HCD_REPLY(ioreq);
+			if ( ( hn->HCD_Functions.Reset_Interface ) && ( ! hn->HCD_Functions.Reset_Interface ( hn, ioreq->req_AltHeader ) ) )
+			{
+				ioreq->req_Public.io_Error = USB2Err_Host_HostError;
+			}
+		}
 
-		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 7" );
+		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 6" );
+
+		HCD_REPLY ( ioreq );
+
+		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 7" );
 
 		ioreq = NULL;
 
 		// --
 		// Start next IOReq if there are any queued
-		HCD_RESTART_ENDPOINT( hn, ep );
+		HCD_RESTART_ENDPOINT ( hn, ep );
 
-		TASK_NAME_SET( "HCD : __HCD_Transfer_Check : 9" );
+		ENDPOINT_UNLOCK ( ep );
+
+		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 9" );
 	}
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( remove );
+	return ( remove );
 }
 
 // --

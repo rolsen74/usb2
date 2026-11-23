@@ -37,9 +37,10 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 	struct USB2_InterfaceNode *	  old;
 	struct USB2_EndPointNode *	  ep;
 	struct USB2_EndPointNode **	  array;
-	struct USB2_EPResource *	  control;
-	struct USB2_IORequest *		  ioreq;
-	struct USB2_SetupData *		  setup;
+	struct USB2_Node *			  node;
+	struct RealRequest *		  pending;
+	struct RealRequest *		  ioreq;
+	struct USB2_SetupData		  setup;
 	struct RealFunctionNode *	  fn;
 	struct RealRegister *		  reg;
 	struct USBBase *			  usbbase;
@@ -47,6 +48,7 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 	U32 offset;
 	U32 slot;
 	S32 result;
+	S32 applied;
 
 	if ( ( ! pubreg ) || ( ! ifc ) || ( alt > 255 ) )
 	{
@@ -71,20 +73,13 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 		return ( FALSE );
 	}
 
-	fn		= ih->ih_Function;
-	control = reg->reg_Public.Res_Control;
-
-	if ( ( ih->ih_Owner != reg ) || ( ! fn ) || ( fn->fkt_Detach ) || ( ! control ) || ( ! control->IORequests )
-		 || ( ! control->IORequests[0] ) || ( ! control->SetupData ) )
-	{
-		goto bailout;
-	}
+	fn = ih->ih_Function;
 
 	SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner != reg ) )
+	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner != reg ) || ( ih->ih_Changing ) )
 	{
 		goto unlock;
 	}
@@ -103,48 +98,57 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 	}
 
 	old = ih->ih_Active;
-	ep	= ( old ) ? old->in_EndPoints.uh_Head : NULL;
 
-	while ( ep )
+	for ( node = usbbase->usb_IORequests.uh_Head; node; node = Node_Next ( node ) )
 	{
-		if ( ( ep->ep_Request_Active ) || ( ep->ep_Request_Queue.uh_Head ) )
+		pending = node->un_Data;
+
+		if ( ( old ) && ( pending->req_Function == fn ) && ( pending->req_EndPoint->ep_Interface == old )
+			 && ( pending->req_PublicStat != IORS_User ) )
 		{
 			goto unlock;
 		}
-
-		ep = Node_Next ( ep );
 	}
+
+	ioreq = IOREQUEST_ALLOCTAGS ( USB2Tag_IOReq_EndPoint, fn->fkt_ControlEndPoint, USB2Tag_IOReq_TimeOut, 5000000, TAG_END );
+
+	if ( ! ioreq )
+	{
+		goto unlock;
+	}
+
+	ih->ih_Changing		 = TRUE;
+	ioreq->req_AltHeader = ih;
 
 	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 	SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
 
-	ioreq				  = control->IORequests[0];
-	setup				  = control->SetupData;
-	setup->RequestType	  = REQTYPE_Write | REQTYPE_Standard | REQTYPE_Interface;
-	setup->RequestCode	  = REQCODE_Set_Interface;
-	setup->Value		  = LE_SWAP16 ( alt );
-	setup->Index		  = LE_SWAP16 ( ih->ih_Number );
-	setup->Length		  = 0;
-	ioreq->io_Command	  = CMD_WRITE;
-	ioreq->io_Data		  = NULL;
-	ioreq->io_Length	  = 0;
-	ioreq->io_SetupData	  = setup;
-	ioreq->io_SetupLength = sizeof ( struct USB2_SetupData );
+	setup.RequestType				 = REQTYPE_Write | REQTYPE_Standard | REQTYPE_Interface;
+	setup.RequestCode				 = REQCODE_Set_Interface;
+	setup.Value						 = LE_SWAP16 ( alt );
+	setup.Index						 = LE_SWAP16 ( ih->ih_Number );
+	setup.Length					 = 0;
+	ioreq->req_Public.io_Command	 = CMD_WRITE;
+	ioreq->req_Public.io_SetupData	 = &setup;
+	ioreq->req_Public.io_SetupLength = sizeof ( setup );
 
-	usbbase->usb_IExec->DoIO ( (PTR)ioreq );
+	IO_DO ( ioreq );
 
-	if ( ioreq->io_Error != USB2Err_NoError )
-	{
-		goto bailout;
-	}
+	result	= ioreq->req_Public.io_Error == USB2Err_NoError;
+	applied = ( ioreq->req_AltApplied ) || ( ioreq->req_Public.io_Error == USB2Err_Host_Timeout );
+
+	IOREQUEST_FREE ( ioreq );
 
 	SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner != reg ) )
+	if ( ( ! result ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner != reg ) )
 	{
+		// A device-side switch without a matching controller state requires re-enumeration.
+		ih->ih_Changing = applied;
+		result			= FALSE;
 		goto unlock;
 	}
 
@@ -152,6 +156,7 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 
 	if ( ! in )
 	{
+		result = FALSE;
 		goto unlock;
 	}
 
@@ -179,11 +184,16 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 
 	while ( ep )
 	{
-		slot		  = offset + ep->ep_Number + ( ( ep->ep_Direction == EPDIR_Out ) ? 16 : 0 );
-		array[slot]	  = ep;
-		ep->ep_Active = TRUE;
-		ep			  = Node_Next ( ep );
+		slot			  = offset + ep->ep_Number + ( ( ep->ep_Direction == EPDIR_Out ) ? 16 : 0 );
+		array[slot]		  = ep;
+		ep->ep_Active	  = TRUE;
+		ep->ep_DataToggle = 0;
+		ep->ep_Stalled	  = FALSE;
+		ep->ep_PingState  = 0;
+		ep				  = Node_Next ( ep );
 	}
+
+	ih->ih_Changing = FALSE;
 
 	result = TRUE;
 
@@ -193,7 +203,6 @@ unlock:
 
 	SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
 
-bailout:
 	INTERFACE_UNLOCKHEADER ( ih );
 	REGISTER_UNLOCK ( reg );
 

@@ -40,6 +40,15 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 	fn	= ioreq->req_Function;
 	ep	= ioreq->req_EndPoint;
 
+	if ( ( hn->hn_HCDType == HCDTYPE_EHCI ) && ( ep->ep_Type == EPATT_Type_Interrupt ) && ( ep->ep_Transactions > 1 ) )
+	{
+		ioreq->req_Public.io_Error = USB2Err_Host_NoBandWidth;
+
+		TASK_NAME_LEAVE ();
+
+		return ( TRUE );
+	}
+
 	// --
 	// Endpoint Stall Info:
 	// - Control (Setup Stage)	--> Never stalls
@@ -55,7 +64,7 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 		 && ( ioreq->req_Public.io_SetupData )
 		 && ( ioreq->req_Public.io_SetupData->RequestType == ( REQTYPE_Write | REQTYPE_Standard | REQTYPE_EndPoint ) )
 		 && ( ioreq->req_Public.io_SetupData->RequestCode == ( REQCODE_Clear_Feature ) )
-		 && ( ioreq->req_Public.io_SetupData->Value == ( LE_SWAP16 ( USBSTATUS_EndPoint_Halt ) ) )
+		 && ( ioreq->req_Public.io_SetupData->Value == ( LE_SWAP16 ( USBFEATURE_EndPoint_Halt ) ) )
 		 && ( ioreq->req_Public.io_SetupLength == ( sizeof ( struct USB2_SetupData ) ) ) )
 	{
 		ioreq->req_DoingDestall = TRUE;
@@ -78,7 +87,7 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 	// Now figure out if we can execute the Request
 	// or maybe the pipe is stalled
 
-	if ( ( ep->ep_Type == EPATT_Type_Control ) || ( ep->ep_Type == EPATT_Type_Interrupt ) || ( ep->ep_Type == EPATT_Type_Bulk ) )
+	if ( ( ep->ep_Type == EPATT_Type_Interrupt ) || ( ep->ep_Type == EPATT_Type_Bulk ) )
 	{
 		// Check if EP Pipe is stalled
 		if ( ( ep->ep_Stalled ) && ( ! ioreq->req_DoingDestall ) )
@@ -96,9 +105,9 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 			do_req = TRUE;
 		}
 	}
-	else // ( ep->ep_Type == EPATT_Type_Isohoronous )
+	else
 	{
-		// Can't stall, always true
+		// A control protocol STALL is cleared by the next SETUP.
 		do_req = TRUE;
 	}
 
@@ -134,12 +143,12 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 			{
 				if ( hn->HCD_Functions.Isochronous_Build )
 				{
-					handled = hn->HCD_Functions.Isochronous_Build( hn, ioreq );
+					handled = hn->HCD_Functions.Isochronous_Build ( hn, ioreq );
 				}
 				else
 				{
 					handled = TRUE;
-					err = USB2Err_Host_IllegalEPType;
+					err		= USB2Err_Host_IllegalEPType;
 				}
 				if ( hn->HCD_Functions.Isochronous_Add )
 				{
@@ -240,11 +249,11 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 			{
 				timeout = ioreq->req_Public.io_TimeOut;
 
-				if ( ( hn->hn_HCDType == HCDTYPE_EHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous ) &&
-					( fn->fkt_Speed == USBSPEED_Full ) && ( ioreq->req_Public.io_Command == CMD_WRITE ) &&
-					( ioreq->req_Public.io_IsoPacketLengths ) )
+				if ( ( hn->hn_HCDType == HCDTYPE_EHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous )
+					 && ( fn->fkt_Speed == USBSPEED_Full ) && ( ioreq->req_Public.io_Command == CMD_WRITE )
+					 && ( ioreq->req_Public.io_IsoPacketLengths ) )
 				{
-					current = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_FRINDEX );
+					current	  = PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_FRINDEX );
 					remaining = ( ioreq->req_HCD.EHCI.IsoLastFrame - current ) & EHCI_FRINDEX_MASK;
 
 					if ( remaining > EHCI_FRINDEX_MASK / 2 )
@@ -253,7 +262,7 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 					}
 
 					// A missed final split may never raise its completion interrupt.
-					timeout = MIN( timeout, ( remaining + EHCI_ISO_COMPLETE_GRACE + 8 ) * 125 );
+					timeout = MIN ( timeout, ( remaining + EHCI_ISO_COMPLETE_GRACE + 8 ) * 125 );
 				}
 
 #ifdef DO_DEBUG
@@ -308,10 +317,10 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 // --
 
 SEC_CODE S32
-__HCD_Request_CanStart( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
+__HCD_Request_CanStart ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 {
-	struct USB2_EndPointNode *ep;
-	struct RealRequest *active;
+	struct USB2_EndPointNode * ep;
+	struct RealRequest *	   active;
 
 	U32 budget;
 	U32 step;
@@ -319,7 +328,7 @@ __HCD_Request_CanStart( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 	U32 speed;
 	U32 command;
 
-	ep = ioreq->req_EndPoint;
+	ep	   = ioreq->req_EndPoint;
 	active = ep->ep_Request_Active;
 
 	if ( ! active )
@@ -327,22 +336,22 @@ __HCD_Request_CanStart( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 		return ( TRUE );
 	}
 
-	speed = ioreq->req_Function->fkt_Speed;
+	speed	= ioreq->req_Function->fkt_Speed;
 	command = ioreq->req_Public.io_Command;
 
 	// Keep one batch ahead when the driver supplies individual packet results.
-	if ( ( ep->ep_Request_ActiveNext ) || ( hn->hn_HCDType != HCDTYPE_EHCI ) ||
-		( ep->ep_Type != EPATT_Type_Isochronous ) || ( active->req_Public.io_Command != command ) ||
-		( ! ( ( ( speed == USBSPEED_High ) && ( command == CMD_READ ) ) ||
-			( ( speed == USBSPEED_Full ) && ( command == CMD_WRITE ) ) ) ) ||
-		( ! active->req_Public.io_IsoPacketLengths ) || ( ! ioreq->req_Public.io_IsoPacketLengths ) ||
-		( ! ep->ep_Interval ) || ( ep->ep_Interval > 16 ) )
+	if ( ( ep->ep_Request_ActiveNext ) || ( hn->hn_HCDType != HCDTYPE_EHCI ) || ( ep->ep_Type != EPATT_Type_Isochronous )
+		 || ( active->req_Public.io_Command != command )
+		 || ( ! ( ( ( speed == USBSPEED_High ) && ( command == CMD_READ ) )
+				  || ( ( speed == USBSPEED_Full ) && ( command == CMD_WRITE ) ) ) )
+		 || ( ! active->req_Public.io_IsoPacketLengths ) || ( ! ioreq->req_Public.io_IsoPacketLengths ) || ( ! ep->ep_Interval )
+		 || ( ep->ep_Interval > 16 ) )
 	{
 		return ( FALSE );
 	}
 
 	budget = hn->hn_HCD.EHCI.FrameList_Size * 8 - EHCI_ISO_RETRY_LEAD - 8;
-	step = 1U << ( ep->ep_Interval - 1 );
+	step   = 1U << ( ep->ep_Interval - 1 );
 
 	if ( speed == USBSPEED_Full )
 	{
@@ -351,8 +360,8 @@ __HCD_Request_CanStart( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 
 	count = ioreq->req_Public.io_IsoPacketCount;
 
-	return ( ( count ) && ( count <= EHCI_ISO_MAX_PACKETS ) &&
-		( active->req_Public.io_IsoPacketCount + count <= budget / step ) );
+	return ( ( count ) && ( count <= EHCI_ISO_MAX_PACKETS )
+			 && ( active->req_Public.io_IsoPacketCount + count <= budget / step ) );
 }
 
 // --
@@ -394,8 +403,8 @@ __HCD_Add_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct R
 	}
 
 	// Can we start Request or do we queue it
-	if ( ( ( ep->ep_Request_Queue.uh_Head ) && ( ioreq->req_PublicStat != IORS_HCD_Queued ) ) ||
-		( ! __HCD_Request_CanStart( hn, ioreq ) ) )
+	if ( ( ( ep->ep_Request_Queue.uh_Head ) && ( ioreq->req_PublicStat != IORS_HCD_Queued ) )
+		 || ( ! __HCD_Request_CanStart ( hn, ioreq ) ) )
 	{
 		USBDEBUG ( "Queuing Node for Addr $%02ld : EP    $%02lx", ioreq->req_Function->fkt_Address, ep->ep_Number );
 
@@ -408,14 +417,13 @@ __HCD_Add_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct R
 	{
 		handled = myAdd_Request ( usbbase, hn, ioreq );
 
-		if ( ( handled ) && ( ep->ep_Request_Active ) &&
-			( ioreq->req_Public.io_Error == USB2Err_Host_NoBandWidth ) )
+		if ( ( handled ) && ( ep->ep_Request_Active ) && ( ioreq->req_Public.io_Error == USB2Err_Host_NoBandWidth ) )
 		{
 			// The future slots are busy. Let the request try again when the active batch ends.
 			ioreq->req_Public.io_Error = USB2Err_NoError;
-			ioreq->req_PublicStat = IORS_HCD_Queued;
+			ioreq->req_PublicStat	   = IORS_HCD_Queued;
 
-			NODE_ADDHEAD( & ep->ep_Request_Queue, ioreq );
+			NODE_ADDHEAD ( &ep->ep_Request_Queue, ioreq );
 
 			handled = FALSE;
 		}

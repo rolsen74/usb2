@@ -15,24 +15,24 @@
 SEC_CODE S32
 XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct USB2_EndPointNode * ep, U32 direction )
 {
-	struct USBBase * usbbase;
+	struct USBBase *	usbbase;
 	struct XHCI_State * state;
-	struct XHCI_Ring * ring;
+	struct XHCI_Ring *	ring;
 
 	U32 * input;
 	U32 * endpoint;
-	U32 dci;
-	U32 type;
-	U32 interval;
-	U32 value;
-	U32 packet;
-	U32 burst;
+	U32	  dci;
+	U32	  type;
+	U32	  interval;
+	U32	  value;
+	U32	  packet;
+	U32	  burst;
 
 	usbbase = hn->hn_USBBase;
-	state = hn->hn_HCD.XHCI.State;
-	dci = ep->ep_Number * 2 + ( direction ? 1 : 0 );
-	packet = ep->ep_MaxPacketSize & 0x7ff;
-	burst = ( slot->Function->fkt_Speed == USBSPEED_High ) ? ( ( ep->ep_MaxPacketSize >> 11 ) & 3 ) : 0;
+	state	= hn->hn_HCD.XHCI.State;
+	dci		= ep->ep_Number * 2 + ( direction ? 1 : 0 );
+	packet	= ep->ep_MaxPacketSize;
+	burst	= ( slot->Function->fkt_Speed == USBSPEED_High ) ? ( ep->ep_Transactions - 1 ) : 0;
 
 	if ( ( ! dci ) || ( dci > 31 ) || ( ! packet ) || ( packet > 1024 ) || ( burst > 2 ) )
 	{
@@ -53,13 +53,13 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 
 	MEM_SET ( slot->Input, 0, 4096 );
 	MEM_COPY ( slot->Output, (U8 *)slot->Input + state->Context_Size, state->Context_Size );
-	input = slot->Input;
+	input	 = slot->Input;
 	input[1] = LE_SWAP32 ( 1 | ( 1UL << dci ) );
-	value = LE_SWAP32 ( input[state->Context_Size / 4] );
+	value	 = LE_SWAP32 ( input[state->Context_Size / 4] );
 	value &= ~( 0x1fUL << 27 );
 	value |= MAX ( slot->Context_Entries, dci ) << 27;
 	input[state->Context_Size / 4] = LE_SWAP32 ( value );
-	endpoint = (U32 *)( (U8 *)slot->Input + ( dci + 1 ) * state->Context_Size );
+	endpoint					   = (U32 *)( (U8 *)slot->Input + ( dci + 1 ) * state->Context_Size );
 
 	switch ( ep->ep_Type )
 	{
@@ -102,14 +102,14 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 	}
 
 	endpoint[0] = LE_SWAP32 ( interval << 16 );
-	endpoint[1] = LE_SWAP32 ( ( packet << 16 ) | ( burst << 8 ) | ( type << 3 ) |
-		( ep->ep_Type == EPATT_Type_Isochronous ? 0 : ( 3 << 1 ) ) );
+	endpoint[1] = LE_SWAP32 ( ( packet << 16 ) | ( burst << 8 ) | ( type << 3 )
+							  | ( ep->ep_Type == EPATT_Type_Isochronous ? 0 : ( 3 << 1 ) ) );
 	endpoint[2] = LE_SWAP32 ( ring->Physical | 1 );
-	value = packet * ( burst + 1 );
+	value		= packet * ( burst + 1 );
 	endpoint[4] = LE_SWAP32 ( ( ep->ep_Type == EPATT_Type_Bulk ) ? value : ( value << 16 ) | value );
 
-	if ( ! XHCI_Command ( hn, slot->Input_Physical, 0, 0,
-		XHCI_TRB_TYPE ( XHCI_TRB_CONFIGURE_EP ) | ( slot->Slot_ID << 24 ), NULL ) )
+	if ( ! XHCI_Command ( hn, slot->Input_Physical, 0, 0, XHCI_TRB_TYPE ( XHCI_TRB_CONFIGURE_EP ) | ( slot->Slot_ID << 24 ),
+						  NULL ) )
 	{
 		XHCI_Ring_Free ( hn, ring );
 

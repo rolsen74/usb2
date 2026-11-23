@@ -27,7 +27,6 @@ __Release ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 	struct USB2_EndPointNode **	  array;
 	struct USB2_ConfigNode *	  cn2;
 	struct USB2_ConfigNode *	  cn;
-	struct RealRequest *		  ioreq;
 
 	USBDEBUG ( "__Release                : FN    %p : 1", fn );
 
@@ -102,61 +101,14 @@ __Release ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 
 						// --
 
-						if ( ENDPOINT_LOCK ( ep ) == LSTAT_Okay )
+						NODE_REMNODE ( &in->in_EndPoints, ep );
+
+						if ( ENDPOINT_FREE ( ep ) != FSTAT_Okay )
 						{
-							// --
-
-							while ( TRUE )
-							{
-								ioreq = NODE_REMHEAD ( &ep->ep_Request_Queue );
-
-								USBDEBUG ( "ioreq : %p, Locks %ld", ioreq, ( ioreq ) ? ioreq->req_Locks : 0 );
-
-								if ( ! ioreq )
-								{
-									break;
-								}
-
-								SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-								IO_STOP ( ioreq );
-								SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
-							}
-
-							// --
-
-							while ( ( ioreq = ep->ep_Request_Active ) )
-							{
-								USBDEBUG ( "ioreq : %p, Locks %ld", ioreq, ioreq->req_Locks );
-
-								SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-								IO_STOP ( ioreq );
-								SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
-							}
-
-							// --
-
-							ENDPOINT_UNLOCK ( ep );
-
-							// --
-
-							NODE_REMNODE ( &in->in_EndPoints, ep );
-
-							USBDEBUG ( "ep : %p, Locks %ld", ep, ep->ep_Locks );
-
-							if ( ENDPOINT_FREE ( ep ) != FSTAT_Okay )
-							{
-								NODE_ADDHEAD ( &in->in_EndPoints, ep );
-								USBDEBUG ( "ep : %p - NOT Freed", ep );
-							}
-							else
-							{
-								USBDEBUG ( "ep : %p - Freed", ep );
-							}
-
-							// --
-
-							ep = ep2;
+							NODE_ADDHEAD ( &in->in_EndPoints, ep );
 						}
+
+						ep = ep2;
 					}
 
 					// --

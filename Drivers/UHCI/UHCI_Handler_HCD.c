@@ -51,18 +51,23 @@ UHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask UNUSED )
 	struct RealRequest * next;
 
 	usbbase = hn->hn_USBBase;
-	req = hn->hn_Active_Transfer_List.uh_Head;
+	req		= hn->hn_Active_Transfer_List.uh_Head;
 
-	while( req )
+	while ( req )
 	{
 		struct RealFunctionNode * fn;
 
 		fn = req->req_Function;
 
-		next						 = Node_Next ( req );
-		SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
-		HCD_TRANSFER_CHECK ( hn, req, FALSE );
-		SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
+		next = Node_Next ( req );
+		if ( FUNCTION_LOCK ( fn ) == LSTAT_Okay )
+		{
+			SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
+			HCD_TRANSFER_CHECK ( hn, req, FALSE );
+			SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
+
+			FUNCTION_UNLOCK ( fn );
+		}
 		req = next;
 	}
 	/* UHCI has no dedicated port-change interrupt. Poll on the HCD tick. */

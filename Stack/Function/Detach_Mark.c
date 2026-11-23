@@ -221,6 +221,13 @@ __Function_MarkDetach ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 			cn = Node_Next ( cn );
 		}
 
+		if ( ( fn->fkt_HCD ) && ( fn->fkt_HCD->hn_Task ) && ( fn->fkt_HCD->hn_Task->tn_TaskAdr ) )
+		{
+			fn->fkt_HCD->hn_DetachPending = TRUE;
+
+			TASK_SIGNAL ( fn->fkt_HCD->hn_Task->tn_TaskAdr, fn->fkt_HCD->hn_HUB_Signal.sig_Signal_Mask );
+		}
+
 		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 		SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );

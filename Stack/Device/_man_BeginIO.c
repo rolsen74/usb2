@@ -71,10 +71,11 @@ FindLiveRequest ( struct USBBase * usbbase, const struct IORequest * request )
 static void
 _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * request )
 {
-	struct RealFunctionNode * fn;
-	struct USB2_HCDNode *	  hn;
-	struct RealRequest *	  ioreq;
-	struct USBBase *		  usbbase;
+	struct RealFunctionNode *	fn;
+	struct USB2_InterfaceNode * in;
+	struct USB2_HCDNode *		hn;
+	struct RealRequest *		ioreq;
+	struct USBBase *			usbbase;
 
 	usbbase = (PTR)Self->Data.LibBase;
 
@@ -114,10 +115,17 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			hn							= fn->fkt_HCD;
 			ioreq->req_Public.io_Actual = 0;
 
+			in = ioreq->req_EndPoint->ep_Interface;
+
 			if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ioreq->req_FreeMe ) || ( ioreq->req_Detach ) )
 			{
 				request->io_Error = USB2Err_Device_Detached;
 			}
+			else if ( ( in ) && ( in->in_Parent->ih_Changing ) )
+			{
+				request->io_Error = USB2Err_Stack_EndPointNotFound;
+			}
+
 			else if ( HCD_VALID ( hn ) != VSTAT_Okay )
 			{
 				request->io_Error = USB2Err_Stack_InvalidStructure;
