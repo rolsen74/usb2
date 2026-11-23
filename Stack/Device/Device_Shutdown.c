@@ -56,12 +56,14 @@ ROMExit ( struct USBBase * usbbase, STR file UNUSED )
 
 	while ( TRUE )
 	{
-		node = NODE_REMHEAD ( &usbbase->usb_FDriver_Header );
+		node = Header_Head ( &usbbase->usb_FDriver_Header );
 
 		if ( ! node )
 		{
 			break;
 		}
+
+		NODE_REMNODE ( &usbbase->usb_FDriver_Header, node );
 
 		FDRIVER_FREE ( node );
 	}

@@ -13,126 +13,60 @@
 
 // --
 
-/*
-** Scan Driver Dir ( libs:usb2/ ) for extrenal classes
-** Skipping known.. they have a file notify
-**
-*/
-
-SEC_CODE static void __myProcess_ScanDriverDir( struct USBBase *usbbase, struct intern *in UNUSED )
+SEC_CODE static void
+__myProcess_ScanDriverDir( struct USBBase *usbbase )
 {
-struct USB2_FktDriverNode *fdn;
-// struct NotifyMessage *msg;
-struct ExamineData *dat;
-struct DOSIFace *IDOS;
-char parse[64];
-STR pattern;
-S32 oldproc;
-S32 oldlock;
-PTR ctx;
+	struct ExamineData *dat;
+	struct DOSIFace *IDOS;
 
-	// --
+	PTR context;
+	S32 oldlock;
+	S32 oldwindow;
+	char pattern[64];
 
- 	ctx	= NULL;
- 	IDOS = usbbase->usb_IDOS;
+	IDOS = usbbase->usb_IDOS;
 
-	// --
-	// Validate Dir lock
+	oldwindow = MISC_SETPROCWINDOW( -1 );
+
+	usbbase->usb_DriverDirLock = IDOS->Lock( DRIVERDIR, ACCESS_READ );
 
 	if ( ! usbbase->usb_DriverDirLock )
 	{
+		usbbase->usb_IExec->DebugPrintF( "USB2: Could not open driver directory %s\n", DRIVERDIR );
+
+		MISC_SETPROCWINDOW( oldwindow );
+
 		return;
 	}
 
-	// --
-	// Prevent DOS opening any windows
-
-	oldproc = MISC_SETPROCWINDOW( -1 );
 	oldlock = MISC_SETCURRENTDIR( usbbase->usb_DriverDirLock );
 
-	// --
-
-	pattern = "#?.class";
-
-	if ( IDOS->ParsePatternNoCase( pattern, parse, sizeof(parse) ) == -1 )
+	if ( IDOS->ParsePatternNoCase( "#?.class", pattern, sizeof( pattern ) ) != -1 )
 	{
-		goto bailout;
-	}
+		context = IDOS->ObtainDirContextTags( EX_LockInput, usbbase->usb_DriverDirLock,
+			EX_MatchString, pattern, EX_DataFields, EXF_TYPE | EXF_NAME, TAG_END );
 
-	ctx = IDOS->ObtainDirContextTags(
-		EX_LockInput,	usbbase->usb_DriverDirLock,
-		EX_MatchString, parse,
-		EX_DataFields,	EXF_TYPE|EXF_NAME,
-		TAG_END
-	);
-
-	while(( dat = IDOS->ExamineDir( ctx )))
-	{
-		if ( EXD_IS_FILE( dat ))
+		if ( context )
 		{
- 			SEMAPHORE_OBTAIN( & usbbase->usb_FDriver_Semaphore );
-
-			fdn = usbbase->usb_FDriver_Header.uh_Head;
-
-			while( fdn )
+			while ( ( dat = IDOS->ExamineDir( context ) ) )
 			{
-				if ( ! MISC_STRICASECOMPARE( fdn->fdn_Class_Filename, dat->Name ))
+				if ( EXD_IS_FILE( dat ) )
 				{
-					break;
-				}
-				else
-				{
-					fdn = Node_Next( fdn );
+					FDRIVER_LOAD( dat->Name );
 				}
 			}
 
-			// If the File is not found, then its new and we need to load it
-			// If the File is found, then we will handle it via FileNotify
-			if ( ! fdn )
-			{
-				fdn = FDRIVER_LOAD( dat->Name );
-
-// 				#if 0
-// 				if ( fdn )
-// 				{
-// 					struct bindmessage msg;
-
-// 					msg.Task = usbbase->usb_IExec->FindTask( NULL );
-// 					msg.usbbase = usbbase;
-// 					msg.fdn = fdn;
-
-// 					if ( MISC_STARTPROCESS(
-// 						NP_Name,	    "Universal Serial Bus",
-// 						NP_Child,	    TRUE,
-// 						NP_Priority,    10,
-// 						NP_StackSize,   20*1024,
-// 						NP_Entry,	    Bind_Process,
-// 						NP_UserData,    &msg,
-// 						TAG_END ))
-// 					{
-// 						usbbase->usb_IExec->Wait( SIGBREAKF_CTRL_E );
-// 					}
-// 				}
-// 				#endif
-
-			}
-
-			SEMAPHORE_RELEASE( & usbbase->usb_FDriver_Semaphore );
+			IDOS->ReleaseDirContext( context );
+		}
+		else
+		{
+			usbbase->usb_IExec->DebugPrintF( "USB2: Could not scan driver directory %s\n", DRIVERDIR );
 		}
 	}
 
-//	  if ( ERROR_NO_MORE_ENTRIES != IDOS->IoErr() )
-//	  {
-//		  goto bailout;
-//	  }
-
-bailout:
-
-	if ( ctx )
-	{
-		IDOS->ReleaseDirContext( ctx );
-	}
-
 	MISC_SETCURRENTDIR( oldlock );
-	MISC_SETPROCWINDOW( oldproc );
+
+	MISC_SETPROCWINDOW( oldwindow );
 }
+
+// --

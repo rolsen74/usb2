@@ -15,6 +15,7 @@
 SEC_CODE struct USB2_FktDriverNode *__FDriver_CreateList( struct USBBase *usbbase, struct TagItem *taglist )
 {
 struct USB2_FktDriverNode *fdn;
+struct USB2_FktDriverNode *existing;
 struct TagItem *tag;
 
 int error;
@@ -22,6 +23,7 @@ int error;
 	USBDEBUG( "__FDriver_CreateList" );
 
 	error = TRUE;
+	existing = NULL;
 
 	// --
 
@@ -50,7 +52,12 @@ int error;
 				}
 
 				// Copy String
-				fdn->fdn_Title = MEM_PRINTF( "%s", tag->ti_Data );
+				fdn->fdn_Title = ( tag->ti_Data ) ? MEM_PRINTF( "%s", tag->ti_Data ) : NULL;
+
+				if ( ! fdn->fdn_Title )
+				{
+					goto bailout;
+				}
 				break;
 			}
 
@@ -66,6 +73,7 @@ int error;
 				else
 				{
 					USBERROR( "__FDriver_CreateList : Invalid TagData (%ld) for Type", tag->ti_Data );
+					goto bailout;
 				}
 				break;
 			}
@@ -77,7 +85,7 @@ int error;
 					MEM_FREEVEC( fdn->fdn_Alias );
 				}
 
-				fdn->fdn_Alias = MEM_PRINTF( "%s", tag->ti_Data );
+				fdn->fdn_Alias = ( tag->ti_Data ) ? MEM_PRINTF( "%s", tag->ti_Data ) : NULL;
 
 				if ( ! fdn->fdn_Alias )
 				{
@@ -98,7 +106,12 @@ int error;
 				}
 
 				// Copy String
-				fdn->fdn_Driver_Filename = MEM_PRINTF( "%s", tag->ti_Data );
+				fdn->fdn_Driver_Filename = ( tag->ti_Data ) ? MEM_PRINTF( "%s", tag->ti_Data ) : NULL;
+
+				if ( ! fdn->fdn_Driver_Filename )
+				{
+					goto bailout;
+				}
 				break;
 			}
 
@@ -113,7 +126,12 @@ int error;
 				}
 
 				// Copy String
-				fdn->fdn_Class_Filename = MEM_PRINTF( "%s", tag->ti_Data );
+				fdn->fdn_Class_Filename = ( tag->ti_Data ) ? MEM_PRINTF( "%s", tag->ti_Data ) : NULL;
+
+				if ( ! fdn->fdn_Class_Filename )
+				{
+					goto bailout;
+				}
 				fdn->fdn_Class_FilenameLen = MISC_STRLENGTH( fdn->fdn_Class_Filename );
 				break;
 			}
@@ -139,6 +157,7 @@ int error;
 				else
 				{
 					USBERROR( "__FDriver_CreateList : Invalid TagData (%08lx) for Class", tag->ti_Data );
+					goto bailout;
 				}
 				break;
 			}
@@ -155,6 +174,7 @@ int error;
 				else
 				{
 					USBERROR( "__FDriver_CreateList : Invalid TagData (%08lx) for SubClass", tag->ti_Data );
+					goto bailout;
 				}
 				break;
 			}
@@ -171,6 +191,7 @@ int error;
 				else
 				{
 					USBERROR( "__FDriver_CreateList : Invalid TagData (%08lx) for Protocol", tag->ti_Data );
+					goto bailout;
 				}
 				break;
 			}
@@ -235,22 +256,40 @@ int error;
 
 	// --
 
-//	usbbase->usb_IExec->DebugPrintF( "\nAdding FDriver Class %ld\n\n", fdn->fdn_Class );
+	if ( ( ! fdn->fdn_Entry ) && ( ! fdn->fdn_Driver_Filename ) )
+	{
+		goto bailout;
+	}
 
-	SEMAPHORE_OBTAIN(	& usbbase->usb_FDriver_Semaphore );
-	NODE_ADDTAIL(		& usbbase->usb_FDriver_Header, fdn );
-	SEMAPHORE_RELEASE(	& usbbase->usb_FDriver_Semaphore );
+	SEMAPHORE_OBTAIN( &usbbase->usb_FDriver_Semaphore );
 
-	// --
+	if ( fdn->fdn_Class_Filename )
+	{
+		for ( existing = Header_Head( &usbbase->usb_FDriver_Header ); existing; existing = Node_Next( existing ) )
+		{
+			if ( ( existing->fdn_Class_FilenameLen == fdn->fdn_Class_FilenameLen ) &&
+				( ! MISC_STRICASECOMPARE( existing->fdn_Class_Filename, fdn->fdn_Class_Filename ) ) )
+			{
+				break;
+			}
+		}
+	}
 
-	error = FALSE;
+	if ( ! existing )
+	{
+		NODE_ADDTAIL( &usbbase->usb_FDriver_Header, fdn );
+
+		error = FALSE;
+	}
+
+	SEMAPHORE_RELEASE( &usbbase->usb_FDriver_Semaphore );
 
 bailout:
 
 	if (( fdn ) && ( error ))
 	{
 		FDRIVER_FREE( fdn );
-		fdn = NULL;
+		fdn = existing;
 	}
 
 	return( fdn );

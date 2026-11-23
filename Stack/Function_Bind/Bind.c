@@ -122,7 +122,7 @@ DriverWorkerInit ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in
 
 // --
 
-SEC_CODE static void RetryInterfaceBinding ( struct USBBase * usbbase, struct USB2_DriverNode * dn );
+SEC_CODE static void RetryDriverBinding ( struct USBBase * usbbase, struct USB2_DriverNode * dn );
 
 // --
 
@@ -152,9 +152,10 @@ DriverWorkerMain ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in
 
 		TASK_SIGNAL ( parent, dn->dn_Message.rdm_Mask );
 	}
-	else if ( ( dn->dn_Interface ) && ( ( myIS_TASKRETURN_ERR ( result ) ) || ( result == TASK_Return_Unsupported ) ) )
+	else if ( ( ( dn->dn_Interface ) || ( dn->dn_Function->fkt_Tier ) )
+			  && ( ( myIS_TASKRETURN_ERR ( result ) ) || ( result == TASK_Return_Unsupported ) ) )
 	{
-		RetryInterfaceBinding ( usbbase, dn );
+		RetryDriverBinding ( usbbase, dn );
 	}
 }
 
@@ -238,9 +239,104 @@ DiscardDriver ( struct USBBase * usbbase, struct USB2_DriverNode * dn )
 
 // --
 
+// Class records are immutable until the workers and scanner have stopped.
+SEC_CODE static S32
+ClassAvailable ( struct USBBase * usbbase, const struct USB2_FktDriverNode * fdn )
+{
+	return ( ( ! fdn->fdn_Detach ) && ( ( ! fdn->fdn_Driver_Filename )
+			 || ( ( usbbase->usb_FrontendsReady ) && ( usbbase->usb_ClassesReady ) ) ) );
+}
+
+// --
+
 #include "Bind_Check_for_Function.c"
 #include "Bind_Check_for_Device.c"
 #include "Bind_Check_for_Interfaces.c"
+
+// --
+
+// Called with the class registry locked.
+SEC_CODE static enum FDSTAT
+BindClasses ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_ASync * as,
+			  struct USB2_DriverNode * previous )
+{
+	struct USB2_DriverNode * bound;
+	struct USB2_FktDriverNode * after;
+
+	enum FDSTAT stat;
+	S32 available;
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_Bind_Semaphore );
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+	available = ( ! fn->fkt_Owner ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe );
+
+	for ( bound = Header_Head ( &usbbase->usb_Bind_Header ); ( available ) && ( bound ); bound = Node_Next ( bound ) )
+	{
+		if ( ( bound != previous ) && ( bound->dn_Function == fn ) && ( ! bound->dn_Interface )
+			 && ( ! bound->dn_Detach ) && ( ! bound->dn_FreeMe ) )
+		{
+			available = FALSE;
+		}
+	}
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_Bind_Semaphore );
+
+	if ( ! available )
+	{
+		return ( FDSTAT_Not_Found );
+	}
+
+	after = previous ? previous->dn_Class : NULL;
+	stat = FDSTAT_Not_Found;
+
+	if ( ( ! after ) || ( after->fdn_Type == USB2Val_FDriver_Device ) )
+	{
+		stat = _Check_for_Devices ( usbbase, fn, as, after );
+	}
+
+	if ( stat == FDSTAT_Not_Found )
+	{
+		stat = _Check_for_Functions ( usbbase, fn, as,
+			( ( after ) && ( after->fdn_Type == USB2Val_FDriver_Function ) ) ? after : NULL );
+	}
+
+	if ( stat == FDSTAT_Not_Found )
+	{
+		stat = _Check_for_Interfaces ( usbbase, fn, as );
+	}
+
+	return ( stat );
+}
+
+// --
+
+SEC_CODE static void
+RetryDriverBinding ( struct USBBase * usbbase, struct USB2_DriverNode * dn )
+{
+	SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+	// The worker still pins this node while the next probe starts.
+	dn->dn_FreeMe = TRUE;
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+	if ( dn->dn_Interface )
+	{
+		_Check_Interface ( usbbase, dn->dn_Function, dn->dn_Interface, dn->dn_ASync, dn );
+	}
+	else
+	{
+		BindClasses ( usbbase, dn->dn_Function, dn->dn_ASync, dn );
+	}
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
+}
 
 // --
 
@@ -290,55 +386,11 @@ __Function_Bind ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct
 		}
 #endif
 
-		// Fast check, if someone owns this device..
-		// no need to check for any drivers
-		if ( ! fn->fkt_Owner )
-		{
-			SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
+		SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
 
-			do
-			{
-				if ( stat == FDSTAT_Not_Found )
-				{
-					stat = _Check_for_Devices ( usbbase, fn, as );
-				}
+		stat = BindClasses ( usbbase, fn, as, NULL );
 
-				if ( stat == FDSTAT_Error )
-				{
-					USBDEBUG ( "__Function_Bind : Checking for Devices failed" );
-					break;
-				}
-
-				if ( stat == FDSTAT_Not_Found )
-				{
-					stat = _Check_for_Functions ( usbbase, fn, as );
-				}
-
-				if ( stat == FDSTAT_Error )
-				{
-					USBDEBUG ( "__Function_Bind : Checking for Functions failed" );
-					break;
-				}
-
-				if ( stat == FDSTAT_Not_Found )
-				{
-					stat = _Check_for_Interfaces ( usbbase, fn, as );
-				}
-
-				if ( stat == FDSTAT_Error )
-				{
-					USBDEBUG ( "__Function_Bind : Checking for Interfaces failed" );
-					break;
-				}
-			} while ( FALSE );
-
-			SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
-		}
-		else
-		{
-			// Allready claimed
-			//			USBERROR( "Skipping Function (claimed) : FN    %p : Class %ld", fn, fn->fkt_Class );
-		}
+		SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
 
 		FUNCTION_UNLOCK ( fn );
 	}

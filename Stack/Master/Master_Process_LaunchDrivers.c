@@ -34,6 +34,15 @@ __myProcess_Entry ( void )
 
 	TASK_SIGNAL ( tm->Parent, tm->Mask );
 
+	// Master must be free to service driver start commands during the scan.
+	__myProcess_ScanDriverDir ( usbbase );
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
+
+	usbbase->usb_ClassesReady = TRUE;
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
+
 	USB2_Bind_Enumerated ( usbbase );
 
 	USB2_FullBoot_Complete ( usbbase, TRUE );

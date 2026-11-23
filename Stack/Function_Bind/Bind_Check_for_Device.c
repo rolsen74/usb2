@@ -13,7 +13,8 @@
 // --
 
 SEC_CODE static enum FDSTAT
-_Check_for_Devices ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_ASync * as )
+_Check_for_Devices ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_ASync * as,
+						  struct USB2_FktDriverNode * previous )
 {
 	struct USB2_FktDriverNode * fdn;
 
@@ -24,10 +25,11 @@ _Check_for_Devices ( struct USBBase * usbbase, struct RealFunctionNode * fn, str
 		return ( FDSTAT_Not_Found );
 	}
 
-	for ( fdn = usbbase->usb_FDriver_Header.uh_Head; fdn; fdn = Node_Next ( fdn ) )
+	fdn = previous ? Node_Next ( previous ) : Header_Head ( &usbbase->usb_FDriver_Header );
+
+	for ( ; fdn; fdn = Node_Next ( fdn ) )
 	{
-		if ( ( fdn->fdn_Type != USB2Val_FDriver_Device ) || ( fdn->fdn_Detach )
-			 || ( ( fdn->fdn_Driver_Filename ) && ( ! usbbase->usb_FrontendsReady ) ) )
+		if ( ( fdn->fdn_Type != USB2Val_FDriver_Device ) || ( ! ClassAvailable ( usbbase, fdn ) ) )
 		{
 			continue;
 		}

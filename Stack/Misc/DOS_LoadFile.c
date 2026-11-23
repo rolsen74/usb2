@@ -15,7 +15,7 @@
 SEC_CODE STR __Misc_LoadFile( struct USBBase *usbbase, STR filename, U32 *filesize )
 {
 S32 handle;
-U32 size;
+S32 size;
 STR mem;
 S32 err;
 
@@ -37,13 +37,13 @@ S32 err;
 
 	size = MISC_GETFILESIZE( handle );
 
-	if ( ! size )
+	if ( size <= 0 )
 	{
 		USBERROR( "Error getting file size" );
 		goto bailout;
 	}
 
-	mem = MEM_ALLOCVEC( size+1, FALSE );
+	mem = MEM_ALLOCVEC( (U32) size + 1, FALSE );
 
 	if ( ! mem )
 	{
@@ -51,7 +51,7 @@ S32 err;
 		goto bailout;
 	}
 
-	if ( MISC_READFILE( handle, mem, size ) != (S32) size )
+	if ( MISC_READFILE( handle, mem, size ) != size )
 	{
 		USBERROR( "Error reading file" );
 		goto bailout;

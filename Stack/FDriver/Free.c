@@ -47,7 +47,7 @@ enum FSTAT fstat;
 
 	TASK_NAME_ENTER( "__FDriver_Free" );
 
-	USBDEBUG( "__FDriver_Free           : FDN %p : (%)", fdn, (file)?file:"<NULL>" );
+	USBDEBUG( "__FDriver_Free           : FDN %p : (%s)", fdn, (file)?file:"<NULL>" );
 
 	// --
 
@@ -129,6 +129,16 @@ enum FSTAT fstat;
 		MEM_FREEVEC( fdn->fdn_Alias );
 
 		fdn->fdn_Alias = NULL;
+	}
+
+	if ( fdn->fdn_Driver_Filename )
+	{
+		MEM_FREEVEC( fdn->fdn_Driver_Filename );
+	}
+
+	if ( fdn->fdn_Class_Filename )
+	{
+		MEM_FREEVEC( fdn->fdn_Class_Filename );
 	}
 
 	while( ( device = usbbase->usb_IExec->RemHead( & fdn->fdn_Devices ) ) )

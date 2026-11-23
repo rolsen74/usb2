@@ -54,7 +54,6 @@ struct USB2_FktDriverNode
 	STR								fdn_Class_Filename;		// FileName of the Class info
 	U32								fdn_Class_FilenameLen;
 //	STR								fdn_Hotkey;
-	struct DateStamp				fdn_ClassDate;
 	// --
 //	uint16							fdn_Pad1;
 //	uint16							fdn_Pad2;

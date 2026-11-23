@@ -12,183 +12,58 @@
 
 // --
 
-struct CmdStruct
+enum ClassField
 {
-	U16	CmdLen;
-	STR	CmdName;
-	U16	CmdType;
+	FIELD_Title,
+	FIELD_Driver,
+	FIELD_Alias,
+	FIELD_Type,
+	FIELD_Class,
+	FIELD_SubClass,
+	FIELD_Protocol,
+	FIELD_Device,
+	FIELD_Count
 };
 
-enum
+static const struct
 {
-	_Title,
-	_FNClass,	// Class Filename
-	_FNDriver,	// Driver Filename
-	_Type,
-	_Class,
-	_SubClass,
-	_Protocol,
-	_Device,
-	_Alias,
-// _StackSize,
-// _Priority,
-// _Hotkey,
-// _Date,
-// // --
-// _Quirk,
-	// --
-	_LAST
-};
-
-static struct CmdStruct Cmds[] =
+	STR Name;
+	U32 Tag;
+} ClassFields[FIELD_Count] =
 {
-	{ 5, "TITLE",		_Title		},
-	{ 6, "DRIVER",		_FNDriver	},
-	{ 5, "ALIAS",		_Alias		},
-	{ 4, "TYPE",		_Type		},
-	{ 5, "CLASS",		_Class		},
-	{ 8, "SUBCLASS",	_SubClass	},
-	{ 8, "PROTOCOL",	_Protocol	},
-//	{ 5, "STACK",		_StackSize	},
-//	{ 8, "PRIORITY",	_Priority	},
-	{ 6, "DEVICE",		_Device		},	// VendorID:ProductID
-//	{ 6, "HOTKEY",		_Hotkey		},
-	{ 0, NULL,			_LAST		},
-};
-
-static U32 _decnumbers[] =
-{
-	1,
-	10,
-	100,
-	1000,
-	10000,
-	100000,
-	1000000,
-	10000000,
-	100000000,
-	1000000000
-};
-
-static int8 HexData[256] =
-{
-//	 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// 0
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// 1
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// 2
-	 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,	// 3
-	-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// 4
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// 5
-	-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// 6
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// 7
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// 8
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// 9
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// A
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// B
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// C
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// D
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// E
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	// F
+	[FIELD_Title]    = { "TITLE",    USB2Tag_FDriver_Title },
+	[FIELD_Driver]   = { "DRIVER",   USB2Tag_FDriver_Driver_Filename },
+	[FIELD_Alias]    = { "ALIAS",    USB2Tag_FDriver_Alias },
+	[FIELD_Type]     = { "TYPE",     USB2Tag_FDriver_Type },
+	[FIELD_Class]    = { "CLASS",    USB2Tag_FDriver_Class },
+	[FIELD_SubClass] = { "SUBCLASS", USB2Tag_FDriver_SubClass },
+	[FIELD_Protocol] = { "PROTOCOL", USB2Tag_FDriver_Protocol },
+	[FIELD_Device]   = { "DEVICE",   USB2Tag_FDriver_DeviceList }
 };
 
 // --
 
-SEC_CODE static U32 _GetDecimal( STR str )
+SEC_CODE static STR
+SkipSpace( STR pos )
 {
-U32 retval;
-U32 pos;
-U32 len;
-U32 cnt;
-
-	retval = 0;
-
-	if ( ! str )
-	{
-		goto bailout;
-	}
-
-	pos = 0;
-
-	while(( str[pos] <= '9' ) && ( str[pos] >= '0' ))
+	while ( ( *pos == ' ' ) || ( *pos == '\t' ) )
 	{
 		pos++;
 	}
 
-	len = pos;
-
-	if ( len > 10 )
-	{
-		len = 10;
-	}
-
-	cnt = 0;
-
-	while( len-- )
-	{
-		retval += (( str[--pos] - '0' ) * ( _decnumbers[cnt++] ));
-	}
-
-bailout:
-
-return( retval );
-}
-
-// --
-
-SEC_CODE static U32 _GetHexadecimal( STR str )
-{
-U32 retval;
-
-	retval = 0;
-
-	if ( ! str )
-	{
-		goto bailout;
-	}
-
-	str += 2;
-
-	while( HexData[ (U32) *str ] != -1 )
-	{
-		retval  = retval << 4;
-		retval |= HexData[ (U32) *str++ ];
-	}
-
-bailout:
-
-	return( retval );
-}
-
-// --
-
-SEC_CODE static U32 ReadValue( STR mem )
-{
-U32 v;
-
-	v = 0;
-
-	if (( mem[0] == '0' ) && (( mem[1] == 'x' ) || ( mem[1] == 'X' )))
-	{
-		v = _GetHexadecimal( mem );
-	}
-	else
-	{
-		v = _GetDecimal( mem );
-	}
-
-	return( v );
+	return ( pos );
 }
 
 // --
 
 SEC_CODE static S32
-Read_Device_ID( const char **input, U16 *id )
+ReadNumber( STR *input, U32 *number, U32 max )
 {
-	const char *pos;
-	U32 digit;
+	STR pos;
 	U32 base;
 	U32 value;
 	U32 digits;
+	U32 digit;
 
 	pos = *input;
 	base = 10;
@@ -201,22 +76,36 @@ Read_Device_ID( const char **input, U16 *id )
 		pos += 2;
 	}
 
-	for( ; ( *pos ) && ( (U8) *pos < 0x80 ); pos++ )
+	for ( ; *pos; pos++ )
 	{
-		digit = (U32) HexData[(U8) *pos];
+		if ( ( *pos >= '0' ) && ( *pos <= '9' ) )
+		{
+			digit = *pos - '0';
+		}
+		else if ( ( *pos >= 'a' ) && ( *pos <= 'f' ) )
+		{
+			digit = *pos - 'a' + 10;
+		}
+		else if ( ( *pos >= 'A' ) && ( *pos <= 'F' ) )
+		{
+			digit = *pos - 'A' + 10;
+		}
+		else
+		{
+			break;
+		}
 
 		if ( digit >= base )
 		{
 			break;
 		}
 
-		value = value * base + digit;
-
-		if ( value > 0xffff )
+		if ( value > ( max - digit ) / base )
 		{
 			return ( FALSE );
 		}
 
+		value = value * base + digit;
 		digits++;
 	}
 
@@ -226,7 +115,7 @@ Read_Device_ID( const char **input, U16 *id )
 	}
 
 	*input = pos;
-	*id = value;
+	*number = value;
 
 	return ( TRUE );
 }
@@ -234,46 +123,35 @@ Read_Device_ID( const char **input, U16 *id )
 // --
 
 SEC_CODE static S32
-Read_Device( struct USBBase *usbbase, struct List *devices, const char *pos )
+ReadDevice( struct USBBase *usbbase, struct List *devices, STR pos )
 {
 	struct USB2_DeviceNode *device;
 
-	U16 vendor;
-	U16 product;
+	U32 vendor;
+	U32 product;
 
 	product = 0;
 
-	if ( ! Read_Device_ID( & pos, & vendor ) )
+	if ( ! ReadNumber( &pos, &vendor, 0xffff ) )
 	{
 		return ( FALSE );
 	}
 
-	while( ( *pos == ' ' ) || ( *pos == '\t' ) )
-	{
-		pos++;
-	}
+	pos = SkipSpace( pos );
 
 	if ( *pos == ':' )
 	{
-		pos++;
+		pos = SkipSpace( pos + 1 );
 
-		while( ( *pos == ' ' ) || ( *pos == '\t' ) )
-		{
-			pos++;
-		}
-
-		if ( ! Read_Device_ID( & pos, & product ) )
+		if ( ! ReadNumber( &pos, &product, 0xffff ) )
 		{
 			return ( FALSE );
 		}
 
-		while( ( *pos == ' ' ) || ( *pos == '\t' ) )
-		{
-			pos++;
-		}
+		pos = SkipSpace( pos );
 	}
 
-	if ( ( *pos ) && ( *pos != '\n' ) && ( *pos != '\r' ) && ( *pos != '#' ) )
+	if ( ( *pos ) && ( *pos != '#' ) )
 	{
 		return ( FALSE );
 	}
@@ -288,378 +166,302 @@ Read_Device( struct USBBase *usbbase, struct List *devices, const char *pos )
 	device->VendorID = vendor;
 	device->DeviceID = product;
 
-	usbbase->usb_IExec->AddTail( devices, & device->Node );
+	usbbase->usb_IExec->AddTail( devices, &device->Node );
 
 	return ( TRUE );
 }
 
 // --
 
-SEC_CODE struct USB2_FktDriverNode *__FDriver_Load( struct USBBase *usbbase, STR filename )
+SEC_CODE static STR
+ReadText( STR pos )
 {
-struct USB2_FktDriverNode *fdn;
-struct TagItem Tags[_LAST+1];
-struct ExamineData *ed;
-struct DOSIFace *IDOS;
-struct List devices;
-struct Node *device;
+	STR text;
+	STR end;
 
-U32 argstart;
-U32 nextline;
-U32 cmdstart;
-U32 cmdlen;
-U32 cmdpos;
-U32 size;
-STR mem;
-S32 dir;
-U32 pos;
-U32 len;
-S32 cmp;
-S32 chr;
+	U8 quote;
 
-	TASK_NAME_ENTER( "__FDriver_Load" );
+	quote = *pos;
 
-	ed		= NULL;
-	fdn		= NULL;
-	mem		= NULL;
-	dir		= 0;
-	IDOS	= usbbase->usb_IDOS;
-
-	usbbase->usb_IExec->NewList( & devices );
-
-	if (( ! IDOS ) || ( ! filename ))
+	if ( ( quote == '\'' ) || ( quote == '"' ) || ( quote == '`' ) )
 	{
-		goto bailout;
-	}
+		text = ++pos;
 
-	dir = MISC_SETCURRENTDIR( usbbase->usb_DriverDirLock );
-
-	// --
-
-	ed = IDOS->ExamineObjectTags(
-		EX_StringNameInput, filename,
-		TAG_END
-	);
-
-	if ( ! ed )
-	{
-		USBDEBUG( "%s not found", filename );
-		goto bailout;
-	}
-
-	// --
-	// We now have a correct date
-
-	for( pos=0 ; pos<_LAST ; pos++ )
-	{	
-		Tags[pos].ti_Tag	= TAG_IGNORE;
-		Tags[pos].ti_Data	= 0;
-	}
-	
-	Tags[ _FNClass	].ti_Tag	= (Tag) USB2Tag_FDriver_Class_Filename;
-	Tags[ _FNClass	].ti_Data	= (Tag) filename;
-
-	Tags[ _Device	].ti_Tag	= (Tag) USB2Tag_FDriver_DeviceList;
-	Tags[ _Device	].ti_Data	= (Tag) & devices;
-
-//	Tags[ _Date 	].ti_Tag	= (Tag) USB2Tag_FDriver_DriverDate;
-//	Tags[ _Date		].ti_Data	= (Tag) & ed->Date;
-
-//	Tags[ _Class 	].ti_Tag	= (Tag) USB2Tag_FDriver_Class;
-//	Tags[ _Class	].ti_Data	= (Tag) FDCLASS_Any;
-
-//	Tags[ _SubClass ].ti_Tag	= (Tag) USB2Tag_FDriver_SubClass;
-//	Tags[ _SubClass	].ti_Data	= (Tag) FDSUBCLASS_Any;
-
-//	Tags[ _Protocol	].ti_Tag	= (Tag) USB2Tag_FDriver_Protocol;
-//	Tags[ _Protocol	].ti_Data	= (Tag) FDPROTOCOL_Any;
-
-	Tags[ _LAST		].ti_Tag	= (Tag) TAG_END;
-	Tags[ _LAST		].ti_Data	= (Tag) TAG_END;
-
-	// ---
-
-	SEMAPHORE_OBTAIN( & usbbase->usb_FDriver_Semaphore );
-
-	len = MISC_STRLENGTH( filename );
-	fdn = usbbase->usb_FDriver_Header.uh_Head;
-
-	while( fdn )
-	{
-		if (( fdn->fdn_Class_Filename )
-		&&	( fdn->fdn_Class_FilenameLen == len )
-		&&	( ! MISC_STRICASECOMPARE( fdn->fdn_Class_Filename, filename )))
-		{
-			break;
-		}
-		else
-		{
-			fdn = Node_Next( fdn );
-		}
-	}
-
-	if ( fdn )
-	{
-		cmp = IDOS->CompareDates( & fdn->fdn_ClassDate, & ed->Date );
-	}
-	else
-	{
-		cmp = 1;
-	}
-
-	SEMAPHORE_RELEASE( & usbbase->usb_FDriver_Semaphore );
-
-	if ( cmp <= 0 )
-	{
-		goto bailout;
-	}
-	else
-	{
-		USBDEBUG( "Updateing %s", filename );
-	}
-
-	// ----
-
-	pos = 0;
-	mem = MISC_LOADFILE( filename, & size );
-
-	if ( ! mem )
-	{
-		goto bailout;
-	}
-
-	while( mem[pos] )
-	{
-		// Skip space
-
-		while(( mem[pos] == 9 ) || ( mem[pos] == 10 ) || ( mem[pos] == 13 ) || ( mem[pos] == 32 ))
+		while ( ( *pos ) && ( *pos != quote ) )
 		{
 			pos++;
 		}
 
-		// Next Line
-
-		nextline = pos;
-
-		while(( mem[nextline] ) && ( mem[nextline] != 10 ) && ( mem[nextline] != 13 ))
+		if ( ( ! *pos ) || ( pos == text ) )
 		{
-			nextline++;
+			return ( NULL );
 		}
 
-		while(( mem[nextline] == 10 ) || ( mem[nextline] == 13 ))
+		end = SkipSpace( pos + 1 );
+
+		if ( ( *end ) && ( *end != '#' ) )
 		{
-			nextline++;
+			return ( NULL );
+		}
+	}
+	else
+	{
+		text = pos;
+
+		while ( ( *pos ) && ( *pos != '#' ) )
+		{
+			pos++;
 		}
 
-		if ( mem[pos] != '#' )
+		while ( ( pos > text ) && ( ( pos[-1] == ' ' ) || ( pos[-1] == '\t' ) ) )
 		{
-			// Count Command Length
+			pos--;
+		}
 
-			cmdstart = pos;
+		if ( pos == text )
+		{
+			return ( NULL );
+		}
+	}
 
-			while(( mem[pos] ) && ( mem[pos] != 9 ) && ( mem[pos] != 32 ) &&
-				( mem[pos] != 10 ) && ( mem[pos] != 13 ))
+	*pos = 0;
+
+	return ( text );
+}
+
+// --
+
+SEC_CODE static S32
+ParseLine( struct USBBase *usbbase, struct TagItem *tags, struct List *devices, STR line )
+{
+	STR key;
+	STR pos;
+	STR text;
+
+	U32 field;
+	U32 number;
+	Tag value;
+	U8 separator;
+
+	key = SkipSpace( line );
+
+	if ( ( ! *key ) || ( *key == '#' ) )
+	{
+		return ( TRUE );
+	}
+
+	pos = key;
+
+	while ( ( *pos ) && ( *pos != ' ' ) && ( *pos != '\t' ) )
+	{
+		pos++;
+	}
+
+	separator = *pos;
+	*pos = 0;
+
+	for ( field = 0; field < FIELD_Count; field++ )
+	{
+		if ( ! MISC_STRICASECOMPARE( key, ClassFields[field].Name ) )
+		{
+			break;
+		}
+	}
+
+	if ( ( field == FIELD_Count ) || ( ! separator ) )
+	{
+		return ( FALSE );
+	}
+
+	pos = SkipSpace( pos + 1 );
+
+	switch ( field )
+	{
+		case FIELD_Device:
+		{
+			return ( ReadDevice( usbbase, devices, pos ) );
+		}
+
+		case FIELD_Class:
+		case FIELD_SubClass:
+		case FIELD_Protocol:
+		{
+			if ( ! ReadNumber( &pos, &number, 0xffff ) )
 			{
-				pos++;
+				return ( FALSE );
 			}
 
-			cmdlen = pos - cmdstart;
+			pos = SkipSpace( pos );
 
-			// Find Argument start Pos
-
-			while(( mem[pos] == 9 ) || ( mem[pos] == 32 ))
+			if ( ( ( *pos ) && ( *pos != '#' ) ) || ( ( number > 0xff ) && ( number != 0xffff ) ) )
 			{
-				pos++;
+				return ( FALSE );
 			}
 
-			// Find Command
+			value = number;
+			break;
+		}
 
-			cmdpos = 0;
+		default:
+		{
+			text = ReadText( pos );
 
-			while( Cmds[cmdpos].CmdName )
+			if ( ! text )
 			{
-				if (( Cmds[cmdpos].CmdLen == cmdlen )
-				&&  ( MISC_STRINCASECOMPARE( & mem[cmdstart], Cmds[cmdpos].CmdName, cmdlen ) == 0 ))
+				return ( FALSE );
+			}
+
+			value = (Tag) text;
+
+			if ( field == FIELD_Type )
+			{
+				if ( ! MISC_STRICASECOMPARE( text, "Interface" ) )
 				{
-					break;
+					value = USB2Val_FDriver_Interface;
+				}
+				else if ( ! MISC_STRICASECOMPARE( text, "Function" ) )
+				{
+					value = USB2Val_FDriver_Function;
+				}
+				else if ( ! MISC_STRICASECOMPARE( text, "Device" ) )
+				{
+					value = USB2Val_FDriver_Device;
 				}
 				else
 				{
-					cmdpos++;
+					return ( FALSE );
 				}
 			}
 
-			switch( Cmds[cmdpos].CmdType )
+			break;
+		}
+	}
+
+	tags[field].ti_Tag = ClassFields[field].Tag;
+	tags[field].ti_Data = value;
+
+	return ( TRUE );
+}
+
+// --
+
+SEC_CODE struct USB2_FktDriverNode *
+__FDriver_Load( struct USBBase *usbbase, STR filename )
+{
+	struct USB2_FktDriverNode *fdn;
+	struct TagItem tags[FIELD_Count + 2];
+	struct List devices;
+	struct Node *device;
+
+	STR mem;
+	STR pos;
+	STR line;
+	STR end;
+	U32 size;
+	U32 field;
+	U32 line_number;
+	U8 separator;
+
+	if ( ( ! usbbase->usb_IDOS ) || ( ! filename ) )
+	{
+		return ( NULL );
+	}
+
+	// The directory scanner supplies the current directory.
+	mem = MISC_LOADFILE( filename, &size );
+
+	if ( ! mem )
+	{
+		usbbase->usb_IExec->DebugPrintF( "USB2: Could not read class %s\n", filename );
+
+		return ( NULL );
+	}
+
+	fdn = NULL;
+	pos = mem;
+	end = mem + size;
+	line_number = 1;
+
+	usbbase->usb_IExec->NewList( &devices );
+
+	for ( field = 0; field < FIELD_Count; field++ )
+	{
+		tags[field].ti_Tag = TAG_IGNORE;
+		tags[field].ti_Data = 0;
+	}
+
+	tags[FIELD_Device].ti_Tag = USB2Tag_FDriver_DeviceList;
+	tags[FIELD_Device].ti_Data = (Tag) &devices;
+	tags[FIELD_Count].ti_Tag = USB2Tag_FDriver_Class_Filename;
+	tags[FIELD_Count].ti_Data = (Tag) filename;
+	tags[FIELD_Count + 1].ti_Tag = TAG_END;
+	tags[FIELD_Count + 1].ti_Data = 0;
+
+	while ( pos < end )
+	{
+		line = pos;
+
+		while ( ( pos < end ) && ( *pos ) && ( *pos != '\r' ) && ( *pos != '\n' ) )
+		{
+			pos++;
+		}
+
+		if ( ( pos < end ) && ( ! *pos ) )
+		{
+			goto invalid;
+		}
+
+		separator = *pos;
+		*pos = 0;
+
+		if ( ! ParseLine( usbbase, tags, &devices, line ) )
+		{
+			goto invalid;
+		}
+
+		if ( pos < end )
+		{
+			pos++;
+
+			if ( ( separator == '\r' ) && ( pos < end ) && ( *pos == '\n' ) )
 			{
-				case _Type:
-				{
-					if (( mem[pos] ) && ( mem[pos] != 10 ))
-					{
-						/**/ if ( ! MISC_STRINCASECOMPARE( "Interface", & mem[pos], 9 ))
-						{
-							Tags[_Type].ti_Tag  = USB2Tag_FDriver_Type;
-							Tags[_Type].ti_Data = USB2Val_FDriver_Interface;
-						}
-						else if ( ! MISC_STRINCASECOMPARE( "Function", & mem[pos], 9 ))
-						{
-							Tags[_Type].ti_Tag  = USB2Tag_FDriver_Type;
-							Tags[_Type].ti_Data = USB2Val_FDriver_Function;
-						}
-						else if ( ! MISC_STRINCASECOMPARE( "Device", & mem[pos], 6 ))
-						{
-							Tags[_Type].ti_Tag  = USB2Tag_FDriver_Type;
-							Tags[_Type].ti_Data = USB2Val_FDriver_Device;
-						}
-					}
-					break;
-				}
-
-				case _Class:
-				{
-					if (( mem[pos] ) && ( mem[pos] != 10 ))
-					{
-						Tags[_Class].ti_Tag  = USB2Tag_FDriver_Class;
-						Tags[_Class].ti_Data = ReadValue( & mem[pos] );
-					}
-					break;
-				}
-
-				case _SubClass:
-				{
-					if (( mem[pos] ) && ( mem[pos] != 10 ))
-					{
-						Tags[_SubClass].ti_Tag  = USB2Tag_FDriver_SubClass;
-						Tags[_SubClass].ti_Data = ReadValue( & mem[pos] );
-					}
-					break;
-				}
-
-				case _Protocol:
-				{
-					if (( mem[pos] ) && ( mem[pos] != 10 ))
-					{
-						Tags[_Protocol].ti_Tag  = USB2Tag_FDriver_Protocol;
-						Tags[_Protocol].ti_Data = ReadValue( & mem[pos] );
-					}
-					break;
-				}
-
-				case _Device:
-				{
-					if ( ! Read_Device( usbbase, & devices, & mem[pos] ) )
-					{
-						USBERROR( "Could not add DEVICE entry in %s", filename );
-
-						fdn = NULL;
-						goto bailout;
-					}
-
-					break;
-				}
-
-				case _Title:
-				case _FNDriver:
-				case _Alias:
-				{
-					if ( ( mem[pos] ) && ( mem[pos] != '\n' ) && ( mem[pos] != '\r' ) )
-					{
-						/**/ if ( mem[pos] == '\'' )
-						{
-							chr = '\'';
-							pos++;
-						}
-						else if ( mem[pos] == '\"' )
-						{
-							chr = '\"';
-							pos++;
-						}
-						else if ( mem[pos] == '`' )
-						{
-							chr = '`';
-							pos++;
-						}
-						else
-						{
-							chr = '\n';
-						}
-
-						argstart = pos;
-
-						// Find String end or Line end
-
-						while( ( mem[pos] ) && ( mem[pos] != '\n' ) && ( mem[pos] != '\r' ) && ( mem[pos] != chr ) )
-						{
-							pos++;
-						}
-
-						mem[pos] = 0;
-
-						if ( pos != argstart )
-						{
-							/**/ if ( Cmds[cmdpos].CmdType == _Title )
-							{
-								Tags[_Title].ti_Tag  = USB2Tag_FDriver_Title;
-								Tags[_Title].ti_Data = (Tag) & mem[argstart];
-							}
-							else if ( Cmds[cmdpos].CmdType == _FNDriver )
-							{
-								Tags[_FNDriver].ti_Tag  = USB2Tag_FDriver_Driver_Filename;
-								Tags[_FNDriver].ti_Data = (Tag) & mem[argstart];
-							}
-							else
-							{
-								Tags[_Alias].ti_Tag  = USB2Tag_FDriver_Alias;
-								Tags[_Alias].ti_Data = (Tag) & mem[argstart];
-							}
-//							else
-//							{
-//								Tags[_Hotkey].ti_Tag  = USB2Tag_FDriver_Hotkey;
-//								Tags[_Hotkey].ti_Data = (U32) & mem[argstart];
-//							}
-						}
-					}
-					break;
-				}
-
-				default:
-				{
-					USBDEBUG( "Unknown class command in %s", filename );
-					break;
-				}
+				pos++;
 			}
 		}
 
-		pos = nextline;
+		line_number++;
 	}
 
-	// --
+	if ( tags[FIELD_Driver].ti_Tag == TAG_IGNORE )
+	{
+		usbbase->usb_IExec->DebugPrintF( "USB2: Class %s is missing DRIVER\n", filename );
 
-	fdn = FDRIVER_CREATELIST( Tags );
+		goto bailout;
+	}
+
+	fdn = FDRIVER_CREATELIST( tags );
+
+	if ( ! fdn )
+	{
+		usbbase->usb_IExec->DebugPrintF( "USB2: Could not register class %s\n", filename );
+	}
+
+	goto bailout;
+
+invalid:
+
+	usbbase->usb_IExec->DebugPrintF( "USB2: Invalid class directive in %s at line %lu\n", filename, line_number );
 
 bailout:
 
-	while( ( device = usbbase->usb_IExec->RemHead( & devices ) ) )
+	while ( ( device = usbbase->usb_IExec->RemHead( &devices ) ) )
 	{
 		MEM_FREEVEC( device );
 	}
 
-	if (( IDOS ) && ( ed ))
-	{
-		IDOS->FreeDosObject( DOS_EXAMINEDATA, ed );
-		ed = NULL;
-	}
+	MEM_FREEVEC( mem );
 
-	if ( mem )
-	{
-		MEM_FREEVEC( mem );
-		mem = NULL;
-	}
-
-	MISC_SETCURRENTDIR( dir );
-
-	TASK_NAME_LEAVE();
-
-	return( fdn );
+	return ( fdn );
 }
 
 // --

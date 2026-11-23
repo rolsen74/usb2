@@ -41,6 +41,7 @@ _Start_Function ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct
 		goto bailout;
 	}
 
+	dn->dn_Class	= fdn;
 	dn->dn_Entry	= fdn->fdn_Entry;
 	dn->dn_Filename = fdn->fdn_Driver_Filename;
 
@@ -142,7 +143,8 @@ bailout:
 // --
 
 static enum FDSTAT
-_Check_for_Functions ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_ASync * as )
+_Check_for_Functions ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_ASync * as,
+							struct USB2_FktDriverNode * previous )
 {
 	struct USB2_FktDriverNode * fdn;
 	enum FDSTAT					stat;
@@ -160,7 +162,7 @@ _Check_for_Functions ( struct USBBase * usbbase, struct RealFunctionNode * fn, s
 
 	if ( ! fn->fkt_Owner )
 	{
-		fdn = Header_Head ( &usbbase->usb_FDriver_Header );
+		fdn = previous ? Node_Next ( previous ) : Header_Head ( &usbbase->usb_FDriver_Header );
 
 		while ( fdn )
 		{
@@ -168,7 +170,7 @@ _Check_for_Functions ( struct USBBase * usbbase, struct RealFunctionNode * fn, s
 			{
 				//				usbbase->usb_IExec->DebugPrintF( "FDN Check Function : %p\n", fdn );
 
-				if ( ( fdn->fdn_Detach ) || ( ( fdn->fdn_Driver_Filename ) && ( ! usbbase->usb_FrontendsReady ) ) )
+				if ( ! ClassAvailable ( usbbase, fdn ) )
 				{
 					//					USBERROR( "FKT : fdn_Detach" );
 					break;

@@ -160,8 +160,7 @@ _Check_Interface ( struct USBBase * usbbase, struct RealFunctionNode * fn, struc
 	{
 		for ( fdn = Header_Head ( &usbbase->usb_FDriver_Header ); fdn; fdn = Node_Next ( fdn ) )
 		{
-			if ( ( fdn->fdn_Type != USB2Val_FDriver_Interface ) || ( fdn->fdn_Detach )
-				 || ( ( fdn->fdn_Driver_Filename ) && ( ! usbbase->usb_FrontendsReady ) ) )
+			if ( ( fdn->fdn_Type != USB2Val_FDriver_Interface ) || ( ! ClassAvailable ( usbbase, fdn ) ) )
 			{
 				continue;
 			}
@@ -223,18 +222,6 @@ _Check_Interface ( struct USBBase * usbbase, struct RealFunctionNode * fn, struc
 	}
 
 	return ( FALSE );
-}
-
-// --
-
-SEC_CODE static void
-RetryInterfaceBinding ( struct USBBase * usbbase, struct USB2_DriverNode * dn )
-{
-	SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
-
-	_Check_Interface ( usbbase, dn->dn_Function, dn->dn_Interface, dn->dn_ASync, dn );
-
-	SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
 }
 
 // --

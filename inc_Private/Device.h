@@ -105,6 +105,7 @@ struct USBBase
 	enum USB2_FullBootState		 usb_FullBootState;
 	struct USB2_FullBootWaiter * usb_FullBootWaiters;
 	U8							 usb_FrontendsReady;
+	U8							 usb_ClassesReady;
 
 	// Queued Memory -- MEMID_x Headers
 	struct Mem_HeaderNode * usb_Memory_Headers;
