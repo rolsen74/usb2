@@ -744,7 +744,7 @@ enum USB2HCDType
 
 #define USB2Tag_Reg_Title					 ( USB2Tag_Dummy + 104 ) // v1.1  - STR
 
-#define USB2Tag_Reg_TimeOut					 ( USB2Tag_Dummy + 105 ) // v1.1  - U32
+#define USB2Tag_Reg_TimeOut					 ( USB2Tag_Dummy + 105 ) // U32, control timeout in microseconds
 
 #define USB2Tag_Reg_InterfaceID				 ( USB2Tag_Dummy + 106 ) // const USB2_ID *
 

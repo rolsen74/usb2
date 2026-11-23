@@ -371,6 +371,7 @@ SRCS		+= Stack/TaskMsg/Unlock.c
 SRCS		+= Stack/TaskMsg/Valid.c
 SRCS		+= Stack/Register/Alloc.c
 SRCS		+= Stack/Register/Free.c
+SRCS		+= Stack/Register/HasControlClaim.c
 SRCS		+= Stack/Register/Lock.c
 SRCS		+= Stack/Register/Register.c
 SRCS		+= Stack/Register/Unlock.c

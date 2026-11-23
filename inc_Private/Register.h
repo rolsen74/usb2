@@ -22,7 +22,6 @@ struct RealRegister
 	// --
 	U32			  reg_StructID;
 	S32			  reg_Locks;
-	U16			  reg_Detach;
 	U16			  reg_FreeMe;
 	struct Task * reg_ClosingTask;
 	//	struct USB2_TaskNode *			reg_Task;
@@ -35,9 +34,12 @@ struct RealRegister
 	struct USB2_NotifyMessage *	  reg_DetachMessage;
 	struct USB2_InterfaceHeader * reg_Interface;
 	struct RealFunctionNode *	  reg_Function;
+	struct USB2_Node			  reg_FunctionNode;
 	struct USB2_Semaphore		  reg_Semaphore;
 	struct USB2_Header			  reg_EPRHeader;
 };
+
+S32 Register_HasControlClaim( const struct RealRegister *reg, const struct USB2_InterfaceHeader *skip );
 
 /***************************************************************************/
 

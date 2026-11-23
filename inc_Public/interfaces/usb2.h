@@ -35,17 +35,19 @@ struct USB2IFace
 	struct USB2_Interface * APICALL ( *USB2_Ifc_FindTags ) ( struct USB2IFace * Self, ... );
 	struct USB2_Interface * APICALL ( *USB2_Ifc_FindList ) ( struct USB2IFace * Self, struct TagItem * taglist );
 	S32 APICALL ( *USB2_Ifc_Claim ) ( struct USB2IFace * Self, struct USB2_Register * reg, struct USB2_Interface * ih );
+	// The last claim stays held while the registration has outstanding control I/O.
 	S32 APICALL ( *USB2_Ifc_Declaim ) ( struct USB2IFace * Self, struct USB2_Register * reg, struct USB2_Interface * ih );
 
 	struct USB2_Register * APICALL ( *USB2_Reg_RegisterTags ) ( struct USB2IFace * Self, ... );
 	struct USB2_Register * APICALL ( *USB2_Reg_RegisterList ) ( struct USB2IFace * Self, struct TagItem * taglist );
-	// Unregister on the task owning the registration and its stack-allocated reply ports.
+	// Stop other tasks from using the registration before unregistering on its owner task.
+	// Other tasks must release resources with their own stack-allocated reply ports first.
 	void				   APICALL ( *USB2_Reg_Unregister ) ( struct USB2IFace * Self, struct USB2_Register * reg );
 
 	struct USB2_EPResource * APICALL ( *USB2_EPRes_ObtainTags ) ( struct USB2IFace * Self, struct USB2_Register * reg, ... );
 	struct USB2_EPResource * APICALL ( *USB2_EPRes_ObtainList ) ( struct USB2IFace * Self, struct USB2_Register * reg,
 																  struct TagItem * taglist );
-	// Release a stack-allocated reply port on the task that obtained it.
+	// Release a resource with a stack-allocated reply port on the task that obtained it.
 	void					 APICALL ( *USB2_EPRes_Release ) ( struct USB2IFace * Self, struct USB2_EPResource * epr );
 	U32						 APICALL ( *USB2_EPRes_Destall ) ( struct USB2IFace * Self, struct USB2_EPResource * epr );
 

@@ -250,7 +250,8 @@ __EndPointRes_ObtainList ( struct USBBase * usbbase, struct RealRegister * reg, 
 		 || ( ( epnr != -1U ) && ( EPADR_Dir_Number ( epnr ) == 0 ) ) )
 	{
 		if ( ( ( eptype == -1U ) || ( eptype == EPATT_Type_Control ) )
-			 && ( ( epnr == -1U ) || ( epdir == EPDIR_Both ) || ( epdir == dir ) ) )
+			 && ( ( epnr == -1U ) || ( epdir == EPDIR_Both ) || ( epdir == dir ) )
+			 && ( Register_HasControlClaim ( reg, NULL ) ) )
 		{
 			epn = fn->fkt_ControlEndPoint;
 		}
@@ -495,8 +496,8 @@ __EndPointRes_ObtainList ( struct USBBase * usbbase, struct RealRegister * reg, 
 
 	if ( ( ! reg->reg_FreeMe ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe )
 		 && ( ! fn->fkt_PortRecovery ) && ( epn->ep_Active )
-		 && ( ( ! in )
-			  || ( ( ! in->in_Parent->ih_Changing ) && ( in->in_Parent->ih_Active == in )
+		 && ( ( ( ! in ) && ( Register_HasControlClaim ( reg, NULL ) ) )
+			  || ( ( in ) && ( ! in->in_Parent->ih_Changing ) && ( in->in_Parent->ih_Active == in )
 				   && ( ( in->in_Parent->ih_Owner == reg ) || ( fn->fkt_Owner == reg ) ) ) ) )
 	{
 		NODE_ADDTAIL ( &reg->reg_EPRHeader, &epr->epr_Node );

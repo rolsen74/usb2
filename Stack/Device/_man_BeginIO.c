@@ -244,6 +244,10 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			{
 				request->io_Error = USB2Err_Device_Detached;
 			}
+			else if ( ( ! in ) && ( resource ) && ( ! Register_HasControlClaim ( resource->epr_Register, NULL ) ) )
+			{
+				request->io_Error = USB2Err_Stack_EndPointNotFound;
+			}
 			else if ( ( in ) && ( ( in->in_Parent->ih_Changing ) || ( in->in_Parent->ih_Active != in )
 					 || ( ( resource ) && ( in->in_Parent->ih_Owner != resource->epr_Register )
 						  && ( fn->fkt_Owner != resource->epr_Register ) ) ) )

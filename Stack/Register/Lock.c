@@ -29,13 +29,13 @@ __Register_Lock ( struct USBBase * usbbase, struct RealRegister * reg )
 
 	TASK_NAME_ENTER ( "__Register_Lock" );
 
-	USBDEBUG ( "__Register_Lock          : REG   %p : Locks %2ld (old) : (%s)", reg, ( reg ) ? reg->reg_Locks : 0,
-			   ( file ) ? file : "<NULL>" );
-
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	if ( REGISTER_VALID ( reg ) == VSTAT_Okay )
 	{
+		USBDEBUG ( "__Register_Lock          : REG   %p : Locks %2ld (old) : (%s)", reg, reg->reg_Locks,
+				   ( file ) ? file : "<NULL>" );
+
 		if ( ( reg->reg_FreeMe ) && ( reg->reg_ClosingTask != TASK_FIND () ) )
 		{
 			lstat = LSTAT_Error;

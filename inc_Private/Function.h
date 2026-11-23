@@ -91,6 +91,7 @@ struct RealFunctionNode
 
 	S32								fkt_InterfaceClaimLocks;
 	struct RealRegister *			fkt_Owner;
+	struct USB2_Header				fkt_Registrations;
 //	S32								fkt_Locks;
 //	struct USB2_Header				fkt_ExpungedList;
 //	struct USB2_Node				fkt_ResourceTrackingNode;

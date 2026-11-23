@@ -21,6 +21,8 @@ InterfaceBusy( struct USBBase *usbbase, struct RealRegister *reg, struct USB2_In
 	struct RealRequest *ioreq;
 	struct USB2_Node *node;
 
+	S32 last_claim;
+
 	if ( ih->ih_Changing )
 	{
 		return ( TRUE );
@@ -36,6 +38,8 @@ InterfaceBusy( struct USBBase *usbbase, struct RealRegister *reg, struct USB2_In
 		}
 	}
 
+	last_claim = ! Register_HasControlClaim( reg, ih );
+
 	// A resource can be unlinked while its requests are still draining.
 	for( node = usbbase->usb_IORequests.uh_Head; node; node = Node_Next( node ) )
 	{
@@ -43,6 +47,13 @@ InterfaceBusy( struct USBBase *usbbase, struct RealRegister *reg, struct USB2_In
 		ep = ioreq->req_EndPoint;
 
 		if ( ( ioreq->req_PublicStat != IORS_User ) && ( ep->ep_Interface ) && ( ep->ep_Interface->in_Parent == ih ) )
+		{
+			return ( TRUE );
+		}
+
+		if ( ( last_claim ) && ( ioreq->req_PublicStat != IORS_User ) &&
+			( ep == ih->ih_Function->fkt_ControlEndPoint ) && ( ioreq->req_Resource ) &&
+			( ioreq->req_Resource->epr_Register == reg ) )
 		{
 			return ( TRUE );
 		}

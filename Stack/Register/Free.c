@@ -177,7 +177,15 @@ __Register_Free ( struct USBBase * usbbase, struct RealRegister * reg )
 	else
 	{
 		reg->reg_FreeMe = TRUE;
-		fstat			= FSTAT_Okay;
+
+		if ( reg->reg_FunctionNode.un_Data )
+		{
+			NODE_REMNODE ( &reg->reg_Function->fkt_Registrations, &reg->reg_FunctionNode );
+
+			reg->reg_FunctionNode.un_Data = NULL;
+		}
+
+		fstat = FSTAT_Okay;
 	}
 
 	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );

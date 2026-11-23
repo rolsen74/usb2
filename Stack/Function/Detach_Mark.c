@@ -39,18 +39,17 @@
 // --
 
 SEC_CODE static void
-NotifyOwner ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct RealRegister * reg )
+NotifyRegistration ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct RealRegister * reg )
 {
 	struct USB2_NotifyMessage * msg;
 
-	if ( ( ! reg ) || ( reg->reg_FreeMe ) || ( reg->reg_Detach ) || ( ! usbbase->usb_Notify_ReplyMsgPort ) )
+	if ( ( ! reg->reg_DetachMessage ) || ( ! usbbase->usb_Notify_ReplyMsgPort ) )
 	{
 		return;
 	}
 
 	msg								   = reg->reg_DetachMessage;
 	reg->reg_DetachMessage			   = NULL;
-	reg->reg_Detach					   = TRUE;
 	msg->nm_Message.mn_ReplyPort	   = &usbbase->usb_Notify_ReplyMsgPort->ump_MsgPort;
 	msg->nm_Message.mn_Length		   = sizeof ( *msg );
 	msg->nm_Type					   = USBNT_Function;
@@ -71,6 +70,7 @@ __Function_MarkDetach ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 	struct USB2_InterfaceNode *	  in;
 	struct USB2_EndPointNode *	  ep;
 	struct USB2_ConfigNode *	  cn;
+	struct USB2_Node *			  node;
 
 	TASK_NAME_ENTER ( "__Function_MarkDetach" );
 
@@ -88,7 +88,10 @@ __Function_MarkDetach ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 
 			fn->fkt_Detach = TRUE;
 
-			NotifyOwner ( usbbase, fn, fn->fkt_Owner );
+			for ( node = fn->fkt_Registrations.uh_Head; node; node = Node_Next ( node ) )
+			{
+				NotifyRegistration ( usbbase, fn, node->un_Data );
+			}
 
 			if ( fn->fkt_Initialized )
 			{
@@ -124,8 +127,6 @@ __Function_MarkDetach ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 					{
 						USBINFO ( "Marking IH %p Detached", ih );
 						ih->ih_Detach = TRUE;
-
-						NotifyOwner ( usbbase, fn, ih->ih_Owner );
 					}
 
 					in = ih->ih_AltSettings.uh_Head;

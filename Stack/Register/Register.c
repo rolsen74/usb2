@@ -194,7 +194,7 @@ struct USB2_ConfigNode *cn;
 
 			case USB2Tag_Reg_TimeOut:
 			{
-				USBINFO ( "USB2Tag_Reg_TimeOut .... : %ld ms", tag->ti_Data );
+				USBINFO ( "USB2Tag_Reg_TimeOut .... : %lu us", tag->ti_Data );
 
 				// Zero is valid
 				timeout = tag->ti_Data;
@@ -396,14 +396,23 @@ struct USB2_ConfigNode *cn;
 		goto bailout;
 	}
 
-	reg->reg_Public.Stack_MsgPort	 = &reg->reg_MsgPort.ump_MsgPort;
-	reg->reg_Public.Stack_MsgPortBit = reg->reg_MsgPort.ump_Signal.sig_Signal_Mask;
-	reg->reg_Public.HCD_ID			 = reg->reg_Function->fkt_HCD->hn_NotifyID;
-	reg->reg_Public.FKT_ID			 = reg->reg_Function->fkt_NotifyID;
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	// --
+	// Publish under the same lock used to mark the function detached.
+	if ( ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) && ( ! fn->fkt_PortRecovery ) )
+	{
+		reg->reg_Public.Stack_MsgPort	 = &reg->reg_MsgPort.ump_MsgPort;
+		reg->reg_Public.Stack_MsgPortBit = reg->reg_MsgPort.ump_Signal.sig_Signal_Mask;
+		reg->reg_Public.HCD_ID			 = fn->fkt_HCD->hn_NotifyID;
+		reg->reg_Public.FKT_ID			 = fn->fkt_NotifyID;
+		reg->reg_FunctionNode.un_Data	 = reg;
 
-	error = FALSE;
+		NODE_ADDTAIL ( &fn->fkt_Registrations, &reg->reg_FunctionNode );
+
+		error = FALSE;
+	}
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 bailout:
 
