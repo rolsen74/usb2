@@ -1,156 +1,21 @@
-# USB Stack for AmigaOS 4 (Experimental)
+# USB2 for AmigaOS 4
 
-This repository contains an **experimental USB host stack for AmigaOS 4**.
+Experimental USB host stack for AmigaOS 4. Includes UHCI, OHCI, EHCI, and experimental xHCI support.
 
-The stack is **functional** and supports several common USB device classes, but it was never completed into a fully polished or officially supported system component. The project is published to preserve the work and allow others to study, reuse, or extend it.
+## Build
 
-## Status
+Use the AmigaOS 4 cross-compiler. Run `make` for the stack or `make -f makefile_archive` to build `usb2.lha` with `lha` installed.
 
-The following functionality has been reported working:
+## Install
 
-- USB Hubs
-- USB Mouse (HID)
-- USB Keyboard (HID)
-- USB Mass Storage Devices (MSD)
-- USB Printer Class (Printer Protocol)
-- USB Audio Class 1.0 PCM microphone capture and playback on tested devices
-- Experimental USB Audio Class 2.0 capture and playback at the device's current clock rate
-- USB Video Class (UVC) webcam capture and live preview on tested cameras
-- USB Bluetooth Classic discovery, legacy PIN pairing, saved-bond reconnect, and Object Push file transfer to Windows on tested hardware
-- 2.4 GHz Wi-Fi on the tested RTL8188EU and RT2870 adapters
-- UHCI (USB 1.1 Host Controller; tested on Pegasus2 under QEMU)
-- OHCI (USB 1.1 Host Controller)
-- EHCI (USB 2.0 Host Controller)
+1. Copy `usb2.kmod` to `SYS:Kickstart/`. Add `MODULE Kickstart/usb2.kmod` to your USB2 Kicklayout entry.
+2. Copy the archive's `Devs/` and `Libs/` contents to `DEVS:` and `LIBS:`, keeping their subdirectories.
+3. Reboot. Run the utilities from `Tools/`. For networking, select `usb2ethernet.device` and the unit assigned to your adapter.
 
-The xHCI driver is still experimental and is enabled in the default build.
-Bluetooth LE scanning and advertising are implemented and awaiting hardware
-validation with an LE-capable adapter.
-Compiling a driver does not establish that it works with hardware.
-
-## Driver Guides
-
-| Component | Guides |
-| --- | --- |
-| Host controllers | [EHCI](Doc/EHCI.md), [OHCI](Doc/OHCI.md), [UHCI](Doc/UHCI.md), [xHCI](Doc/XHCI.md) |
-| Built-in device drivers | [HUB](Doc/HUB.md), [HID](Doc/HID.md), [MSD](Doc/MSD.md) |
-| Classes | [PTP and MTP](Doc/PTP.md), [Printer](Doc/Printer.md), [Video](Doc/Video.md), [Audio](Doc/Audio.md), [Bluetooth](Doc/USB2BluetoothTest.md), [Smart card (CCID)](Doc/SmartCard.md) |
-| Serial devices | [PL2303 and CDC ACM](Doc/PL2303.md) |
-| Networking | [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md), [RT2870](Doc/RT2870.md) |
-| AHI and AmigaInput | [AHI playback](Doc/AHI.md), [Competition Pro](Doc/CompPro.md), [Xbox 360](Doc/Xbox360.md) |
-
-## Human Interface Devices
-
-USB HID covers keyboards, mice, and experimental pen tablet support. See the
-[HID guide](Doc/HID.md).
-
-## Mass Storage
-
-USB Bulk-Only Transport devices are exposed through `usb2disk.device`. See the
-[MSD guide](Doc/MSD.md).
-
-## USB Printers
-
-Print through `usb2printer.device` using the USB Printer Class or DOT4. See
-the [Printer guide](Doc/Printer.md).
-
-## USB Video (Experimental)
-
-UVC cameras expose MJPEG and YUY2 capture through `usb2video.device`. See the
-[Video guide](Doc/Video.md).
-
-## USB Audio (Experimental)
-
-USB Audio Class 1.0 PCM capture and playback and experimental Class 2.0
-support use `usb2audio.device`. See the
-[Audio guide](Doc/Audio.md) and [AHI playback guide](Doc/AHI.md).
-
-## Serial and Parallel Devices
-
-The USB stack creates `usb2serial.device` and `usb2parallel.device` at boot.
-Both start with no units. The [PL2303 and CDC ACM driver](Doc/PL2303.md)
-registers serial units as adapters are attached. Parallel is ready for a
-backend driver. Hardware testing is pending.
-
-## USB Bluetooth (Experimental)
-
-The Bluetooth USB class driver registers compatible HCI controllers with
-`bluetooth2.device` when they are connected and removes them on detach.
-Install `cls_Bluetooth.Class` and `cls_Bluetooth.Driver` in `LIBS:USB2/` and load
-`bluetooth2.kmod` at boot. The module comes from the companion
-[Bluetooth2 repository](https://github.com/rolsen74/bt2).
-
-[USB2BluetoothTest](Doc/USB2BluetoothTest.md) covers Classic discovery,
-remote names, service browsing, legacy PIN pairing, saved bonds, RFCOMM,
-and outgoing Object Push. Run `USB2BluetoothTest GUI` to scan and send files
-from a ReAction window. The `07D1:F101` dongle sent a file from an Amiga
-to Windows. Both `07D1:F101` and `1131:1001` passed controller probes.
-LE scanning and advertising require a controller that supports Bluetooth LE.
-Experimental A2DP Source playback streams a PCM WAV file to a Classic
-Bluetooth speaker using SBC. See the [speaker playback guide](Doc/USB2BluetoothTest.md#play-a-wav-on-a-bluetooth-speaker).
-Experimental [RTL8761BU firmware loading](Doc/USB2BluetoothTest.md#realtek-rtl8761bu-adapters)
-covers specific ASUS USB-BT500 and TP-Link UB500 revisions.
-The [Bluetooth2 AHI mode](Doc/AHI.md#bluetooth-speaker-playback) streams the
-AHI mixer output to a selected speaker.
-[Classic Bluetooth HID](Doc/USB2BluetoothTest.md#monitor-a-classic-bluetooth-keyboard-or-mouse)
-captures Boot Protocol keyboard and mouse reports. The experimental
-`INPUT` option routes a bonded peripheral to Workbench.
-
-## USB Networking
-
-Ethernet class drivers register their units with `usb2ethernet.device`.
-To add an adapter, install its `.Class` and `.Driver` in `LIBS:USB2/`.
-The class file supplies the USB matching rules, display title and driver
-filename. An optional `ALIAS` entry supplies a compatibility name. A new
-driver can register those names through `RegisterClassAdapter`. The stack
-routes the registered unit through the driver's SANA-II callbacks.
-
-| Adapter | USB vendor:product IDs | Status |
-| --- | --- | --- |
-| [RTL8152 wired Ethernet](Doc/RTL8152.md) | `0bda:8152` | Experimental |
-| [RTL8188EU 2.4 GHz Wi-Fi](Doc/RTL8188.md) | `0bda:8179`, `07b8:8179`, `2357:010c` | Working on `0bda:8179` |
-| [RT2870 2.4 GHz Wi-Fi](Doc/RT2870.md) | `07d1:3c09` | Working on `07d1:3c09` |
-| [SiS163U 2.4 GHz Wi-Fi](Doc/USB2WirelessManager.md#sis163u-passive-scan) | `0d8e:0163` | Experimental |
-
-Install the `usb2ethernet.device` file-picker placeholder in `DEVS:Networks/`.
-See the adapter guides for
-firmware, setup, and hardware validation.
-
-## General Limitations
-
-- The stack is **not feature-complete**
-- Error handling and edge cases may be missing
-- Not all USB devices are guaranteed to work
-- Performance and stability have not been fully tuned
-- No active development roadmap
-
-## Supported Environment
-
-- Target OS: **AmigaOS 4**
-- Tested UHCI setup: **Pegasus2 under QEMU**
-- Target hardware: **Amiga X5000/20/40**, with onboard EHCI
-
-## Building
-
-With the AmigaOS 4 cross-compiler installed, run `make`. The default
-build enables UHCI, OHCI, EHCI, xHCI, HUB, HID, and MSD. To exclude xHCI,
-use `make DRV_XHCI=0`; its hardware validation is still pending.
-
-### Building the distribution archive
-
-With the AmigaOS 4 cross-compiler and `lha` installed, run the following
-from the repository root.
-
-```sh
-make -f makefile_archive
-```
-
-The archive is written to `usb2.lha` in the repository root. Extracting it
-creates this directory tree.
+## Archive layout
 
 ```text
 usb2/
-├── Kickstart/
-│   └── usb2.kmod
 ├── Devs/
 │   ├── AHI/
 │   │   ├── bluetooth2.audio
@@ -161,27 +26,43 @@ usb2/
 │   ├── Firmware/
 │   │   ├── rt2870.bin
 │   │   ├── rt2870.licence
-│   │   ├── rtl8188eufw.licence
-│   │   └── rtl8188eufw.bin
+│   │   ├── rtl8188eufw.bin
+│   │   └── rtl8188eufw.licence
 │   ├── Networks/
 │   │   └── usb2ethernet.device
-│   └── usb2printer.device
+│   ├── usb2parallel.device
+│   ├── usb2printer.device
+│   └── usb2serial.device
+├── Kickstart/
+│   └── usb2.kmod
 ├── Libs/
 │   ├── USB2/
 │   │   ├── cls_Audio.Class
 │   │   ├── cls_Audio.Driver
 │   │   ├── cls_Bluetooth.Class
 │   │   ├── cls_Bluetooth.Driver
-│   │   ├── CDCACM.Class
-│   │   ├── PL2303.Class
-│   │   ├── PL2303.Driver
+│   │   ├── cls_CDCACM.Class
 │   │   ├── cls_MTP.Class
 │   │   ├── cls_PTP.Class
 │   │   ├── cls_PTP.Driver
+│   │   ├── cls_Printer.Class
+│   │   ├── cls_Printer.Driver
 │   │   ├── cls_SmartCard.Class
 │   │   ├── cls_SmartCard.Driver
 │   │   ├── cls_Video.Class
-│   │   └── cls_Video.Driver
+│   │   ├── cls_Video.Driver
+│   │   ├── eth_RT2870.Class
+│   │   ├── eth_RT2870.Driver
+│   │   ├── eth_RTL8152.Class
+│   │   ├── eth_RTL8152.Driver
+│   │   ├── eth_RTL8188.Class
+│   │   ├── eth_RTL8188.Driver
+│   │   ├── eth_RTL8821.Class
+│   │   ├── eth_RTL8821.Driver
+│   │   ├── eth_SiS163U.Class
+│   │   ├── eth_SiS163U.Driver
+│   │   ├── ser_PL2303.Class
+│   │   └── ser_PL2303.Driver
 │   ├── usb2wifi.library
 │   ├── usb2wpa.library
 │   ├── usb2wpa2.library
@@ -191,123 +72,19 @@ usb2/
     ├── USB2AudioTest
     ├── USB2BluetoothTest
     ├── USB2SDRTest
-    ├── USB2WirelessManager
-    └── USB2VideoTest
+    ├── USB2SmartCardTest
+    ├── USB2VideoTest
+    └── USB2WirelessManager
 ```
 
-- **Core stack** — Copy `usb2.kmod` to `SYS:Kickstart/` and use
-  `MODULE Kickstart/usb2.kmod` in your USB2 Kicklayout entry. The module
-  registers `usb2.device` and includes the host controller, hub, HID, and
-  mass-storage drivers.
-- **Printer** — Copy `usb2printer.device` to `DEVS:` and select that device in
-  your printer preferences.
-- **Networking** — Copy the RTL8152 or RTL8188EU device from `Devs/Networks/`
-  to `DEVS:Networks/`. For RTL8188EU, copy the files from `Devs/Firmware/`
-  to `DEVS:Firmware/` and configure a wireless supplicant as described in the
-  [RTL8188EU guide](Doc/RTL8188.md).
-- **Classes** — Copy each `.Class` file together with its
-  matching `.Driver` file to `LIBS:USB2/`. The stack reads the `.Class`
-  files to match USB interfaces and load the corresponding drivers.
-  - `Audio` provides PCM capture and playback through `usb2audio.device`.
-    Run `Tools/USB2AudioTest` to check microphone capture.
-  - [PTP and MTP](Doc/PTP.md) let you browse and copy files through `PTP:` for compatible cameras, phones, and media players.
-  - `Video` exposes USB webcam capture through `usb2video.device`. Run
-    `Tools/USB2VideoTest` for a live preview or run it with `SAVE` to capture
-    a still image. See the
-    [Video guide](Doc/Video.md).
-- **Serial devices** — Copy `PL2303.Class`, `CDCACM.Class`, and `PL2303.Driver`
-  to `LIBS:USB2/` to use supported adapters through `usb2serial.device`.
-- **AHI playback** — Copy `Devs/AHI/usb2.audio` and `Devs/AudioModes/USB2`
-  to the corresponding directories under `DEVS:`. For Bluetooth speakers,
-  install the `bluetooth2.audio` driver and `Bluetooth2` mode from the same
-  directories. See the [AHI guide](Doc/AHI.md).
-- **RTL-SDR test** — Run `Tools/USB2SDRTest` from a Shell with an
-  `0BDA:2838` receiver attached. It reports the Bulk IN endpoint and
-  probes the tuner ID. To build just the tool, run
-  `make -C Programs/USB2SDRTest`.
-  With an R820T-family tuner and a high-speed USB connection, run
-  `USB2SDRTest CAPTURE 99500000` to tune to 99.5 MHz and save one second
-  of unsigned 8-bit interleaved I/Q at 1,024,000 samples per second.
-  Use a local FM frequency in Hz. The file is 2,048,000 bytes.
-  `FILE path` overrides `RAM:usb2sdr.iq`. A successful capture replaces
-  an existing file at the selected path.
-  To capture FM audio directly, run
-  `USB2SDRTest CAPTURE 99500000 SECONDS 5 WAV RAM:fm.wav`. This saves a
-  48 kHz mono PCM16 WAV. Omit `WAV` to save raw I/Q. `SECONDS` accepts
-  1 to 5 and defaults to 1 for either output.
-  Run `USB2SDRTest DECODE RAM:usb2sdr.iq` to demodulate the saved capture
-  into a 48 kHz mono PCM16 WAV using 50 µs FM deemphasis. The default
-  output is `RAM:usb2sdr.wav`. Use `WAV path` to choose another file.
-  Decoding runs without the USB receiver attached.
-  For live mono FM, run `USB2SDRTest LISTEN 99500000` with a USB audio
-  output attached and `usb2audio.device` available. The tool uses the
-  first compatible playback unit. Specify `OUTPUT 16` to select a unit,
-  and press Ctrl+C to stop.
-- **SiS163U Wi-Fi (experimental)** — `Libs/USB2/eth_SiS163U.Class`
-  matches the Topcom 54 Mbps Wi-Fi stick (`0D8E:0163`). Opening the unit
-  checks register access and endpoint setup, then reads the station address
-  from the adapter EEPROM. SANA-II queries, events,
-  multicast bookkeeping, and buffer hooks are available. RF type `$08`
-  supports baseband initialization, RF calibration, and channel selection
-  from 1 to 13 through `S2_SETOPTIONS`. The Topcom test found zero SSIDs
-  in a [passive scan](Doc/USB2WirelessManager.md#sis163u-passive-scan).
-  Association and packet transfer remain in development.
-  Build it with `make -C Drivers/Ethernet/SiS163U`.
-- **[RT2870 Wi-Fi](Doc/RT2870.md)** — Install
-  `eth_RT2870.Class` and `eth_RT2870.Driver` in `LIBS:USB2/` and copy
-  `rt2870.bin` and `rt2870.licence` from `Devs/Firmware/` to
-  `DEVS:Firmware/`.
-- **[USB2Analyzer](Doc/USB2Analyzer.md)** — Run it from the extracted
-  `Tools/` directory after booting with the USB2 stack. It displays host
-  controllers, attached devices, and their interfaces.
-- **WPA library** — `Libs/usb2wpa.library` handles legacy WPA-Personal
-  with TKIP on RTL8188EU and RT2870. Build it with `make -C Libraries/WPA`.
-- **WPA3 library** — `Libs/usb2wpa3.library` provides SAE group 19 with
-  Hash-to-Element and Hunting-and-Pecking, plus the WPA3 four-way handshake
-  for RTL8188EU and RT2870. Build it with `make -C Libraries/WPA3`.
-- **[USB2WirelessManager](Doc/USB2WirelessManager.md)** — Run it from
-  `Tools/` to find a named Wi-Fi network with RTL8188EU or RT2870.
-  Run it without arguments to edit saved profiles. Use `SETUP` to open
-  the picker or `AUTO` to start Wi-Fi using the saved autoconnect flag.
-  Both drivers support WPA2-Personal. RTL8188EU also supports open networks.
-  For WPA2, copy `Libs/usb2wpa2.library` to `LIBS:` and install
-  AmiSSL v5 (5.16+) or v6 (6.1+).
+## Guides
 
-## Project Goals (Original)
-
-- Implement a USB host stack for AmigaOS 4
-- Support common HID, storage, and printer devices
-- Explore USB host controller and class driver design
-- Prototype low-level OS integration
-
-## Intended Use
-
-This project is useful for:
-
-- Studying a working USB stack on AmigaOS 4
-- Reusing or adapting code for similar systems
-- Experimentation and further development
-- Technical and historical reference
+- Host controllers and built-in drivers. [EHCI](Doc/EHCI.md), [OHCI](Doc/OHCI.md), [UHCI](Doc/UHCI.md), [xHCI](Doc/XHCI.md), [hubs](Doc/HUB.md), [HID](Doc/HID.md), [mass storage](Doc/MSD.md)
+- USB classes. [Audio](Doc/Audio.md), [AHI](Doc/AHI.md), [video](Doc/Video.md), [printers](Doc/Printer.md), [PTP and MTP](Doc/PTP.md), [serial](Doc/PL2303.md), [smart cards](Doc/SmartCard.md)
+- Networking. [RTL8152](Doc/RTL8152.md), [RTL8188EU](Doc/RTL8188.md), [RT2870](Doc/RT2870.md), [Wi-Fi setup](Doc/USB2WirelessManager.md)
+- Bluetooth requires the companion stack. [Bluetooth2](https://github.com/rolsen74/bt2), [USB Bluetooth guide](Doc/USB2BluetoothTest.md)
+- Tools and controllers. [USB2Analyzer](Doc/USB2Analyzer.md), [Competition Pro](Doc/CompPro.md), [Xbox 360](Doc/Xbox360.md)
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0 or later**.
-
-See the `LICENSE` file for the full license text.
-
-## Contributions
-
-Contributions are welcome, with the understanding that:
-
-- The code reflects experimental design decisions
-- Cleanup and refactoring may be required
-- Contributions must be compatible with GPL-3.0-or-later
-
-## Author
-
-Rene W. Olsen  
-(2012–2026)
-
----
-
-*Published to keep a working implementation available, not to present a finished product.*
+Copyright 2012–2026 Rene W. Olsen. [GPL-3.0-or-later](LICENSE).
