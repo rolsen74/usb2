@@ -14,69 +14,52 @@
 // --
 // If DOS is not around, we have to run in a Task
 
-SEC_CODE void Master_Task_Entry( struct USBBase *usbbase, struct MasterStartMsg *msg )
+SEC_CODE void
+Master_Task_Entry( struct USBBase *usbbase, struct MasterStartMsg *msg )
 {
-struct USB2_TaskNode *tn;
-struct intern *in;
-struct Task *parent;
-struct Task *self;
-U32 mask;
-S32 stat;
-S32 rc;
+	struct USB2_TaskNode *tn;
+	struct ExecIFace *IExec;
+	struct intern *in;
 
-	// --
-
-	parent	= msg->Parent;
-	mask	= msg->Mask;
-	self	= TASK_FIND();
-
-	// --
-
-	rc = MAIN_RETURN_UNSET;
+	IExec = usbbase->usb_IExec;
 	in = usbbase->usb_Master_Intern;
-	tn = & usbbase->usb_Master_Task;
+	tn = &usbbase->usb_Master_Task;
 	tn->tn_State = TASK_State_Starting;
 
-	stat = __myTask_Init( usbbase, in );
-
-	if ( stat )
-	{
-		tn->tn_TaskAdr = self;
-
-		msg->Result = TRUE;
-		TASK_SIGNAL( parent, mask );
-
-		// --
-
-		tn->tn_State = TASK_State_Running;
-
-		rc = __myTask_Main( usbbase, in );
-
-		if ( rc != MAIN_RETURN_PROMOTE )
-		{
-			tn->tn_State = TASK_State_Stopping;
-
-			// --
-
-			parent	= usbbase->usb_Master_Task.tn_Parent;
-			mask	= usbbase->usb_Master_Task.tn_Mask;
-
-			tn->tn_TaskAdr = NULL;
-		}
-	}
-
-	if ( rc != MAIN_RETURN_PROMOTE )
+	if ( ! __myTask_Init( usbbase, in ) )
 	{
 		__myTask_Free( usbbase, in );
 
-		usbbase->usb_IExec->Disable();
-
 		tn->tn_State = TASK_State_Stopped;
 
-		// --
-		// Parent can be NULL
-		TASK_SIGNAL( parent, mask );
+		Master_ReplyStart( IExec, msg, FALSE );
+
+		return;
 	}
+
+	tn->tn_TaskAdr = TASK_FIND();
+
+	tn->tn_State = TASK_State_Running;
+
+	Master_ReplyStart( IExec, msg, TRUE );
+
+	if ( __myTask_Main( usbbase, in ) == MAIN_RETURN_PROMOTE )
+	{
+		// Retire the old task before the replacement can dispatch work.
+		IExec->Disable();
+
+		in->PromotionReleased = TRUE;
+
+		IExec->Signal( tn->tn_TaskAdr, SIGBREAKF_CTRL_E );
+
+		return;
+	}
+
+	tn->tn_State = TASK_State_Stopping;
+
+	__myTask_Free( usbbase, in );
+
+	Master_Finish( usbbase );
 }
 
 // --

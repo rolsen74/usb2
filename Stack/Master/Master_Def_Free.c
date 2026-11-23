@@ -46,7 +46,6 @@ __myTask_Def_Free ( struct USBBase * usbbase, struct intern * in )
 	// --
 
 	MSGPORT_FREE ( &in->Task_Shutdown_MsgPort );
-	TASK_FREESIGNAL ( &in->Task_Shutdown_Signal );
 
 	// -- Timer Tick
 

@@ -96,9 +96,6 @@ __myTask_Main ( struct USBBase * usbbase, struct intern * in )
 		// Fullboot signal
 		wait |= SIGBREAKF_CTRL_E;
 
-		// a Subtask stopped
-		wait |= in->Task_Shutdown_Signal.sig_Signal_Mask;
-
 		// a Subtask dident stop in time .. timeout, crashed?
 		wait |= in->Task_Shutdown_MsgPort.ump_Signal.sig_Signal_Mask;
 
@@ -117,24 +114,17 @@ __myTask_Main ( struct USBBase * usbbase, struct intern * in )
 		** Check Flags
 		*/
 
-		// Master Exit signal
-		if ( mask & SIGBREAKF_CTRL_C )
+		if ( usbbase->usb_Master_Task.tn_Parent )
 		{
-			if ( usbbase->usb_Master_Task.tn_Parent )
-			{
-				USBDEBUG ( "__myTask_Main (Master)   : Got : CTRL+C : Exit Signal" );
-				in->Stopping = TRUE;
-			}
-			else
-			{
-				USBDEBUG ( "__myTask_Main (Master)   : Got : CTRL+C : Someone tryed to stop us, ignoring" );
-			}
+			in->Stopping = TRUE;
 		}
 
 		if ( mask & SIGBREAKF_CTRL_D )
 		{
 			// Just a refresh, so we can break the Wait()
 			USBDEBUG ( "__myTask_Main (Master)   : Got : CTRL+D" );
+			myHandle_Task_Ended ( usbbase, in );
+
 			myFree_DNs ( usbbase );
 			myFree_TNs ( usbbase );
 		}
@@ -148,7 +138,6 @@ __myTask_Main ( struct USBBase * usbbase, struct intern * in )
 			{
 				if ( __myMaster_StartPromote ( usbbase ) )
 				{
-					USBDEBUG ( "__myTask_Main : Promote exit\n" );
 					retval = MAIN_RETURN_PROMOTE;
 					break; // exit right away
 				}
@@ -168,13 +157,6 @@ __myTask_Main ( struct USBBase * usbbase, struct intern * in )
 				in->Tick_TimeRequest.Time.Microseconds = 0;
 				IO_SEND ( &in->Tick_TimeRequest );
 			}
-		}
-
-		// a Subtask ended
-		if ( mask & in->Task_Shutdown_Signal.sig_Signal_Mask )
-		{
-			USBDEBUG ( "__myTask_Main (Master)   : Got : Task_Shutdown_Signal" );
-			myHandle_Task_Ended ( usbbase, in );
 		}
 
 		// a Subtask dident stop in time .. timeout, crashed?

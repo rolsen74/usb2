@@ -12,10 +12,60 @@
 
 // --
 
+#include "Master.h"
+
+// --
+
+SEC_CODE static S32
+Master_PrepareStart( struct ExecIFace *IExec, struct USBBase *usbbase, struct MasterStartMsg *msg )
+{
+	S32 signal;
+
+	signal = IExec->AllocSignal( -1 );
+
+	if ( signal >= 0 )
+	{
+		msg->usbbase = usbbase;
+
+		msg->Parent = IExec->FindTask( NULL );
+
+		msg->Result = MASTER_START_PENDING;
+		msg->Mask = 1UL << signal;
+	}
+
+	return ( signal );
+}
+
+// --
+
+SEC_CODE static S32
+Master_WaitStart( struct ExecIFace *IExec, struct MasterStartMsg *msg, S32 signal, PTR task )
+{
+	S32 retval;
+
+	retval = FALSE;
+
+	if ( task )
+	{
+		do
+		{
+			IExec->Wait( msg->Mask );
+		}
+		while ( msg->Result == MASTER_START_PENDING );
+
+		retval = msg->Result;
+	}
+
+	IExec->FreeSignal( signal );
+
+	return ( retval );
+}
+
+// --
+
 #include "Startup_Promote.c"
 #include "Startup_Process.c"
 #include "Startup_Task.c"
-#include "Master.h"
 
 // --
 

@@ -15,70 +15,47 @@
 // If DOS is around, we can start Process right away
 
 SEC_CODE void
-Master_Process_Entry ( void )
+Master_Process_Entry( void )
 {
-	struct MasterStartMsg * msg;
-	struct USB2_TaskNode *	tn;
-	struct ExecIFace *		IExec;
-	struct USBBase *		usbbase;
-	struct intern *			in;
-	struct Task *			parent;
-	struct Task *			self;
-	U32						mask;
-	S32						stat;
+	struct MasterStartMsg *msg;
+	struct USB2_TaskNode *tn;
+	struct ExecIFace *IExec;
+	struct USBBase *usbbase;
+	struct intern *in;
 
 	IExec = USB2_GetExecIFace();
-	msg	  = (PTR)( IExec->FindTask ( NULL )->tc_UserData );
+
+	msg = (PTR)( IExec->FindTask( NULL )->tc_UserData );
 
 	usbbase = msg->usbbase;
-	parent	= msg->Parent;
-	mask	= msg->Mask;
-	self	= TASK_FIND ();
-
-	msg->Result = FALSE;
-
-	// --
-
-	in			 = usbbase->usb_Master_Intern;
-	tn			 = &usbbase->usb_Master_Task;
+	in = usbbase->usb_Master_Intern;
+	tn = &usbbase->usb_Master_Task;
 	tn->tn_State = TASK_State_Starting;
 
-	// --
-
-	stat = __myProcess_Init ( usbbase, in, FALSE );
-
-	if ( stat )
+	if ( ! __myProcess_Init( usbbase, in ) )
 	{
-		tn->tn_TaskAdr = self;
+		__myProcess_Free( usbbase, in );
 
-		msg->Result = TRUE;
-		TASK_SIGNAL ( parent, mask );
+		tn->tn_State = TASK_State_Stopped;
 
-		// --
+		Master_ReplyStart( IExec, msg, FALSE );
 
-		tn->tn_State = TASK_State_Running;
-
-		__myProcess_Main ( usbbase, in );
-
-		tn->tn_State = TASK_State_Stopping;
-
-		// --
-
-		parent = usbbase->usb_Master_Task.tn_Parent;
-		mask   = usbbase->usb_Master_Task.tn_Mask;
-
-		tn->tn_TaskAdr = NULL;
+		return;
 	}
 
-	__myProcess_Free ( usbbase, in );
+	tn->tn_TaskAdr = TASK_FIND();
 
-	IExec->Disable ();
+	tn->tn_State = TASK_State_Running;
 
-	tn->tn_State = TASK_State_Stopped;
+	Master_ReplyStart( IExec, msg, TRUE );
 
-	// --
-	// Parent can be NULL
-	TASK_SIGNAL ( parent, mask );
+	__myProcess_Main( usbbase, in );
+
+	tn->tn_State = TASK_State_Stopping;
+
+	__myProcess_Free( usbbase, in );
+
+	Master_Finish( usbbase );
 }
 
 // --

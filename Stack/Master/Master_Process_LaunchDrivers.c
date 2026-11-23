@@ -32,20 +32,25 @@ __myProcess_Entry ( void )
 	parent	= tm->Parent;
 	in		= usbbase->usb_Master_Intern;
 
-	TASK_SIGNAL ( tm->Parent, tm->Mask );
+	Master_ReplyStart( IExec, tm, TRUE );
 
 	// Master must be free to service driver start commands during the scan.
-	__myProcess_ScanDriverDir ( usbbase );
+	if ( __myProcess_ScanDriverDir( usbbase ) )
+	{
+		SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
 
-	SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
+		usbbase->usb_ClassesReady = TRUE;
 
-	usbbase->usb_ClassesReady = TRUE;
+		SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
 
-	SEMAPHORE_RELEASE ( &usbbase->usb_FDriver_Semaphore );
+		USB2_Bind_Enumerated ( usbbase );
 
-	USB2_Bind_Enumerated ( usbbase );
-
-	USB2_FullBoot_Complete ( usbbase, TRUE );
+		USB2_FullBoot_Complete( usbbase, TRUE );
+	}
+	else
+	{
+		USB2_FullBoot_Complete( usbbase, FALSE );
+	}
 
 	IExec->Disable ();
 
@@ -66,7 +71,8 @@ __myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in )
 	struct MasterStartMsg msg;
 	struct USB2_Signal	  sig;
 	struct DOSIFace *	  IDOS;
-	U32					  mask;
+
+	sig.sig_StructID = 0;
 
 	if ( TASK_ALLOCSIGNAL ( &sig ) )
 	{
@@ -74,7 +80,7 @@ __myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in )
 
 		msg.usbbase = usbbase;
 		msg.Parent	= TASK_FIND ();
-		msg.Result	= FALSE;
+		msg.Result	= MASTER_START_PENDING;
 		msg.Mask	= sig.sig_Signal_Mask;
 
 		in->LauncherRunning = TRUE;
@@ -82,15 +88,11 @@ __myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in )
 		if ( IDOS->CreateNewProcTags ( NP_Name, "Universal Serial Bus - Launcher", NP_Child, FALSE, NP_Priority, 1, NP_StackSize,
 									   1024 * 32, NP_Entry, __myProcess_Entry, NP_UserData, &msg, TAG_END ) )
 		{
-			while ( TRUE )
+			do
 			{
-				mask = TASK_WAIT ( msg.Mask );
-
-				if ( ( mask & msg.Mask ) == msg.Mask )
-				{
-					break;
-				}
+				TASK_WAIT( msg.Mask );
 			}
+			while ( msg.Result == MASTER_START_PENDING );
 		}
 		else
 		{

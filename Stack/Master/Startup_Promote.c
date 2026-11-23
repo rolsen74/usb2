@@ -24,7 +24,7 @@ struct ExecIFace *IExec;
 struct DOSIFace *IDOS;
 S32 retval;
 PTR task;
-U32 mask;
+S32 signal;
 
 	retval = FALSE;
 
@@ -46,10 +46,12 @@ U32 mask;
 
 		if ( IDOS )
 		{
-			msg.usbbase = usbbase;
-			msg.Parent = TASK_FIND();
-			msg.Result = FALSE;
-			msg.Mask = SIGBREAKF_CTRL_E;
+			signal = Master_PrepareStart( IExec, usbbase, &msg );
+
+			if ( signal < 0 )
+			{
+				return ( FALSE );
+			}
 
 			task = IDOS->CreateNewProcTags( 
 				NP_Name,		"Universal Serial Bus",
@@ -61,16 +63,7 @@ U32 mask;
 				TAG_END
 			);
 
-			while( task )
-			{
-				mask = IExec->Wait( msg.Mask );
-
-				if (( mask & msg.Mask ) == msg.Mask )
-				{
-					retval = msg.Result;
-					break;
-				}
-			}
+			retval = Master_WaitStart( IExec, &msg, signal, task );
 		}
 	}
 

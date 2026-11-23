@@ -11,6 +11,8 @@
 #ifndef _STACK_MASTER_H_
 #define _STACK_MASTER_H_
 
+#define MASTER_START_PENDING (-1)
+
 #define MAIN_RETURN_UNSET	0
 #define MAIN_RETURN_EXIT	1
 #define MAIN_RETURN_PROMOTE 2
@@ -22,6 +24,7 @@ struct intern
 #endif
 
 	S32 Stopping;
+	volatile S32 PromotionReleased;
 
 	S32 LauncherStarted;
 	S32 LauncherRunning;
@@ -33,7 +36,6 @@ struct intern
 
 	// -- (Sub) Tasks Shutdown -- TaskMsg's
 	struct USB2_Header	Shutdown_TM_List;
-	struct USB2_Signal	Task_Shutdown_Signal;
 	struct USB2_MsgPort Task_Shutdown_MsgPort;
 
 	// -- Timer Tick
@@ -48,7 +50,7 @@ struct MasterStartMsg
 {
 	PTR usbbase;
 	PTR Parent;
-	U32 Result;
+	volatile S32 Result;
 	U32 Mask;
 };
 

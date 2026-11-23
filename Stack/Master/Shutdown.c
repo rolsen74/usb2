@@ -12,35 +12,56 @@
 
 // --
 
-SEC_CODE void __Master_Shutdown( struct USBBase *usbbase )
+SEC_CODE void
+__Master_Shutdown( struct USBBase *usbbase )
 {
-U32 mask;
+	struct USB2_TaskNode *tn;
+	struct ExecIFace *IExec;
+	struct Task *self;
 
-	USBDEBUG( "__Master_Shutdown        : Task %p", usbbase->usb_Master_Task.tn_TaskAdr );
+	S32 signal;
+	S32 running;
+	U32 mask;
 
-	if ( usbbase->usb_Master_Task.tn_TaskAdr )
+	tn = &usbbase->usb_Master_Task;
+	IExec = usbbase->usb_IExec;
+
+	self = IExec->FindTask( NULL );
+
+	signal = IExec->AllocSignal( -1 );
+
+	mask = ( signal >= 0 ) ? ( 1UL << signal ) : SIGBREAKF_CTRL_F;
+
+	IExec->Disable();
+
+	running = ( tn->tn_TaskAdr != NULL );
+
+	if ( running )
 	{
-		USBDEBUG( "__Master_Shutdown        : 11 :" );
+		tn->tn_Parent = self;
+		tn->tn_Mask = mask;
 
-		usbbase->usb_Master_Task.tn_Parent = TASK_FIND();
-		usbbase->usb_Master_Task.tn_Mask = SIGBREAKF_CTRL_F;
-
-		TASK_SIGNAL( usbbase->usb_Master_Task.tn_TaskAdr, SIGBREAKF_CTRL_C );
-
-		USBDEBUG( "__Master_Shutdown        : 22 :" );
-
-		while( TRUE )
-		{
-			mask = TASK_WAIT( SIGBREAKF_CTRL_F );
-
-			if ( mask & SIGBREAKF_CTRL_F )
-			{
-				break;
-			}
-		}
+		IExec->Signal( tn->tn_TaskAdr, SIGBREAKF_CTRL_C );
 	}
 
-	USBDEBUG( "__Master_Shutdown        : 33 :" );
+	IExec->Enable();
+
+	while ( running )
+	{
+		IExec->Wait( mask );
+
+		// A break signal can be pending when no private signal is available.
+		IExec->Disable();
+
+		running = ( tn->tn_TaskAdr != NULL );
+
+		IExec->Enable();
+	}
+
+	if ( signal >= 0 )
+	{
+		IExec->FreeSignal( signal );
+	}
 }
 
 // --

@@ -13,7 +13,7 @@
 
 // --
 
-SEC_CODE S32 __myProcess_Init( struct USBBase *usbbase, struct intern *in, S32 Promote )
+SEC_CODE S32 __myProcess_Init( struct USBBase *usbbase, struct intern *in )
 {
 S32 retval;
 
@@ -21,7 +21,7 @@ S32 retval;
 
 	// --
 
-	if ( ! __myTask_Def_Init( usbbase, in, Promote ))
+	if ( ! __myTask_Def_Init( usbbase, in ))
 	{
 		USBERROR( "__myProcess_Init (Master) : 1 : Error" );
 		goto bailout;

@@ -21,8 +21,10 @@
 
 // --
 
+#include "Master_StartReply.c"
 #include "Master_Def_Init.c"
 #include "Master_Def_Free.c"
+#include "Master_Finish.c"
 
 // --
 

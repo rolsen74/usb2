@@ -40,9 +40,6 @@ __myProcess_Main ( struct USBBase * usbbase, struct intern * in )
 		// Fullboot signal
 		wait |= SIGBREAKF_CTRL_E;
 
-		// a Subtask stopped
-		wait |= in->Task_Shutdown_Signal.sig_Signal_Mask;
-
 		// a Subtask dident stop in time .. timeout, crashed?
 		wait |= in->Task_Shutdown_MsgPort.ump_Signal.sig_Signal_Mask;
 
@@ -61,16 +58,9 @@ __myProcess_Main ( struct USBBase * usbbase, struct intern * in )
 
 		//		usbbase->usb_IExec->DebugPrintF( "__myProcess_Main : Task %p : Mask $%08lx\n", TASK_FIND(), mask );
 
-		if ( ( mask & SIGBREAKF_CTRL_C ) && ( usbbase->usb_Master_Task.tn_Parent ) )
+		if ( usbbase->usb_Master_Task.tn_Parent )
 		{
 			in->Stopping = TRUE;
-		}
-
-		if ( ( mask & SIGBREAKF_CTRL_E ) && ( ! in->Stopping ) && ( ! in->LauncherStarted ) )
-		{
-			in->LauncherStarted = TRUE;
-
-			__myProcess_LaunchDrivers ( usbbase, in );
 		}
 
 		if ( mask & SIGBREAKF_CTRL_D )
@@ -78,6 +68,8 @@ __myProcess_Main ( struct USBBase * usbbase, struct intern * in )
 			// Just a refresh, so we can break the Wait()
 			USBDEBUG ( "__myProcess_Main (Master)        : Got : CTRL+D" );
 			//			USBERROR( "__myProcess_Main (Master)        : Got : CTRL+D" );
+			myHandle_Task_Ended ( usbbase, in );
+
 			myFree_DNs ( usbbase );
 			myFree_TNs ( usbbase );
 		}
@@ -93,14 +85,6 @@ __myProcess_Main ( struct USBBase * usbbase, struct intern * in )
 				in->Tick_TimeRequest.Time.Microseconds = 0;
 				IO_SEND ( &in->Tick_TimeRequest );
 			}
-		}
-
-		// a Subtask ended
-		if ( mask & in->Task_Shutdown_Signal.sig_Signal_Mask )
-		{
-			USBDEBUG ( "__Task_Main (Master)        : Got : Task_Shutdown_Signal" );
-			//			USBERROR( "__Task_Main (Master)        : Got : Task_Shutdown_Signal" );
-			myHandle_Task_Ended ( usbbase, in );
 		}
 
 		// a Subtask dident stop in time .. timeout, crashed?
@@ -136,6 +120,13 @@ __myProcess_Main ( struct USBBase * usbbase, struct intern * in )
 				MEMORY_FREE ( MEMID_NotifyMessage, msg, 0 );
 			}
 		}
+		if ( ( mask & SIGBREAKF_CTRL_E ) && ( ! in->Stopping ) && ( ! in->LauncherStarted ) )
+		{
+			in->LauncherStarted = TRUE;
+
+			__myProcess_LaunchDrivers ( usbbase, in );
+		}
+
 	}
 }
 

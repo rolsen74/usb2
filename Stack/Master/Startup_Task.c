@@ -13,7 +13,7 @@
 
 // --
 
-void Master_Task_Entry( struct USBBase *usbbase, struct USB2_TaskMsg *tm );
+void Master_Task_Entry( struct USBBase *usbbase, struct MasterStartMsg *msg );
 
 // --
 
@@ -23,7 +23,7 @@ struct MasterStartMsg msg;
 struct ExecIFace *IExec;
 struct Task *task;
 S32 retval;
-U32 mask;
+S32 signal;
 
 	retval = FALSE;
 
@@ -31,12 +31,14 @@ U32 mask;
 
 	if ( ! usbbase->usb_Master_Task.tn_TaskAdr )
 	{
-		msg.usbbase = usbbase;
-		msg.Parent = TASK_FIND();
-		msg.Result = FALSE;
-		msg.Mask = SIGBREAKF_CTRL_E;
-
 		IExec = usbbase->usb_IExec;
+
+		signal = Master_PrepareStart( IExec, usbbase, &msg );
+
+		if ( signal < 0 )
+		{
+			return ( FALSE );
+		}
 
 		task = IExec->CreateTaskTags(
 			"Universal Serial Bus",
@@ -48,16 +50,7 @@ U32 mask;
 			TAG_END 
 		);
 
-		while( task )
-		{
-			mask = IExec->Wait( msg.Mask );
-
-			if (( mask & msg.Mask ) == msg.Mask )
-			{
-				retval = msg.Result;
-				break;
-			}
-		}
+		retval = Master_WaitStart( IExec, &msg, signal, task );
 	}
 	else
 	{

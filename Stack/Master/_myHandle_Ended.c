@@ -29,11 +29,6 @@ myRemoveNode ( struct USB2_TaskMsg * tm, struct USBBase * usbbase, struct intern
 	NODE_REMNODE ( &in->Shutdown_TM_List, tm );
 
 	TASKMSG_FREE ( tm );
-	tm = NULL; // Just make sure we don't use it from now on
-
-	// --
-	// Inform Master (our self?) a task have ended
-	TASK_SIGNAL ( usbbase->usb_Master_Task.tn_TaskAdr, SIGBREAKF_CTRL_D );
 }
 
 // --

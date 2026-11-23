@@ -326,7 +326,7 @@ __Cmd_Start_Process ( struct USBBase * usbbase, struct intern * in UNUSED, struc
 	tm->tm_Task = tn;
 	// --
 
-	if ( IDOS )
+	if ( ( IDOS ) && ( IExec->FindTask ( NULL )->tc_Node.ln_Type == NT_PROCESS ) )
 	{
 		USBDEBUG ( "__Cmd_Start_Process : 12 : Process" );
 

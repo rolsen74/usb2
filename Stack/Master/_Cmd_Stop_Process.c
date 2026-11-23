@@ -34,8 +34,6 @@ __Cmd_Stop_Process ( struct USBBase * usbbase, struct intern * in, struct USB2_T
 	}
 
 	tn->tn_StopRequested = TRUE;
-	tn->tn_Parent		 = TASK_FIND ();
-	tn->tn_Mask			 = in->Task_Shutdown_Signal.sig_Signal_Mask;
 
 	usbbase->usb_IExec->Signal ( task, SIGBREAKF_CTRL_C );
 
