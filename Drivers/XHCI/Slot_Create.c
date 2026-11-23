@@ -18,11 +18,10 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 	struct USBBase * usbbase;
 	struct XHCI_State * state;
 	struct XHCI_Slot * slot;
+	struct XHCI_Slot * translator;
 	struct RealFunctionNode * parent;
 	struct RealFunctionNode * cursor;
 	struct RealFunctionNode * tt_hub;
-	struct RealRequest * active;
-	struct XHCI_Slot * old;
 
 	U32 * input;
 	U32 * output;
@@ -31,8 +30,6 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 	U32 speed;
 	U32 packet;
 	U32 slot_id;
-	U32 index;
-	U32 busy;
 	U32 route;
 	U32 depth;
 	U32 tt_port;
@@ -49,6 +46,11 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 	tt_slot = 0;
 
 	if ( ! parent )
+	{
+		return ( NULL );
+	}
+
+	if ( ( ! XHCI_Slots_Retire ( hn ) ) && ( ! state->Command_Done ) )
 	{
 		return ( NULL );
 	}
@@ -99,55 +101,14 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 			return ( NULL );
 		}
 
-		for ( index = 1; index <= state->Max_Slots; index++ )
-		{
-			if ( ( state->Slots[index] ) && ( state->Slots[index]->Function == tt_hub ) )
-			{
-				tt_slot = index;
-				break;
-			}
-		}
+		translator = XHCI_Slot_Find ( hn, tt_hub->fkt_NotifyID );
 
-		if ( ! tt_slot )
+		if ( ! translator )
 		{
 			return ( NULL );
 		}
 
-	}
-
-	for ( index = 1; ( parent->fkt_Tier == 0 ) && ( index <= state->Max_Slots ); index++ )
-	{
-		old = state->Slots[index];
-
-		if ( ( ! old ) || ( old->Root_Port != port ) )
-		{
-			continue;
-		}
-
-		busy = FALSE;
-
-		for ( active = hn->hn_Active_Transfer_List.uh_Head; active; active = Node_Next ( active ) )
-		{
-			if ( active->req_HCD.XHCI.Slot == old )
-			{
-				busy = TRUE;
-				break;
-			}
-		}
-
-		if ( busy )
-		{
-			return ( NULL );
-		}
-
-		if ( ! XHCI_Command ( hn, 0, 0, 0,
-			XHCI_TRB_TYPE ( XHCI_TRB_DISABLE_SLOT ) | ( old->Slot_ID << 24 ), NULL ) )
-		{
-			return ( NULL );
-		}
-
-		( (U32 *)state->DCBAA )[old->Slot_ID * 2] = 0;
-		XHCI_Slot_Free ( hn, old );
+		tt_slot = translator->Slot_ID;
 	}
 
 	if ( parent->fkt_Tier == 0 )
@@ -223,8 +184,9 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 	}
 
 	slot->Slot_ID = slot_id;
-	slot->Function = fn;
-	slot->Root_Port = port;
+	slot->Function_ID = fn->fkt_NotifyID;
+	slot->Parent_ID = parent->fkt_NotifyID;
+	slot->Speed = fn->fkt_Speed;
 	slot->Context_Entries = 1;
 	slot->EP0_Packet = packet;
 	state->Slots[slot_id] = slot;
@@ -255,13 +217,18 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 failed:
 	if ( slot->Slot_ID )
 	{
-		XHCI_Command ( hn, 0, 0, 0,
-			XHCI_TRB_TYPE ( XHCI_TRB_DISABLE_SLOT ) | ( slot->Slot_ID << 24 ), NULL );
-		dcbaa = state->DCBAA;
-		dcbaa[slot->Slot_ID * 2] = 0;
-	}
+		// Keep the DMA buffers if the controller has not released the slot.
+		slot->Function_ID = 0;
 
-	XHCI_Slot_Free ( hn, slot );
+		if ( state->Command_Done )
+		{
+			XHCI_Slot_Disable ( hn, slot );
+		}
+	}
+	else
+	{
+		XHCI_Slot_Free ( hn, slot );
+	}
 
 	return ( NULL );
 }

@@ -32,6 +32,13 @@ __Release ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
+	if ( fn->fkt_ActiveIOReq )
+	{
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		return;
+	}
+
 	if ( ( fn->fkt_Config_Active ) && ( fn->fkt_Address < 128 ) )
 	{
 		array = fn->fkt_HCD->hn_EndPoint_Array;
@@ -268,15 +275,12 @@ __Function_Free ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 
 		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
-		if ( ! fn->fkt_ActiveIOReq )
+		if ( ! fn->fkt_Detach )
 		{
-			//			usbbase->usb_IExec->DebugPrintF( "FN %p : fkt_ActiveIOReq %ld : Freeing\n", fn, fn->fkt_ActiveIOReq );
-			__Release ( usbbase, fn );
+			FUNCTION_MARKDETACH ( fn );
 		}
-		//		else
-		//		{
-		//			usbbase->usb_IExec->DebugPrintF( "FN %p : fkt_ActiveIOReq %ld : Skipping\n", fn, fn->fkt_ActiveIOReq );
-		//		}
+
+		__Release ( usbbase, fn );
 
 		FUNCTION_UNLOCK ( fn );
 	}
@@ -320,11 +324,6 @@ __Function_Free ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 	}
 
 	USBINFO ( "__Function_Free           : Freeing %p : (%s)", fn, ( file ) ? file : "<NULL>" );
-
-	if ( ( fn->fkt_Initialized ) && ( ! fn->fkt_Detach ) )
-	{
-		USB2_Notify_Function ( usbbase, fn, USBNC_Removing );
-	}
 
 	// --
 

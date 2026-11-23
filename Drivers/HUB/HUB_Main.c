@@ -58,7 +58,7 @@ struct USB2_Node *n;
 		fn = n->un_Data;
 		// --
 
-		if (( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ! in->Running ))
+		if (( fn->fkt_Detach ) || ( fn->fkt_FreeMe ))
 		{
 			USBDEBUG( "HUB_Main__Free_FNs                :  1 : FN    %p : Locks %2ld", fn, fn->fkt_Locks );
 

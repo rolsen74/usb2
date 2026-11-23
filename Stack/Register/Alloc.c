@@ -40,6 +40,14 @@ S32 error;
 
 	reg->reg_StructID = ID_USB2_REG;
 
+	reg->reg_DetachMessage = MEMORY_ALLOC( MEMID_NotifyMessage, TRUE );
+
+	if ( ! reg->reg_DetachMessage )
+	{
+		USBERROR( "__Register_Alloc         : Error allocating detach message" );
+		goto bailout;
+	}
+
 	// --
 
 	SEMAPHORE_INIT( & reg->reg_Semaphore );

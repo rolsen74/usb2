@@ -55,14 +55,15 @@ struct XHCI_Buffer
 
 struct XHCI_Slot
 {
-	struct RealFunctionNode * Function;
+	USB2_ID Function_ID;
+	USB2_ID Parent_ID;
 	PTR Input;
 	PTR Output;
 	U32 Input_Physical;
 	U32 Output_Physical;
 	U32 Slot_ID;
 	U32 Address;
-	U32 Root_Port;
+	U32 Speed;
 	U32 Context_Entries;
 	U32 EP0_Packet;
 	U32 Hub_Configured;

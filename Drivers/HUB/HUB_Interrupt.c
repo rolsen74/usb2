@@ -75,7 +75,7 @@ U8 *data;
 
 				in->ErrorCnt = 0;
 
-				if ( ( ( in->Ports / 8 ) + 1 ) <= ioreq->io_Actual )
+				if ( ( in->Running ) && ( ( ( in->Ports / 8 ) + 1 ) <= ioreq->io_Actual ) )
 				{
 					// Something changed, check all ports
 					data = ioreq->io_Data;

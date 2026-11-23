@@ -190,6 +190,11 @@ __Register_Free ( struct USBBase * usbbase, struct RealRegister * reg )
 		MSGPORT_FREE ( &reg->reg_MsgPort );
 	}
 
+	if ( reg->reg_DetachMessage )
+	{
+		MEMORY_FREE ( MEMID_NotifyMessage, reg->reg_DetachMessage, 0 );
+	}
+
 	MEMORY_FREE ( MEMID_USBRegister, reg, 0 );
 
 bailout:

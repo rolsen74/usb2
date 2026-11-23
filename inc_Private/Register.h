@@ -32,6 +32,7 @@ struct RealRegister
 	STR reg_Title;
 	//	struct USB2_EPResource *	reg_Control;
 	struct USB2_MsgPort			  reg_MsgPort;
+	struct USB2_NotifyMessage *	  reg_DetachMessage;
 	struct USB2_InterfaceHeader * reg_Interface;
 	struct RealFunctionNode *	  reg_Function;
 	struct USB2_Semaphore		  reg_Semaphore;

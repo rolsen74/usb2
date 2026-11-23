@@ -29,6 +29,7 @@ SEC_RODATA const struct HCDFunctions XHCIFunctions = {
 	.Handler_HCD	   = XHCI_Handler_HCD,
 	.Handler_Reset	   = XHCI_Handler_Reset,
 	.Handler_Interrupt = XHCI_Handler_Interrupt,
+	.Retire_Detached   = XHCI_Slots_Retire,
 
 	// -- Transfers
 

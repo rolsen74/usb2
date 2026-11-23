@@ -125,6 +125,9 @@ SEC_CODE U32				XHCI_Ring_Queue ( struct XHCI_Ring * ring, U32 low, U32 high, U3
 SEC_CODE void				XHCI_Event_Poll ( struct USB2_HCDNode * hn );
 SEC_CODE S32				XHCI_Command ( struct USB2_HCDNode * hn, U32 low, U32 high, U32 status, U32 control, U32 * result );
 SEC_CODE void				XHCI_Slot_Free ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot );
+SEC_CODE S32				XHCI_Slot_Disable ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot );
+SEC_CODE S32				XHCI_Slots_Retire ( struct USB2_HCDNode * hn );
+SEC_CODE struct XHCI_Slot * XHCI_Slot_Find ( struct USB2_HCDNode * hn, USB2_ID function_id );
 SEC_CODE struct XHCI_Slot * XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn );
 SEC_CODE S32				XHCI_Endpoint_Drop ( struct USB2_HCDNode * hn, struct USB2_InterfaceHeader * ih );
 SEC_CODE S32  XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct USB2_EndPointNode * ep,

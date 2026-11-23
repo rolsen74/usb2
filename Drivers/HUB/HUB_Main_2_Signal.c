@@ -44,10 +44,21 @@
 
 // --
 
-SEC_CODE void HUB_Main__Signal( struct USBBase *usbbase UNUSED, struct intern *in UNUSED )
+SEC_CODE void
+HUB_Main__Signal( struct USBBase *usbbase, struct intern *in )
 {
+	U32 port;
+
 	USBINFO( "__myMain (HUB)           : HUB_Main__Signal (2)" );
 	USBDEBUG( "FN Signal Locks #%lu", in->Function->fkt_Locks );
+
+	for( port = 1 ; port <= in->Ports ; port++ )
+	{
+		if ( in->PortFunctions[port] )
+		{
+			HUB__Port_Function_Rem( usbbase, in, port );
+		}
+	}
 }
 
 // --

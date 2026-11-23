@@ -62,7 +62,7 @@ LockPublishedInterface ( struct USBBase * usbbase, const struct USB2_Interface *
 // --
 
 SEC_CODE static struct RealFunctionNode *
-LockPublishedFunction ( struct USBBase * usbbase, const struct USB2_Function * function )
+LockPublishedFunction ( struct USBBase * usbbase, const struct USB2_Function * function, const USB2_ID * id )
 {
 	struct USB2_Node *		  node;
 	struct RealFunctionNode * fn;
@@ -77,7 +77,8 @@ LockPublishedFunction ( struct USBBase * usbbase, const struct USB2_Function * f
 	{
 		fn = node->un_Data;
 
-		if ( ( fn ) && ( &fn->fkt_Public == function ) && ( fn->fkt_ControlEndPoint ) && ( ! fn->fkt_Detach )
+		if ( ( fn ) && ( ( &fn->fkt_Public == function ) || ( ( id ) && ( fn->fkt_Initialized ) && ( fn->fkt_NotifyID == *id ) ) )
+			 && ( fn->fkt_ControlEndPoint ) && ( ! fn->fkt_Detach )
 			 && ( ! fn->fkt_FreeMe ) && ( FUNCTION_LOCK ( fn ) == LSTAT_Okay ) )
 		{
 			break;
@@ -104,6 +105,7 @@ __Register_RegisterList ( struct USBBase * usbbase, struct TagItem * taglist )
 	const struct USB2_Function *  function;
 	struct RealFunctionNode *	  pinned_fn;
 	const USB2_ID *				  ifc_id;
+	const USB2_ID *				  function_id;
 	struct USB2_DriverMessage *	  msg;
 	struct RealFunctionNode *	  fn;
 	struct RealRegister *		  reg;
@@ -130,6 +132,7 @@ struct USB2_ConfigNode *cn;
 	function  = NULL;
 	pinned_fn = NULL;
 	ifc_id	  = NULL;
+	function_id = NULL;
 	pinned	  = NULL;
 	error	  = TRUE;
 	//	dev		= FALSE;
@@ -145,6 +148,7 @@ struct USB2_ConfigNode *cn;
 				function = NULL;
 				ifc		 = NULL;
 				ifc_id	 = NULL;
+				function_id = NULL;
 				break;
 			}
 
@@ -154,6 +158,17 @@ struct USB2_ConfigNode *cn;
 				function = (PTR)tag->ti_Data;
 				ifc		 = NULL;
 				ifc_id	 = NULL;
+				function_id = NULL;
+				break;
+			}
+
+			case USB2Tag_Reg_FunctionID:
+			{
+				msg		 = NULL;
+				function = NULL;
+				ifc		 = NULL;
+				ifc_id	 = NULL;
+				function_id = (PTR)tag->ti_Data;
 				break;
 			}
 
@@ -163,6 +178,7 @@ struct USB2_ConfigNode *cn;
 				function = NULL;
 				ifc		 = (PTR)tag->ti_Data;
 				ifc_id	 = NULL;
+				function_id = NULL;
 				break;
 			}
 
@@ -172,6 +188,7 @@ struct USB2_ConfigNode *cn;
 				function = NULL;
 				ifc		 = NULL;
 				ifc_id	 = (PTR)tag->ti_Data;
+				function_id = NULL;
 				break;
 			}
 
@@ -206,9 +223,10 @@ struct USB2_ConfigNode *cn;
 		ih = pinned;
 	}
 
-	if ( function )
+	if ( ( function ) || ( function_id ) )
 	{
-		pinned_fn = LockPublishedFunction ( usbbase, function );
+		pinned_fn = LockPublishedFunction ( usbbase, function, function_id );
+
 		fn		  = pinned_fn;
 	}
 

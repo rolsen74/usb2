@@ -24,7 +24,12 @@ struct RealFunctionNode *fn;
 
 	fn = hn->hn_Function_Array[0];
 
-	TASK_STOP_FN( fn );
+	if ( fn )
+	{
+		FUNCTION_MARKDETACH( fn );
+
+		TASK_STOP_FN( fn );
+	}
 
 	TASK_NAME_LEAVE();
 }

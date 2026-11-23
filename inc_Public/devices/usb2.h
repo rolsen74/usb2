@@ -748,6 +748,8 @@ enum USB2HCDType
 
 #define USB2Tag_Reg_InterfaceID				 ( USB2Tag_Dummy + 106 ) // const USB2_ID *
 
+#define USB2Tag_Reg_FunctionID				 ( USB2Tag_Dummy + 107 ) // const USB2_ID * from USB2_Function.FKT_ID
+
 // -- + --
 // -- IORequest
 

@@ -22,9 +22,6 @@ enum USB2_Cmd
 	// -- Start new Task/Process
 	CMD_START_PROCESS,
 	CMD_STOP_PROCESS,
-
-	// -- Function Message
-	CMD_FKT_DETACH,			// Send Detach msg too all Registers
 };
 
 // --
@@ -37,14 +34,6 @@ struct CmdHeader
 	U32					cm_Result;
 	struct Task *		cm_Task;
 	U32					cm_Mask;
-};
-
-// --
-
-struct FktMessage
-{
-	struct CmdHeader			fm_Cmd;
-	struct RealFunctionNode *	fm_FN;
 };
 
 // --

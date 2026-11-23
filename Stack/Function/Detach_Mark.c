@@ -38,56 +38,6 @@
 
 // --
 
-#if 0
-
-struct CmdHeader
-{
-	struct Message		cm_Message;
-	enum USB2_Cmd		cm_Command;
-	struct USBBase *	cm_usbbase;
-	U32					cm_Result;
-	struct Task *		cm_Task;
-	U32					cm_Mask;
-};
-
-#endif
-
-static void
-__Send_DetachCommand ( struct USBBase * usbbase, struct RealFunctionNode * fn )
-{
-	struct FktMessage * fm;
-
-	fm = MEM_ALLOCVEC ( sizeof ( struct FktMessage ), TRUE );
-
-	if ( ! fm )
-	{
-		USBERROR ( "Error allocating memory fm" );
-		goto bailout;
-	}
-
-	fm->fm_Cmd.cm_Command = CMD_FKT_DETACH;
-
-	// --
-
-	if ( FUNCTION_LOCK ( fn ) != LSTAT_Okay )
-	{
-		MEM_FREEVEC ( fm );
-		goto bailout;
-	}
-
-	fm->fm_FN = fn;
-
-	// --
-
-	MSGPORT_PUTMSG ( usbbase->usb_Master_MsgPort, fm );
-
-bailout:
-
-	return;
-}
-
-// --
-
 SEC_CODE static void
 NotifyOwner ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct RealRegister * reg )
 {
@@ -98,13 +48,8 @@ NotifyOwner ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct Rea
 		return;
 	}
 
-	msg = MEMORY_ALLOC ( MEMID_NotifyMessage, TRUE );
-
-	if ( ! msg )
-	{
-		return;
-	}
-
+	msg								   = reg->reg_DetachMessage;
+	reg->reg_DetachMessage			   = NULL;
 	reg->reg_Detach					   = TRUE;
 	msg->nm_Message.mn_ReplyPort	   = &usbbase->usb_Notify_ReplyMsgPort->ump_MsgPort;
 	msg->nm_Message.mn_Length		   = sizeof ( *msg );
@@ -136,10 +81,11 @@ __Function_MarkDetach ( struct USBBase * usbbase, struct RealFunctionNode * fn )
 		SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
 		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
 		if ( ! fn->fkt_Detach )
 		{
 			USBINFO ( "Marking FN %p Detached", fn );
-			__Send_DetachCommand ( usbbase, fn );
+
 			fn->fkt_Detach = TRUE;
 
 			NotifyOwner ( usbbase, fn, fn->fkt_Owner );

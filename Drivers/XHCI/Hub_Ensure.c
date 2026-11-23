@@ -21,22 +21,12 @@ XHCI_Hub_Ensure ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 
 	U32 * input;
 	U32 * context;
-	U32 index;
 	U32 ports;
 	U32 value;
 
 	usbbase = hn->hn_USBBase;
 	state = hn->hn_HCD.XHCI.State;
-	slot = NULL;
-
-	for ( index = 1; index <= state->Max_Slots; index++ )
-	{
-		if ( ( state->Slots[index] ) && ( state->Slots[index]->Function == fn ) )
-		{
-			slot = state->Slots[index];
-			break;
-		}
-	}
+	slot = XHCI_Slot_Find ( hn, fn->fkt_NotifyID );
 
 	if ( ( ! slot ) || ( ! fn->fkt_HUBDescriptor ) )
 	{

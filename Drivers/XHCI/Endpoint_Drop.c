@@ -23,7 +23,6 @@ XHCI_Endpoint_Drop ( struct USB2_HCDNode * hn, struct USB2_InterfaceHeader * ih 
 	struct USB2_EndPointNode *	ep;
 
 	U32 * input;
-	U32	  index;
 	U32	  dci;
 	U32	  drop;
 	U32	  entries;
@@ -32,18 +31,10 @@ XHCI_Endpoint_Drop ( struct USB2_HCDNode * hn, struct USB2_InterfaceHeader * ih 
 	usbbase = hn->hn_USBBase;
 	state	= hn->hn_HCD.XHCI.State;
 	old		= ih->ih_Active;
-	slot	= NULL;
 	drop	= 0;
 	entries = 1;
 
-	for ( index = 1; index <= state->Max_Slots; index++ )
-	{
-		if ( ( state->Slots[index] ) && ( state->Slots[index]->Function == ih->ih_Function ) )
-		{
-			slot = state->Slots[index];
-			break;
-		}
-	}
+	slot = XHCI_Slot_Find ( hn, ih->ih_Function->fkt_NotifyID );
 
 	if ( ( ! old ) || ( ! slot ) )
 	{

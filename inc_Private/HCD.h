@@ -50,6 +50,7 @@ struct HCDFunctions
 	U32 ( *Handler_Interrupt ) ( struct ExceptionContext *, struct ExecBase *, PTR );
 	U32 ( *Handler_Reset ) ( struct ExceptionContext *, struct ExecBase *, PTR );
 	void ( *Handler_HCD ) ( struct USB2_HCDNode *, U32 );
+	S32 ( *Retire_Detached ) ( struct USB2_HCDNode * );
 
 	// -- Root HUB Functions --
 

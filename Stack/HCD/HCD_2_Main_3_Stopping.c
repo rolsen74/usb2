@@ -62,7 +62,7 @@ __Stopping ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern *
 		if ( mask & hn->HCD_Restart_Chip.sig_Signal_Mask )
 		{
 			__myHandle_Reset ( usbbase, hn );
-			mask = 0;
+			mask &= ~hn->HCD_Mask;
 		}
 
 		if ( mask & hn->HCD_Mask )

@@ -32,7 +32,7 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 	state	= hn->hn_HCD.XHCI.State;
 	dci		= ep->ep_Number * 2 + ( direction ? 1 : 0 );
 	packet	= ep->ep_MaxPacketSize;
-	burst	= ( slot->Function->fkt_Speed == USBSPEED_High ) ? ( ep->ep_Transactions - 1 ) : 0;
+	burst	= ( slot->Speed == USBSPEED_High ) ? ( ep->ep_Transactions - 1 ) : 0;
 
 	if ( ( ! dci ) || ( dci > 31 ) || ( ! packet ) || ( packet > 1024 ) || ( burst > 2 ) )
 	{
@@ -82,7 +82,7 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 
 	if ( ep->ep_Type != EPATT_Type_Bulk )
 	{
-		if ( slot->Function->fkt_Speed >= USBSPEED_High )
+		if ( slot->Speed >= USBSPEED_High )
 		{
 			interval = MAX ( 1, MIN ( ep->ep_Interval, 16 ) ) - 1;
 		}

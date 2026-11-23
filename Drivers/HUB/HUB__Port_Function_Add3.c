@@ -129,7 +129,12 @@ bailout:
 	if (( fn ) && ( error ))
 	{
 		NODE_REMNODE( & in->FN_Header, & fn->fkt_DriverNode );
-		FUNCTION_FREE( fn );
+
+		if ( FUNCTION_FREE( fn ) == FSTAT_Locked )
+		{
+			NODE_ADDHEAD( & in->FN_Header, & fn->fkt_DriverNode );
+		}
+
 		fn = NULL;
 	}
 

@@ -146,6 +146,11 @@ DrainDetachedFunctions ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 			HCD_REPLY ( ioreq );
 		}
 	}
+
+	if ( hn->HCD_Functions.Retire_Detached )
+	{
+		hn->HCD_Functions.Retire_Detached ( hn );
+	}
 }
 
 // --

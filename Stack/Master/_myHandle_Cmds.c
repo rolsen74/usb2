@@ -10,7 +10,6 @@
 
 #include "_Cmd_Start_Process.c"
 #include "_Cmd_Stop_Process.c"
-#include "_Cmd_Fkt_Detach.c"
 
 // --
 
@@ -51,12 +50,6 @@ myHandle_Cmds ( struct USBBase * usbbase, struct intern * in )
 			{
 				__Cmd_Stop_Process ( usbbase, in, (PTR)msg );
 				continue;
-				break;
-			}
-
-			case CMD_FKT_DETACH:
-			{
-				reply = __Cmd_Fkt_Detach ( usbbase, in, (PTR)msg );
 				break;
 			}
 

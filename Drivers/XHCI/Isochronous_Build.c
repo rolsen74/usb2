@@ -15,7 +15,6 @@
 SEC_CODE S32
 XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 {
-	struct XHCI_State *		   state;
 	struct XHCI_Slot *		   slot;
 	struct XHCI_Ring *		   ring;
 	struct XHCI_Buffer *	   buffer;
@@ -32,7 +31,6 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	U32	  size;
 	U16 * lengths;
 
-	state	  = hn->hn_HCD.XHCI.State;
 	ep		  = req->req_EndPoint;
 	length	  = req->req_Public.io_Length;
 	direction = req->req_Public.io_Command == CMD_READ;
@@ -58,16 +56,7 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return ( TRUE );
 	}
 
-	slot = NULL;
-
-	for ( index = 1; index <= state->Max_Slots; index++ )
-	{
-		if ( ( state->Slots[index] ) && ( state->Slots[index]->Function == req->req_Function ) )
-		{
-			slot = state->Slots[index];
-			break;
-		}
-	}
+	slot = XHCI_Slot_Find ( hn, req->req_Function->fkt_NotifyID );
 
 	if ( ! slot )
 	{

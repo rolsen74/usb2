@@ -15,13 +15,11 @@
 SEC_CODE S32
 XHCI_Bulk_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 {
-	struct XHCI_State *		   state;
 	struct XHCI_Slot *		   slot;
 	struct XHCI_Ring *		   ring;
 	struct XHCI_Buffer *	   buffer;
 	struct USB2_EndPointNode * ep;
 
-	U32 index;
 	U32 direction;
 	U32 count;
 	U32 control;
@@ -31,7 +29,6 @@ XHCI_Bulk_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	U32 td_size;
 	S32 add_zero;
 
-	state	  = hn->hn_HCD.XHCI.State;
 	ep		  = req->req_EndPoint;
 	length	  = req->req_Public.io_Length;
 	packet	  = ep->ep_MaxPacketSize;
@@ -45,16 +42,7 @@ XHCI_Bulk_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return ( TRUE );
 	}
 
-	slot = NULL;
-
-	for ( index = 1; index <= state->Max_Slots; index++ )
-	{
-		if ( ( state->Slots[index] ) && ( state->Slots[index]->Function == req->req_Function ) )
-		{
-			slot = state->Slots[index];
-			break;
-		}
-	}
+	slot = XHCI_Slot_Find ( hn, req->req_Function->fkt_NotifyID );
 
 	if ( ! slot )
 	{
