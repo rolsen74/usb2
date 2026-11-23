@@ -44,6 +44,13 @@ __HCD_Reply ( struct USBBase * usbbase UNUSED, struct RealRequest * ioreq )
 			IOREQUEST_UNLOCK ( ioreq );
 		}
 
+		if ( ioreq->req_DestallTarget )
+		{
+			ENDPOINT_UNLOCK ( ioreq->req_DestallTarget );
+
+			ioreq->req_DestallTarget = NULL;
+		}
+
 		IOREQUEST_ACTIVE_SUB ( ioreq );
 
 		ioreq->req_PublicStat	  = IORS_User;

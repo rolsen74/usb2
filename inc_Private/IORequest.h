@@ -84,6 +84,8 @@ struct RealRequest
 
 	struct RealFunctionNode *	  req_Function;
 	struct USB2_InterfaceHeader * req_AltHeader;
+	struct USB2_EndPointNode *	  req_DestallTarget;
+	struct RealEndPointResource * req_Resource;
 	U8							  req_AltApplied;
 	struct USB2_EndPointNode *	  req_EndPoint;
 	struct USB2_MsgPort			  req_MsgPort;
@@ -91,7 +93,6 @@ struct RealRequest
 	enum IORStat				  req_PublicStat;
 
 	U8 req_TimerAdded;
-	U8 req_DoingDestall;
 
 #if 0
 //	U8								rr_HCDControlled;			// HCD has control, need to Reply it

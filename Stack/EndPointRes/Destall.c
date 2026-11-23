@@ -28,11 +28,13 @@ __EndPointRes_Destall ( struct USBBase * usbbase, struct USB2_EPResource * epr )
 	struct RealEndPointResource * real;
 	struct USB2_EndPointNode *	  ep;
 	struct RealFunctionNode *	  fn;
+	struct USB2_InterfaceNode *	  in;
 	struct USB2_SetupData		  sd;
 	struct RealRequest *		  ioreq;
-	U32							  retval;
-	U32							  locked;
-	U32							  idx;
+
+	U32 retval;
+	U32 locked;
+	U32 idx;
 
 	TASK_NAME_ENTER ( "__EndPointRes_Destall" );
 
@@ -64,7 +66,7 @@ __EndPointRes_Destall ( struct USBBase * usbbase, struct USB2_EPResource * epr )
 		goto bailout;
 	}
 
-	ep = (PTR)real->epr_Public.EndPoint;
+	ep = real->epr_EndPoint;
 
 	if ( ENDPOINT_VALID ( ep ) != VSTAT_Okay )
 	{
@@ -80,27 +82,45 @@ __EndPointRes_Destall ( struct USBBase * usbbase, struct USB2_EPResource * epr )
 		goto bailout;
 	}
 
-	if ( fn->fkt_Detach )
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+	in = ep->ep_Interface;
+
+	if ( ( real->epr_FreeMe ) || ( real->epr_Register->reg_FreeMe ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe )
+		 || ( ! ep->ep_Active ) || ( ( in ) && ( ( in->in_Parent->ih_Changing ) || ( in->in_Parent->ih_Active != in ) ) ) )
 	{
-		USBERROR ( "__EndPointRes_Destall : Function detached" );
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
 		goto bailout;
 	}
 
 	if ( ep->ep_Type == EPATT_Type_Control )
 	{
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
 		retval = TRUE;
 		goto bailout;
 	}
 
-	// if mp == NULL then alloc IOReq will create the msgport
-	ioreq = IOREQUEST_ALLOCTAGS ( USB2Tag_IOReq_EndPoint, fn->fkt_ControlEndPoint, USB2Tag_IOReq_TimeOut,
-								  500000,					   // 0.5 sec timeout
-								  USB2Tag_IOReq_MsgPort, NULL, // Create one for me
-								  TAG_END );
+	ioreq = IOREQUEST_ALLOCTAGS ( USB2Tag_IOReq_EndPoint, fn->fkt_ControlEndPoint, USB2Tag_IOReq_TimeOut, 500000, TAG_END );
+
+	if ( ( ioreq ) && ( ENDPOINT_LOCK ( ep ) == LSTAT_Okay ) )
+	{
+		ioreq->req_DestallTarget = ep;
+	}
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 	if ( ! ioreq )
 	{
 		USBERROR ( "__EndPointRes_Destall : Error creating IORequest" );
+		goto bailout;
+	}
+
+	if ( ! ioreq->req_DestallTarget )
+	{
+		IOREQUEST_FREE ( ioreq );
+
 		goto bailout;
 	}
 

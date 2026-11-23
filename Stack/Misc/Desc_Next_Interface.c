@@ -12,64 +12,65 @@
 
 // --
 
-SEC_CODE struct USB2_Interface_Desc *__Desc_Next_Interface( struct USBBase *usbbase, struct RealRegister *reg, struct USB2_Interface_Desc *ifcdsc )
+SEC_CODE struct USB2_Interface_Desc *
+__Desc_Next_Interface ( struct USBBase * usbbase, struct RealRegister * reg, struct USB2_Interface_Desc * ifcdsc )
 {
-struct USB2_Interface_Desc *next;
-struct RealFunctionNode *fn;
-struct USB2_Descriptor *dsc;
-struct USB2_ConfigNode *cn;
+	struct USB2_Interface_Desc * next;
+	struct RealFunctionNode *	 fn;
+	struct USB2_Descriptor *	 dsc;
+	struct USB2_ConfigNode *	 cn;
 
 	next = NULL;
-	dsc = NULL;
-	fn	= NULL;
-	cn	= NULL;
+	dsc	 = NULL;
+	fn	 = NULL;
+	cn	 = NULL;
 
 	// --
 
-	if ( REGISTER_VALID( reg ) != VSTAT_Okay )
+	if ( REGISTER_LOCK ( reg ) != LSTAT_Okay )
 	{
 		reg = NULL;
-		USBDEBUG( "Invalid Register Pointer %p", reg );
+		USBDEBUG ( "Invalid Register Pointer %p", reg );
 		goto bailout;
 	}
 
-	SEMAPHORE_OBTAIN( & reg->reg_Semaphore );
+	SEMAPHORE_OBTAIN ( &reg->reg_Semaphore );
 
 	// --
 
 	fn = reg->reg_Function;
 
-	if ( FUNCTION_LOCK( fn ) != LSTAT_Okay )
+	if ( FUNCTION_LOCK ( fn ) != LSTAT_Okay )
 	{
 		fn = NULL;
-		USBDEBUG( "Function Lock Failed" );
+		USBDEBUG ( "Function Lock Failed" );
 		goto bailout;
 	}
 
 	// --
 
-	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	cn = fn->fkt_Config_Active;
 
-	if ( ( ! cn ) || ( CONFIG_LOCK( cn ) != LSTAT_Okay ) )
+	if ( ( ! cn ) || ( CONFIG_LOCK ( cn ) != LSTAT_Okay ) )
 	{
 		cn = NULL;
 	}
 
-	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 	if ( ! cn )
 	{
-		USBDEBUG( "Config Lock Failed" );
+		USBDEBUG ( "Config Lock Failed" );
 		goto bailout;
 	}
 
-	dsc = (PTR) cn->cfg_Descriptor;
+	dsc = (PTR)cn->cfg_Descriptor;
 
 	if ( ! dsc )
 	{
-		USBDEBUG( "NULL Pointer" );
+		USBDEBUG ( "NULL Pointer" );
 		goto bailout;
 	}
 
@@ -78,7 +79,7 @@ struct USB2_ConfigNode *cn;
 	if ( dsc->DescriptorType == DSCTYPE_Configuration )
 	{
 		// Skip Config Descriptor
-		dsc = DESC_NEXT_DESC( dsc );
+		dsc = DESC_NEXT_DESC ( dsc );
 	}
 
 	// --
@@ -87,48 +88,48 @@ struct USB2_ConfigNode *cn;
 	{
 		if ( ifcdsc->DescriptorType != DSCTYPE_Interface )
 		{
-			USBDEBUG( "Not an Interface Descriptor" );
+			USBDEBUG ( "Not an Interface Descriptor" );
 			goto bailout;
 		}
 
 		// First check given Interface Descriptor is in Active Config
 
-		while(( dsc ) && ( dsc->DescriptorType != DSCTYPE_Configuration ))
+		while ( ( dsc ) && ( dsc->DescriptorType != DSCTYPE_Configuration ) )
 		{
-			if (( dsc->DescriptorType == DSCTYPE_Interface ) && ( dsc == (PTR) ifcdsc ))
+			if ( ( dsc->DescriptorType == DSCTYPE_Interface ) && ( dsc == (PTR)ifcdsc ) )
 			{
-//				USBDEBUG( "Found ifcdsc" );
+				//				USBDEBUG( "Found ifcdsc" );
 				break;
 			}
 			else
 			{
-				dsc = DESC_NEXT_DESC( dsc );
+				dsc = DESC_NEXT_DESC ( dsc );
 			}
 		}
 
-		if (( ! dsc ) || ( dsc->DescriptorType == DSCTYPE_Configuration ))
+		if ( ( ! dsc ) || ( dsc->DescriptorType == DSCTYPE_Configuration ) )
 		{
 			// This is not an error
 			goto bailout;
 		}
 
 		// Skip Interface Descriptor
-		dsc = DESC_NEXT_DESC( dsc );
+		dsc = DESC_NEXT_DESC ( dsc );
 	}
 
 	// Find Next Interface Descriptor
 
-	while(( dsc ) && ( dsc->DescriptorType != DSCTYPE_Configuration ))
+	while ( ( dsc ) && ( dsc->DescriptorType != DSCTYPE_Configuration ) )
 	{
 		if ( dsc->DescriptorType == DSCTYPE_Interface )
 		{
-//			USBDEBUG( "Found Interface Descriptor" );
-			next = (PTR) dsc;
+			//			USBDEBUG( "Found Interface Descriptor" );
+			next = (PTR)dsc;
 			break;
 		}
 		else
 		{
-			dsc = DESC_NEXT_DESC( dsc );
+			dsc = DESC_NEXT_DESC ( dsc );
 		}
 	}
 
@@ -136,20 +137,22 @@ bailout:
 
 	if ( cn )
 	{
-		CONFIG_UNLOCK(cn);
+		CONFIG_UNLOCK ( cn );
 	}
 
 	if ( fn )
 	{
-		FUNCTION_UNLOCK( fn );
+		FUNCTION_UNLOCK ( fn );
 	}
 
 	if ( reg )
 	{
-		SEMAPHORE_RELEASE( & reg->reg_Semaphore );
+		SEMAPHORE_RELEASE ( &reg->reg_Semaphore );
+
+		REGISTER_UNLOCK ( reg );
 	}
 
-	return( next );
+	return ( next );
 }
 
 // --

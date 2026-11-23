@@ -68,14 +68,82 @@ FindLiveRequest ( struct USBBase * usbbase, const struct IORequest * request )
 
 // --
 
+// Called with the stack lock held.
+static S32
+PrepareHaltClear ( struct USBBase * usbbase, struct RealRequest * ioreq, struct USB2_HCDNode * hn )
+{
+	struct USB2_SetupData *		setup;
+	struct USB2_EndPointNode *	target;
+	struct USB2_InterfaceNode * in;
+
+	U32 address;
+	U32 slot;
+
+	setup = ioreq->req_Public.io_SetupData;
+
+	if ( ( ioreq->req_Public.io_Command != CMD_WRITE ) || ( ioreq->req_EndPoint->ep_Type != EPATT_Type_Control )
+		 || ( ioreq->req_Public.io_Data ) || ( ioreq->req_Public.io_Length ) || ( ! setup )
+		 || ( ioreq->req_Public.io_SetupLength != sizeof ( *setup ) )
+		 || ( setup->RequestType != ( REQTYPE_Write | REQTYPE_Standard | REQTYPE_EndPoint ) )
+		 || ( setup->RequestCode != REQCODE_Clear_Feature ) || ( setup->Value != LE_SWAP16 ( USBFEATURE_EndPoint_Halt ) ) )
+	{
+		return ( TRUE );
+	}
+
+	address = LE_SWAP16 ( setup->Index );
+
+	if ( ( address & ~( EPADR_Dir_Mask | EPADR_EndPoint_Mask ) ) || ( ioreq->req_Function->fkt_Address >= 128 ) )
+	{
+		return ( FALSE );
+	}
+
+	slot = ( ioreq->req_Function->fkt_Address * 32 ) + EPADR_Dir_Number ( address );
+
+	if ( ( address & EPADR_Dir_Mask ) == EPADR_Dir_Out )
+	{
+		slot += 16;
+	}
+
+	target = hn->hn_EndPoint_Array[slot];
+
+	if ( ( ! target ) || ( target->ep_Function != ioreq->req_Function ) || ( ! target->ep_Active ) )
+	{
+		return ( FALSE );
+	}
+
+	in = target->ep_Interface;
+
+	if ( ( in ) && ( ( in->in_Parent->ih_Changing ) || ( in->in_Parent->ih_Active != in ) ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( ioreq->req_DestallTarget )
+	{
+		return ( ioreq->req_DestallTarget == target );
+	}
+
+	if ( ENDPOINT_LOCK ( target ) != LSTAT_Okay )
+	{
+		return ( FALSE );
+	}
+
+	ioreq->req_DestallTarget = target;
+
+	return ( TRUE );
+}
+
+// --
+
 static void
 _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * request )
 {
-	struct RealFunctionNode *	fn;
-	struct USB2_InterfaceNode * in;
-	struct USB2_HCDNode *		hn;
-	struct RealRequest *		ioreq;
-	struct USBBase *			usbbase;
+	struct RealEndPointResource * resource;
+	struct RealFunctionNode *	  fn;
+	struct USB2_InterfaceNode *	  in;
+	struct USB2_HCDNode *		  hn;
+	struct RealRequest *		  ioreq;
+	struct USBBase *			  usbbase;
 
 	usbbase = (PTR)Self->Data.LibBase;
 
@@ -115,9 +183,11 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			hn							= fn->fkt_HCD;
 			ioreq->req_Public.io_Actual = 0;
 
-			in = ioreq->req_EndPoint->ep_Interface;
+			in		 = ioreq->req_EndPoint->ep_Interface;
+			resource = ioreq->req_Resource;
 
-			if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ioreq->req_FreeMe ) || ( ioreq->req_Detach ) )
+			if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ioreq->req_FreeMe ) || ( ioreq->req_Detach )
+				 || ( ( resource ) && ( ( resource->epr_FreeMe ) || ( resource->epr_Register->reg_FreeMe ) ) ) )
 			{
 				request->io_Error = USB2Err_Device_Detached;
 			}
@@ -129,6 +199,10 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			else if ( HCD_VALID ( hn ) != VSTAT_Okay )
 			{
 				request->io_Error = USB2Err_Stack_InvalidStructure;
+			}
+			else if ( ! PrepareHaltClear ( usbbase, ioreq, hn ) )
+			{
+				request->io_Error = USB2Err_Stack_EndPointNotFound;
 			}
 			else
 			{
@@ -146,7 +220,14 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			}
 		}
 
+		if ( ! ( request->io_Flags & IOF_QUICK ) )
+		{
+			MSGPORT_REPLYMSG ( request );
+		}
+
 		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		return;
 	}
 
 	if ( ! ( request->io_Flags & IOF_QUICK ) )

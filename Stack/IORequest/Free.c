@@ -11,16 +11,36 @@
 #include "usb2_all.h"
 
 // --
-// Release all resource we can, for this Struct
-
+// Remove this request's reply without consuming other messages on the port.
 SEC_CODE static void
-__Release ( struct USBBase * usbbase UNUSED, struct RealRequest * ioreq UNUSED )
+CollectReply ( struct USBBase * usbbase, struct RealRequest * ioreq )
 {
-	//	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
-	// --
+	struct ExecIFace * IExec;
+	struct MsgPort *   port;
+	struct Node *	   node;
 
-	// --
-	//	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+	port = ioreq->req_Public.io_Message.mn_ReplyPort;
+
+	if ( ! port )
+	{
+		return;
+	}
+
+	IExec = usbbase->usb_IExec;
+
+	IExec->Disable ();
+
+	for ( node = port->mp_MsgList.lh_Head; node->ln_Succ; node = node->ln_Succ )
+	{
+		if ( node == &ioreq->req_Public.io_Message.mn_Node )
+		{
+			IExec->Remove ( node );
+
+			break;
+		}
+	}
+
+	IExec->Enable ();
 }
 
 // --
@@ -47,21 +67,6 @@ __IORequest_Free ( struct USBBase * usbbase, struct RealRequest * ioreq )
 
 	// --
 
-	if ( IOREQUEST_LOCK ( ioreq ) == LSTAT_Okay )
-	{
-		if ( ! ioreq->req_FreeMe )
-		{
-			USBINFO ( "Marking IOReq %p FreeMe", ioreq );
-			ioreq->req_FreeMe = TRUE;
-		}
-
-		__Release ( usbbase, ioreq );
-
-		IOREQUEST_UNLOCK ( ioreq );
-	}
-
-	// --
-
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	vstat = IOREQUEST_VALID ( ioreq );
@@ -72,8 +77,10 @@ __IORequest_Free ( struct USBBase * usbbase, struct RealRequest * ioreq )
 	}
 	else if ( vstat == VSTAT_Okay )
 	{
+		ioreq->req_FreeMe = TRUE;
+
 		//		usbbase->usb_IExec->DebugPrintF( "__IORequest_Free         : IOReq %p : Locks %2ld : Stat %ld : Task %p :\n",
-		//ioreq, ioreq->req_Locks, ioreq->req_PublicStat, usbbase->usb_IExec->FindTask(NULL) );
+		// ioreq, ioreq->req_Locks, ioreq->req_PublicStat, usbbase->usb_IExec->FindTask(NULL) );
 
 		if ( ( ioreq->req_PublicStat != IORS_User ) && ( ioreq->req_PublicStat != IORS_Unset ) )
 		{
@@ -95,6 +102,8 @@ __IORequest_Free ( struct USBBase * usbbase, struct RealRequest * ioreq )
 			{
 				NODE_REMNODE ( &usbbase->usb_IORequests, &ioreq->req_LiveNode );
 			}
+
+			CollectReply ( usbbase, ioreq );
 
 			ioreq->req_StructID = ID_USB2_FREED;
 			fstat				= FSTAT_Okay;
@@ -126,7 +135,7 @@ __IORequest_Free ( struct USBBase * usbbase, struct RealRequest * ioreq )
 	//	||	(( Node_Prev(ioreq)) && ( Node_Prev(ioreq) != (PTR) 0xAC222222 )))
 	//	{
 	//		USBPANIC( "__IORequest_Free    : Register Node have not been removed : Self %p : Next %p : Prev %p : (%s)", ioreq,
-	//Node_Next(ioreq), Node_Prev(ioreq), file );
+	// Node_Next(ioreq), Node_Prev(ioreq), file );
 	//	}
 	//
 	//	#endif
@@ -161,6 +170,11 @@ __IORequest_Free ( struct USBBase * usbbase, struct RealRequest * ioreq )
 	}
 
 #endif
+
+	if ( ioreq->req_DestallTarget )
+	{
+		ENDPOINT_UNLOCK ( ioreq->req_DestallTarget );
+	}
 
 	if ( ioreq->req_EndPoint )
 	{

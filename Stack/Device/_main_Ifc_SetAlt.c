@@ -103,8 +103,9 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 	{
 		pending = node->un_Data;
 
-		if ( ( old ) && ( pending->req_Function == fn ) && ( pending->req_EndPoint->ep_Interface == old )
-			 && ( pending->req_PublicStat != IORS_User ) )
+		if ( ( old ) && ( pending->req_Function == fn )
+			 && ( ( ( pending->req_EndPoint->ep_Interface == old ) && ( pending->req_PublicStat != IORS_User ) )
+				  || ( ( pending->req_DestallTarget ) && ( pending->req_DestallTarget->ep_Interface == old ) ) ) )
 		{
 			goto unlock;
 		}

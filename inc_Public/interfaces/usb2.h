@@ -21,35 +21,37 @@ struct USB2IFace
 {
 	struct InterfaceData Data;
 
-	U32								APICALL (*Obtain)(struct USB2IFace *Self);
-	U32								APICALL (*Release)(struct USB2IFace *Self);
-	void							APICALL (*Expunge)(struct USB2IFace *Self);
-	struct Interface *				APICALL (*Clone)(struct USB2IFace *Self);
+	U32				   APICALL ( *Obtain ) ( struct USB2IFace * Self );
+	U32				   APICALL ( *Release ) ( struct USB2IFace * Self );
+	void			   APICALL ( *Expunge ) ( struct USB2IFace * Self );
+	struct Interface * APICALL ( *Clone ) ( struct USB2IFace * Self );
 
-	U32								APICALL (*USB2_Attr_Get)(struct USB2IFace *Self, USB2_ID id, U32 tag, PTR buffer, U32 buffsersize );
-	U32								APICALL (*USB2_Attr_Set)(struct USB2IFace *Self, USB2_ID id, U32 tag, PTR buffer, U32 buffsersize );
+	U32 APICALL ( *USB2_Attr_Get ) ( struct USB2IFace * Self, USB2_ID id, U32 tag, PTR buffer, U32 buffsersize );
+	U32 APICALL ( *USB2_Attr_Set ) ( struct USB2IFace * Self, USB2_ID id, U32 tag, PTR buffer, U32 buffsersize );
 
-	struct USB2_Function *			APICALL (*USB2_Fkt_FindTags)(struct USB2IFace *Self, ... );
-	struct USB2_Function *			APICALL (*USB2_Fkt_FindList)(struct USB2IFace *Self, struct TagItem *taglist );
+	struct USB2_Function * APICALL ( *USB2_Fkt_FindTags ) ( struct USB2IFace * Self, ... );
+	struct USB2_Function * APICALL ( *USB2_Fkt_FindList ) ( struct USB2IFace * Self, struct TagItem * taglist );
 
-	struct USB2_Interface *			APICALL (*USB2_Ifc_FindTags)(struct USB2IFace *Self, ... );
-	struct USB2_Interface *			APICALL (*USB2_Ifc_FindList)(struct USB2IFace *Self, struct TagItem *taglist );
-	S32								APICALL (*USB2_Ifc_Claim)(struct USB2IFace *Self, struct USB2_Register *reg, struct USB2_Interface *ih );
-	S32								APICALL (*USB2_Ifc_Declaim)(struct USB2IFace *Self, struct USB2_Register *reg, struct USB2_Interface *ih );
+	struct USB2_Interface * APICALL ( *USB2_Ifc_FindTags ) ( struct USB2IFace * Self, ... );
+	struct USB2_Interface * APICALL ( *USB2_Ifc_FindList ) ( struct USB2IFace * Self, struct TagItem * taglist );
+	S32 APICALL ( *USB2_Ifc_Claim ) ( struct USB2IFace * Self, struct USB2_Register * reg, struct USB2_Interface * ih );
+	S32 APICALL ( *USB2_Ifc_Declaim ) ( struct USB2IFace * Self, struct USB2_Register * reg, struct USB2_Interface * ih );
 
-	struct USB2_Register *			APICALL (*USB2_Reg_RegisterTags)(struct USB2IFace *Self, ...);
-	struct USB2_Register *			APICALL (*USB2_Reg_RegisterList)(struct USB2IFace *Self, struct TagItem *taglist );
-	void							APICALL (*USB2_Reg_Unregister)(struct USB2IFace *Self, struct USB2_Register *reg );
+	struct USB2_Register * APICALL ( *USB2_Reg_RegisterTags ) ( struct USB2IFace * Self, ... );
+	struct USB2_Register * APICALL ( *USB2_Reg_RegisterList ) ( struct USB2IFace * Self, struct TagItem * taglist );
+	void				   APICALL ( *USB2_Reg_Unregister ) ( struct USB2IFace * Self, struct USB2_Register * reg );
 
-	struct USB2_EPResource *		APICALL (*USB2_EPRes_ObtainTags)(struct USB2IFace *Self, struct USB2_Register *reg, ... );
-	struct USB2_EPResource *		APICALL (*USB2_EPRes_ObtainList)(struct USB2IFace *Self, struct USB2_Register *reg, struct TagItem taglist );
-	void							APICALL (*USB2_EPRes_Release)(struct USB2IFace *Self, struct USB2_EPResource *epr );
-	U32								APICALL (*USB2_EPRes_Destall)(struct USB2IFace *Self, struct USB2_EPResource *epr );
+	struct USB2_EPResource * APICALL ( *USB2_EPRes_ObtainTags ) ( struct USB2IFace * Self, struct USB2_Register * reg, ... );
+	struct USB2_EPResource * APICALL ( *USB2_EPRes_ObtainList ) ( struct USB2IFace * Self, struct USB2_Register * reg,
+																  struct TagItem * taglist );
+	void					 APICALL ( *USB2_EPRes_Release ) ( struct USB2IFace * Self, struct USB2_EPResource * epr );
+	U32						 APICALL ( *USB2_EPRes_Destall ) ( struct USB2IFace * Self, struct USB2_EPResource * epr );
 
-	PTR								APICALL (*USB2_Notify_Add)(struct USB2IFace *Self, U32 type, struct MsgPort *mp );
-	void							APICALL (*USB2_Notify_Remove)(struct USB2IFace *Self, PTR notify );
+	PTR	 APICALL ( *USB2_Notify_Add ) ( struct USB2IFace * Self, U32 type, struct MsgPort * mp );
+	void APICALL ( *USB2_Notify_Remove ) ( struct USB2IFace * Self, PTR notify );
 	// Select an owned interface's alternate setting and update its active endpoints.
-	S32								APICALL (*USB2_Ifc_SetAlt)(struct USB2IFace *Self, struct USB2_Register *reg, struct USB2_Interface *ifc, U32 alt );
+	S32 APICALL ( *USB2_Ifc_SetAlt ) ( struct USB2IFace * Self, struct USB2_Register * reg, struct USB2_Interface * ifc,
+									   U32 alt );
 };
 
 /***************************************************************************/
@@ -58,11 +60,11 @@ struct USB2DriverIFace
 {
 	struct InterfaceData Data;
 
-	U32								APICALL ( *Obtain )	 ( struct USB2DriverIFace *Self );
-	U32								APICALL ( *Release ) ( struct USB2DriverIFace *Self );
-	void							APICALL ( *Expunge ) ( struct USB2DriverIFace *Self );
-	struct Interface *				APICALL ( *Clone )	 ( struct USB2DriverIFace *Self );
-	U32								APICALL ( *Entry )	 ( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg );
+	U32				   APICALL ( *Obtain ) ( struct USB2DriverIFace * Self );
+	U32				   APICALL ( *Release ) ( struct USB2DriverIFace * Self );
+	void			   APICALL ( *Expunge ) ( struct USB2DriverIFace * Self );
+	struct Interface * APICALL ( *Clone ) ( struct USB2DriverIFace * Self );
+	U32				   APICALL ( *Entry ) ( struct USB2DriverIFace * Self, struct USB2_DriverMessage * msg );
 };
 
 /***************************************************************************/
@@ -126,10 +128,6 @@ struct USB2IFace
 }
 #endif
 #endif
-
-
-
-
 
 #endif
 

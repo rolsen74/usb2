@@ -16,63 +16,43 @@
 SEC_CODE static void
 __Release ( struct USBBase * usbbase, struct RealRegister * reg )
 {
-	// struct RealEndPointResource *real;
-	struct RealEndPointResource * next;
 	struct RealEndPointResource * epr;
 	struct USB2_InterfaceHeader * ih;
 	struct USB2_InterfaceGroup *  ig;
 	struct RealFunctionNode *	  fn;
 	struct USB2_ConfigNode *	  cn;
 
-	//	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	// --
-	// Free EndPoint Resources
+	reg->reg_Public.Res_Control = NULL;
 
-	epr = reg->reg_EPRHeader.uh_Head;
-
-	USBDEBUG ( "__Register_Free          : Trying to free EPR %p (1)", epr );
-
-	while ( epr )
+	while ( ( epr = reg->reg_EPRHeader.uh_Head ) )
 	{
-		USBDEBUG ( "__Register_Free          : Trying to free EPR %p (2)", epr );
+		epr->epr_FreeMe = TRUE;
 
-		next = Node_Next ( epr );
-		// --
-
-		//		real = (PTR) ( (char *) epr - offsetof( struct RealEndPointResource, epr_Node ));
-
-		//		#ifdef DO_DEBUG
-		//
-		//		if ( ENDPOINTRES_VALID(epr) != VSTAT_Okay )
-		//		{
-		//			USBPANIC( "__Register_Free : Invalid EPR : %p -> %p", epr, real );
-		//		}
-		//
-		//		#endif
-
-		USBDEBUG ( "__Register_Free          : Trying to free EPR %p", epr );
-		USBDEBUG ( "--> : REM 4 : EPR %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
 		NODE_REMNODE ( &reg->reg_EPRHeader, &epr->epr_Node );
 
-		if ( ENDPOINTRES_FREE ( epr ) != FSTAT_Okay )
-		{
-			USBDEBUG ( "__Register_Free : Failed to free EPR %p", epr );
-			USBDEBUG ( "--> : ADD 5 : EPR %p to REG %p : Title '%s' :", epr, reg, reg->reg_Title );
-			NODE_ADDTAIL ( &reg->reg_EPRHeader, &epr->epr_Node );
-		}
-		else
-		{
-			USBDEBUG ( "__Register_Free          : Free'd EPR %p", epr );
-			if ( reg->reg_Public.Res_Control == &epr->epr_Public )
-			{
-				USBDEBUG ( "__Register_Free          : Found Control EPR (1)" );
-				reg->reg_Public.Res_Control = NULL;
-			}
-		}
-		// --
-		epr = next;
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		ENDPOINTRES_FREE ( epr );
+
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 	}
+
+	// Other references include a private Obtain and an explicit Release.
+	while ( reg->reg_Locks )
+	{
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		MISC_WAIT ( 1000 );
+
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+	}
+
+	// Only the teardown task can take the references used by the declaim helpers.
+	reg->reg_ClosingTask = TASK_FIND ();
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 	// -- Release Claims and Function Lock
 
@@ -121,10 +101,6 @@ __Release ( struct USBBase * usbbase, struct RealRegister * reg )
 		INTERFACE_UNLOCKHEADER ( ih );
 		reg->reg_Interface = NULL;
 	}
-
-	// --
-
-	//	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 }
 
 // --
@@ -153,56 +129,38 @@ __Register_Free ( struct USBBase * usbbase, struct RealRegister * reg )
 
 	// --
 
-	if ( REGISTER_LOCK ( reg ) == LSTAT_Okay )
-	{
-		if ( ! reg->reg_FreeMe )
-		{
-			USBINFO ( "Marking REG %p FreeMe", reg );
-			reg->reg_FreeMe = TRUE;
-		}
-
-		__Release ( usbbase, reg );
-
-		REGISTER_UNLOCK ( reg );
-	}
-
-	// --
-
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	vstat = REGISTER_VALID ( reg );
 
-	/**/ if ( vstat == VSTAT_Null )
+	if ( vstat != VSTAT_Okay )
 	{
-		fstat = FSTAT_Null;
+		fstat = ( vstat == VSTAT_Null ) ? FSTAT_Null : FSTAT_Error;
 	}
-	else if ( vstat == VSTAT_Okay )
+	else if ( reg->reg_FreeMe )
 	{
-		if ( reg->reg_Locks > 0 )
-		{
-			USBINFO ( "__Register_Free          : Register Node still have %ld locks", reg->reg_Locks );
-			fstat = FSTAT_Locked;
-		}
-		else
-		{
-			reg->reg_StructID = ID_USB2_FREED;
-			fstat			  = FSTAT_Okay;
-		}
+		fstat = FSTAT_Locked;
 	}
-	else // ( vstat == VSTAT_Error )
+	else
 	{
-		USBPANIC ( "__Register_Free  : Invalid Pointer %p : (%s)", reg, file );
-		fstat = FSTAT_Error;
+		reg->reg_FreeMe = TRUE;
+		fstat			= FSTAT_Okay;
 	}
 
 	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-
-	// --
 
 	if ( fstat != FSTAT_Okay )
 	{
 		goto bailout;
 	}
+
+	__Release ( usbbase, reg );
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+	reg->reg_StructID = ID_USB2_FREED;
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 	USBINFO ( "__Register_Free          : Freeing %p : (%s)", reg, ( file ) ? file : "<NULL>" );
 
@@ -215,7 +173,7 @@ __Register_Free ( struct USBBase * usbbase, struct RealRegister * reg )
 	//	||	(( Node_Prev( reg )) && ( Node_Prev( reg ) != (PTR) 0xAC222222 )))
 	//	{
 	//		USBPANIC( "__Register_Free          : REGister Node have not been removed : Self %p : Next %p : Prev %p : (%s)", reg,
-	//Node_Next( reg ), Node_Prev( reg ), file );
+	// Node_Next( reg ), Node_Prev( reg ), file );
 	//	}
 	//
 	//	#endif

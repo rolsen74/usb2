@@ -13,22 +13,21 @@
 // --
 // Release all resource we can, for this Struct
 
-SEC_CODE static S32
+SEC_CODE static void
 __Release ( struct USBBase * usbbase, struct RealEndPointResource * epr )
 {
 	struct RealRequest * ioreq;
 
 	U32 count;
 	U32 index;
+	S32 active;
 
 	if ( ! epr->epr_Public.IORequests )
 	{
-		return ( TRUE );
+		return;
 	}
 
 	count = epr->epr_RequestCount;
-
-	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 	// The first request can own the reply port shared by the rest.
 	while ( count )
@@ -41,20 +40,34 @@ __Release ( struct USBBase * usbbase, struct RealEndPointResource * epr )
 			continue;
 		}
 
-		if ( ioreq->req_PublicStat != IORS_User )
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+		active = ( ioreq->req_PublicStat != IORS_User );
+
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		if ( active )
 		{
-			SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+			usbbase->usb_IExec->AbortIO ( (PTR)ioreq );
 
-			IO_STOP ( ioreq );
-
+			// The reply port can signal another task.
 			SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+			while ( ioreq->req_PublicStat != IORS_User )
+			{
+				SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+				MISC_WAIT ( 1000 );
+
+				SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+			}
+
+			SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 		}
 
-		if ( IOREQUEST_FREE ( ioreq ) != FSTAT_Okay )
+		while ( IOREQUEST_FREE ( ioreq ) == FSTAT_Locked )
 		{
-			SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-
-			return ( FALSE );
+			MISC_WAIT ( 1000 );
 		}
 
 		epr->epr_Public.IORequests[index] = NULL;
@@ -63,10 +76,6 @@ __Release ( struct USBBase * usbbase, struct RealEndPointResource * epr )
 	MEM_FREEVEC ( epr->epr_Public.IORequests );
 
 	epr->epr_Public.IORequests = NULL;
-
-	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-
-	return ( TRUE );
 }
 
 // --
@@ -85,30 +94,12 @@ __EndPointRes_Free ( struct USBBase * usbbase, struct RealEndPointResource * epr
 
 {
 	struct RealRegister * reg;
-	enum VSTAT			  vstat;
-	enum FSTAT			  fstat;
-	PTR					  buf;
-	S32					  pos;
-	S32					  released;
+
+	enum VSTAT vstat;
+	PTR		   buf;
+	S32		   pos;
 
 	USBDEBUG ( "__EndPointRes_Free       : EPR   %p : (%s)", epr, ( file ) ? file : "<NULL>" );
-
-	// --
-
-	released = FALSE;
-
-	if ( ENDPOINTRES_LOCK ( epr ) == LSTAT_Okay )
-	{
-		if ( ! epr->epr_FreeMe )
-		{
-			USBINFO ( "Marking EPR %p FreeMe", epr );
-			epr->epr_FreeMe = TRUE;
-		}
-
-		released = __Release ( usbbase, epr );
-
-		ENDPOINTRES_UNLOCK ( epr );
-	}
 
 	// --
 
@@ -116,37 +107,33 @@ __EndPointRes_Free ( struct USBBase * usbbase, struct RealEndPointResource * epr
 
 	vstat = ENDPOINTRES_VALID ( epr );
 
-	/**/ if ( vstat == VSTAT_Null )
+	if ( vstat != VSTAT_Okay )
 	{
-		fstat = FSTAT_Null;
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		return ( ( vstat == VSTAT_Null ) ? FSTAT_Null : FSTAT_Error );
 	}
-	else if ( vstat == VSTAT_Okay )
+
+	epr->epr_FreeMe = TRUE;
+
+	while ( epr->epr_Locks )
 	{
-		if ( ( ! released ) || ( epr->epr_Locks > 0 ) )
-		{
-			USBDEBUG ( "__EndPointRes_Free  : EndPoint Node still have %ld locks", epr->epr_Locks );
-			fstat = FSTAT_Locked;
-		}
-		else
-		{
-			epr->epr_StructID = ID_USB2_FREED;
-			fstat			  = FSTAT_Okay;
-		}
-	}
-	else // ( vstat == VSTAT_Error )
-	{
-		USBPANIC ( "__EndPointRes_Free  : Invalid Pointer %p : (%s)", epr, file );
-		fstat = FSTAT_Error;
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+		MISC_WAIT ( 1000 );
+
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 	}
 
 	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
-	// --
+	__Release ( usbbase, epr );
 
-	if ( fstat != FSTAT_Okay )
-	{
-		goto bailout;
-	}
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+	epr->epr_StructID = ID_USB2_FREED;
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 	USBINFO ( "__EndPointRes_Free       : Freeing %p : (%s)", epr, ( file ) ? file : "<NULL>" );
 
@@ -216,11 +203,7 @@ __EndPointRes_Free ( struct USBBase * usbbase, struct RealEndPointResource * epr
 
 	MEMORY_FREE ( MEMID_USBEndPointResource, epr, 0 );
 
-bailout:
-
-	//	USBDEBUG( 5, "__EndPointRes_Free  : 99" );
-
-	return ( fstat );
+	return ( FSTAT_Okay );
 }
 
 // --

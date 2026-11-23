@@ -24,9 +24,9 @@ __HCD_Transfer_Remove ( struct USBBase * usbbase, struct USB2_HCDNode * hn, stru
 	struct USB2_EndPointNode * destall_ep;
 	struct USB2_EndPointNode * ep;
 	struct RealFunctionNode *  fn;
-	U32						   actual;
-	U32						   offset;
-	U32						   index;
+
+	U32 actual;
+	U32 index;
 
 	//	USBDEBUG( "__HCD_Transfer_Remove :" );
 	TASK_NAME_ENTER ( "HCD : __HCD_Transfer_Remove" );
@@ -65,40 +65,24 @@ __HCD_Transfer_Remove ( struct USBBase * usbbase, struct USB2_HCDNode * hn, stru
 	// --
 	// Check if a Destall succeded
 
-	if ( ioreq->req_DoingDestall )
+	if ( ioreq->req_DestallTarget )
 	{
-		ioreq->req_DoingDestall = FALSE;
-		index					= LE_SWAP16 ( ioreq->req_Public.io_SetupData->Index );
+		destall_ep = ioreq->req_DestallTarget;
+		index	   = LE_SWAP16 ( ioreq->req_Public.io_SetupData->Index );
 
 		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
 		if ( ( ioreq->req_PublicStat == IORS_HCD_Active ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe )
-			 && ( fn->fkt_Address < 128 ) && ( ioreq->req_Public.io_Error == USB2Err_NoError ) )
+			 && ( destall_ep->ep_Active ) && ( ioreq->req_Public.io_Error == USB2Err_NoError ) )
 		{
-			offset = ( fn->fkt_Address * 32 ) + ( index & 0x0f );
+			usbbase->usb_IExec->DebugPrintF ( "[%s] We successfully Destalled -- Addr %ld : EP    $%02lx : EPN Info : EPNr "
+											  "%ld : EPDir %ld : EPSize %ld : EPType %ld\n",
+											  usbbase->usb_IExec->FindTask ( NULL )->tc_Node.ln_Name, fn->fkt_Address, index,
+											  destall_ep->ep_Number, destall_ep->ep_Direction, destall_ep->ep_MaxPacketSize,
+											  destall_ep->ep_Type );
 
-			if ( ( index & EPADR_Dir_Mask ) == EPADR_Dir_Out )
-			{
-				offset += 16;
-			}
-
-			destall_ep = hn->hn_EndPoint_Array[offset];
-
-			if ( destall_ep )
-			{
-				usbbase->usb_IExec->DebugPrintF ( "[%s] We successfully Destalled -- Addr %ld : EP    $%02lx : EPN Info : EPNr "
-												  "%ld : EPDir %ld : EPSize %ld : EPType %ld\n",
-												  usbbase->usb_IExec->FindTask ( NULL )->tc_Node.ln_Name, fn->fkt_Address, index,
-												  destall_ep->ep_Number, destall_ep->ep_Direction, destall_ep->ep_MaxPacketSize,
-												  destall_ep->ep_Type );
-
-				destall_ep->ep_DataToggle = 0;
-				destall_ep->ep_Stalled	  = FALSE;
-			}
-			else
-			{
-				USBERROR ( "Destall Error : EndPoint Not Found : Offset %ld", offset );
-			}
+			destall_ep->ep_DataToggle = 0;
+			destall_ep->ep_Stalled	  = FALSE;
 		}
 		else
 		{

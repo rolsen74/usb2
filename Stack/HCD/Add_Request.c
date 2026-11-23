@@ -60,27 +60,18 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 	// --
 	// First figure out if its a Clear Halt (Destall)
 
-	if ( ( ep->ep_Type == ( EPATT_Type_Control ) ) && ( ioreq->req_Public.io_Data == 0 ) && ( ioreq->req_Public.io_Length == 0 )
-		 && ( ioreq->req_Public.io_SetupData )
-		 && ( ioreq->req_Public.io_SetupData->RequestType == ( REQTYPE_Write | REQTYPE_Standard | REQTYPE_EndPoint ) )
-		 && ( ioreq->req_Public.io_SetupData->RequestCode == ( REQCODE_Clear_Feature ) )
-		 && ( ioreq->req_Public.io_SetupData->Value == ( LE_SWAP16 ( USBFEATURE_EndPoint_Halt ) ) )
-		 && ( ioreq->req_Public.io_SetupLength == ( sizeof ( struct USB2_SetupData ) ) ) )
+	if ( ioreq->req_DestallTarget )
 	{
-		ioreq->req_DoingDestall = TRUE;
+		U32 index;
 
-		//		#ifdef DO_DEBUG
-		U32 index = LE_SWAP16 ( ioreq->req_Public.io_SetupData->Index );
+		index = LE_SWAP16 ( ioreq->req_Public.io_SetupData->Index );
 
 		usbbase->usb_IExec->Disable ();
+
 		usbbase->usb_IExec->DebugPrintF ( "[%s] Destalling Pipe -- Addr %ld -- EP $%02lx\n",
 										  usbbase->usb_IExec->FindTask ( NULL )->tc_Node.ln_Name, (U32)fn->fkt_Address, index );
+
 		usbbase->usb_IExec->Enable ();
-		//		#endif
-	}
-	else
-	{
-		ioreq->req_DoingDestall = FALSE;
 	}
 
 	// --
@@ -90,7 +81,7 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 	if ( ( ep->ep_Type == EPATT_Type_Interrupt ) || ( ep->ep_Type == EPATT_Type_Bulk ) )
 	{
 		// Check if EP Pipe is stalled
-		if ( ( ep->ep_Stalled ) && ( ! ioreq->req_DoingDestall ) )
+		if ( ep->ep_Stalled )
 		{
 			//			usbbase->usb_IExec->Disable();
 			//			usbbase->usb_IExec->DebugPrintF( "Pipe is stalled -- Addr %ld -- EP $%02lx\n", (U32) fn->fkt_Address,
