@@ -9,6 +9,7 @@
 // --
 
 #include "inc/All.h"
+#include <intuition/menuclass.h>
 
 // --
 
@@ -32,7 +33,18 @@ enum
 
 // --
 
+enum
+{
+	MENU_SAVE_TREE = 1,
+	MENU_ABOUT,
+	MENU_QUIT,
+	MENU_PREFERENCES
+};
+
+// --
+
 struct Window *		Main_WindowAdr		= NULL;
+static Object *		Main_MenuStrip		= NULL;
 Object *			Main_WinObject		= NULL;
 S32					Main_WinXPos		= 0;
 S32					Main_WinYPos		= 0;
@@ -61,20 +73,118 @@ static S32		Build_Device_TreeNode( struct List *l, U32 g, struct USB2_FktNode *n
 
 // --
 
+static S32
+Main_CreateMenu( void )
+{
+	static struct TagItem items[] =
+	{
+		{ NM_Menu, (Tag) "Project" },
+		{ NM_Item, (Tag) "Save tree" },
+		{ MA_ID, MENU_SAVE_TREE },
+		{ NM_Item, (Tag) ML_SEPARATOR },
+		{ NM_Item, (Tag) "About" },
+		{ MA_ID, MENU_ABOUT },
+		{ MA_Key, (Tag) "?" },
+		{ NM_Item, (Tag) ML_SEPARATOR },
+		{ NM_Item, (Tag) "Quit" },
+		{ MA_ID, MENU_QUIT },
+		{ MA_Key, (Tag) "Q" },
+		{ NM_Menu, (Tag) "Edit" },
+		{ NM_Item, (Tag) "Preferences..." },
+		{ MA_ID, MENU_PREFERENCES },
+		{ MA_Key, (Tag) "P" },
+		{ TAG_END, 0 }
+	};
+
+	Main_MenuStrip = NewObject( NULL, "menuclass", MA_Type, T_ROOT, TAG_END );
+
+	if ( ! Main_MenuStrip )
+	{
+		printf( "USB2Analyzer: could not open menuclass (requires Intuition 54.6 or later).\n" );
+
+		return ( FALSE );
+	}
+
+	if ( ! IDoMethod( Main_MenuStrip, MM_NEWMENU, 0, items ) )
+	{
+		printf( "USB2Analyzer: could not build the menu.\n" );
+
+		return ( FALSE );
+	}
+
+	SetAttrs( Main_WinObject, WINDOW_MenuStrip, Main_MenuStrip, TAG_END );
+
+	return ( TRUE );
+}
+
+// --
+
+static void
+Main_HandleMenu( void )
+{
+	static const struct EasyStruct about =
+	{
+		.es_StructSize = sizeof( struct EasyStruct ),
+		.es_Title = "About USB2Analyzer",
+		.es_TextFormat = VERS " (" DATE ")\n"
+			"Copyright (c) 2012-2026 by Rene W. Olsen\n"
+			"GPL-3.0-or-later",
+		.es_GadgetFormat = "OK"
+	};
+
+	U32 id;
+
+	id = NO_MENU_ID;
+
+	while( ( id = IDoMethod( Main_MenuStrip, MM_NEXTSELECT, 0, id ) ) != NO_MENU_ID )
+	{
+		switch( id )
+		{
+			case MENU_SAVE_TREE:
+			{
+				Request_Device_Tree_Save( Main_WindowAdr );
+
+				break;
+			}
+
+			case MENU_ABOUT:
+			{
+				EasyRequestArgs( Main_WindowAdr, & about, NULL, NULL );
+
+				break;
+			}
+
+			case MENU_PREFERENCES:
+			{
+				Prefs_OpenWindow( Main_WindowAdr );
+
+				break;
+			}
+
+			case MENU_QUIT:
+			{
+				Running = FALSE;
+
+				return;
+			}
+		}
+	}
+}
+
+// --
+
 S32 Main_OpenWindow( void )
 {
 S32 retval;
 
 	retval = FALSE;
 
-//	Main_MenuCreate();
-
 	if ( ! Main_WindowAdr )
 	{
-//		SetAttrs( Main_WinObject,
-//			WINDOW_MenuStrip, ( MainMenuStrip1 ) ? MainMenuStrip1 : MainMenuStrip2,
-//			TAG_END
-//		);
+		if ( ! Main_CreateMenu() )
+		{
+			goto bailout;
+		}
 
 		Main_WindowAdr = (PTR) IDoMethod( Main_WinObject, WM_OPEN );
 
@@ -116,7 +226,14 @@ void Main_CloseWindow( void )
 		Main_WindowAdr = NULL;
 	}
 
-//	Main_MenuDelete();
+	if ( Main_MenuStrip )
+	{
+		SetAttrs( Main_WinObject, WINDOW_MenuStrip, NULL, TAG_END );
+
+		DisposeObject( Main_MenuStrip );
+
+		Main_MenuStrip = NULL;
+	}
 }
 
 // --
@@ -143,13 +260,19 @@ S32 retval;
 		goto bailout;
 	}
 
-	PropertiesColInfo = AllocLBColumnInfo( 2,
+	PropertiesColInfo = AllocLBColumnInfo( 4,
 		LBCIA_Column, 0,
-		 LBCIA_Title, "Property",
-		 LBCIA_Weight, 38,
+		 LBCIA_Title, "Field",
+		 LBCIA_Weight, 36,
 		LBCIA_Column, 1,
+		 LBCIA_Title, "Size",
+		 LBCIA_Weight, 8,
+		LBCIA_Column, 2,
 		 LBCIA_Title, "Value",
-		 LBCIA_Weight, 62,
+		 LBCIA_Weight, 24,
+		LBCIA_Column, 3,
+		 LBCIA_Title, "Description",
+		 LBCIA_Weight, 32,
 		TAG_END
 	);
 
@@ -167,8 +290,6 @@ S32 retval;
 //		WA_Backdrop,								TRUE,
 //		WA_Borderless,								TRUE,
 //		WA_CustomScreen,							MainScreen,
-//		WINDOW_MenuStrip,							MainMenuStrip,
-//		WINDOW_MenuUserData,						WGUD_FUNC,
 		WINDOW_ParentGroup,							NO2(LayoutClass,GADMAINID_Root),
 			LAYOUT_Orientation,						LAYOUT_ORIENT_VERT,
 
@@ -204,7 +325,7 @@ S32 retval;
 					// Properties List
 					LAYOUT_AddChild,				NO2(ListBrowserClass,GADMAINID_PropertiesList),
 						GA_ID,						GADMAINID_PropertiesList,
-						GA_ReadOnly,				TRUE,
+						LISTBROWSER_Hierarchical,	TRUE,
 						LISTBROWSER_AutoFit,		TRUE,
 						LISTBROWSER_VertSeparators,	FALSE,
 						LISTBROWSER_ColumnTitles,	TRUE,
@@ -322,8 +443,6 @@ bailout:
 
 void Main_DestoryWindow( void )
 {
-PTR node;
-
 	if ( Main_WinObject )
 	{
 		DisposeObject( Main_WinObject );
@@ -343,14 +462,6 @@ PTR node;
 	{
 		FreeLBColumnInfo( PropertiesColInfo );
 		PropertiesColInfo = NULL;
-	}
-
-//	if ( DeviceTreeUSBList )
-	{
-		while(( node = RemHead( & DeviceTreeUSBList )))
-		{
-			FktNode_Delete( node );
-		}
 	}
 }
 
@@ -440,11 +551,17 @@ U16 code;
 //				break;
 //			}
 //
-//			case WMHI_MENUPICK:
-//			{
-//				Main_MenuPick();
-//				break;
-//			}
+			case WMHI_MENUPICK:
+			{
+				Main_HandleMenu();
+
+				if ( ! Running )
+				{
+					return;
+				}
+
+				break;
+			}
 
 			case WMHI_CLOSEWINDOW:
 			{
@@ -653,6 +770,28 @@ U32 cnt;
 				}
 
 				AddTail( l, guinode );
+			}
+		}
+
+		for ( node = (PTR) GetHead( & n->Header ); node; node = (PTR) GetSucc( & node->Node ) )
+		{
+			if ( ( n->Functions ) && ( node->Type == TYPE_FUNCTION ) )
+			{
+				continue;
+			}
+
+			// The hub row already displays its interface descriptor.
+			if ( ( node->Type == TYPE_INTERFACE ) && ( node->IfcDesc ) &&
+				( node->IfcDesc->InterfaceClass == USBCLASS_HUB ) )
+			{
+				continue;
+			}
+
+			namebuf[0] = 0;
+
+			if ( ! Build_Device_TreeNode( l, g + 1, node, namebuf ) )
+			{
+				goto bailout;
 			}
 		}
 	}

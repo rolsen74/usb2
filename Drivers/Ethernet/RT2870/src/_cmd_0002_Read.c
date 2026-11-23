@@ -21,7 +21,7 @@ Cmd_Read( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	S32 eapol;
 
 	opener = ioreq->ios2_BufferManagement;
-	eapol = ioreq->ios2_PacketType == RT2870_EAPOL_TYPE;
+	eapol = ( ioreq->ios2_Req.io_Command == CMD_READ ) && ( ioreq->ios2_PacketType == RT2870_EAPOL_TYPE );
 
 	if ( ( eapol ) ? ( ! unit->unit_Channel || ( ioreq->ios2_Req.io_Flags & SANA2IOF_RAW ) ) : ( ! unit->unit_Online ) )
 	{

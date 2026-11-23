@@ -63,7 +63,7 @@ L2CAPEcho( struct IORequest *request, ULONG unit, const char *address )
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "ECHO requires Bluetooth.Driver 1.6 and controller support for ACL data.\n" );
+			Printf( "ECHO requires cls_Bluetooth.Driver 1.6 and controller support for ACL data.\n" );
 
 			break;
 

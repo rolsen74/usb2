@@ -27,6 +27,8 @@ RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 	U8 *payload;
 	U32 header;
 	U32 type;
+	U32 payload_length;
+	S32 typed;
 	U8 flags;
 	S32 eapol_only;
 
@@ -45,7 +47,8 @@ RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 	}
 	else if ( frame[4] & 1 )
 	{
-		if ( ! FindMulticastAddress( unit, frame + 4 ) )
+		if ( ( ! Sana2_MulticastMatch( & unit->unit_Multicast, frame + 4 ) ) &&
+			( ! Sana2_MulticastMatch( & unit->unit_MulticastRanges, frame + 4 ) ) )
 		{
 			return;
 		}
@@ -95,9 +98,10 @@ RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 
 	payload = frame + header + 8;
 	length -= header + 8;
+	payload_length = length;
 	unit->unit_PacketsRx++;
 
-	RTL8188EU_UpdateThroughput( unit, 0, length + 14 );
+	Sana2_UpdateThroughput( & unit->unit_Pending, 0, length + 14 );
 	orphan = NULL;
 
 	ioreq = (PTR) GetHead( & unit->unit_Pending );
@@ -117,9 +121,13 @@ RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 		ioreq = (PTR) GetSucc( (PTR) ioreq );
 	}
 
-	if ( ! ioreq )
+	typed = ioreq != NULL;
+
+	if ( ! typed )
 	{
 		unit->unit_UnknownPackets++;
+
+		Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, TRUE );
 		ioreq = orphan;
 
 		if ( ! ioreq )
@@ -159,7 +167,16 @@ RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 		ioreq->ios2_WireError = S2WERR_BUFF_ERROR;
 		ioreq->ios2_DataLength = 0;
 
-		SignalSana2Event( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF );
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF, TRUE );
+
+		if ( typed )
+		{
+			Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, TRUE );
+		}
+	}
+	else if ( typed )
+	{
+		Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, FALSE );
 	}
 
 	ReplyMsg( (PTR) ioreq );

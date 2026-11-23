@@ -17,7 +17,6 @@ void Cmd_Read( struct devUnit *unit, struct IOSana2Req *ioreq );
 void Cmd_Write( struct devUnit *unit, struct IOSana2Req *ioreq );
 void Cmd_Flush( struct devUnit *unit, struct IOSana2Req *ioreq );
 void Cmd_Invalid( struct devUnit *unit, struct IOSana2Req *ioreq );
-void NSCmd_DeviceQuery( struct devUnit *unit, struct IOStdReq *ioreq );
 void s2_Sana2Hook( struct devUnit *unit, struct IOSana2Req *ioreq );
 void s2_DeviceQuery( struct devUnit *unit, struct IOSana2Req *ioreq );
 void s2_GetStationAddress( struct devUnit *unit, struct IOSana2Req *ioreq );

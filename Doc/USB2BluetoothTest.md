@@ -10,7 +10,7 @@ version, manufacturer ID, and Bluetooth address.
 1. Build `bluetooth2.kmod` from the companion Bluetooth2 repository.
    Use Bluetooth2 1.3 or later for discovery. Install it in `SYS:Kickstart/` and add
    `MODULE Kickstart/bluetooth2.kmod` to your USB2 Kicklayout entry.
-2. Copy `Bluetooth.Class` and `Bluetooth.Driver` from the USB2 archive's
+2. Copy `cls_Bluetooth.Class` and `cls_Bluetooth.Driver` from the USB2 archive's
    `Libs/USB2/` directory to `LIBS:USB2/`, and reboot.
 3. Plug in a Bluetooth dongle. The serial console reports its assigned
    unit. Run `USB2BluetoothTest` from a Shell for unit 0 or pass `UNIT=1`
@@ -21,7 +21,7 @@ version, manufacturer ID, and Bluetooth address.
 
 ### Realtek RTL8761BU adapters
 
-Bluetooth.Driver 1.19 can load firmware for the ASUS USB-BT500
+cls_Bluetooth.Driver 1.20 can load firmware for the ASUS USB-BT500
 (`0B05:190E`), TP-Link UB500 (`2357:0604`), and Realtek reference
 adapter (`0BDA:8771`). The USB IDs identify the revisions covered here.
 Copy `rtl8761bu_fw.bin` and, if available, `rtl8761bu_config.bin` from

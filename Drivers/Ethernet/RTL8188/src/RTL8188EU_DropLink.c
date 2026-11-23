@@ -36,7 +36,7 @@ RTL8188EU_DropLink( struct EthernetUnit *unit )
 
 	if ( online )
 	{
-		SignalSana2Event( unit, S2EVENT_OFFLINE );
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_OFFLINE, TRUE );
 	}
 }
 

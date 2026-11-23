@@ -26,6 +26,8 @@ PTR node;
 
 	IExec = usbbase->usb_IExec;
 
+	USB2_FullBoot_Complete( usbbase, FALSE );
+
 	// --
 
 	HCD_CONTROLLERS_STOP();

@@ -13,31 +13,13 @@
 // --
 
 static S32
-__myProcess_Init( struct PrinterUnit *unit )
+__myProcess_Init( struct PrinterUnit *unit, struct USB2_DriverMessage *msg )
 {
 	S32 retval;
 
 	retval = FALSE;
 
 	USBERROR( "Printer : __myProcess_Init" );
-
-	// --
-
-	if ( ! __myProcess_1_Get_Config( unit ))
-	{
-		USBERROR( "Printer : __myProcess_Init : Error parsing config" );
-
-		goto bailout;
-	}
-
-	// --
-
-	if ( ! Process_Find_Device( unit ))
-	{
-		USBERROR( "Printer : __myProcess_Init : Error did not find usb device" );
-
-		goto bailout;
-	}
 
 	// --
 
@@ -70,7 +52,7 @@ __myProcess_Init( struct PrinterUnit *unit )
 
 	// --
 
-	if ( ! Process_Setup_Device( unit ))
+	if ( ! Process_Setup_Device( unit, msg ))
 	{
 		USBERROR( "Printer : __myProcess_Init : Error setting up usb device" );
 

@@ -13,9 +13,6 @@
 
 // --
 
-#define __S2QUAD_DEFINED
-typedef unsigned long long S2QUAD;
-
 #include <proto/dos.h>
 #include <proto/exec.h>
 #include <proto/usb2.h>
@@ -37,5 +34,6 @@ typedef unsigned long long S2QUAD;
 #include "Debug.h"
 #include "Device.h"
 #include "Unit.h"
+#include "Sana2Commands.h"
 
 #endif

@@ -254,9 +254,15 @@ U32 taskstat;
 			{
 //				usbbase->usb_IExec->DebugPrintF( "FDN Check Function : %p\n", fdn );
 
-				if ( fdn->fdn_Detach )
+				if ( ( fdn->fdn_Detach ) ||
+					( ( fdn->fdn_Driver_Filename ) && ( ! usbbase->usb_FrontendsReady ) ) )
 				{
 //					USBERROR( "FKT : fdn_Detach" );
+					break;
+				}
+
+				if ( ! Match_Driver_Device( usbbase, fdn, fn->fkt_DeviceDescriptor ) )
+				{
 					break;
 				}
 

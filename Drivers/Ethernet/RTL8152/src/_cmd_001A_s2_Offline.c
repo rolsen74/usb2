@@ -30,7 +30,7 @@ s2_Offline( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	AbortAll( unit, NULL, S2WERR_UNIT_OFFLINE );
 
-	CheckEvent( unit, S2EVENT_OFFLINE );
+	Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_OFFLINE, TRUE );
 
 bailout:
 

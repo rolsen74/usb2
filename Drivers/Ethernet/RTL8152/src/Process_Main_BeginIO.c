@@ -124,6 +124,23 @@ struct IOSana2Req *ioreq;
 				break;
 			}
 
+			case S2_ADDMULTICASTADDRESSES:
+			case S2_DELMULTICASTADDRESSES:
+				Sana2_MulticastRange( & unit->unit_MulticastRanges, ioreq );
+
+				IExec->ReplyMsg( (PTR) ioreq );
+
+				break;
+
+			case S2_TRACKTYPE:
+			case S2_UNTRACKTYPE:
+			case S2_GETTYPESTATS:
+				Sana2_TrackType( & unit->unit_TrackedTypes, ioreq );
+
+				IExec->ReplyMsg( (PTR) ioreq );
+
+				break;
+
 			case /* 0017 */ S2_ONEVENT:
 			{
 				s2_OnEvent( unit, ioreq );
@@ -152,14 +169,6 @@ struct IOSana2Req *ioreq;
 			    SHOWMSG( "BeginIO: io_Command = S2_OFFLINE" );
 
                 s2_Offline( unit, ioreq );
-			    break;
-		    }
-
-			case /* 4000 */ NSCMD_DEVICEQUERY:
-		    {
-				SHOWMSG( "BeginIO: io_Command = NSCMD_DEVICEQUERY" );
-
-				NSCmd_DeviceQuery( unit, (APTR) ioreq );
 			    break;
 		    }
 

@@ -26,4 +26,14 @@ enum SCRTYPE
 
 // --
 
+struct ScreenPrefs
+{
+	enum SCRTYPE Type;
+	U32 Mode;
+	U32 Width;
+	U32 Height;
+};
+
+// --
+
 #endif

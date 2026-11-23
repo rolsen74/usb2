@@ -140,7 +140,7 @@ ReportCaptureResult( const struct BTRFCOMMCapture *capture, enum BTHCIResult res
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "SAVE requires Bluetooth.Driver 1.11 and a Basic Mode L2CAP channel.\n" );
+			Printf( "SAVE requires cls_Bluetooth.Driver 1.11 and a Basic Mode L2CAP channel.\n" );
 
 			break;
 

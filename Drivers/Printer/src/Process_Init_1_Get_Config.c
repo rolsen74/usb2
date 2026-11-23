@@ -9,175 +9,83 @@
 // --
 
 #include "All.h"
+#include <stdio.h>
 
 // --
 
-#define CFGBUF_SIZE 1024 * 4
+#define CFGBUF_SIZE 4096
 
-static S32
-__myProcess_1_Get_Config ( struct PrinterUnit * unit )
+static void
+__myProcess_1_Get_Config( struct PrinterUnit *unit )
 {
-	struct RDArgs * rda2;
-	struct RDArgs * rda;
+	struct RDArgs *args;
+	struct RDArgs *source;
+	struct ConfigOptions options;
 
-	STR				filename;
-	STR				filebuf;
-	S32				retval;
-	S32				stat;
-	S32				len;
+	char filename[64];
+	STR buffer;
+	S32 length;
 
-	rda		= NULL;
-	rda2	= NULL;
-	filebuf = NULL;
-	retval	= FALSE;
-
-	USBERROR ( "Printer : __myProcess_1_Get_Config" );
-
-	unit->unit_USB_VendorID = -1;
-	unit->unit_USB_DeviceID = -1;
-	unit->unit_Buffer_Size	= 16; // Default Buffer 16kb
-								  //	unit->unit_Buffer_Size = 0;		// Testing Buffering off
-
-	// --
-
-	// Keep the existing path for per-unit settings.
-	filename = ASPrintf ( "usb2_printer.device/unit%ld", unit->unit_UnitNr );
-
-	if ( ! filename )
+	if ( unit->unit_Dot4_Active )
 	{
-		USBERROR ( "Printer : Error allocating memory" );
+		return;
+	}
 
+	unit->unit_Buffer_Size = 16 * 1024;
+
+	buffer = AllocVecTags( CFGBUF_SIZE, TAG_END );
+
+	if ( ! buffer )
+	{
+		return;
+	}
+
+	snprintf( filename, sizeof( filename ), "usb2_printer.device/unit%lu", unit->unit_UnitNr );
+
+	length = GetVar( filename, buffer, CFGBUF_SIZE - 2, 0 );
+
+	if ( ( length <= 0 ) || ( length >= CFGBUF_SIZE - 2 ) )
+	{
 		goto bailout;
 	}
 
-	filebuf = AllocVecTags ( CFGBUF_SIZE, TAG_END );
+	buffer[length++] = '\n';
+	buffer[length] = 0;
 
-	if ( ! filebuf )
+	source = AllocDosObjectTagList( DOS_RDARGS, NULL );
+
+	if ( ! source )
 	{
-		USBERROR ( "Printer : Error allocating memory" );
-
 		goto bailout;
 	}
 
-	stat = GetVar ( filename, filebuf, CFGBUF_SIZE - 2, 0 );
+	memset( & options, 0, sizeof( options ) );
 
-	if ( stat != -1 )
+	source->RDA_Source.CS_Buffer = buffer;
+	source->RDA_Source.CS_Length = length;
+	source->RDA_Flags = RDAF_NOPROMPT;
+
+	args = ReadArgs( CONFIGTEMPLATE, (PTR) & options, source );
+
+	if ( args )
 	{
-		USBERROR ( "Printer : Error GetVar failed" );
-
-		goto bailout;
-	}
-
-	if ( stat <= 0 )
-	{
-		// Not an error
-		retval = TRUE;
-		goto bailout;
-	}
-
-	len			   = strlen ( filebuf );
-
-	filebuf[len++] = '\n';
-	filebuf[len++] = 0;
-
-	rda = AllocDosObjectTagList ( DOS_RDARGS, NULL );
-
-	if ( ! rda )
-	{
-		USBERROR ( "Printer : Error allocating read args" );
-
-		goto bailout;
-	}
-
-	memset ( &unit->unit_Options, 0, sizeof ( struct ConfigOptions ) );
-
-	rda->RDA_Source.CS_Buffer = filebuf;
-	rda->RDA_Source.CS_Length = len;
-	rda->RDA_Source.CS_CurChr = 0;
-	rda->RDA_Flags |= RDAF_NOPROMPT;
-
-	rda2 = ReadArgs ( CONFIGTEMPLATE, (PTR)&unit->unit_Options, rda );
-
-	if ( ! rda2 )
-	{
-		USBERROR ( "Printer : Error parsing config file" );
-
-		if ( ! unit->unit_CfgError )
+		if ( options.BufferSize )
 		{
-			// Only print one pr Opener
-			unit->unit_CfgError = TRUE;
-
-			TimedDosRequesterTags ( TDR_TitleString, DEVNAME, TDR_GadgetString, "_Okay", TDR_ImageType, TDRIMAGE_ERROR,
-									TDR_FormatString, "Error parsing config file", TAG_END );
+			unit->unit_Buffer_Size = MIN( *options.BufferSize, 1024 ) * 1024;
 		}
 
-		goto bailout;
+		FreeArgs( args );
 	}
-
-	if ( unit->unit_Options.VendorID )
+	else
 	{
-		unit->unit_USB_VendorID = *unit->unit_Options.VendorID;
+		DebugPrintF( "USB2 printer: invalid settings in %s\n", filename );
 	}
 
-	if ( unit->unit_Options.DeviceID )
-	{
-		unit->unit_USB_DeviceID = *unit->unit_Options.DeviceID;
-	}
-
-	if ( unit->unit_Options.BufferSize )
-	{
-		unit->unit_Buffer_Size = *unit->unit_Options.BufferSize;
-	}
-
-	retval = TRUE;
+	FreeDosObject( DOS_RDARGS, source );
 
 bailout:
 
-	if ( rda2 )
-	{
-		FreeArgs ( rda2 );
-
-		rda2 = NULL;
-	}
-
-	if ( rda )
-	{
-		FreeDosObject ( DOS_RDARGS, rda );
-
-		rda = NULL;
-	}
-
-	if ( filebuf )
-	{
-		FreeVec ( filebuf );
-
-		filebuf = NULL;
-	}
-
-	if ( filename )
-	{
-		FreeVec ( filename );
-
-		filename = NULL;
-	}
-
-	if ( unit->unit_Buffer_Size > 1024 )
-	{
-		USBINFO ( "Printer : Limiting Buffser size to 1024" );
-
-		unit->unit_Buffer_Size = 1024;
-	}
-
-	USBERROR ( "Printer : Vendor ID ....... : $%04lx", unit->unit_USB_VendorID );
-
-	USBERROR ( "Printer : Device ID ....... : $%04lx", unit->unit_USB_DeviceID );
-
-	USBERROR ( "Printer : Buffer Size ..... : %lu (%lu bytes)", unit->unit_Buffer_Size, unit->unit_Buffer_Size * 1024 );
-
-	// Convert into real bytes .. for speed
-	unit->unit_Buffer_Size *= 1024;
-
-	return ( retval );
+	FreeVec( buffer );
 }
 
 // --

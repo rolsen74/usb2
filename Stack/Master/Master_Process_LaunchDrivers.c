@@ -13,90 +13,11 @@
 
 // --
 
-SEC_CODE static void
-myGetHead ( struct USBBase * usbbase, struct RealFunctionNode ** ptr_fn, struct USB2_Node ** ptr_n )
-{
-	struct RealFunctionNode * fn;
-	struct USB2_Node *		  n;
-
-	SEMAPHORE_OBTAIN ( &usbbase->usb_Fkt_Semaphore );
-
-	n = Header_Head ( &usbbase->usb_Fkt_Header );
-
-	if ( n )
-	{
-		fn = n->un_Data;
-
-		if ( FUNCTION_LOCK ( fn ) != LSTAT_Okay )
-		{
-			fn = NULL;
-			n  = NULL;
-		}
-	}
-	else
-	{
-		fn = NULL;
-		n  = NULL;
-	}
-
-	SEMAPHORE_RELEASE ( &usbbase->usb_Fkt_Semaphore );
-
-	*ptr_fn = fn;
-	*ptr_n	= n;
-}
-
-// --
-
-SEC_CODE static void
-myGetNext ( struct USBBase * usbbase, struct RealFunctionNode ** ptr_fn, struct USB2_Node ** ptr_n )
-{
-	struct RealFunctionNode * fn;
-	struct USB2_Node *		  n;
-
-	n  = *ptr_n;
-	fn = *ptr_fn;
-
-	SEMAPHORE_OBTAIN ( &usbbase->usb_Fkt_Semaphore );
-
-	FUNCTION_UNLOCK ( fn );
-
-	// --
-
-	n = n->un_Next;
-
-	if ( n )
-	{
-		fn = n->un_Data;
-
-		if ( FUNCTION_LOCK ( fn ) != LSTAT_Okay )
-		{
-			fn = NULL;
-			n  = NULL;
-		}
-	}
-	else
-	{
-		fn = NULL;
-		n  = NULL;
-	}
-
-	SEMAPHORE_RELEASE ( &usbbase->usb_Fkt_Semaphore );
-
-	*ptr_fn = fn;
-	*ptr_n	= n;
-}
-
-// --
-// Trying to avoid holding the semaphore lock for a long time
-// so thats why I use GetHead/GetNext .. I know it looks ugly
-
 static void
 __myProcess_Entry ( void )
 {
-	struct RealFunctionNode * fn;
 	struct MasterStartMsg *	  tm;
 	struct ExecIFace *		  IExec;
-	struct USB2_Node *		  n;
 	struct USBBase *		  usbbase;
 
 	// --
@@ -109,18 +30,9 @@ __myProcess_Entry ( void )
 
 	TASK_SIGNAL ( tm->Parent, tm->Mask );
 
-	myGetHead ( usbbase, &fn, &n );
+	USB2_Bind_Enumerated( usbbase );
 
-	while ( n )
-	{
-		// This will not work on RootHub Device/Function
-		// but we will never get to add a driver as
-		// our HUB driver have takes control of that device
-
-		FUNCTION_BIND ( fn, fn->fkt_ASync );
-
-		myGetNext ( usbbase, &fn, &n );
-	}
+	USB2_FullBoot_Complete( usbbase, TRUE );
 
 	TASK_NAME_LEAVE ();
 }
@@ -160,6 +72,8 @@ __myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in UNUSED 
 		else
 		{
 			USBERROR ( "__myProcess_LaunchDrivers : Process error" );
+
+			USB2_FullBoot_Complete( usbbase, FALSE );
 		}
 
 		TASK_FREESIGNAL ( &sig );
@@ -167,6 +81,8 @@ __myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in UNUSED 
 	else
 	{
 		USBERROR ( "__myProcess_LaunchDrivers : Signal error" );
+
+		USB2_FullBoot_Complete( usbbase, FALSE );
 	}
 }
 

@@ -20,7 +20,7 @@ Cmd_OnEvent( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	U32 supported;
 
 	events = ioreq->ios2_WireError;
-	supported = S2EVENT_ONLINE | S2EVENT_OFFLINE | S2EVENT_ERROR | S2EVENT_HARDWARE | S2EVENT_RX | S2EVENT_TX | S2EVENT_BUFF;
+	supported = SANA2_COMMON_EVENTS;
 
 	if ( ( ! events ) || ( events & ~supported ) )
 	{

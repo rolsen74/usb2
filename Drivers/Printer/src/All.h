@@ -20,6 +20,7 @@
 
 #include <devices/newstyle.h>
 #include <devices/parallel.h>
+#include <interfaces/usb2port.h>
 #include <dos/dostags.h>
 
 #include <stdarg.h>
@@ -31,8 +32,6 @@
 #include "Types.h"
 #include "Version.h"
 // --
-#include "Base.h"
-#include "Task.h"
 #include "Debug.h"
 #include "Buffer.h"
 #include "Config.h"
@@ -45,15 +44,9 @@
 
 struct PrinterUnit
 {
-	struct Unit						unit_Unit;
-	U32								unit_UnitNr;
-
-	STR								unit_TaskName;
-	enum TaskState					unit_TaskState;
-	struct Task *					unit_TaskAdr;
-
-	struct Task *					unit_ExitParent;
-	U32								unit_ExitMask;
+	ULONG							unit_UnitNr;
+	struct USB2PrinterIFace *		unit_PortInterface;
+	struct USB2PortUnit *			unit_PortUnit;
 
 	struct MsgPort *				unit_PRT_Begin_MsgPort;
 	U32								unit_PRT_Begin_MsgPortBit;
@@ -84,7 +77,7 @@ struct PrinterUnit
 	// Active USB IOReq's
 	S32								unit_USB_IOReq_ActiveCount;		//
 
-	// struct IOExtPar *
+	// struct IOStdReq *
 	struct List *					unit_PAR_IOReq_WaitingList;		// Waiting too be send to usb printer
 	S32								unit_PAR_IOReq_WaitingCount;	//
 
@@ -101,20 +94,10 @@ struct PrinterUnit
 	S32								unit_Buffer_WaitingCount;		//
 
 
-	// -- Config
-	U32								unit_USB_VendorID;
-	U32								unit_USB_DeviceID;
-	struct ConfigOptions			unit_Options;
-
-	// -- Settings
-	U8								unit_StartupComplete;
-	U8								unit_NotRunning;			// Error shown
-	U8								unit_CfgError;				// Cfg err Shown
 	U8								unit_Detached;				// USB Device disconnected
 	U8								unit_PrinterStatus;
 	U8								unit_LastByteSend;
-	U8								unit_Shutdown;				// Yes time to stop, clear buffers and exit
-	U8								unit_Running;				//
+	U8								unit_JobHasData;
 };
 
 // --
@@ -122,35 +105,29 @@ struct PrinterUnit
 
 // --
 
-extern struct IORequest *USB2IOReq;
-extern struct MsgPort *USB2MsgPort;
 
 // --
 
 extern struct Interface *INewlib;
 extern struct Library *NewlibBase;
 
-struct PrinterUnit *Unit_Alloc( U32 unitnr );
 
-void	Cmd_Write_Buffer(				struct PrinterUnit *unit, struct IOExtPar *pario );
-void	Cmd_Write_Direct(				struct PrinterUnit *unit, struct IOExtPar *pario );
-void	_cmd_4000_NSCmd_DeviceQuery(	struct IOStdReq *ioreq );
-S32		Resources_Init(					struct PrinterBase *devBase );
-void	Resources_Free(					struct PrinterBase *devBase );
+void	Cmd_Write_Buffer(				struct PrinterUnit *unit, struct IOStdReq *pario );
+void	Cmd_Write_Direct(				struct PrinterUnit *unit, struct IOStdReq *pario );
+S32		Resources_Init(					void );
+void	Resources_Free(					void );
 void	Buffer_Flush(					struct PrinterUnit *unit );
 S32		Buffer_Write(					struct PrinterUnit *unit, U8 *data, U32 size );
 void	Buffer_Schedule(				struct PrinterUnit *unit );
 void	Direct_Schedule(				struct PrinterUnit *unit );
-S32		Process_Find_Device(			struct PrinterUnit *unit );
-S32		Process_Setup_Device(			struct PrinterUnit *unit );
+S32		Process_Setup_Device( struct PrinterUnit *unit, struct USB2_DriverMessage *msg );
 S32		Dot4_Setup(					struct PrinterUnit *unit );
 S32		Dot4_Write(					struct PrinterUnit *unit, const U8 *data, U32 size, U32 *written );
-void	Dot4_Shutdown(				struct PrinterUnit *unit );
-S32		Unit_Startup(					struct PrinterUnit *unit );
-S32		Unit_Startup_USB(				struct PrinterUnit *unit );
-void	Unit_Free(						struct PrinterUnit *unit );
-void	NSCmd_DeviceQuery(				struct IOStdReq *ioreq );
-void	Printer_Process_Entry(			void );
+void	Dot4_Shutdown(					struct PrinterUnit *unit );
+U32		Printer_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg );
+void	Process_Main( struct PrinterUnit *unit );
+void	Printer_Abort( struct PrinterUnit *unit );
+void	Send_FormFeed( struct PrinterUnit *unit );
 
 // --
 

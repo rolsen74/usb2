@@ -22,11 +22,6 @@ Buffer_Schedule( struct PrinterUnit *unit )
 
 	if ( unit->unit_Detached )
 	{
-		if ( ( unit->unit_Shutdown ) && ( ! unit->unit_USB_IOReq_ActiveCount ) )
-		{
-			unit->unit_Running = FALSE;
-		}
-
 		return;
 	}
 
@@ -57,22 +52,6 @@ Buffer_Schedule( struct PrinterUnit *unit )
 
 		if ( ! pb )
 		{
-			// Okay nothing too print
-
-			if (( unit->unit_Shutdown )
-			&&	( ! unit->unit_USB_IOReq_ActiveCount )
-			&&	( ! unit->unit_PAR_IOReq_WaitingCount )
-			&&	( ! unit->unit_Buffer_WaitingCount ))
-			{
-				USBINFO( "Buffer_Schedule : We are done, time to exit" );
-
-				unit->unit_Running = FALSE;
-			}
-			else
-			{
-				USBINFO( "Buffer_Schedule : Okay nothing too print" );
-			}
-
 			break;
 		}
 

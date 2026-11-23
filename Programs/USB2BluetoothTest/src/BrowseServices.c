@@ -114,7 +114,7 @@ BrowseServices( struct IORequest *request, ULONG unit, const char *address )
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "Service discovery requires Bluetooth.Driver 1.7 and a Classic Basic Mode L2CAP channel.\n" );
+			Printf( "Service discovery requires cls_Bluetooth.Driver 1.7 and a Classic Basic Mode L2CAP channel.\n" );
 
 			break;
 

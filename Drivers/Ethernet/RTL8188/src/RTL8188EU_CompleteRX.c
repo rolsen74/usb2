@@ -44,11 +44,16 @@ RTL8188EU_CompleteRX( struct EthernetUnit *unit )
 			unit->unit_RadioReady = FALSE;
 			unit->unit_TxReady = FALSE;
 
+			if ( usbio->io_Error == USB2Err_Device_Detached )
+			{
+				unit->unit_Detached = TRUE;
+			}
+
 			RTL8188EU_DropLink( unit );
 
-			SignalSana2Event( unit, S2EVENT_ERROR | S2EVENT_HARDWARE );
+			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE, TRUE );
 
-			AbortPendingCommands( unit, NULL, NULL );
+			Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
 		}
 
 		RTL8188EU_SubmitRX( unit );

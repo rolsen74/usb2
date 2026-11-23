@@ -47,6 +47,8 @@ S32 error;
 	fdn->fdn_SubClass	= FDSUBCLASS_Any;
 	fdn->fdn_Protocol	= FDPROTOCOL_Any;
 
+	usbbase->usb_IExec->NewList( & fdn->fdn_Devices );
+
 	// --
 
 	error = FALSE;

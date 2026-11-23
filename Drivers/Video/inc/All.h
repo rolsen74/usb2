@@ -25,6 +25,11 @@
 #define SEC_CODE
 #define SEC_RODATA
 
+#define VIDEO_DRIVER_NAME "cls_Video.Driver"
+#define VIDEO_DRIVER_VERSION 1
+#define VIDEO_DRIVER_REVISION 1
+#define VIDEO_DRIVER_ID VIDEO_DRIVER_NAME " 1.1 (23.11.2026)\r\n"
+
 #include "Video.h"
 
 #endif

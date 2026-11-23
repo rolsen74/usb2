@@ -193,13 +193,15 @@ RTL8188EU_Transmit( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 			USB2_EPRes_Destall( resource );
 		}
 
-		SignalSana2Event( unit, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE );
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE, TRUE );
 	}
 	else if ( ! management )
 	{
 		unit->unit_PacketsTx++;
 
-		RTL8188EU_UpdateThroughput( unit, ethernet_size, 0 );
+		Sana2_AccountType( & unit->unit_TrackedTypes, type, ethernet_size - 14, FALSE, FALSE );
+
+		Sana2_UpdateThroughput( & unit->unit_Pending, ethernet_size, 0 );
 	}
 
 	return;

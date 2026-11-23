@@ -21,20 +21,60 @@ enum SCRTYPE		Main_ScreenType		= SCRTYPE_Screen;
 
 // --
 
+
+S32
+Request_Screen_Mode( struct Window *window, struct ScreenPrefs *prefs )
+{
+	struct ScreenModeRequester *request;
+
+	S32 selected;
+
+	selected = FALSE;
+
+	request = AllocAslRequestTags( ASL_ScreenModeRequest, TAG_END );
+
+	if ( request )
+	{
+		selected = AslRequestTags( request,
+			ASLSM_Window, window,
+			ASLSM_SleepWindow, TRUE,
+			ASLSM_InitialDisplayID, prefs->Mode,
+			ASLSM_InitialDisplayWidth, prefs->Width,
+			ASLSM_InitialDisplayHeight, prefs->Height,
+			ASLSM_DoWidth, TRUE,
+			ASLSM_DoHeight, TRUE,
+			ASLSM_MinWidth, WIN_MINWIDTH,
+			ASLSM_MinHeight, WIN_MINHEIGHT,
+			TAG_END
+		);
+
+		if ( selected )
+		{
+			prefs->Mode = request->sm_DisplayID;
+			prefs->Width = request->sm_DisplayWidth;
+			prefs->Height = request->sm_DisplayHeight;
+		}
+
+		FreeAslRequest( request );
+	}
+
+	return ( selected );
+}
+
+// --
+
 S32 Main_OpenScreen( void )
 {
-struct ScreenModeRequester *modereq;
 struct Screen *scr;
 S32 retval;
 U32 type;
 U32 mode;
-U32 ret;
 U32 w;
 U32 h;
 
 	retval = FALSE;
 
-	type = Prefs_ScrType;
+	type = Prefs_Screen.Type;
 	mode = 0;
 	scr = NULL;
 	w = 0;
@@ -76,46 +116,14 @@ U32 h;
 
 	if ( type == SCRTYPE_Screen )
 	{
-		mode= Prefs_ScrMode;
-		w	= Prefs_ScrWidth;
-		h	= Prefs_ScrHeight;
-
-		if ( ModeNotAvailable( mode ) == INVALID_ID )
+		if ( ModeNotAvailable( Prefs_Screen.Mode ) )
 		{
-			modereq = AllocAslRequestTags( ASL_ScreenModeRequest,
-				TAG_END
-			);
-
-			if ( modereq )
-			{
-				ret = AslRequestTags( modereq,
-					ASLSM_InitialDisplayID,	mode,
-					ASLSM_DoWidth,			TRUE,
-					ASLSM_DoHeight,			TRUE,
-					ASLSM_MinWidth,			WIN_MINWIDTH,
-					ASLSM_MinHeight,		WIN_MINHEIGHT,
-					TAG_END
-				);
-
-				if ( ret )
-				{
-					mode		= modereq->sm_DisplayID;
-					w			= modereq->sm_DisplayWidth;
-					h			= modereq->sm_DisplayHeight;
-
-					Prefs_ScrWidth	= w;
-					Prefs_ScrHeight	= h;
-					Prefs_ScrMode	= mode;
-
-//					IUSB2Config->USBEnv_SetHex( PHandle, "Screen",	 "ModeID",	 mode );
-//					IUSB2Config->USBEnv_SetDec( PHandle, "Width",	 "Width", 	 w );
-//					IUSB2Config->USBEnv_SetDec( PHandle, "Width",	 "Height", 	 h );
-//					IUSB2Config->USBEnv_Use( PHandle );
-				}
-
-				FreeAslRequest( modereq );
-			}
+			Request_Screen_Mode( NULL, & Prefs_Screen );
 		}
+
+		mode = Prefs_Screen.Mode;
+		w = Prefs_Screen.Width;
+		h = Prefs_Screen.Height;
 
 		if ( w < WIN_MINWIDTH )
 		{
@@ -142,6 +150,13 @@ U32 h;
 		);
 	}
 
+	if ( ( ! scr ) && ( type != SCRTYPE_Window ) )
+	{
+		type = SCRTYPE_Window;
+
+		scr = LockPubScreen( "Workbench" );
+	}
+
 	if ( ! scr )
 	{
 		printf( "failed to open screen\n" );
@@ -150,7 +165,7 @@ U32 h;
 
 	Main_ScreenAdr = scr;
 	Main_ScreenType = type;
-	Prefs_ScrType = type;
+	Prefs_Screen.Type = type;
 
 	switch( type )
 	{

@@ -13,16 +13,16 @@
 ###########################################################################
 
 # Target binary and install path
-TARGET		:= usb2rtl8152.device
+TARGET		:= eth_RTL8152.Driver
 OBJDIR		:= obj
 BINDIR		:= bin
-INSTALLDIR	:= devs:networks
+INSTALLDIR	:= libs:usb2/
 MAPFILE		:= $(TARGET).map
 
 # Compiler flags
 CFLAGS		:= -O2
 CFLAGS		+= -I.
-CFLAGS		+= -I../../../inc_Public
+CFLAGS		+= -I../../../inc_Public -I../Common
 CFLAGS		+= -Iinc
 CFLAGS		+= -Isrc
 CFLAGS		+= -W
@@ -108,6 +108,10 @@ SRCS		:= $(sort $(SRCS))
 OBJS		:= $(patsubst %.c,$(OBJDIR)/%.o,$(SRCS))
 DEPS		:= $(patsubst %.c,$(OBJDIR)/%.d,$(SRCS))
 
+COMMON_SRCS	:= $(wildcard ../Common/EthClass_*.c ../Common/Sana2_*.c)
+OBJS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(COMMON_SRCS))
+DEPS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.d,$(COMMON_SRCS))
+
 all: $(BINDIR)/$(TARGET)
 
 ###########################################################################
@@ -125,7 +129,7 @@ $(BINDIR):
 
 ###########################################################################
 
-CLEANFILES	:= $(wildcard $(OBJDIR)/src/*.o $(OBJDIR)/src/*.d $(BINDIR)/$(TARGET) $(MAPFILE) usb2.map)
+CLEANFILES	:= $(wildcard $(OBJDIR)/src/*.o $(OBJDIR)/src/*.d $(OBJDIR)/common/*.o $(OBJDIR)/common/*.d $(BINDIR)/$(TARGET) $(MAPFILE) usb2.map)
 
 clean:
 	$(if $(CLEANFILES),$(RM) $(CLEANFILES))
@@ -134,10 +138,10 @@ clean:
 
 install:
 ifeq ($(HOSTOS),AmigaOS)
-	$(COPY) $(BINDIR)/$(TARGET) $(INSTALLDIR)
+	$(COPY) $(BINDIR)/$(TARGET) eth_RTL8152.Class $(INSTALLDIR)
 else
 	@echo "Install is AmigaOS-oriented. On Linux, copy manually to target media:"
-	@echo "  $(COPY) $(BINDIR)/$(TARGET) <your-amiga-volume>/Devs/Networks/"
+	@echo "  $(COPY) $(BINDIR)/$(TARGET) eth_RTL8152.Class <your-amiga-volume>/Libs/USB2/"
 endif
 
 ###########################################################################
@@ -154,3 +158,7 @@ $(OBJDIR)/%.o: %.c makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 ###########################################################################
+
+$(OBJDIR)/common/%.o: ../Common/%.c makefile
+	@$(MKDIR) $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@

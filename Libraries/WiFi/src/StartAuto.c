@@ -11,6 +11,7 @@
 #include "All.h"
 
 #include <dos/dostags.h>
+#include <interfaces/usb2eth.h>
 
 // --
 
@@ -164,7 +165,7 @@ WiFi_StartAuto( struct USB2WiFiIFace *self, U32 adapter, U32 unit )
 
 	DebugPrintF( "USB2 Wi-Fi: usb2wifi.library %lu.%lu started the connection task for %s unit %lu.\n",
 		(U32) base->lib_Version, (U32) base->lib_Revision,
-		device, unit );
+		USB2_ETH_DEVICE, unit );
 
 	return ( TRUE );
 }

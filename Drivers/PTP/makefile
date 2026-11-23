@@ -6,7 +6,7 @@
 ###########################################################################
 
 # Target binary file
-TARGET		:= PTP.Driver
+TARGET		:= cls_PTP.Driver
 
 # Object Dir
 OBJDIR		:= obj
@@ -149,11 +149,11 @@ clean:
 install: all
 ifeq ($(HOSTOS),AmigaOS)
 	$(COPY) $(BINDIR)/$(TARGET) $(INSTALLDIR)
-	$(COPY) PTP.Class $(INSTALLDIR)
-	$(COPY) MTP.Class $(INSTALLDIR)
+	$(COPY) cls_PTP.Class $(INSTALLDIR)
+	$(COPY) cls_MTP.Class $(INSTALLDIR)
 else
 	@echo "Install is AmigaOS-oriented. On Linux, copy manually to target media:"
-	@echo "  $(COPY) $(BINDIR)/$(TARGET) PTP.Class MTP.Class <your-amiga-volume>/Libs/USB2/"
+	@echo "  $(COPY) $(BINDIR)/$(TARGET) cls_PTP.Class cls_MTP.Class <your-amiga-volume>/Libs/USB2/"
 endif
 
 ###########################################################################

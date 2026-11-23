@@ -72,7 +72,7 @@ U32 mask;
 	{
 		unit->unit_Online = FALSE;
 
-		CheckEvent( unit, S2EVENT_OFFLINE );
+		Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_OFFLINE, TRUE );
 	}
 }
 

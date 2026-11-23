@@ -12,7 +12,8 @@
 
 // --
 
-#define DRIVER_ID USB2SMARTCARD_DRIVER " 1.0 (21.11.2026)\r\n"
+#define DRIVER_REVISION 1
+#define DRIVER_ID USB2SMARTCARD_DRIVER " 1.1 (23.11.2026)\r\n"
 
 struct Library *SysBase;
 struct ExecIFace *IExec;
@@ -140,6 +141,7 @@ Driver_Init( PTR dummy __attribute__((unused)), PTR seglist __attribute__((unuse
 	base->Library.lib_Node.ln_Name = USB2SMARTCARD_DRIVER;
 	base->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
 	base->Library.lib_Version = 1;
+	base->Library.lib_Revision = DRIVER_REVISION;
 	base->Library.lib_IdString = DRIVER_ID;
 
 	IExec->InitSemaphore( & base->Lock );

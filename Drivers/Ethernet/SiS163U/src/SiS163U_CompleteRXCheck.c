@@ -16,17 +16,20 @@
 #define SIS163U_RX_MAX_TRANSFER 1600
 #define SIS163U_RX_LENGTH_MASK 0x0fff
 #define SIS163U_RX_FRAME_OK 0x08000000
-#define IEEE80211_BEACON_MIN_SIZE 36
+#define IEEE80211_SCAN_FRAME_MIN_SIZE 36
+#define IEEE80211_BEACON 0x80
+#define IEEE80211_PROBE_RESPONSE 0x50
 
 static U32
-ReadBeaconLength( const U8 *data, U32 actual )
+ReadMgmtLength( const U8 *data, U32 actual )
 {
 	const U8 *trailer;
+
 	U32 payload;
 	U32 status;
 	U32 length;
 
-	if ( ( actual < IEEE80211_BEACON_MIN_SIZE + SIS163U_RX_TRAILER_SIZE ) ||
+	if ( ( actual < SIS163U_WLAN_HEADER + SIS163U_RX_TRAILER_SIZE ) ||
 		( actual >= SIS163U_RX_MAX_TRANSFER ) )
 	{
 		return ( 0 );
@@ -39,9 +42,9 @@ ReadBeaconLength( const U8 *data, U32 actual )
 	length = status & SIS163U_RX_LENGTH_MASK;
 
 	// The frame starts at byte zero. Up to three padding bytes precede the trailer.
-	if ( ( length < IEEE80211_BEACON_MIN_SIZE ) || ( length > payload ) ||
+	if ( ( length < SIS163U_WLAN_HEADER ) || ( length > payload ) ||
 		( payload - length > 3 ) || ( ! ( status & SIS163U_RX_FRAME_OK ) ) ||
-		( data[0] != 0x80 ) )
+		( data[0] & 0x0f ) )
 	{
 		return ( 0 );
 	}
@@ -61,7 +64,7 @@ AdvanceRXCheck( struct EthernetUnit *unit )
 
 	if ( channel == SIS163U_CHANNEL_MAX )
 	{
-		USBINFO( "SiS163U: passive receive check finished without a beacon" );
+		USBINFO( "SiS163U: passive receive check finished without a beacon or probe response" );
 
 		error = SiS163U_SetChannel( unit, 1 );
 
@@ -112,7 +115,7 @@ CompleteMgmtRead( struct EthernetUnit *unit, struct USB2_IORequest *usbio )
 				(U32) unit->unit_Channel, usbio->io_Actual );
 		}
 
-		length = ReadBeaconLength( usbio->io_Data, usbio->io_Actual );
+		length = ReadMgmtLength( usbio->io_Data, usbio->io_Actual );
 	}
 
 	if ( ( error == USB2Err_Host_Timeout ) && ( ! usbio->io_Actual ) )
@@ -168,6 +171,7 @@ SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
 	struct USB2_EPResource *resource;
 	struct USB2_IORequest *usbio;
 
+	const U8 *frame;
 	U32 length;
 
 	resource = unit->unit_Bulk_Rx_Resource;
@@ -218,18 +222,21 @@ SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
 		USBINFO( "SiS163U: first bulk IN transfer, %lu bytes", usbio->io_Actual );
 	}
 
-	length = ReadBeaconLength( usbio->io_Data, usbio->io_Actual );
+	frame = usbio->io_Data;
 
-	if ( length )
+	length = ReadMgmtLength( frame, usbio->io_Actual );
+
+	if ( ( length >= IEEE80211_SCAN_FRAME_MIN_SIZE ) &&
+		( ( frame[0] == IEEE80211_BEACON ) || ( frame[0] == IEEE80211_PROBE_RESPONSE ) ) )
 	{
-		USBINFO( "SiS163U: received beacon on channel %lu, %lu bytes", (U32) unit->unit_Channel, length );
+		USBINFO( "SiS163U: received a scan frame on channel %lu, %lu bytes", (U32) unit->unit_Channel, length );
 
 		return;
 	}
 
 	if ( unit->unit_RxCheckReads == SIS163U_RX_CHECK_READS )
 	{
-		USBINFO( "SiS163U: channel %lu had no beacon in %lu reads",
+		USBINFO( "SiS163U: channel %lu had no scan frames in %lu reads",
 			(U32) unit->unit_Channel, unit->unit_RxCheckReads );
 
 		AdvanceRXCheck( unit );

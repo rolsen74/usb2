@@ -18,6 +18,7 @@
 
 #define USB2_SERIAL_DEVICE "usb2serial.device"
 #define USB2_PARALLEL_DEVICE "usb2parallel.device"
+#define USB2_PRINTER_DEVICE "usb2printer.device"
 #define USB2_PORT_BACKEND_UNIT 0xffffffffUL
 
 struct USB2PortUnit;
@@ -44,6 +45,26 @@ struct USB2PortIFace
 	struct USB2PortUnit *APICALL (*Register)( struct USB2PortIFace *Self,
 		struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
 	void APICALL (*Unregister)( struct USB2PortIFace *Self, struct USB2PortUnit *unit );
+};
+
+/*
+ * Printer drivers obtain "main" v1 on USB2_PRINTER_DEVICE. The usual
+ * abort-port signal also wakes the worker on last close. Flush the print
+ * job, then call FinishJob. Unregister also releases a waiting closer.
+ */
+struct USB2PrinterIFace
+{
+	struct InterfaceData Data;
+	ULONG APICALL (*Obtain)( struct USB2PrinterIFace *Self );
+	ULONG APICALL (*Release)( struct USB2PrinterIFace *Self );
+	void APICALL (*Expunge)( struct USB2PrinterIFace *Self );
+	struct Interface *APICALL (*Clone)( struct USB2PrinterIFace *Self );
+
+	struct USB2PortUnit *APICALL (*Register)( struct USB2PrinterIFace *Self,
+		struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
+	void APICALL (*Unregister)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
+	BOOL APICALL (*JobClosing)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
+	void APICALL (*FinishJob)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 };
 
 #endif

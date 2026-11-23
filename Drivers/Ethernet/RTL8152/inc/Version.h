@@ -14,12 +14,12 @@
 // --
 
 #define VERSION		1
-#define REVISION	5
-#define DATE		"21.11.2026"
-#define VERS		"usb2rtl8152.device 1.5"
-#define VSTRING		"usb2rtl8152.device 1.5 (21.11.2026)\r\n"
-#define VERSTAG		"\0$VER: usb2rtl8152.device 1.5 (21.11.2026)"
-#define DEVNAME		"usb2rtl8152.device"
+#define REVISION	9
+#define DATE		"22.11.2026"
+#define VERS		"eth_RTL8152.Driver 1.9"
+#define VSTRING		"eth_RTL8152.Driver 1.9 (22.11.2026)\r\n"
+#define VERSTAG		"\0$VER: eth_RTL8152.Driver 1.9 (22.11.2026)"
+#define DEVNAME		"eth_RTL8152.Driver"
 
 // --
 

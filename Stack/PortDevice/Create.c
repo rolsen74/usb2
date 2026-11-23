@@ -86,14 +86,42 @@ SEC_RODATA static const PTR Interfaces[] = //
 
 // --
 
+SEC_RODATA static const PTR PrinterVectors[] =
+{
+	(PTR) Obtain,
+	(PTR) Release,
+	NULL,
+	NULL,
+	(PTR) PortDevice_Register,
+	(PTR) PortDevice_Unregister,
+	(PTR) PortDevice_JobClosing,
+	(PTR) PortDevice_FinishJob,
+	(PTR) -1
+};
+
+SEC_RODATA static const struct TagItem PrinterTags[] =
+{
+	{ MIT_Name, (Tag) "main" },
+	{ MIT_VectorTable, (Tag) PrinterVectors },
+	{ MIT_Version, 1 },
+	{ TAG_END, 0 }
+};
+
+SEC_RODATA static const PTR PrinterInterfaces[] = { (PTR) ManagerTags, (PTR) PrinterTags, NULL };
+
+// --
+
 SEC_CODE static struct USB2PortDevice *
-Alloc ( struct ExecIFace * IExec, STR name, STR id, U8 serial )
+Alloc ( struct USBBase * usbbase, STR name, STR id, U8 revision, enum USB2PortType type )
 {
 	struct USB2PortDevice * base;
+	struct ExecIFace * IExec;
+
+	IExec = usbbase->usb_IExec;
 
 	base = (PTR)IExec->CreateLibraryTags (				//
 		CLT_NoLegacyIFace, TRUE,						//
-		CLT_Interfaces, Interfaces,						//
+		CLT_Interfaces, type == PORT_PRINTER ? PrinterInterfaces : Interfaces, //
 		CLT_DataSize, sizeof ( struct USB2PortDevice ), //
 		TAG_END											//
 	);
@@ -107,9 +135,11 @@ Alloc ( struct ExecIFace * IExec, STR name, STR id, U8 serial )
 	base->Library.lib_Node.ln_Name = name;
 	base->Library.lib_Flags		   = LIBF_SUMUSED | LIBF_CHANGED;
 	base->Library.lib_Version	   = 1;
+	base->Library.lib_Revision	   = revision;
 	base->Library.lib_IdString	   = id;
 	base->IExec					   = IExec;
-	base->Serial				   = serial;
+	base->USB					   = usbbase;
+	base->Type					   = type;
 
 	IExec->InitSemaphore ( &base->Lock );
 
@@ -118,11 +148,12 @@ Alloc ( struct ExecIFace * IExec, STR name, STR id, U8 serial )
 
 // --
 
-SEC_CODE void
+SEC_CODE S32
 PortDevice_Create ( struct USBBase * usbbase )
 {
 	struct USB2PortDevice * serial;
 	struct USB2PortDevice * parallel;
+	struct USB2PortDevice * printer;
 	struct ExecIFace *		IExec;
 
 	IExec = usbbase->usb_IExec;
@@ -130,34 +161,52 @@ PortDevice_Create ( struct USBBase * usbbase )
 	// --
 	// Serial
 
-	serial = Alloc ( IExec, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.0 (" DATE ")\r\n", TRUE );
+	serial = Alloc ( usbbase, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.2 (" DATE ")\r\n", 2, PORT_SERIAL );
 
 	if ( ! serial )
 	{
 		USBERROR ( "Could not allocate USB serial device" );
-		return;
+
+		return ( FALSE );
 	}
 
 	// --
 	// Parallel
 
-	parallel = Alloc ( IExec, USB2_PARALLEL_DEVICE, USB2_PARALLEL_DEVICE " 1.0 (" DATE ")\r\n", FALSE );
+	parallel = Alloc ( usbbase, USB2_PARALLEL_DEVICE, USB2_PARALLEL_DEVICE " 1.2 (" DATE ")\r\n", 2, PORT_PARALLEL );
 
 	if ( ! parallel )
 	{
 		IExec->DeleteLibrary ( (PTR)serial );
 
 		USBERROR ( "Could not allocate USB parallel device" );
-		return;
+
+		return ( FALSE );
 	}
 
-	// --
+	printer = Alloc ( usbbase, USB2_PRINTER_DEVICE, USB2_PRINTER_DEVICE " 1.5 (" DATE ")\r\n", 5, PORT_PRINTER );
+
+	if ( ! printer )
+	{
+		IExec->DeleteLibrary ( (PTR)parallel );
+
+		IExec->DeleteLibrary ( (PTR)serial );
+
+		USBERROR ( "Could not allocate USB printer device" );
+
+		return ( FALSE );
+	}
+
 	// The permanent port devices have vectors in this Kickstart module.
 	usbbase->usb_Library.lib_OpenCnt++;
 
 	IExec->AddDevice ( (PTR)serial );
 
 	IExec->AddDevice ( (PTR)parallel );
+
+	IExec->AddDevice ( (PTR)printer );
+
+	return ( TRUE );
 }
 
 // --

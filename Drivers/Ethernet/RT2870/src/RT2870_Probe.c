@@ -43,7 +43,7 @@ RT2870_Probe( struct EthernetUnit *unit )
 
 		if ( error )
 		{
-			USBERROR( "RT2870: unit %lu ASIC version read failed, USB error %ld", unit->unit_UnitNr, error );
+			USBERROR( "RT2870: ASIC version read failed, USB error %ld", error );
 
 			return ( FALSE );
 		}
@@ -58,13 +58,12 @@ RT2870_Probe( struct EthernetUnit *unit )
 
 	if ( attempt == RT2870_READY_ATTEMPTS )
 	{
-		USBERROR( "RT2870: unit %lu ASIC did not become ready", unit->unit_UnitNr );
+		USBERROR( "RT2870: ASIC did not become ready" );
 
 		return ( FALSE );
 	}
 
-	USBINFO( "RT2870: unit %lu 07D1:3C09 MAC/BBP $%04lx revision $%04lx",
-		unit->unit_UnitNr, version >> 16, version & 0xffff );
+	USBINFO( "RT2870: 07D1:3C09 MAC/BBP $%04lx revision $%04lx", version >> 16, version & 0xffff );
 
 	for( offset = 0; offset < sizeof( unit->unit_StationAddress ); offset += 2 )
 	{
@@ -73,8 +72,7 @@ RT2870_Probe( struct EthernetUnit *unit )
 
 		if ( error )
 		{
-			USBERROR( "RT2870: unit %lu EEPROM read at $%04lx failed, USB error %ld",
-				unit->unit_UnitNr, RT2870_EEPROM_MAC + offset, error );
+			USBERROR( "RT2870: EEPROM read at $%04lx failed, USB error %ld", RT2870_EEPROM_MAC + offset, error );
 
 			return ( FALSE );
 		}
@@ -84,7 +82,7 @@ RT2870_Probe( struct EthernetUnit *unit )
 
 	if ( ( ! addressBits ) || ( address[0] & 1 ) )
 	{
-		USBERROR( "RT2870: unit %lu EEPROM has no valid station address", unit->unit_UnitNr );
+		USBERROR( "RT2870: EEPROM has no valid station address" );
 
 		return ( FALSE );
 	}

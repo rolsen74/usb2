@@ -16,7 +16,7 @@ extern struct Interface *INewlib;
 extern struct Library *NewlibBase;
 struct TimerIFace *IRTL8188Timer;
 
-S32 Resources_Init( struct EthernetBase *ethBase )
+S32 Resources_Init( void )
 {
 struct ExecBase *exec;
 struct Library *timer;
@@ -30,7 +30,11 @@ S32 retval;
 	// --
 
 	NewlibBase = OpenLibrary( "newlib.library", 50 );
-	INewlib = GetInterface( NewlibBase, "main", 1, NULL );
+
+	if ( NewlibBase )
+	{
+		INewlib = GetInterface( NewlibBase, "main", 1, NULL );
+	}
 
 	if ( ! INewlib )
 	{
@@ -41,7 +45,11 @@ S32 retval;
 	// --
 
 	DOSBase = OpenLibrary( "dos.library", 50 );
-	IDOS = (PTR) GetInterface( (PTR) DOSBase, "main", 1, NULL );
+
+	if ( DOSBase )
+	{
+		IDOS = (PTR) GetInterface( (PTR) DOSBase, "main", 1, NULL );
+	}
 
 	if ( ! IDOS )
 	{
@@ -52,7 +60,11 @@ S32 retval;
 	// --
 
 	UtilityBase = OpenLibrary( "utility.library", 50 );
-	IUtility = (PTR) GetInterface( (PTR) UtilityBase, "main", 1, NULL );
+
+	if ( UtilityBase )
+	{
+		IUtility = (PTR) GetInterface( (PTR) UtilityBase, "main", 1, NULL );
+	}
 
 	if ( ! IUtility )
 	{
@@ -69,15 +81,6 @@ S32 retval;
 	{
 		IRTL8188Timer = (PTR) GetInterface( timer, "main", 1, NULL );
 	}
-
-	InitSemaphore( & ethBase->eth_ETH_Semaphore );
-
-	// --
-
-
-
-
-	// --
 
 	retval = TRUE;
 

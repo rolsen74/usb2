@@ -12,13 +12,82 @@
 
 // --
 
+static ULONG
+Read_Adapter( const struct IORequest *request )
+{
+	struct USB2EthIFace *ethernet;
+
+	ULONG type;
+
+	type = USB2ETH_ADAPTER_UNKNOWN;
+
+	if ( request->io_Device->dd_Library.lib_Revision >= USB2ETH_ADAPTER_REVISION )
+	{
+		ethernet = (APTR) GetInterface( (APTR) request->io_Device, "main", 1, NULL );
+
+		if ( ethernet )
+		{
+			type = ethernet->GetAdapter( request, 0 );
+
+			DropInterface( (APTR) ethernet );
+		}
+	}
+
+	return ( type );
+}
+
+// --
+
+ULONG
+Wireless_ResolveAdapter( const char *selector, ULONG number )
+{
+	struct IOSana2Req request;
+
+	ULONG expected;
+	ULONG type;
+
+	expected = USB2ETH_ADAPTER_UNKNOWN;
+
+	if ( ! strcmp( selector, WIRELESS_RTL8188_LEGACY ) )
+	{
+		expected = USB2ETH_ADAPTER_RTL8188;
+	}
+	else if ( ! strcmp( selector, WIRELESS_RT2870_DEVICE ) )
+	{
+		expected = USB2ETH_ADAPTER_RT2870;
+	}
+	else if ( ! strcmp( selector, WIRELESS_SIS163U_DEVICE ) )
+	{
+		expected = USB2ETH_ADAPTER_SIS163U;
+	}
+	else if ( strcmp( selector, WIRELESS_DEVICE ) )
+	{
+		return ( USB2ETH_ADAPTER_UNKNOWN );
+	}
+
+	memset( & request, 0, sizeof( request ) );
+
+	request.ios2_Req.io_Message.mn_Length = sizeof( request );
+
+	if ( OpenDevice( WIRELESS_DEVICE, number, & request.ios2_Req, 0 ) )
+	{
+		return ( USB2ETH_ADAPTER_UNKNOWN );
+	}
+
+	type = Read_Adapter( & request.ios2_Req );
+
+	CloseDevice( & request.ios2_Req );
+
+	return ( ( ( ! expected ) || ( expected == type ) ) ? type : USB2ETH_ADAPTER_UNKNOWN );
+}
+
+// --
+
 S32
 Wireless_Open( struct Wireless *wireless )
 {
-	char devicePath[64];
+	ULONG type;
 	S32 error;
-
-	snprintf( devicePath, sizeof( devicePath ), "DEVS:Networks/%s", wireless->DeviceName );
 
 	wireless->CommandPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
@@ -61,17 +130,29 @@ Wireless_Open( struct Wireless *wireless )
 	wireless->TimerOpen = TRUE;
 	wireless->Command->ios2_BufferManagement = NULL;
 
-	error = OpenDevice( devicePath, wireless->UnitNumber, & wireless->Command->ios2_Req, 0 );
+	error = OpenDevice( WIRELESS_DEVICE, wireless->UnitNumber, & wireless->Command->ios2_Req, 0 );
 
 	if ( error )
 	{
-		fprintf( stderr, "Could not open %s unit %lu (%ld).\n", devicePath,
+		fprintf( stderr, "Could not open %s unit %lu (%ld).\n", WIRELESS_DEVICE,
 			(unsigned long) wireless->UnitNumber, (long) error );
 
 		return ( FALSE );
 	}
 
 	wireless->DeviceOpen = TRUE;
+
+	type = Read_Adapter( & wireless->Command->ios2_Req );
+
+	if ( ( type == USB2ETH_ADAPTER_UNKNOWN ) || ( type != wireless->AdapterType ) )
+	{
+		fprintf( stderr, "%s unit %lu has no matching Wi-Fi adapter.\n",
+			WIRELESS_DEVICE, (unsigned long) wireless->UnitNumber );
+
+		return ( FALSE );
+	}
+
+	wireless->DeviceName = WIRELESS_DEVICE;
 	wireless->Receive->ios2_Req.io_Device = wireless->Command->ios2_Req.io_Device;
 	wireless->Receive->ios2_Req.io_Unit = wireless->Command->ios2_Req.io_Unit;
 	wireless->Receive->ios2_BufferManagement = wireless->Command->ios2_BufferManagement;
@@ -89,16 +170,26 @@ Wireless_Open( struct Wireless *wireless )
 // --
 
 void
-Wireless_Close( struct Wireless *wireless )
+Wireless_Reset_Options( struct Wireless *wireless )
 {
 	static const U8 empty[WIRELESS_ADDR_SIZE] = { 0 };
 
+	if ( wireless->SetOptions )
+	{
+		Wireless_Set_Options( wireless, 0, empty, 0, S2ENC_NONE, FALSE );
+
+		wireless->SetOptions = FALSE;
+	}
+}
+
+// --
+
+void
+Wireless_Close( struct Wireless *wireless )
+{
 	if ( wireless->DeviceOpen )
 	{
-		if ( wireless->SetOptions )
-		{
-			Wireless_Set_Options( wireless, 0, empty, 0, S2ENC_NONE, FALSE );
-		}
+		Wireless_Reset_Options( wireless );
 
 		CloseDevice( & wireless->Command->ios2_Req );
 	}

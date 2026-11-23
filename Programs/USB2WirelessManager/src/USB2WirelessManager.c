@@ -14,7 +14,7 @@
 
 #ifndef USB2WIFI_EMBEDDED
 static const char version[] __attribute__((used)) =
-	"\0$VER: USB2WirelessManager 0.35 (21.11.2026)";
+	"\0$VER: USB2WirelessManager 0.37 (22.11.2026)";
 #endif
 
 // --
@@ -55,15 +55,6 @@ Run_Wireless( struct Wireless *wireless, U32 channel, U32 maxChannel, S32 open, 
 	U32 probeLength;
 	U8 probe[WIRELESS_80211_HEADER + 2 + WIRELESS_MAX_SSID + 16];
 	S32 wpa2;
-
-	if ( ( wireless->Hidden ) && ( wireless->ScanRT2870 ) &&
-		( wireless->Command->ios2_Req.io_Device->dd_Library.lib_Version == 1 ) &&
-		( wireless->Command->ios2_Req.io_Device->dd_Library.lib_Revision < 25 ) )
-	{
-		fprintf( stderr, "Hidden networks need usb2rt2870.device 1.25 or later.\n" );
-
-		return ( RETURN_FAIL );
-	}
 
 	preferred = wireless->Auto ? channel : 0;
 	last = ( channel && ! preferred ) ? channel : maxChannel;
@@ -319,18 +310,19 @@ main( int argc, char **argv __attribute__((unused)) )
 		return ( RETURN_FAIL );
 	}
 
+	device = values[5] ? (const char *) values[5] : WIRELESS_DEVICE;
+
 	if ( values[13] )
 	{
-		device = values[5] ? (const char *) values[5] : WIRELESS_DEVICE;
 		unit = values[4] ? *(const LONG *) values[4] : 0;
 		channel = values[3] ? *(const LONG *) values[3] : 0;
 
-		if ( ( strcmp( device, WIRELESS_SIS163U_DEVICE ) ) ||
+		if ( ( strcmp( device, WIRELESS_DEVICE ) && strcmp( device, WIRELESS_SIS163U_DEVICE ) ) ||
 			( unit < 0 ) || ( unit > 31 ) || ( channel < 0 ) || ( channel > 13 ) ||
 			( values[0] ) || ( values[1] ) || ( values[2] ) || ( values[6] ) || ( values[7] ) ||
 			( values[8] ) || ( values[9] ) || ( values[10] ) || ( values[11] ) || ( values[12] ) )
 		{
-			fprintf( stderr, "Use SCAN DEVICE=%s with optional UNIT and CHANNEL.\n", WIRELESS_SIS163U_DEVICE );
+			fprintf( stderr, "Use SCAN with a SiS163U unit and optional CHANNEL.\n" );
 
 			result = RETURN_FAIL;
 		}
@@ -346,13 +338,13 @@ main( int argc, char **argv __attribute__((unused)) )
 
 	if ( ( values[11] ) || ( values[12] ) )
 	{
-		device = values[5] ? (const char *) values[5] : WIRELESS_DEVICE;
 		unit = values[4] ? *(const LONG *) values[4] : 0;
 
 		if ( ( values[11] && values[12] ) || ( values[0] ) || ( values[1] ) || ( values[2] ) ||
 			( values[3] ) || ( values[6] ) || ( values[7] ) || ( values[8] ) || ( values[9] ) || ( values[10] ) ||
 			( unit < 0 ) || ( unit > 31 ) ||
-			( strcmp( device, WIRELESS_DEVICE ) && strcmp( device, WIRELESS_RT2870_DEVICE ) ) )
+			( strcmp( device, WIRELESS_DEVICE ) && strcmp( device, WIRELESS_RT2870_DEVICE ) &&
+				strcmp( device, WIRELESS_RTL8188_LEGACY ) ) )
 		{
 			fprintf( stderr, "Use AUTO or SETUP with only DEVICE and UNIT.\n" );
 
@@ -388,9 +380,8 @@ main( int argc, char **argv __attribute__((unused)) )
 	wireless.UseSAE = wireless.AllowWPA3;
 	channel = values[3] ? *(const LONG *) values[3] : 0;
 	unit = values[4] ? *(const LONG *) values[4] : 0;
-	device = values[5] ? (const char *) values[5] : WIRELESS_DEVICE;
-	wireless.DeviceName = device;
-	rt2870 = ! strcmp( device, WIRELESS_RT2870_DEVICE );
+	wireless.AdapterType = ( unit >= 0 ) ? Wireless_ResolveAdapter( device, unit ) : USB2ETH_ADAPTER_UNKNOWN;
+	rt2870 = wireless.AdapterType == USB2ETH_ADAPTER_RT2870;
 	wireless.ScanRT2870 = rt2870;
 	maxChannel = rt2870 ? 13 : WIRELESS_MAX_CHANNEL;
 	result = RETURN_FAIL;
@@ -417,9 +408,9 @@ main( int argc, char **argv __attribute__((unused)) )
 	{
 		fprintf( stderr, "PASSWORD must contain %u to 63 printable ASCII characters.\n", wireless.UseSAE ? 1U : 8U );
 	}
-	else if ( ( ! rt2870 ) && ( strcmp( device, WIRELESS_DEVICE ) ) )
+	else if ( ( ! rt2870 ) && ( wireless.AdapterType != USB2ETH_ADAPTER_RTL8188 ) )
 	{
-		fprintf( stderr, "DEVICE must be %s or %s.\n", WIRELESS_DEVICE, WIRELESS_RT2870_DEVICE );
+		fprintf( stderr, "No matching RTL8188 or RT2870 adapter on %s unit %ld.\n", WIRELESS_DEVICE, unit );
 	}
 	else if ( ( ( values[6] ) || ( values[7] ) ) &&
 		( ( ! rt2870 ) || ( values[1] ) || ( wireless.AllowWPA2 ) || ( wireless.AllowWPA3 ) || ( ( values[6] ) && ( values[7] ) ) ) )
@@ -428,7 +419,7 @@ main( int argc, char **argv __attribute__((unused)) )
 	}
 	else if ( ( rt2870 ) && ( values[1] ) )
 	{
-		fprintf( stderr, "%s supports scans, AUTH, ASSOCIATE, WPA2 and WPA3. OPEN is unavailable.\n", device );
+		fprintf( stderr, "RT2870 supports scans, AUTH, ASSOCIATE, WPA2 and WPA3. OPEN is unavailable.\n" );
 	}
 	else
 	{

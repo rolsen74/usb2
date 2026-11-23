@@ -19,7 +19,7 @@ S32				Running			= FALSE;
 
 // --
 
-static S32	Main_Alloc( void );
+static S32	Main_Alloc( S32 gui );
 static S32	Main_Start( void );
 static void Main_Stop( void );
 static void Main_Free( void );
@@ -27,38 +27,66 @@ static void Main_Loop( void );
 
 // --
 
-int main( void )
+int main( int argc, char **argv )
 {
-S32 retval;
+	const char *path;
+	S32 retval;
 
+	path = NULL;
 	retval = RETURN_FAIL;
 
-	if ( Main_Alloc() )
+	if ( argc > 1 )
 	{
-		do
+		if ( ( argc != 3 ) || ( strcasecmp( argv[1], "SAVETREE" ) ) || ( ! argv[2][0] ) )
 		{
-			Restart = FALSE;
+			fprintf( stderr, "Usage: USB2Analyzer [SAVETREE <file>]\n" );
 
-			if ( Main_Start() )
-			{
-				Main_Loop();
-			}
-
-			Main_Stop();
+			return ( RETURN_FAIL );
 		}
-		while( Restart );
 
-		retval = RETURN_OK;
+		path = argv[2];
+	}
+
+	if ( Main_Alloc( ! path ) )
+	{
+		if ( path )
+		{
+			if ( Save_Device_Tree( path ) )
+			{
+				retval = RETURN_OK;
+			}
+			else
+			{
+				fprintf( stderr, "USB2Analyzer: Could not write '%s'.\n", path );
+			}
+		}
+		else
+		{
+			do
+			{
+				Restart = FALSE;
+
+				if ( Main_Start() )
+				{
+					Main_Loop();
+
+					retval = RETURN_OK;
+				}
+
+				Main_Stop();
+			}
+			while( Restart );
+		}
 	}
 
 	Main_Free();
 
-	return( retval );
+	return ( retval );
 }
 
 // --
 
-static S32 Main_Alloc( void )
+static S32 Main_Alloc( S32 gui )
 {
 S32 retval;
 
@@ -74,7 +102,7 @@ S32 retval;
 	NewList( & IORequestGUIList );
 	NewList( & CaptureGUIList );
 
-	if ( ! myOpenResources( 16384 ))
+	if ( ( gui ) && ( ! myOpenResources( 16384 ) ) )
 	{
 		printf( "myOpenResources() failed\n" );
 		goto bailout;
@@ -96,10 +124,10 @@ S32 retval;
 //		goto bailout;
 //	}
 
-//	if ( Load_Program_Settings() == FALSE )
-//	{
-//		goto bailout;
-//	}
+	if ( gui )
+	{
+		Prefs_Load();
+	}
 
 //	if ( Init_Databases() == FALSE )
 //	{
@@ -111,7 +139,7 @@ S32 retval;
 //		goto bailout;
 //	}
 
-	if ( ! Main_BuildWindow() )
+	if ( ( gui ) && ( ! Main_BuildWindow() ) )
 	{
 		printf( "Main_BuildWindow() failed\n" );
 		goto bailout;
@@ -128,9 +156,14 @@ bailout:
 
 static void Main_Free( void )
 {
+	PTR node;
+
 //	Main_Free1();
 
-	Main_DestoryWindow();
+	if ( IListBrowser )
+	{
+		Main_DestoryWindow();
+	}
 
 //--	Free_Databases();
 
@@ -147,6 +180,11 @@ static void Main_Free( void )
 //	Main_CloseTimerDevice();
 
 	USB_Cleanup();
+
+	while( ( node = RemHead( & DeviceTreeUSBList ) ) )
+	{
+		FktNode_Delete( node );
+	}
 
 	myCloseResources();
 }
@@ -186,7 +224,7 @@ static void Main_Stop( void )
 {
 //	Main_RemNotify();
 
-//	Prefs_CloseWindow();
+	Prefs_CloseWindow();
 
 	Main_CloseWindow();
 
@@ -209,7 +247,7 @@ U32 mask;
 //			DBBrowserWindowBits |
 //			DBInfoWindowBits |
 //			MemWindowBits |
-//			PrefsWindowBits |
+			Prefs_WindowBits |
 //			TimerMsgPortBit |
 //			USBNotifyMsgPortBit |
 //			USBWatchMsgPortBit |
@@ -237,10 +275,10 @@ U32 mask;
 //			Mem_HandleWindow();
 //		}
 
-//		if ( mask & PrefsWindowBits )
-//		{
-//			Prefs_HandleWindow();
-//		}
+		if ( ( Running ) && ( mask & Prefs_WindowBits ) )
+		{
+			Prefs_HandleWindow();
+		}
 
 //		if ( mask & TimerMsgPortBit )
 //		{

@@ -1,6 +1,0 @@
-TYPE Interface
-TITLE "USB Smart Card (CCID)"
-DRIVER "SmartCard.Driver"
-CLASS 0x0b
-SUBCLASS 0x00
-PROTOCOL 0x00

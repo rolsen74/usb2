@@ -15,7 +15,7 @@
 
 // --
 
-#define USB2SMARTCARD_DRIVER "SmartCard.Driver"
+#define USB2SMARTCARD_DRIVER "cls_SmartCard.Driver"
 #define USB2SMARTCARD_INTERFACE "ccid"
 #define USB2SMARTCARD_VERSION 1
 #define USB2SMARTCARD_UNITS 32

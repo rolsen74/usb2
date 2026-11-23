@@ -33,7 +33,15 @@ struct USB2_SetupData *setup;
 
 	DoIO( (PTR) ioreq );
 
-	return ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == length ) );
+	if ( ( ioreq->io_Error != USB2Err_NoError ) || ( ioreq->io_Actual != length ) )
+	{
+		DebugPrintF( "USB2 serial: control type $%02lX request $%02lX value $%04lX index $%04lX, error %ld, %lu/%lu bytes\n",
+			(U32) type, (U32) code, (U32) value, (U32) index, (S32) ioreq->io_Error, ioreq->io_Actual, (U32) length );
+
+		return ( FALSE );
+	}
+
+	return ( TRUE );
 }
 
 // --

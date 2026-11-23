@@ -54,7 +54,7 @@ ReportPlayback( struct BTAudioPlayback *audio, enum BTHCIResult result, struct B
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "Playback needs Bluetooth.Driver 1.14, a bulk ACL transport, and a compatible speaker.\n" );
+			Printf( "Playback needs cls_Bluetooth.Driver 1.14, a bulk ACL transport, and a compatible speaker.\n" );
 
 			break;
 

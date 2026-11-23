@@ -76,7 +76,7 @@ MakeVisible( struct IORequest *request, ULONG unit, const char *name, LONG secon
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "VISIBLE requires Bluetooth.Driver 1.5 or later.\n" );
+			Printf( "VISIBLE requires cls_Bluetooth.Driver 1.5 or later.\n" );
 
 			break;
 

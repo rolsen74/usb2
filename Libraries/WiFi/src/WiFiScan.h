@@ -33,6 +33,6 @@ struct WiFiScan
 	void *Context;
 };
 
-int32_t WiFi_Discover( uint32_t adapter, uint32_t unit, struct WiFiScan *scan );
+int32_t WiFi_PickNetwork( uint32_t adapter, uint32_t unit, struct WiFiScan *scan );
 
 #endif

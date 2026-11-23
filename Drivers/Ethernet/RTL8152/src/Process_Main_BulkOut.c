@@ -20,6 +20,9 @@ Handle_BulkOutMessages( struct devUnit *unit )
 	struct IONode *node;
 	struct IOSana2Req *request;
 
+	U8 *frame;
+	U32 type;
+
 	IUSB2 = unit->unit_IUSB2;
 
 	while(( usbio = (PTR) IExec->GetMsg( unit->unit_USBBulkOut->MsgPort ) ))
@@ -47,12 +50,17 @@ Handle_BulkOutMessages( struct devUnit *unit )
 		else if ( ( usbio->io_Error == USB2Err_NoError ) && ( usbio->io_Actual == usbio->io_Length ) )
 		{
 			unit->unit_PacketsSent++;
+			frame = node->Buffer + RTL8152_TX_DESCRIPTOR_SIZE;
+			type = ( (U32) frame[12] << 8 ) | frame[13];
+
+			Sana2_AccountType( & unit->unit_TrackedTypes, type,
+				usbio->io_Actual - RTL8152_TX_DESCRIPTOR_SIZE - 14, FALSE, FALSE );
 
 			UpdateThroughput( unit, usbio->io_Actual - RTL8152_TX_DESCRIPTOR_SIZE, 0 );
 		}
 		else
 		{
-			CheckEvent( unit, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE );
+			Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE, TRUE );
 
 			request->ios2_Req.io_Error = S2ERR_TX_FAILURE;
 			request->ios2_WireError = S2WERR_GENERIC_ERROR;

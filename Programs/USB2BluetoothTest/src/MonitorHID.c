@@ -138,7 +138,7 @@ MonitorBluetoothHID( struct IORequest *request, ULONG unit, const char *address,
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "HID monitoring requires Bluetooth.Driver 1.17 and a Classic Basic Mode L2CAP connection.\n" );
+			Printf( "HID monitoring requires cls_Bluetooth.Driver 1.17 and a Classic Basic Mode L2CAP connection.\n" );
 
 			break;
 

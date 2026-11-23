@@ -28,8 +28,8 @@
 
 struct ConfigOptions
 {
-	U32 *	VendorID;			// Force custom VendorID
-	U32 *	DeviceID;			// Force custom DeviceID
+	U32 *	VendorID;			// Accepted in older settings files
+	U32 *	DeviceID;
 	U32 *	BufferSize;			// Buffer size in kb ( 0 = Off, 1 = 1024 bytes )
 };
 

@@ -12,7 +12,7 @@
 
 // --
 
-static void
+void
 Send_FormFeed( struct PrinterUnit *unit )
 {
 	struct USB2_IORequest *usbio;
@@ -21,24 +21,28 @@ Send_FormFeed( struct PrinterUnit *unit )
 
 	USBERROR( "Send_FormFeed" );
 
-	// --
-	// todo:
-	//  Make sure Bulk queues are empty
-	//  only run this when we have alost shutdown
+	data[0] = '\f';
 
-	data[0] = '\f';		// FormFeed
+	usbio = (PTR) RemHead( unit->unit_USB_IOReq_FreeList );
 
-	// high jack, first bulk... lets hope its done in this test
-	usbio = unit->unit_Bulk_Tx_Resource->IORequests[0];
+	if ( ! usbio )
+	{
+		return;
+	}
 
 	usbio->io_Command	= CMD_WRITE;
 	usbio->io_UserData	= NULL;
-//	usbio->io_Offset	= 0;
 	usbio->io_Length	= 1;
 	usbio->io_Data		= data;
 
 	DoIO( (PTR) usbio );
 
+	if ( usbio->io_Error == USB2Err_Device_Detached )
+	{
+		unit->unit_Detached = TRUE;
+	}
+
+	AddTail( unit->unit_USB_IOReq_FreeList, (PTR) usbio );
 }
 
 // --

@@ -13,7 +13,7 @@
 // --
 
 void
-CloseResources( struct devBase *devBase UNUSED )
+Resources_Free( void )
 {
 	// --
 

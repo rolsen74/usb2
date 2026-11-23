@@ -35,11 +35,11 @@ struct VideoDriverBase *driver;
 	}
 
 	driver->Library.lib_Node.ln_Type = NT_LIBRARY;
-	driver->Library.lib_Node.ln_Name = (STR) "Video.Driver";
+	driver->Library.lib_Node.ln_Name = (STR) VIDEO_DRIVER_NAME;
 	driver->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
-	driver->Library.lib_Version = 1;
-	driver->Library.lib_Revision = 0;
-	driver->Library.lib_IdString = (STR) "Video.Driver 1.0 (17.11.2026)\r\n";
+	driver->Library.lib_Version = VIDEO_DRIVER_VERSION;
+	driver->Library.lib_Revision = VIDEO_DRIVER_REVISION;
+	driver->Library.lib_IdString = (STR) VIDEO_DRIVER_ID;
 	driver->SegList = seglist;
 	InitSemaphore( & driver->Context.Lock );
 

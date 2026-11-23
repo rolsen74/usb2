@@ -104,7 +104,7 @@ ReportFileResult( const struct BTRFCOMMFile *file, enum BTHCIResult result, cons
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "FILE requires Bluetooth.Driver 1.10 and a Basic Mode L2CAP channel.\n" );
+			Printf( "FILE requires cls_Bluetooth.Driver 1.10 and a Basic Mode L2CAP channel.\n" );
 
 			break;
 

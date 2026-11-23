@@ -219,7 +219,7 @@ S32 rebuild;
 		ReplyMsg( & msg->nm_Message );
 	}
 
-	if ( rebuild )
+	if ( ( rebuild ) && ( Main_WinObject ) )
 	{
 		Build_Device_Tree();
 	}
@@ -554,10 +554,11 @@ S32 rebuild;
 									node->Functions[child->Port-1] = child;
 								}
 							}
-
-							rebuild = TRUE;
 						}
 					}
+
+					// The descriptor can become available with the port count unchanged.
+					rebuild = TRUE;
 				}
 			}
 			break;
@@ -568,7 +569,8 @@ S32 rebuild;
 			node = FktNode_Find( & DeviceTreeUSBList, msg->nm_ID );
 
 			if ( ( node ) && ( parent->Functions ) &&
-				( node->Port >= 1 ) && ( node->Port <= parent->Ports ) )
+				( node->Port >= 1 ) && ( node->Port <= parent->Ports ) &&
+				( parent->Functions[node->Port-1] == node ) )
 			{
 				parent->Functions[ node->Port-1 ] = NULL;
 			}
@@ -596,202 +598,117 @@ bailout:
 
 // --
 
-static S32 Handle_Notify_Interface( struct USB2_NotifyMessage *msg )
+static S32
+Select_Interface_Descriptor( struct USB2_FktNode *node, struct USB2_FktNode *parent,
+	const struct USB2_NotifyMessage *msg )
 {
-struct USB2_Descriptor *dsc;
-struct USB2_FktNode *parent;
-struct USB2_FktNode *node;
-U32 cfgnr;
-// U32 cnt;
-// U32 max;
-// U16 Buffer[128];
-S32 len;
-S32 rebuild;
+	struct USB2_Descriptor *dsc;
+	struct USB2_Config_Desc *config;
+	struct USB2_Interface_Desc *interface;
 
-	rebuild = FALSE;
+	U32 number;
+	S32 length;
+
+	dsc = (PTR) parent->CfgDesc;
+	length = parent->CfgSize;
+	number = ~0U;
+
+	while ( ( dsc ) && ( length >= 2 ) )
+	{
+		if ( ( dsc->Length < 2 ) || ( dsc->Length > length ) )
+		{
+			break;
+		}
+
+		if ( ( dsc->DescriptorType == DSCTYPE_Configuration ) &&
+			( dsc->Length >= sizeof( *config ) ) )
+		{
+			config = (PTR) dsc;
+			number = config->ConfigurationValue;
+		}
+		else if ( ( dsc->DescriptorType == DSCTYPE_Interface ) &&
+			( dsc->Length >= sizeof( *interface ) ) &&
+			( number == msg->nm_Data.nm_Interface.nm_Config_Nr ) )
+		{
+			interface = (PTR) dsc;
+
+			if ( ( interface->InterfaceNumber == msg->nm_Data.nm_Interface.nm_Interface_Nr ) &&
+				( interface->AlternateSetting == msg->nm_Data.nm_Interface.nm_Interface_AltNr ) )
+			{
+				node->IfcDesc = interface;
+				node->IfcSize = length;
+				node->Config = number;
+				node->Speed = parent->Speed;
+
+				return ( TRUE );
+			}
+		}
+
+		length -= dsc->Length;
+		dsc = (PTR) ( (U8 *) dsc + dsc->Length );
+	}
+
+	return ( FALSE );
+}
+
+// --
+
+static S32
+Handle_Notify_Interface( struct USB2_NotifyMessage *msg )
+{
+	struct USB2_FktNode *parent;
+	struct USB2_FktNode *node;
+
+	node = FktNode_Find( & DeviceTreeUSBList, msg->nm_ID );
+
+	if ( msg->nm_Command == USBNC_Removing )
+	{
+		if ( ! node )
+		{
+			return ( FALSE );
+		}
+
+		Remove( (PTR) node );
+
+		FktNode_Delete( node );
+
+		return ( TRUE );
+	}
+
+	if ( ( msg->nm_Command != USBNC_Adding ) && ( msg->nm_Command != USBNC_Updating ) )
+	{
+		return ( FALSE );
+	}
 
 	parent = FktNode_Find( & DeviceTreeUSBList, msg->nm_Data.nm_Interface.nm_Function_ID );
 
 	if ( ! parent )
 	{
-		DebugPrintF( "Parent Node not found\n" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	switch( msg->nm_Command )
+	if ( node )
 	{
-		case USBNC_Adding:
-		{
-			if ( FktNode_Find( & DeviceTreeUSBList, msg->nm_ID ) )
-			{
-				break;
-			}
-
-			node = FktNode_Alloc( TYPE_INTERFACE, msg->nm_ID );
-
-			if ( ! node )
-			{
-				break;
-			}
-
-			// --
-
-			dsc = (PTR) parent->CfgDesc;
-			len = (S32) parent->CfgSize;
-
-			if ( ! parent->CfgDesc )
-			{
-				FktNode_Delete( node );
-				break;
-			}
-
-			node->IfcDesc = NULL;
-
-			cfgnr = -1;
-
-			while ( ( dsc ) && ( len >= 2 ) && ( ! node->IfcDesc ) )
-			{
-				if ( ( dsc->Length < 2 ) || ( dsc->Length > len ) )
-				{
-					break;
-				}
-
-				/**/ if ( dsc->DescriptorType == DSCTYPE_Configuration )
-				{
-					if ( dsc->Length < sizeof( struct USB2_Config_Desc ) )
-					{
-						break;
-					}
-
-					struct USB2_Config_Desc * cfgdsc = (PTR) dsc ;
-
-					cfgnr = cfgdsc->ConfigurationValue;
-				}
-				else if ( dsc->DescriptorType == DSCTYPE_Interface )
-				{
-					if ( dsc->Length < sizeof( struct USB2_Interface_Desc ) )
-					{
-						break;
-					}
-
-					struct USB2_Interface_Desc * ifcdsc = (PTR) dsc ;
-
-					while( TRUE )
-					{
-						if ( msg->nm_Data.nm_Interface.nm_Config_Nr	!= cfgnr )
-						{
-							break;
-						}
-
-						if ( msg->nm_Data.nm_Interface.nm_Interface_Nr != ifcdsc->InterfaceNumber )
-						{
-							break;
-						}
-
-						if ( msg->nm_Data.nm_Interface.nm_Interface_AltNr != ifcdsc->AlternateSetting )
-						{
-							break;
-						}
-
-						node->IfcDesc = ifcdsc;
-						node->IfcSize = len;
-						node->Config = cfgnr;
-						break;
-					}
-				}
-
-				len -= dsc->Length;
-				dsc = len >= 2 ? (PTR)( (U8 *)dsc + dsc->Length ) : NULL;
-			}
-
-			if ( ! node->IfcDesc )
-			{
-				FktNode_Delete( node );
-				break;
-			}
-
-			// --
-
-			// DebugPrintF( "USBNC_Adding 3" );
-			// U32 ii = msg->nm_Data.nm_Interface.nm_Interface_StringID;
-
-			// if ( ii )
-			// {
-			// 	DebugPrintF( "String IDnr: %ld", ii );
-
-			// 	Buffer[0] = 0;
-
-			// 	DebugPrintF( "USBNC_Adding 3.4" );
-
-			// 	IUSB2->Stack_GetAttribute( msg->nm_Data.nm_Interface.nm_Interface_StringID, USB2Tag_IFC_String, & Buffer, sizeof( Buffer ));
-
-			// 	DebugPrintF( "USBNC_Adding 3.5" );
-
-			// 	if ( Buffer[0] )
-			// 	{
-			// 		max = MIN(( Buffer[0] >> 9 ), 32 ) + 1;
-
-			// 		DebugPrintF( "USBNC_Adding 3.6" );
-
-			// 		node->Data.Interface.InterfaceStr[0] = '\"';
-
-			// 		for( cnt=1 ; cnt<max ; cnt++ )
-			// 		{
-			// 			node->Data.Interface.InterfaceStr[cnt] = ( Buffer[cnt] >> 8 );
-			// 		}
-
-			// 		DebugPrintF( "USBNC_Adding 3.7" );
-
-			// 		node->Data.Interface.InterfaceStr[cnt++] = '\"';
-			// 		node->Data.Interface.InterfaceStr[cnt] = 0;
-			// 	}
-			// }
-
-			// --
-
-			AddTail( & parent->Header, (PTR) node );
-
-			rebuild = TRUE;
-			break;
-		}
-
-		case USBNC_Updating:
-		{
-			node = FktNode_Find( & DeviceTreeUSBList, msg->nm_ID );
-
-			if ( node )
-			{
-
-				// There are nothing that can change atm
-
-			}
-			break;
-		}
-
-		case USBNC_Removing:
-		{
-			node = FktNode_Find( & DeviceTreeUSBList, msg->nm_ID );
-
-			if ( node )
-			{
-				Remove( (PTR) node );
-
-				FktNode_Delete( node );
-
-				rebuild = TRUE;
-			}
-			break;
-		}
-
-		default:
-		{
-			break;
-		}
+		return ( Select_Interface_Descriptor( node, parent, msg ) );
 	}
 
-bailout:
+	node = FktNode_Alloc( TYPE_INTERFACE, msg->nm_ID );
 
-	return(	rebuild );
+	if ( ! node )
+	{
+		return ( FALSE );
+	}
+
+	if ( ! Select_Interface_Descriptor( node, parent, msg ) )
+	{
+		FktNode_Delete( node );
+
+		return ( FALSE );
+	}
+
+	AddTail( & parent->Header, (PTR) node );
+
+	return ( TRUE );
 }
 
 // --

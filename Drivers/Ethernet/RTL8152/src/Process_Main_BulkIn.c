@@ -37,7 +37,7 @@ Handle_BulkInMessages( struct devUnit *unit )
 		{
 			unit->unit_Running = FALSE;
 
-			CheckEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
+			Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE, TRUE );
 		}
 		else if ( ( ! node->AbortError ) && ( unit->unit_Online ) &&
 			( usbio->io_Error == USB2Err_NoError ) && ( usbio->io_Actual <= node->BufferSize ) )
@@ -54,7 +54,7 @@ Handle_BulkInMessages( struct devUnit *unit )
 				{
 					unit->unit_BadData++;
 
-					CheckEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
+					Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE, TRUE );
 
 					break;
 				}
@@ -71,7 +71,7 @@ Handle_BulkInMessages( struct devUnit *unit )
 		}
 		else if ( ( ! node->AbortError ) && ( unit->unit_Online ) )
 		{
-			CheckEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
+			Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE, TRUE );
 
 			if ( usbio->io_Error == USB2Err_Host_Stall )
 			{

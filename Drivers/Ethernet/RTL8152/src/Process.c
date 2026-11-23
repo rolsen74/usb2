@@ -9,55 +9,85 @@
 // --
 
 #include "All.h"
+#include "EthClass.h"
 
 // --
 
-void
-unit_Process( void )
+extern const struct USB2EthOps EthClass_Ops;
+
+// --
+
+U32
+EthClass_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg )
 {
-struct devUnit *unit;
-struct Task *finish;
-struct Task *self;
+	struct devUnit *unit;
+	struct EthClassPort port;
 
-	//--------
+	S32 registered;
 
-	self = IExec->FindTask( NULL );
-
-	unit = (APTR) ( self -> tc_UserData );
-
-	finish = unit->unit_FinishingTask;
-
-	//--------
-
-	if ( unit_Process_Init( unit ))
+	if ( ( ! msg ) || ( ! msg->IUSB2 ) || ( ! msg->Interface ) )
 	{
-		unit->unit_Process = self;
-		unit->unit_Running = TRUE;
-
-		IExec->Signal( finish, SIGBREAKF_CTRL_E );
-
-		// --
-
-		unit_Process_MainLoop( unit );
-
-		finish = NULL;
+		return ( FALSE );
 	}
+
+	IExec->DebugPrintF( "RTL8152: probing %04lX:%04lX interface %lu\n",
+		(U32) msg->VendorID, (U32) msg->DeviceID, (U32) msg->Interface->IFC_Num );
+
+	if ( msg->Interface->IFC_Num != 0 )
+	{
+		IExec->DebugPrintF( "RTL8152: interface %lu skipped, only interface 0 is supported\n",
+			(U32) msg->Interface->IFC_Num );
+
+		return ( FALSE );
+	}
+
+	unit = IExec->AllocVecTags( sizeof( *unit ), AVT_Clear, 0, TAG_END );
+
+	if ( ! unit )
+	{
+		return ( FALSE );
+	}
+
+	IExec->InitSemaphore( & unit->unit_DispatchLock );
+
+	unit->unit_IUSB2 = msg->IUSB2;
+	unit->unit_USBInterface = msg->Interface;
+	registered = FALSE;
+
+	memset( & port, 0, sizeof( port ) );
+
+	if ( unit_Process_Init( unit, msg ) )
+	{
+		unit->unit_Running = TRUE;
+		unit->unit_AcceptIO = TRUE;
+
+		registered = EthClass_Register( & port, & EthClass_Ops, unit,
+			& unit->unit_UnitNumber, USB2ETH_ADAPTER_RTL8152, msg );
+
+		if ( registered )
+		{
+			unit_Process_MainLoop( unit );
+		}
+	}
+
+	IExec->ObtainSemaphore( & unit->unit_DispatchLock );
+
+	unit->unit_AcceptIO = FALSE;
+
+	IExec->ReleaseSemaphore( & unit->unit_DispatchLock );
 
 	unit_Process_Free( unit );
 
-	IExec->Forbid();
-
-	if ( ! finish )
+	if ( registered )
 	{
-		finish = unit->unit_FinishingTask;
+		EthClass_Unregister( & port );
+	}
+	else
+	{
+		IExec->FreeVec( unit );
 	}
 
-	unit->unit_Process = NULL;
-
-	if ( finish )
-	{
-		IExec->Signal( finish, SIGBREAKF_CTRL_F );
-	}
+	return ( registered );
 }
 
 // --

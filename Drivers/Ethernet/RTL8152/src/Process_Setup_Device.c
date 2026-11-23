@@ -13,7 +13,7 @@
 // --
 
 int
-unit_Process_InitUSB( struct devUnit *unit )
+unit_Process_InitUSB( struct devUnit *unit, struct USB2_DriverMessage *msg )
 {
 	struct USB2IFace *IUSB2;
 	struct IONode *node;
@@ -23,7 +23,7 @@ unit_Process_InitUSB( struct devUnit *unit )
 	IUSB2 = unit->unit_IUSB2;
 
 	unit->unit_USBRegister = IUSB2->USB2_Reg_RegisterTags(
-		USB2Tag_Reg_Interface, unit->unit_USBInterface,
+		USB2Tag_Reg_DriverMessage, msg,
 		USB2Tag_Reg_Title, "RTL8152 Ethernet",
 		TAG_END );
 

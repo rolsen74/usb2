@@ -105,6 +105,7 @@ ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action, S32 fromP
 	wireless.SSID = wifi->Profile.SSID;
 	wireless.SSIDLength = strlen( wifi->Profile.SSID );
 	wireless.ScanRT2870 = wifi->Adapter == USB2WIFI_RT2870;
+	wireless.AdapterType = wireless.ScanRT2870 ? USB2ETH_ADAPTER_RT2870 : USB2ETH_ADAPTER_RTL8188;
 	wireless.UseWPA = wifi->Profile.Security == USB2WIFI_WPA;
 	wireless.AllowWPA2 = wifi->Profile.Security == USB2WIFI_WPA2;
 	wireless.AllowWPA3 = wifi->Profile.Security == USB2WIFI_WPA3;
@@ -147,6 +148,7 @@ WiFi_Run( const char *device, U32 unit, S32 setup )
 	struct Library *base;
 
 	U32 action;
+	ULONG type;
 	S32 retryPicker;
 	S32 autoConnect;
 	S32 result;
@@ -154,11 +156,24 @@ WiFi_Run( const char *device, U32 unit, S32 setup )
 
 	memset( & wifi, 0, sizeof( wifi ) );
 
+	type = Wireless_ResolveAdapter( device, unit );
+
+	if ( ( type != USB2ETH_ADAPTER_RT2870 ) && ( type != USB2ETH_ADAPTER_RTL8188 ) )
+	{
+		fprintf( stderr, "No matching RTL8188 or RT2870 adapter on %s unit %lu.\n",
+			WIRELESS_DEVICE, (unsigned long) unit );
+
+		return ( RETURN_FAIL );
+	}
+
+	device = WIRELESS_DEVICE;
+
 	base = OpenLibrary( USB2WIFI_NAME, USB2WIFI_VERSION );
 
-	if ( ( ! base ) || ( base->lib_Version == USB2WIFI_VERSION && base->lib_Revision < USB2WIFI_PROFILE_REVISION ) )
+	if ( ( ! base ) || ( ( base->lib_Version == USB2WIFI_VERSION ) &&
+		( base->lib_Revision < USB2WIFI_SHARED_ETH_REVISION ) ) )
 	{
-		fprintf( stderr, "Install LIBS:%s 1.4 or later.\n", USB2WIFI_NAME );
+		fprintf( stderr, "Install LIBS:%s 1.27 or later.\n", USB2WIFI_NAME );
 
 		if ( base )
 		{
@@ -180,7 +195,7 @@ WiFi_Run( const char *device, U32 unit, S32 setup )
 
 	retryPicker = base->lib_Version > USB2WIFI_VERSION || base->lib_Revision >= USB2WIFI_RETRY_PICKER_REVISION;
 	autoConnect = base->lib_Version > USB2WIFI_VERSION || base->lib_Revision >= USB2WIFI_EDITOR_REVISION;
-	wifi.Adapter = ! strcmp( device, WIRELESS_RT2870_DEVICE ) ? USB2WIFI_RT2870 : USB2WIFI_RTL8188;
+	wifi.Adapter = ( type == USB2ETH_ADAPTER_RT2870 ) ? USB2WIFI_RT2870 : USB2WIFI_RTL8188;
 	wifi.Unit = unit;
 
 	wifi.Claimed = wifi.Interface->Claim( wifi.Adapter, unit );

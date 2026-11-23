@@ -111,7 +111,7 @@ main( void )
 
 	if ( ! driver )
 	{
-		puts( "No USB CCID driver is active. With SmartCard.Class and SmartCard.Driver installed, reconnect the reader." );
+		puts( "No USB CCID driver is active. With cls_SmartCard.Class and cls_SmartCard.Driver installed, reconnect the reader." );
 		result = RETURN_WARN;
 		goto done;
 	}
@@ -149,7 +149,7 @@ main( void )
 	}
 	else
 	{
-		puts( "SmartCard.Driver does not expose the CCID interface." );
+		puts( "cls_SmartCard.Driver does not expose the CCID interface." );
 		result = RETURN_ERROR;
 	}
 

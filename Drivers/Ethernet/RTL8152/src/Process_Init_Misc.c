@@ -26,6 +26,10 @@ int retval;
 	IExec->NewList( & unit->unit_SampleList );
 	IExec->NewList( & unit->unit_MultiCastList );
 
+	IExec->NewList( & unit->unit_MulticastRanges );
+
+	IExec->NewList( & unit->unit_TrackedTypes );
+
 	IExec->NewList( & unit->unit_USBBulkInActiveList );
 	IExec->NewList( & unit->unit_USBBulkInFreeList );
 	IExec->NewList( & unit->unit_USBBulkOutActiveList );

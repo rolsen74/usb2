@@ -1,0 +1,6 @@
+# USB Printer Class.
+TYPE Interface
+TITLE "USB Printer"
+DRIVER "cls_Printer.Driver"
+CLASS 0x07
+SUBCLASS 0x01

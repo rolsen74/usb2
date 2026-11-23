@@ -12,6 +12,9 @@
 
 // --
 
+struct Library *SysBase;
+struct ExecIFace *IExec;
+struct USB2IFace *IUSB2;
 struct Library *DOSBase;
 struct DOSIFace *IDOS;
 struct Library *UtilityBase;
@@ -23,11 +26,10 @@ struct TimerIFace *IRT2870Timer;
 // --
 
 S32
-Resources_Init( struct EthernetBase *ethBase )
+Resources_Init( void )
 {
 	struct Library *timer;
 
-	InitSemaphore( & ethBase->eth_ETH_Semaphore );
 
 	NewlibBase = OpenLibrary( "newlib.library", 50 );
 

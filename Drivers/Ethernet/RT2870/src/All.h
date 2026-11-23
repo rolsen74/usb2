@@ -4,10 +4,12 @@
 #include <proto/dos.h>
 #include <proto/exec.h>
 #include <proto/usb2.h>
+#include <interfaces/usb2eth.h>
 #include <proto/utility.h>
 #include <interfaces/timer.h>
 #include <devices/newstyle.h>
 #include <devices/sana2.h>
+#include "Sana2Commands.h"
 #include <devices/usb2rt2870.h>
 #include <exec/emulation.h>
 #include <dos/dostags.h>
@@ -17,8 +19,9 @@
 #include "Types.h"
 #include "WirelessCrypto.h"
 #include "Version.h"
-#include "Base.h"
-#include "Task.h"
+
+#define ETH_CLASS_ADAPTER USB2ETH_ADAPTER_RT2870
+#define ETH_CLASS_HAS_WORK_LOCK
 
 #define RT2870_VENDOR 0x07d1
 #define RT2870_PRODUCT 0x3c09
@@ -70,6 +73,11 @@ struct EthernetUnit
 	struct SignalSemaphore unit_CommandLock;
 	struct SignalSemaphore unit_WorkLock;
 	struct List unit_Pending;
+	struct List unit_MulticastRanges;
+	struct List unit_TrackedTypes;
+	U64 unit_PacketsRx;
+	U64 unit_PacketsTx;
+	U64 unit_UnknownPackets;
 	U8 unit_StationAddress[6];
 	U8 unit_Peer[6];
 	U8 unit_LastBeaconBSSID[6];
@@ -108,20 +116,16 @@ struct EthernetUnit
 	U8 unit_RxCheckReady;
 	U8 unit_Channel;
 	U8 unit_ManagementPID;
-	enum TaskState unit_TaskState;
-	U32 unit_UnitNr;
+	ULONG unit_UnitNr;
 	S32 unit_Exclusive;
 	S32 unit_Detached;
 };
 
-S32 Resources_Init( struct EthernetBase *ethBase );
-void Resources_Free( struct EthernetBase *ethBase );
-struct EthernetUnit *Unit_Alloc( U32 unitnr );
+S32 Resources_Init( void );
+void Resources_Free( void );
+struct EthernetUnit *Unit_Alloc( void );
 void Unit_Free( struct EthernetUnit *unit );
-S32 Unit_Startup( struct EthernetUnit *unit );
-S32 Unit_Startup_USB( struct EthernetUnit *unit );
-void Ethernet_Process_Entry( void );
-S32 Process_Init( struct EthernetUnit *unit );
+S32 Process_Init( struct EthernetUnit *unit, struct USB2_DriverMessage *msg );
 void Process_Main( struct EthernetUnit *unit );
 void Process_Free( struct EthernetUnit *unit );
 S32 RT2870_Control( struct USB2_EPResource *control, U8 direction, U8 command, U16 value, U16 address, PTR data, U16 length );
@@ -158,12 +162,7 @@ S32 RT2870_CopyPacket( struct IOSana2Req *ioreq, PTR to, PTR from, U32 length, S
 void RT2870_SetOnline( struct EthernetUnit *unit, S32 online );
 void Process_RadioCommands( struct EthernetUnit *unit );
 void Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
-void AbortPendingCommands( struct EthernetUnit *unit, struct IORequest *request, struct BufferManagement *opener );
-void SignalSana2Event( struct EthernetUnit *unit, U32 events );
-void _cmd_4000_NSCmd_DeviceQuery( struct IOStdReq *ioreq );
 
-extern struct IORequest *USB2IOReq;
-extern struct MsgPort *USB2MsgPort;
 extern struct Interface *INewlib;
 extern struct Library *NewlibBase;
 extern struct TimerIFace *IRT2870Timer;

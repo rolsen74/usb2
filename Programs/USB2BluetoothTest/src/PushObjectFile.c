@@ -79,7 +79,7 @@ ReportPushResult( const struct BTObjectPush *push, enum BTHCIResult result, cons
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "PUSH requires Bluetooth.Driver 1.12 and a Basic Mode L2CAP channel.\n" );
+			Printf( "PUSH requires cls_Bluetooth.Driver 1.12 and a Basic Mode L2CAP channel.\n" );
 
 			break;
 

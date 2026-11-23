@@ -1,10 +1,10 @@
 # USB2WirelessManager
 
-`USB2WirelessManager` scans for a named Wi-Fi network. The default driver,
-`usb2rtl8188.device`, can also join open, WPA-Personal (TKIP), WPA2-Personal and WPA3-Personal networks. Select
-`DEVICE=usb2rt2870.device` for scanning, WPA-Personal (TKIP), WPA2-Personal and WPA3-Personal on the RT2870. `UNIT`
-selects a unit of the chosen driver. See the [RTL8188EU guide](RTL8188.md)
-for supported Realtek adapters, firmware, and security limitations.
+`USB2WirelessManager` opens `usb2ethernet.device` and detects the adapter
+registered on the selected `UNIT`. RTL8188EU supports open, WPA-Personal
+(TKIP), WPA2-Personal and WPA3-Personal networks. RT2870 supports the three
+WPA modes. SiS163U supports [passive scanning](#sis163u-passive-scan).
+Use the unit shown in the serial log, normally 0 for the first adapter.
 
 ## Build and install
 
@@ -18,9 +18,9 @@ make -C Libraries/WiFi
 make -C Programs/USB2WirelessManager
 ```
 
-Start AmigaOS 4 with `usb2.device` loaded. Follow the [RTL8188EU guide](RTL8188.md) to install that driver. For RT2870,
-copy `usb2rt2870.device` to `DEVS:Networks/` and `rt2870.bin` and its
-licence to `DEVS:Firmware/`. Run
+Boot with the matching `usb2.kmod`. Follow the
+[RTL8188EU guide](RTL8188.md) or [RT2870 guide](RT2870.md) to install the
+class driver and firmware. Run
 `Programs/USB2WirelessManager/bin/USB2WirelessManager` from a Shell. The distribution archive places the program at
 `usb2/Tools/USB2WirelessManager`.
 
@@ -40,17 +40,14 @@ USB2WirelessManager "My Network" WPA2
 USB2WirelessManager "My Network" WPA3
 USB2WirelessManager "My Network" WPA2 CHANNEL=5
 USB2WirelessManager "My Network" WPA2 UNIT=1
-USB2WirelessManager "My Network" DEVICE=usb2rt2870.device CHANNEL=5
-USB2WirelessManager "My Network" DEVICE=usb2rt2870.device CHANNEL=5 AUTH
-USB2WirelessManager "My Network" DEVICE=usb2rt2870.device CHANNEL=5 ASSOCIATE
-USB2WirelessManager "My Network" DEVICE=usb2rt2870.device WPA
-USB2WirelessManager "My Network" DEVICE=usb2rt2870.device CHANNEL=5 WPA2
-USB2WirelessManager "My Network" DEVICE=usb2rt2870.device WPA2 PASSWORD="example passphrase"
-USB2WirelessManager "My Network" DEVICE=usb2rt2870.device WPA3 PASSWORD="example passphrase"
-USB2WirelessManager "My Network" DEVICE=usb2rt2870.device WPA2 WPA3
+USB2WirelessManager "My Network" UNIT=0 CHANNEL=5 AUTH
+USB2WirelessManager "My Network" UNIT=0 CHANNEL=5 ASSOCIATE
+USB2WirelessManager "My Network" UNIT=0 WPA2 PASSWORD="example passphrase"
+USB2WirelessManager "My Network" UNIT=0 WPA3 PASSWORD="example passphrase"
+USB2WirelessManager "My Network" UNIT=0 WPA2 WPA3
 ```
 
-With only an SSID, the program scans channels 1–11, reports a matching access
+With only an SSID, the program scans the adapter's channels, reports a matching access
 point's address, channel, and security, then exits. `OPEN` joins an open
 network. `WPA` explicitly selects legacy WPA-Personal with TKIP. It requires
 `usb2wpa.library`, with RTL8188EU 1.3 and manager 0.21 or later, or
@@ -86,7 +83,7 @@ access point and reports its reply. `ASSOCIATE` tests WPA2-Personal
 association and waits for message 1 of the WPA2 handshake. These tests
 finish before password entry. `WPA2` brings the interface online after
 the handshake. Use
-`usb2rt2870.device` and the same unit in your TCP/IP configuration.
+`usb2ethernet.device` and the same unit in your TCP/IP configuration.
 
 Wait for `WPA connected`, `WPA2 connected`, `WPA3 connected`, or `Associated` before starting the TCP/IP
 interface. Leave the manager running while connected so it can handle group-key updates. Press Ctrl-C to disconnect.
@@ -102,12 +99,13 @@ with `AID 0, online 0` means association has not completed yet.
 SiS163U support is experimental. The passive scan found zero SSIDs on the
 tested Topcom adapter.
 
-Use USB2WirelessManager 0.35 or later and `usb2sis163u.device` 1.12 or later.
-Run the scan from a Shell with the Topcom `0D8E:0163` attached.
+Install `eth_SiS163U.Class` and `eth_SiS163U.Driver` in `LIBS:USB2/`.
+Run the scan with USB2WirelessManager 0.36 or later and the Topcom
+`0D8E:0163` attached.
 
 ```text
-USB2WirelessManager SCAN DEVICE=usb2sis163u.device
-USB2WirelessManager SCAN DEVICE=usb2sis163u.device CHANNEL=9
+USB2WirelessManager SCAN UNIT=0
+USB2WirelessManager SCAN UNIT=0 CHANNEL=9
 ```
 
 The scan listens on channels 1 through 13 unless you select one channel.
@@ -116,8 +114,8 @@ Unit 0 is the default. Association and data transfer are still in development.
 
 ## Saved profiles and startup
 
-Install `usb2wifi.library` 1.26 or later in `LIBS:`.
-Use RTL8188EU 1.7 or RT2870 1.27 or later. When TCP/IP configures one of
+Install `usb2wifi.library` 1.27 or later in `LIBS:`.
+Use `eth_RTL8188.Driver` 1.12 or `eth_RT2870.Driver` 1.29 or later. When TCP/IP configures one of
 these adapters, the library connects without a window if its saved
 `ETH:` record has autoconnect enabled and the login succeeds. If the
 connection fails, or a required password is missing, the picker opens.
@@ -136,7 +134,7 @@ on that adapter and use `SETUP`.
 
 ```text
 USB2WirelessManager SETUP
-USB2WirelessManager SETUP DEVICE=usb2rt2870.device UNIT=0
+USB2WirelessManager SETUP UNIT=0
 ```
 
 Use Up and Down to select a network, fill its fields and move the cursor
@@ -164,12 +162,18 @@ network credentials separately from each adapter's last connection.
 # SSID: name, security, password, hidden
 SSID: "My Network", WPA2, "example-password", 0
 
-# ETH: device filename, unit, last SSID, security, last channel, autoconnect
-ETH: "usb2rtl8188.device", 0, "My Network", WPA2, 6, 0
+# ETH: device filename, unit, last SSID, security, last channel, autoconnect, optional factory MAC
+ETH: "usb2rtl8188.device", 0, "My Network", WPA2, 6, 0, "02:11:22:33:44:55"
 ETH: "usb2rt2870.device", 0, "My Network", WPA2, 11, 0
 ```
 
 An `ETH:` line references an `SSID:` line by name and security mode.
+Profiles use the adapter type (`usb2rtl8188.device` or `usb2rt2870.device`) and
+factory MAC, so a change in the shared unit number preserves the selection.
+The manager opens `usb2ethernet.device` using the registered unit number.
+The older `DEVICE` values still work as adapter selectors. The manager can
+add a factory MAC to a legacy entry in `ENV:usb2wifi` when it can identify
+a single matching adapter and a single saved entry for that type.
 Adapters using the same network share its password. Use `OPEN`, `WPA`,
 `WPA2`, or `WPA3` for security, channel `0` when unknown, and `""` for
 an empty password. Hidden and autoconnect flags are `0` or `1`.
@@ -184,13 +188,13 @@ The next successful profile write converts `ENV:usb2wifi`. When old
 profiles contain different passwords for the same SSID and security mode,
 the library asks for a password before it can save a shared credential.
 
-Use the same `DEVICE` and `UNIT` options you used to configure TCP/IP.
+Use the same `UNIT` number as your `usb2ethernet.device` TCP/IP interface.
 `AUTO` uses the same autoconnect setting as normal startup. The
 following commands start Wi-Fi from a Shell task.
 
 ```text
 Run <NIL: >NIL: USB2WirelessManager AUTO
-Run <NIL: >NIL: USB2WirelessManager AUTO DEVICE=usb2rt2870.device UNIT=0
+Run <NIL: >NIL: USB2WirelessManager AUTO UNIT=0
 ```
 
 Use the line for the adapter you want to start. Keep the manager running

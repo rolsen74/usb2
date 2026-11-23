@@ -24,7 +24,11 @@ Process_Free( struct EthernetUnit *unit )
 	detached = unit->unit_Detached;
 	unit->unit_Detached = TRUE;
 
-	AbortPendingCommands( unit, NULL, NULL );
+	Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
+
+	Sana2_FreeList( & unit->unit_MulticastRanges );
+
+	Sana2_FreeList( & unit->unit_TrackedTypes );
 
 	ReleaseSemaphore( & unit->unit_CommandLock );
 

@@ -13,12 +13,12 @@
 
 // --
 
-#define DEVNAME		"usb2rtl8188.device"
+#define DEVNAME		"eth_RTL8188.Driver"
 
 #define VERSION		1
-#define REVISION	7
-#define DATE		"20.11.2026"
-#define VERS		DEVNAME " 1.7"
+#define REVISION	13
+#define DATE		"22.11.2026"
+#define VERS		DEVNAME " 1.13"
 #define VSTRING		VERS " (" DATE ")\r\n"
 #define VERSTAG		"\0$VER: " VERS " (" DATE ")"
 

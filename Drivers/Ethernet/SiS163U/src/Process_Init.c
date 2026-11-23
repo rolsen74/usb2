@@ -12,48 +12,16 @@
 
 // --
 
-static struct USB2_Interface *
-FindInterface( void )
-{
-	struct USB2_Interface *ifc;
-
-	U32 index;
-
-	for( index = 0;; index++ )
-	{
-		ifc = USB2_Ifc_FindTags( USB2Tag_Find_VendorID, SIS163U_VENDOR,
-			USB2Tag_Find_DeviceID, SIS163U_PRODUCT, USB2Tag_Find_Class, USBCLASS_Vendor_Specific,
-			USB2Tag_Find_Index, index, TAG_END );
-
-		if ( ( ! ifc ) || ( ifc->IFC_Num == 0 ) )
-		{
-			return ( ifc );
-		}
-	}
-}
-
-// --
-
 S32
-Process_Init( struct EthernetUnit *unit )
+Process_Init( struct EthernetUnit *unit, struct USB2_DriverMessage *msg )
 {
 	struct USB2_Device_Desc desc;
-	struct USB2_Interface *ifc;
 	struct USB2_Register *reg;
 
 	U32 value;
 	S32 error;
 
-	ifc = FindInterface();
-
-	if ( ! ifc )
-	{
-		USBERROR( "SiS163U: no available 0D8E:0163 interface 0" );
-
-		return ( FALSE );
-	}
-
-	reg = USB2_Reg_RegisterTags( USB2Tag_Reg_Interface, ifc,
+	reg = USB2_Reg_RegisterTags( USB2Tag_Reg_DriverMessage, msg,
 		USB2Tag_Reg_Title, "SiS163U", TAG_END );
 
 	if ( ! reg )
@@ -65,7 +33,7 @@ Process_Init( struct EthernetUnit *unit )
 
 	unit->unit_USB_Register = reg;
 
-	if ( USB2_Attr_Get( ifc->FKT_ID, USB2Tag_Attr_DeviceDesc, & desc, sizeof( desc ) ) == sizeof( desc ) )
+	if ( USB2_Attr_Get( msg->Interface->FKT_ID, USB2Tag_Attr_DeviceDesc, & desc, sizeof( desc ) ) == sizeof( desc ) )
 	{
 		unit->unit_ChipRevision = ( LE_SWAP16( desc.DeviceVers ) >> 8 ) + 0x30;
 
@@ -77,7 +45,7 @@ Process_Init( struct EthernetUnit *unit )
 
 	if ( error )
 	{
-		USBERROR( "SiS163U: unit %lu register $00C8 read failed, USB error %ld", unit->unit_UnitNr, error );
+		USBERROR( "SiS163U: register $00C8 read failed, USB error %ld", error );
 
 		return ( FALSE );
 	}
@@ -89,17 +57,18 @@ Process_Init( struct EthernetUnit *unit )
 
 	unit->unit_Bulk_Tx_Resource = USB2_EPRes_ObtainTags( reg, USB2Tag_EPRes_InterfaceNr, 0,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_Out, USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
-		USB2Tag_EPRes_NrOfIORequest, 0, TAG_END );
+		USB2Tag_EPRes_NrOfIORequest, 1, USB2Tag_EPRes_BufferSize, SIS163U_TX_BUFFER_SIZE,
+		USB2Tag_EPRes_AddZeroPacket, TRUE, TAG_END );
 
 	if ( ( ! unit->unit_Bulk_Rx_Resource ) || ( ! unit->unit_Bulk_Tx_Resource ) )
 	{
-		USBERROR( "SiS163U: unit %lu could not obtain both bulk endpoints", unit->unit_UnitNr );
+		USBERROR( "SiS163U: could not obtain both bulk endpoints" );
 
 		return ( FALSE );
 	}
 
-	USBINFO( "SiS163U: unit %lu 0D8E:0163 register $00C8 = $%08lx, bulk IN %lu and OUT %lu bytes/packet",
-		unit->unit_UnitNr, value, unit->unit_Bulk_Rx_Resource->EndPointMax, unit->unit_Bulk_Tx_Resource->EndPointMax );
+	USBINFO( "SiS163U: 0D8E:0163 register $00C8 = $%08lx, bulk IN %lu and OUT %lu bytes/packet",
+		value, unit->unit_Bulk_Rx_Resource->EndPointMax, unit->unit_Bulk_Tx_Resource->EndPointMax );
 
 	unit->unit_StationAddressValid = SiS163U_ReadStationAddress( unit );
 

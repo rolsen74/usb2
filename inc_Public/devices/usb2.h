@@ -638,6 +638,8 @@ struct USB2_EndPointStatus
 	U16	Stat;
 };
 
+#define USBFEATURE_EndPoint_Halt			0x00
+
 #define USBSTATUS_EndPoint_Halt			0x01
 
 /***************************************************************************/
@@ -871,11 +873,10 @@ enum USB2HCDType
 #define USB2Tag_FDriver_Promote			( USB2Tag_Dummy + 44 )	 // v1.1  - PTR
 #endif
 
+#define USB2Tag_FDriver_DeviceList		( USB2Tag_Dummy + 50 )	 // struct List * of owned USB2_DeviceNode entries to move
+
 #if 0
 #define USB2Tag_FDriver_Stack			( USB2Tag_Dummy + 49 )	 // v1.1  - U32
-
-#define USB2Tag_FDriver_DeviceList		( USB2Tag_Dummy + 50 )	 // v1.1  - struct List *
-
 #define USB2Tag_FDriver_DriverDate		( USB2Tag_Dummy + 51 )	 // v1.1  - struct DateStamp *
 
 #define USB2Tag_FDriver_Hotkey			( USB2Tag_Dummy + 52 )	 // v1.1  - STR

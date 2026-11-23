@@ -12,15 +12,73 @@
 
 // --
 
+#ifdef USB2WIFI_EMBEDDED
+
+static S32
+WaitForPicker( struct Wireless *wireless, struct WiFiScan *scan )
+{
+	struct IOSana2Req *event;
+
+	U32 mask;
+	S32 result;
+
+	event = wireless->Receive;
+	mask = ( 1UL << wireless->ReceivePort->mp_SigBit ) | scan->InputMask | SIGBREAKF_CTRL_C;
+	result = USB2WIFI_OK;
+	event->ios2_Req.io_Command = S2_ONEVENT;
+	event->ios2_Req.io_Flags = 0;
+	event->ios2_WireError = S2EVENT_HARDWARE;
+
+	SendIO( & event->ios2_Req );
+
+	while ( ! CheckIO( & event->ios2_Req ) )
+	{
+		if ( ! scan->Update( scan->Context ) )
+		{
+			break;
+		}
+
+		if ( Wait( mask ) & SIGBREAKF_CTRL_C )
+		{
+			result = USB2WIFI_MISSING;
+			break;
+		}
+	}
+
+	if ( CheckIO( & event->ios2_Req ) )
+	{
+		result = USB2WIFI_MISSING;
+	}
+	else
+	{
+		AbortIO( & event->ios2_Req );
+	}
+
+	WaitIO( & event->ios2_Req );
+
+	// A hardware event can win the race with closing the picker.
+	if ( ( ( ! event->ios2_Req.io_Error ) && ( event->ios2_WireError & S2EVENT_HARDWARE ) ) ||
+		( ( event->ios2_Req.io_Error == S2ERR_OUTOFSERVICE ) &&
+			( event->ios2_WireError == S2WERR_UNIT_DISCONNECTED ) ) )
+	{
+		result = USB2WIFI_MISSING;
+	}
+
+	return ( result );
+}
+
+// --
+
 S32
-WiFi_Discover( U32 adapter, U32 unit, struct WiFiScan *scan )
+WiFi_PickNetwork( U32 adapter, U32 unit, struct WiFiScan *scan )
 {
 	static const U8 empty[WIRELESS_ADDR_SIZE] = { 0 };
 	struct Wireless wireless;
-	enum WirelessResult result;
+	enum WirelessResult scanResult;
 
 	U32 channel;
 	U32 last;
+	S32 result;
 
 	memset( & wireless, 0, sizeof( wireless ) );
 
@@ -28,10 +86,11 @@ WiFi_Discover( U32 adapter, U32 unit, struct WiFiScan *scan )
 	wireless.ScanNetworks = scan;
 	wireless.UnitNumber = unit;
 	wireless.ScanRT2870 = adapter == USB2WIFI_RT2870;
-	wireless.DeviceName = wireless.ScanRT2870 ? WIRELESS_RT2870_DEVICE : WIRELESS_DEVICE;
+	wireless.AdapterType = wireless.ScanRT2870 ? USB2ETH_ADAPTER_RT2870 : USB2ETH_ADAPTER_RTL8188;
 	wireless.SSID = "";
 	last = wireless.ScanRT2870 ? 13 : WIRELESS_MAX_CHANNEL;
-	result = WIRELESS_IO_ERROR;
+	result = USB2WIFI_MISSING;
+	scanResult = WIRELESS_TIMEOUT;
 
 	if ( Wireless_Open( & wireless ) )
 	{
@@ -40,48 +99,54 @@ WiFi_Discover( U32 adapter, U32 unit, struct WiFiScan *scan )
 
 		DoIO( & wireless.Command->ios2_Req );
 
-		if ( ( wireless.Command->ios2_Req.io_Error ) || ( wireless.Command->ios2_WireError & S2EVENT_ONLINE ) )
+		if ( ( ! wireless.Command->ios2_Req.io_Error ) && ( ! ( wireless.Command->ios2_WireError & S2EVENT_ONLINE ) ) )
 		{
-			Wireless_Close( & wireless );
+			for( channel = 1; channel <= last; channel++ )
+			{
+				if ( ! scan->Update( scan->Context ) )
+				{
+					scanResult = WIRELESS_STOPPED;
 
-			return ( USB2WIFI_ERROR );
+					break;
+				}
+
+				wireless.AP.Channel = channel;
+
+				if ( ! Wireless_Set_Options( & wireless, channel, empty, 0, S2ENC_NONE, FALSE ) )
+				{
+					break;
+				}
+
+				scanResult = Wireless_Wait_Frame( & wireless, 340000, NULL, 0, Wireless_Match_Beacon, FALSE );
+
+				if ( scanResult != WIRELESS_TIMEOUT )
+				{
+					break;
+				}
+			}
 		}
 
-		for( channel = 1; channel <= last; channel++ )
+		if ( scanResult == WIRELESS_STOPPED )
 		{
-			if ( ( scan->Update ) && ( ! scan->Update( scan->Context ) ) )
-			{
-				result = WIRELESS_STOPPED;
+			result = USB2WIFI_OK;
+		}
+		else
+		{
+			Wireless_Reset_Options( & wireless );
 
-				break;
-			}
-
-			wireless.AP.Channel = channel;
-
-			if ( ! Wireless_Set_Options( & wireless, channel, empty, 0, S2ENC_NONE, FALSE ) )
-			{
-				result = WIRELESS_IO_ERROR;
-				break;
-			}
-
-			result = Wireless_Wait_Frame( & wireless, 340000, NULL, 0, Wireless_Match_Beacon, FALSE );
-
-			if ( result != WIRELESS_TIMEOUT )
-			{
-				break;
-			}
+			// Keep this open handle so a replacement on the same unit cannot own the picker.
+			result = WaitForPicker( & wireless, scan );
 		}
 	}
 
 	Wireless_Close( & wireless );
 
-	return ( result == WIRELESS_STOPPED ? USB2WIFI_MISSING :
-		( result == WIRELESS_TIMEOUT ? USB2WIFI_OK : USB2WIFI_ERROR ) );
+	return ( result );
 }
 
 // --
 
-#ifndef USB2WIFI_EMBEDDED
+#else
 
 S32
 Wireless_ScanSiS163U( U32 unit, U32 channel )
@@ -99,7 +164,7 @@ Wireless_ScanSiS163U( U32 unit, U32 channel )
 
 	memset( & scan, 0, sizeof( scan ) );
 
-	wireless.DeviceName = WIRELESS_SIS163U_DEVICE;
+	wireless.AdapterType = USB2ETH_ADAPTER_SIS163U;
 	wireless.UnitNumber = unit;
 	wireless.ScanNetworks = & scan;
 	wireless.SSID = "";
@@ -108,14 +173,6 @@ Wireless_ScanSiS163U( U32 unit, U32 channel )
 
 	if ( ! Wireless_Open( & wireless ) )
 	{
-		goto done;
-	}
-
-	if ( ( wireless.Command->ios2_Req.io_Device->dd_Library.lib_Version == 1 ) &&
-		( wireless.Command->ios2_Req.io_Device->dd_Library.lib_Revision < 12 ) )
-	{
-		fprintf( stderr, "SCAN requires usb2sis163u.device 1.12 or later.\n" );
-
 		goto done;
 	}
 

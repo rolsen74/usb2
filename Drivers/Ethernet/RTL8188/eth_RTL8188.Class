@@ -1,0 +1,8 @@
+# Realtek RTL8188EU wireless adapters.
+TYPE Interface
+TITLE "RTL8188EU Wi-Fi"
+DRIVER "eth_RTL8188.Driver"
+CLASS 0xff
+DEVICE 0x0bda:0x8179
+DEVICE 0x07b8:0x8179
+DEVICE 0x2357:0x010c

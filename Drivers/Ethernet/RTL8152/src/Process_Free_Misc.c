@@ -17,7 +17,6 @@ unit_Process_FreeMisc( struct devUnit *unit )
 {
 	struct AbortIOMessage *abort;
 	struct IORequest *request;
-	struct Node *node;
 
 	AbortReqOnList( & unit->unit_RxList, NULL, S2WERR_UNIT_OFFLINE );
 
@@ -27,10 +26,11 @@ unit_Process_FreeMisc( struct devUnit *unit )
 
 	AbortReqOnList( & unit->unit_SampleList, NULL, S2WERR_UNIT_OFFLINE );
 
-	while(( node = IExec->RemHead( & unit->unit_MultiCastList ) ))
-	{
-		IExec->FreeVec( node );
-	}
+	Sana2_FreeList( & unit->unit_MulticastRanges );
+
+	Sana2_FreeList( & unit->unit_TrackedTypes );
+
+	Sana2_FreeList( & unit->unit_MultiCastList );
 
 	if ( unit->unit_AbortIOMsgPort )
 	{

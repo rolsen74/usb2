@@ -1,0 +1,6 @@
+TYPE Interface
+TITLE "Media Transfer Protocol"
+DRIVER "cls_PTP.Driver"
+CLASS 0xff
+SUBCLASS 0xff
+PROTOCOL 0x00

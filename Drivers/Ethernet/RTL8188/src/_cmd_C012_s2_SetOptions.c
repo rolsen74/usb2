@@ -228,9 +228,9 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 			unit->unit_RadioReady = FALSE;
 			unit->unit_TxReady = FALSE;
 
-			SignalSana2Event( unit, S2EVENT_ERROR | S2EVENT_HARDWARE );
+			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE, TRUE );
 
-			AbortPendingCommands( unit, NULL, NULL );
+			Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
 
 			return;
 		}
@@ -250,7 +250,7 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	{
 		unit->unit_Online = TRUE;
 
-		SignalSana2Event( unit, S2EVENT_ONLINE );
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ONLINE, TRUE );
 	}
 
 	RTL8188EU_SubmitRX( unit );

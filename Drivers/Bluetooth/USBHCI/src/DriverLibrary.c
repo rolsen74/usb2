@@ -13,8 +13,9 @@
 
 // --
 
-#define DRIVER_NAME "Bluetooth.Driver"
-#define DRIVER_ID DRIVER_NAME " 1.19 (21.11.2026)"
+#define DRIVER_NAME "cls_Bluetooth.Driver"
+#define DRIVER_REVISION 20
+#define DRIVER_ID DRIVER_NAME " 1.20 (23.11.2026)"
 
 // --
 
@@ -120,7 +121,7 @@ Init( struct BluetoothDriverBase *base, BPTR seglist, struct ExecIFace *exec )
 	base->Library.lib_Node.ln_Name = DRIVER_NAME;
 	base->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
 	base->Library.lib_Version = 1;
-	base->Library.lib_Revision = 19;
+	base->Library.lib_Revision = DRIVER_REVISION;
 	base->Library.lib_IdString = DRIVER_ID;
 
 	return ( base );

@@ -4,7 +4,7 @@
 
 .PHONY: all clean install
 
-TARGET := Video.Driver
+TARGET := cls_Video.Driver
 OBJDIR := obj
 BINDIR := bin
 HOSTOS := $(shell uname)
@@ -50,7 +50,7 @@ clean:
 install: all
 ifeq ($(HOSTOS),AmigaOS)
 	copy $(BINDIR)/$(TARGET) Libs:USB2
-	copy Video.Class Libs:USB2
+	copy cls_Video.Class Libs:USB2
 else
-	@echo "Copy $(BINDIR)/$(TARGET) and Video.Class to Libs:USB2 on AmigaOS."
+	@echo "Copy $(BINDIR)/$(TARGET) and cls_Video.Class to Libs:USB2 on AmigaOS."
 endif

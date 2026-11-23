@@ -17,17 +17,6 @@
 
 /**************************************************************************/
 
-struct devBase
-{
-	struct Device			dev_Base;
-	uint16					dev_Pad;
-	APTR					dev_SegList;
-	struct SignalSemaphore	dev_GlobalLock;
-	APTR					dev_Units[32];
-};
-
-/**************************************************************************/
-
 struct AbortIOMessage
 {
 	struct Message		msg;
@@ -56,16 +45,4 @@ extern struct Library *NewlibBase;
 extern struct Interface *INewlib;
 extern struct TimerIFace *ITimer;
 
-struct devBase *Device_Init( struct devBase *devBase, APTR seglist, struct ExecIFace *myIExec );
-U32 Device_Obtain( struct DeviceManagerInterface *Self );
-U32 Device_Release( struct DeviceManagerInterface *Self );
-S32 Device_Open( struct DeviceManagerInterface *Self, struct IOSana2Req *ioreq, U32 unitnum, U32 flags );
-APTR Device_Close( struct DeviceManagerInterface *Self, struct IOSana2Req *ioreq );
-APTR Device_Expunge( struct DeviceManagerInterface *Self );
-void Device_BeginIO( struct DeviceManagerInterface *Self, struct IOSana2Req *ioreq );
-void Device_AbortIO( struct DeviceManagerInterface *Self, struct IOSana2Req *ioreq );
-int OpenResources( struct devBase *devBase );
-void CloseResources( struct devBase *devBase );
-
 #endif
-

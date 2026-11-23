@@ -10,6 +10,7 @@
 
 #include "usb2_all.h"
 #include "Stack/PortDevice/PortDevice.h"
+#include "Stack/EthDevice/EthDevice.h"
 
 // --
 
@@ -112,6 +113,7 @@ bailout:
 SEC_CODE USED PTR
 ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 {
+	struct USB2EthDevice *ethernet;
 	struct ExpansionIFace * IExpansion;
 	struct ExecIFace *		IExec;
 	struct USBBase *		usbbase;
@@ -319,9 +321,6 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 
 	// --
 
-	PortDevice_Create ( usbbase );
-
-	// --
 
 	//	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 #if defined( DO_PANIC )
@@ -402,7 +401,36 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 
 	//	IExec->DebugPrintF( "Add Device\n" );
 
+	ethernet = EthDevice_Alloc( usbbase );
+
+	if ( ! ethernet )
+	{
+		goto bailout;
+	}
+
+	if ( ! PortDevice_Create( usbbase ) )
+	{
+		IExec->DeleteLibrary( (PTR) ethernet );
+
+		goto bailout;
+	}
+
+	usbbase->usb_Library.lib_OpenCnt++;
+
+	IExec->AddDevice( (PTR) ethernet );
+
+	IExec->DebugPrintF( "USB2 Ethernet: " USB2_ETH_DEVICE " ready\n" );
+
 	IExec->AddDevice ( (PTR)usbbase );
+
+	SEMAPHORE_OBTAIN( & usbbase->usb_FDriver_Semaphore );
+
+	usbbase->usb_FrontendsReady = TRUE;
+
+	SEMAPHORE_RELEASE( & usbbase->usb_FDriver_Semaphore );
+
+	USB2_Bind_Enumerated( usbbase );
+
 
 	//	USBERROR( "Rock'n Roll" );
 	IExec->DebugPrintF ( "USB : Rock'n Roll\n" );

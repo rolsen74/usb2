@@ -14,7 +14,7 @@
 // --
 
 int
-unit_Process_Init( struct devUnit *unit )
+unit_Process_Init( struct devUnit *unit, struct USB2_DriverMessage *msg )
 {
 int retval;
 
@@ -27,19 +27,7 @@ int retval;
 		goto bailout;
 	}
 
-	if ( unit_Process_OpenUSBDevice( unit ) == FALSE )
-	{
-		IExec->DebugPrintF( "RTL8152: could not open usb2.device\n" );
-		goto bailout;
-	}
-
-	if ( unit_Process_FindUSBDevice( unit ) == FALSE )
-	{
-		IExec->DebugPrintF( "RTL8152: no 0BDA:8152 vendor-specific interface found\n" );
-		goto bailout;
-	}
-
-	if ( unit_Process_InitUSB( unit ) == FALSE )
+	if ( unit_Process_InitUSB( unit, msg ) == FALSE )
 	{
 		IExec->DebugPrintF( "RTL8152: could not claim USB interface or allocate transfers\n" );
 		goto bailout;
@@ -51,7 +39,7 @@ int retval;
 		goto bailout;
 	}
 
-	IExec->DebugPrintF( "RTL8152: %s unit %lu initialized\n", VERS, unit->unit_UnitNumber );
+	IExec->DebugPrintF( "RTL8152: %s initialized\n", VERS );
 
     retval = TRUE;
 

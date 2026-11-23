@@ -13,7 +13,6 @@
 // --
 
 #include "Process_Main_BeginIO.c"
-
 #include "Process_Main_Shutdown.c"
 #include "Process_Main_Buffer.c"
 #include "Process_Main_Direct.c"
@@ -23,33 +22,49 @@
 void
 Process_Main( struct PrinterUnit *unit )
 {
+	struct USB2_NotifyMessage *msg;
+	struct USB2_Register *reg;
+
 	U32 wait;
 	U32 mask;
 
-	USBERROR( "Printer : __myProcess_Main : Enter" );
+	reg = unit->unit_USB_Register;
+	wait = SIGBREAKF_CTRL_C | reg->Stack_MsgPortBit | unit->unit_PRT_Begin_MsgPortBit |
+		unit->unit_PRT_Abort_MsgPortBit | unit->unit_Bulk_Tx_Resource->MsgPortBit;
 
-	wait = SIGBREAKF_CTRL_C;
-	wait |= unit->unit_PRT_Begin_MsgPortBit;
-	wait |= unit->unit_PRT_Abort_MsgPortBit;
-	wait |= unit->unit_Bulk_Tx_Resource->MsgPortBit;
-
-	unit->unit_Running = TRUE;
-
-	while( unit->unit_Running )
+	while( ! unit->unit_Detached )
 	{
 		mask = Wait( wait );
 
-		if ( mask & unit->unit_PRT_Abort_MsgPortBit )
+		if ( mask & reg->Stack_MsgPortBit )
 		{
+			while( ( msg = (PTR) GetMsg( reg->Stack_MsgPort ) ) )
+			{
+				if ( msg->nm_Command == USBNC_Detached )
+				{
+					unit->unit_Detached = TRUE;
+				}
 
+				ReplyMsg( (PTR) msg );
+			}
 		}
 
-		if ( mask & unit->unit_PRT_Begin_MsgPortBit )
+		if ( ( unit->unit_Detached ) || ( mask & SIGBREAKF_CTRL_C ) )
+		{
+			break;
+		}
+
+		if ( mask & unit->unit_PRT_Abort_MsgPortBit )
+		{
+			Printer_Abort( unit );
+		}
+
+		if ( mask & ( unit->unit_PRT_Begin_MsgPortBit | unit->unit_PRT_Abort_MsgPortBit ) )
 		{
 			__myProcess_Main_BeginIO( unit );
 		}
 
-		if ( mask & unit->unit_Bulk_Tx_Resource->MsgPortBit )
+		if ( ( ! unit->unit_Detached ) && ( mask & unit->unit_Bulk_Tx_Resource->MsgPortBit ) )
 		{
 			if ( unit->unit_Buffer_Size )
 			{
@@ -61,28 +76,11 @@ Process_Main( struct PrinterUnit *unit )
 			}
 		}
 
-		if ( mask & SIGBREAKF_CTRL_C )
+		if ( ! unit->unit_Detached )
 		{
-			if ( unit->unit_ExitParent )
-			{
-				__myProcess_Main_Shutdown( unit );
-			}
+			Finish_Job( unit );
 		}
 	}
-
-	unit->unit_StartupComplete = FALSE;
-
-	#if 0
-	USBERROR( "Lasy byte : $%02lx (%ld)", (S32) unit->unit_LastByteSend, (S32) unit->unit_LastByteSend );
-
-	if (( unit->unit_LastByteSend != '\f' )
-	&&	( unit->unit_Detached == 0 ))
-	{
-		Send_FormFeed( unit );
-	}
-	#endif
-
-	USBERROR( "Printer : __myProcess_Main : Leave" );
 }
 
 // --

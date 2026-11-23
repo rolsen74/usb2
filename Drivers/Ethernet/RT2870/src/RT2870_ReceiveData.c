@@ -16,6 +16,7 @@ static void
 DeliverPacket( struct EthernetUnit *unit, const U8 *frame, U8 *body, U32 length )
 {
 	struct IOSana2Req *request;
+	struct IOSana2Req *orphan;
 
 	static const U8 broadcast[] = { 255, 255, 255, 255, 255, 255 };
 	U8 ethernet[RT2870_MTU + 14];
@@ -23,11 +24,15 @@ DeliverPacket( struct EthernetUnit *unit, const U8 *frame, U8 *body, U32 length 
 	U32 type;
 	U32 dhcp;
 	U8 flags;
+	U32 payload_length;
+	S32 typed;
 
 	type = ( (U32) body[6] << 8 ) | body[7];
 	payload = body + 8;
 	flags = 0;
 	dhcp = 0;
+	orphan = NULL;
+	payload_length = length;
 
 	if ( ! memcmp( frame + 4, broadcast, sizeof( broadcast ) ) )
 	{
@@ -45,6 +50,17 @@ DeliverPacket( struct EthernetUnit *unit, const U8 *frame, U8 *body, U32 length 
 
 	ObtainSemaphore( & unit->unit_CommandLock );
 
+	if ( ( flags == SANA2IOF_MCAST ) && ( ! Sana2_MulticastMatch( & unit->unit_MulticastRanges, frame + 4 ) ) )
+	{
+		ReleaseSemaphore( & unit->unit_CommandLock );
+
+		return;
+	}
+
+	unit->unit_PacketsRx++;
+
+	Sana2_UpdateThroughput( & unit->unit_Pending, 0, length + 14 );
+
 	request = (PTR) GetHead( & unit->unit_Pending );
 
 	while( request )
@@ -54,7 +70,22 @@ DeliverPacket( struct EthernetUnit *unit, const U8 *frame, U8 *body, U32 length 
 			break;
 		}
 
+		if ( ( ! orphan ) && ( request->ios2_Req.io_Command == S2_READORPHAN ) )
+		{
+			orphan = request;
+		}
+
 		request = (PTR) GetSucc( (PTR) request );
+	}
+
+	typed = request != NULL;
+
+	if ( ! typed )
+	{
+		unit->unit_UnknownPackets++;
+		request = orphan;
+
+		Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, TRUE );
 	}
 
 	if ( request )
@@ -79,6 +110,13 @@ DeliverPacket( struct EthernetUnit *unit, const U8 *frame, U8 *body, U32 length 
 			length += 14;
 		}
 
+		else if ( ! typed )
+		{
+			payload -= 2;
+			length += 2;
+		}
+
+		request->ios2_PacketType = type;
 		request->ios2_Req.io_Flags &= ~( SANA2IOF_MCAST | SANA2IOF_BCAST );
 		request->ios2_Req.io_Flags |= flags;
 		request->ios2_DataLength = length;
@@ -89,12 +127,22 @@ DeliverPacket( struct EthernetUnit *unit, const U8 *frame, U8 *body, U32 length 
 			request->ios2_WireError = S2WERR_BUFF_ERROR;
 			request->ios2_DataLength = 0;
 
+			if ( typed )
+			{
+				Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, TRUE );
+			}
+
 			RT2870_ReportDHCP( & unit->unit_DHCPDropped, dhcp, "receive buffer copy failed" );
 
-			SignalSana2Event( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF );
+			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF, FALSE );
 		}
 		else
 		{
+			if ( typed )
+			{
+				Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, FALSE );
+			}
+
 			RT2870_ReportDHCP( & unit->unit_DHCPDelivered, dhcp, "delivered to TCP/IP" );
 		}
 

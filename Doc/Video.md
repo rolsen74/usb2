@@ -18,7 +18,7 @@ make -C Drivers/Video
 make -C Drivers/Video/Test
 ```
 
-Install `Drivers/Video/bin/Video.Driver` and `Drivers/Video/Video.Class` in
+Install `Drivers/Video/bin/cls_Video.Driver` and `Drivers/Video/cls_Video.Class` in
 `Libs:USB2` on AmigaOS 4. Run `USB2VideoTest` to open the settings window
 with **Video Capture**, **Audio Capture**, and **Audio Output** groups.
 Video Capture is checked when a camera is available. If multiple video units
@@ -43,7 +43,7 @@ The size menu shows **Default** above a separator, then the remaining sizes
 ordered by width and height. FPS choices run from lowest to highest. Changing
 size refreshes the rates for that size. Mode and size changes keep the
 previous values when offered and otherwise choose the closest available
-values. Use the updated `Video.Driver` to query the camera default.
+values. Use the updated `cls_Video.Driver` to query the camera default.
 
 **Audio Capture** enables the input selector. Check **Audio Output** to
 monitor the selected input through USB audio or AHI's configured unit 0.
@@ -90,7 +90,7 @@ Run `USB2VideoTest SAVE` from a Shell to capture 30 frames and save the last
 one as `RAM:usbvideo.jpg` (MJPEG) or `RAM:usbvideo.yuy2` (raw YUY2).
 Combine `MODE` and `SAVE` to capture in a selected mode.
 Each frame read times out after ten seconds.
-If the tool cannot open a video unit, check that `Video.Class` and `Video.Driver`
+If the tool cannot open a video unit, check that `cls_Video.Class` and `cls_Video.Driver`
 were installed before connecting the webcam, then reconnect it.
 
 ## Compatibility and validation

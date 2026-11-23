@@ -21,11 +21,11 @@ __myProcess_Free( struct PrinterUnit *unit )
 {
 	USBERROR( "Printer : __myProcess_Free" );
 
-	__myProcess_Free_MsgPorts( unit );
-
 	__myProcess_CleanupDevice( unit );
 
 	__myProcess_Free_Lists( unit );
+
+	__myProcess_Free_MsgPorts( unit );
 }
 
 // --

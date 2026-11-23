@@ -17,6 +17,8 @@
 
 #include <proto/asl.h>
 #include <proto/button.h>
+#include <proto/chooser.h>
+#include <proto/label.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
 // #include <proto/expansion.h>
@@ -33,6 +35,9 @@
 
 #include <classes/window.h>
 #include <gadgets/button.h>
+#include <gadgets/chooser.h>
+#include <images/label.h>
+#include <dos/var.h>
 #include <gadgets/layout.h>
 #include <gadgets/listbrowser.h>
 
@@ -41,6 +46,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 
 // --
 

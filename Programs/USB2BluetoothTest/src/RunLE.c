@@ -176,7 +176,7 @@ RunLE( struct IORequest *request, ULONG unit, enum BTLEMode mode, const char *na
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "LE operations require Bluetooth.Driver 1.13 or later.\n" );
+			Printf( "LE operations require cls_Bluetooth.Driver 1.13 or later.\n" );
 
 			break;
 

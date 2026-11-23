@@ -15,6 +15,8 @@
 static void
 __myProcess_Free_MsgPorts( struct PrinterUnit *unit )
 {
+	struct IORequest *request;
+
 	USBERROR( "Printer : __myProcess_Free_MsgPorts" );
 
 	if ( unit->unit_PRT_Abort_MsgPort )
@@ -27,6 +29,13 @@ __myProcess_Free_MsgPorts( struct PrinterUnit *unit )
 
 	if ( unit->unit_PRT_Begin_MsgPort )
 	{
+		while( ( request = (PTR) GetMsg( unit->unit_PRT_Begin_MsgPort ) ) )
+		{
+			request->io_Error = ( request->io_Flags & IOPARF_ABORT ) ? IOERR_ABORTED : ParErr_NotOpen;
+
+			ReplyMsg( (PTR) request );
+		}
+
 		FreeSysObject( ASOT_PORT, unit->unit_PRT_Begin_MsgPort );
 
 		unit->unit_PRT_Begin_MsgPortBit = 0;

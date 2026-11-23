@@ -16,7 +16,7 @@ static void
 __myProcess_Main_Direct( struct PrinterUnit *unit )
 {
 	struct USB2_IORequest *usbio;
-	struct IOExtPar *pario;
+	struct IOStdReq *pario;
 
 	U32 ionr;
 
@@ -75,9 +75,8 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 			{
 				USBERROR( "__myProcess_Main_Direct : USB2Err_NoError" );
 
-				pario->IOPar.io_Actual = usbio->io_Actual;
-				pario->IOPar.io_Error = ( usbio->io_Actual == usbio->io_Length ) ? 0 : ParErr_LineErr;
-				pario->io_Status = 0;
+				pario->io_Actual = usbio->io_Actual;
+				pario->io_Error = ( usbio->io_Actual == usbio->io_Length ) ? 0 : ParErr_LineErr;
 
 				if ( ( usbio->io_Data ) && ( usbio->io_Actual > 0 ) && ( usbio->io_Actual <= usbio->io_Length ) )
 				{
@@ -88,6 +87,7 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 					off = usbio->io_Actual-1;
 
 					unit->unit_LastByteSend = buf[ off ];
+					unit->unit_JobHasData = TRUE;
 				}
 
 				break;
@@ -98,9 +98,8 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 				// Todo : Flush all queued requests
 				USBERROR( "__myProcess_Main_Direct : USB2Err_Device_Detached" );
 
-				pario->IOPar.io_Actual = 0;
-				pario->IOPar.io_Error = ParErr_NotOpen;
-				pario->io_Status = 0;
+				pario->io_Actual = 0;
+				pario->io_Error = ParErr_NotOpen;
 				unit->unit_Detached = TRUE;
 				break;
 			}
@@ -109,14 +108,13 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 			{
 				USBERROR( "__myProcess_Main_Direct : Destalling" );
 
-				pario->IOPar.io_Actual = usbio->io_Actual;
-				pario->IOPar.io_Error = ParErr_LineErr;
-				pario->io_Status = 0;
+				pario->io_Actual = usbio->io_Actual;
+				pario->io_Error = ParErr_LineErr;
 
 				if ( ! USB2_EPRes_Destall( unit->unit_Bulk_Tx_Resource ))
 				{
 					unit->unit_Detached = TRUE;
-					pario->IOPar.io_Error = ParErr_NotOpen;
+					pario->io_Error = ParErr_NotOpen;
 				}
 
 				break;
@@ -126,9 +124,8 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 			{
 				USBERROR( "__myProcess_Main_Direct : Unknown error %lu", (U32) usbio->io_Error );
 
-				pario->IOPar.io_Actual = 0;
-				pario->IOPar.io_Error = ParErr_LineErr;
-				pario->io_Status = 0;
+				pario->io_Actual = 0;
+				pario->io_Error = ParErr_LineErr;
 				break;
 			}
 		}
@@ -140,12 +137,18 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 //		USBERROR( "usbio->io_Actual  : %ld", usbio->io_Actual );
 //		USBERROR( "usbio->io_Error   : %ld", usbio->io_Error );
 
-//		USBERROR( "pario->io_Offset  : %ld", pario->IOPar.io_Offset );
-//		USBERROR( "pario->io_Length  : %ld", pario->IOPar.io_Length );
-//		USBERROR( "pario->io_Actual  : %ld", pario->IOPar.io_Actual );
-//		USBERROR( "pario->io_Error   : %ld", pario->IOPar.io_Error );
+//		USBERROR( "pario->io_Offset  : %ld", pario->io_Offset );
+//		USBERROR( "pario->io_Length  : %ld", pario->io_Length );
+//		USBERROR( "pario->io_Actual  : %ld", pario->io_Actual );
+//		USBERROR( "pario->io_Error   : %ld", pario->io_Error );
 
 		USBERROR( "__myProcess_Main_Direct : Reply ParIO %p", pario );
+
+		if ( pario->io_Flags & IOPARF_ABORT )
+		{
+			pario->io_Actual = usbio->io_Actual;
+			pario->io_Error = IOERR_ABORTED;
+		}
 
 		ReplyMsg( (PTR) pario );
 

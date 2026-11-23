@@ -165,7 +165,7 @@ TestRFCOMM( struct IORequest *request, ULONG unit, const char *address, LONG cha
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "This test requires Bluetooth.Driver %s and a Basic Mode L2CAP channel.\n",
+			Printf( "This test requires cls_Bluetooth.Driver %s and a Basic Mode L2CAP channel.\n",
 				( text || reply ) ? "1.9" : "1.8" );
 
 			break;

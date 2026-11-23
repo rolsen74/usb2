@@ -18,11 +18,11 @@
 // --
 
 #define LIBPRI		0
-#define LIBNAME		"PTP.Driver"
+#define LIBNAME		"cls_PTP.Driver"
 #define VERSION		1
-#define REVISION	3
-#define DATE		"21.11.2026"		// dd.mm.yyyy
-#define VERS		LIBNAME " 1.3"
+#define REVISION	4
+#define DATE		"23.11.2026"		// dd.mm.yyyy
+#define VERS		LIBNAME " 1.4"
 #define VSTRING		VERS " (" DATE ")\r\n"
 #define VERSTAG		"\0$VER: " VERS " (" DATE ")"
 

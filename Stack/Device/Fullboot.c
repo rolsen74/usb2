@@ -37,15 +37,43 @@ SEC_RODATA const struct Resident fullboot_res =
 
 // --
 
+SEC_CODE static void
+Full_Boot_Failed( struct ExecIFace *IExec )
+{
+	struct ExecBase *SysBase;
+	struct USBBase *usbbase;
+
+	SysBase = (PTR) IExec->Data.LibBase;
+
+	usbbase = (PTR) IExec->FindName( & SysBase->DeviceList, "usb2.device" );
+
+	if ( usbbase )
+	{
+		USB2_FullBoot_Complete( usbbase, FALSE );
+	}
+}
+
+// --
+
 SEC_CODE static void Full_Boot( void )
 {
 struct ExecIFace *IExec;
 struct DOSIFace *IDOS;
 struct Library *DOSBase;
+struct Process *process;
 
 	IExec = USB2_GetExecIFace();
+	process = NULL;
 
 	IExec->DebugPrintF( "USB : Full Boot (" VERS ")\n" );
+
+	#ifdef MSD_DEBUG
+	IExec->DebugPrintF( "USB : MSD debug active\n" );
+	#endif
+
+	#ifdef USB2_BIND_DEBUG
+	IExec->DebugPrintF( "USB : class binding debug active\n" );
+	#endif
 
 	#ifdef SIS163U_RX_TRACE
 	IExec->DebugPrintF( "USB : SiS163U EHCI RX trace active\n" );
@@ -69,7 +97,7 @@ struct Library *DOSBase;
 		goto bailout;
 	}
 
-	IDOS->CreateNewProcTags(
+	process = IDOS->CreateNewProcTags(
 		NP_Name,		"Universal Serial Bus - Fullboot Process",
 		NP_Child,		FALSE,
 		NP_Priority,	0,
@@ -79,6 +107,11 @@ struct Library *DOSBase;
 	);
 
 bailout:
+
+	if ( ! process )
+	{
+		Full_Boot_Failed( IExec );
+	}
 
 	if ( IDOS )
 	{
@@ -108,6 +141,7 @@ U32 lock2;
 U32 lock3;
 U8 timerstat;
 U8 usbstat;
+S32 signalled;
 
 	// ----
 
@@ -117,6 +151,7 @@ U8 usbstat;
 	usbstat		= 1;
 	usbreq		= NULL;
 	usbport		= NULL;
+	signalled	= FALSE;
 
 	// ----
 
@@ -259,6 +294,8 @@ U8 usbstat;
 			if ( usbbase->usb_Master_Task.tn_TaskAdr )
 			{
 				IExec->Signal( usbbase->usb_Master_Task.tn_TaskAdr, SIGBREAKF_CTRL_E );
+
+				signalled = TRUE;
 			}
 
 			if ( ! usbbase->usb_MounterBase )
@@ -293,6 +330,11 @@ U8 usbstat;
 	}
 
 bailout:
+
+	if ( ! signalled )
+	{
+		Full_Boot_Failed( IExec );
+	}
 
 	// ----
 

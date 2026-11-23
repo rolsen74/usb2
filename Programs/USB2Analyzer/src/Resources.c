@@ -16,12 +16,12 @@
 // struct Library *				ApplicationBase		= NULL;
 struct Library *				AslBase				= NULL;
 struct Library *				ButtonBase			= NULL;
-// struct Library *				ChooserBase			= NULL;
+struct Library *				ChooserBase			= NULL;
 // struct Library *				CyberGfxBase		= NULL;
 // struct Library *				DOSBase				= NULL;
 struct Library *				GfxBase				= NULL;
 struct Library *				IntuitionBase		= NULL;
-// struct Library *				LabelBase			= NULL;
+struct Library *				LabelBase			= NULL;
 struct Library *				LayoutBase			= NULL;
 struct Library *				ListBrowserBase		= NULL;
 // struct Library *				NewlibBase			= NULL;
@@ -33,8 +33,8 @@ struct Library *				ListBrowserBase		= NULL;
 struct Library *				WindowBase			= NULL;
 
 Class *							ButtonClass			= NULL;
-// Class *						ChooserClass		= NULL;
-// Class *						LabelClass			= NULL;
+Class *						ChooserClass		= NULL;
+Class *						LabelClass			= NULL;
 Class *							LayoutClass			= NULL;
 Class *							ListBrowserClass	= NULL;
 // Class *						SliderClass			= NULL;
@@ -106,7 +106,7 @@ static struct OpenStruct OpenList[] =
 	// { OT_Library,		"cybergraphics.library",	42,		& CyberGfxBase,		NULL },
 	// { OT_Library,		"dos.library",				50,		& DOSBase,			NULL },
 	// { OT_Library,		"graphics.library",			50,		& GfxBase,			NULL },
-	{ OT_Library,		"intuition.library",			50,		& IntuitionBase,	NULL },
+	{ OT_Library,		"intuition.library",			54,		& IntuitionBase,	NULL },
 	// { OT_Library,		"Picasso96API.library",		50,		& P96Base,			NULL },
 	// { OT_Library,		"utility.library",			50,		& UtilityBase,		NULL },
 
@@ -123,13 +123,13 @@ static struct OpenStruct OpenList[] =
 
 	// -- Note: Intuition must be opened before OT classes
 	{ OT_Class,			"gadgets/button.gadget",		50,		& ButtonBase,		& ButtonClass },
-	// { OT_Class,			"gadgets/chooser.gadget",	50,		& ChooserBase,		& ChooserClass },
+	{ OT_Class,			"gadgets/chooser.gadget",	50,		& ChooserBase,		& ChooserClass },
 	{ OT_Class,			"gadgets/layout.gadget",		50,		& LayoutBase,		& LayoutClass },
 	{ OT_Class,			"gadgets/listbrowser.gadget",	50,		& ListBrowserBase,	& ListBrowserClass },
 	// { OT_Class,			"gadgets/slider.gadget",	50,		& SliderBase,		& SliderClass },
 	// { OT_Class,			"gadgets/space.gadget",		50,		& SpaceBase,		& SpaceClass },
-	// { OT_Class,			"images/label.image",		50,		& LabelBase,		& LabelClass },
-	{ OT_Class,			"window.class",					50,		& WindowBase,		& WindowClass },
+	{ OT_Class,			"images/label.image",		50,		& LabelBase,		& LabelClass },
+	{ OT_Class,			"window.class",					54,		& WindowBase,		& WindowClass },
 	{ OT_Interface,		"main",							1,		& ListBrowserBase,	& IListBrowser },
 
 	{ OT_End,			NULL,							0,		NULL,				NULL },

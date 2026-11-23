@@ -53,7 +53,7 @@ s2_Online( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	Schedule_RxIOReq( unit );
 
-	CheckEvent( unit, S2EVENT_ONLINE | S2EVENT_CONFIGCHANGED );
+	Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ONLINE | S2EVENT_CONFIGCHANGED, TRUE );
 
 bailout:
 

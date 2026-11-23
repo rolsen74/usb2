@@ -1,4 +1,4 @@
-TARGET := Bluetooth.Driver
+TARGET := cls_Bluetooth.Driver
 OBJDIR := obj
 BINDIR := bin
 

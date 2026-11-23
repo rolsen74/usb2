@@ -16,7 +16,6 @@ void
 Process_Free( struct EthernetUnit *unit )
 {
 	struct Message *msg;
-	struct Node *node;
 
 	S32 stopRadio;
 
@@ -25,12 +24,13 @@ Process_Free( struct EthernetUnit *unit )
 	stopRadio = ( ! unit->unit_Detached ) && ( unit->unit_RadioInitialized );
 	unit->unit_Detached = TRUE;
 
-	AbortPendingCommands( unit, NULL, NULL );
+	Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
 
-	while(( node = RemHead( & unit->unit_Multicast ) ))
-	{
-		FreeVec( node );
-	}
+	Sana2_FreeList( & unit->unit_MulticastRanges );
+
+	Sana2_FreeList( & unit->unit_TrackedTypes );
+
+	Sana2_FreeList( & unit->unit_Multicast );
 
 	ReleaseSemaphore( & unit->unit_CommandLock );
 

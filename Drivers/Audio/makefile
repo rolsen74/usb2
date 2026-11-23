@@ -4,7 +4,7 @@
 
 .PHONY: all clean install
 
-TARGET := Audio.Driver
+TARGET := cls_Audio.Driver
 OBJDIR := obj
 BINDIR := bin
 HOSTOS := $(shell uname)
@@ -50,7 +50,7 @@ clean:
 install: all
 ifeq ($(HOSTOS),AmigaOS)
 	copy $(BINDIR)/$(TARGET) Libs:USB2
-	copy Audio.Class Libs:USB2
+	copy cls_Audio.Class Libs:USB2
 else
-	@echo "Copy $(BINDIR)/$(TARGET) and Audio.Class to Libs:USB2 on AmigaOS."
+	@echo "Copy $(BINDIR)/$(TARGET) and cls_Audio.Class to Libs:USB2 on AmigaOS."
 endif

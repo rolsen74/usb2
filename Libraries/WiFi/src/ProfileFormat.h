@@ -18,11 +18,14 @@ struct ProfileNetwork
 	S32 ConflictingPassword;
 };
 
+#define WIFI_STATION_SIZE 6
+
 struct ProfileAdapter
 {
 	struct ProfileAdapter *Next;
 	struct USB2WiFiProfile Profile;
 	U32 Unit;
+	U8 Station[WIFI_STATION_SIZE];
 	char Device[WIFI_DEVICE_NAME_SIZE];
 };
 
@@ -47,6 +50,9 @@ S32 WiFi_ReadProfiles( struct ProfileDatabase *db );
 S32 WiFi_WriteProfiles( const struct ProfileDatabase *db );
 void WiFi_FreeProfiles( struct ProfileDatabase *db );
 struct ProfileNetwork *WiFi_ProfileNetwork( struct ProfileDatabase *db, const struct USB2WiFiProfile *profile, S32 create );
+S32 WiFi_HasStation( const U8 *station );
+void WiFi_FormatStation( char *text, const U8 *station );
+struct ProfileAdapter *WiFi_ProfileStation( struct ProfileDatabase *db, const char *device, U32 unit, const U8 *station, S32 create );
 struct ProfileAdapter *WiFi_ProfileAdapter( struct ProfileDatabase *db, const char *device, U32 unit, S32 create );
 S32 WiFi_LoadProfileEdit( struct ProfileDatabase *db, char **original, U32 *length );
 enum ProfileEditResult WiFi_SaveProfileEdit( const struct ProfileDatabase *db, const char *original, U32 originalLength, S32 permanent );

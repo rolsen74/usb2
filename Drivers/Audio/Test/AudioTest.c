@@ -64,16 +64,16 @@ Audio_CheckSetup( void )
 	S32 loaded;
 	S32 registered;
 
-	Audio_CheckFile( "LIBS:USB2/Audio.Class" );
+	Audio_CheckFile( "LIBS:USB2/cls_Audio.Class" );
 
-	Audio_CheckFile( "LIBS:USB2/Audio.Driver" );
+	Audio_CheckFile( "LIBS:USB2/cls_Audio.Driver" );
 
 	base = (PTR) IExec->Data.LibBase;
 	size = 0;
 
 	Forbid();
 
-	driver = (PTR) FindName( & base->LibList, "Audio.Driver" );
+	driver = (PTR) FindName( & base->LibList, "cls_Audio.Driver" );
 
 	device = FindName( & base->DeviceList, AUDIO_DEVICE_NAME );
 
@@ -96,7 +96,7 @@ Audio_CheckSetup( void )
 
 	Permit();
 
-	Printf( "Loaded Audio.Driver: %s\n", size ? label : ( loaded ? "no version string" : "none" ) );
+	Printf( "Loaded cls_Audio.Driver: %s\n", size ? label : ( loaded ? "no version string" : "none" ) );
 
 	Printf( "%s registered: %s\n", AUDIO_DEVICE_NAME, registered ? "yes" : "no" );
 }

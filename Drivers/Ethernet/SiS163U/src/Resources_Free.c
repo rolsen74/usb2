@@ -13,29 +13,8 @@
 // --
 
 void
-Resources_Free( struct EthernetBase *ethBase UNUSED )
+Resources_Free( void )
 {
-	if ( IUSB2 )
-	{
-		DropInterface( (PTR) IUSB2 );
-
-		IUSB2 = NULL;
-	}
-
-	if ( USB2Base )
-	{
-		CloseDevice( USB2IOReq );
-
-		USB2Base = NULL;
-	}
-
-	FreeSysObject( ASOT_IOREQUEST, USB2IOReq );
-
-	FreeSysObject( ASOT_PORT, USB2MsgPort );
-
-	USB2IOReq = NULL;
-	USB2MsgPort = NULL;
-
 	if ( IUtility )
 	{
 		DropInterface( (PTR) IUtility );

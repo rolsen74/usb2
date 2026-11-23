@@ -31,7 +31,7 @@ RT2870_TKIPFailure( struct EthernetUnit *unit )
 		unit->unit_TKIPLastFailure = now;
 	}
 
-	SignalSana2Event( unit, S2EVENT_ERROR | S2EVENT_RX );
+	Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX, FALSE );
 }
 
 // --

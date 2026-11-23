@@ -16,9 +16,17 @@
 #define DEVICES_SERIAL_H_OBSOLETE
 #include <devices/serial.h>
 #include <devices/parallel.h>
+#include <devices/newstyle.h>
 #include <interfaces/usb2port.h>
 
 // --
+
+enum USB2PortType
+{
+	PORT_SERIAL,
+	PORT_PARALLEL,
+	PORT_PRINTER
+};
 
 struct USB2PortUnit
 {
@@ -28,23 +36,30 @@ struct USB2PortUnit
 	U32 Number;
 	U32 Opens;
 	U8 Shared;
+	U8 Closing;
+	struct Message *CloseReply;
 };
 
 struct USB2PortDevice
 {
 	struct Library Library;
 	struct ExecIFace *IExec;
+	struct USBBase *USB;
 	struct SignalSemaphore Lock;
 	struct USB2PortUnit *Units;
-	U8 Serial;
+	enum USB2PortType Type;
 };
 
-SEC_CODE void PortDevice_Create( struct USBBase *usbbase );
+SEC_CODE S32 PortDevice_Create( struct USBBase *usbbase );
 SEC_CODE S32 PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, U32 number, U32 flags );
 SEC_CODE PTR PortDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request );
 SEC_CODE void PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *request );
 SEC_CODE void PortDevice_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *request );
+SEC_CODE void PortDevice_Query( struct USB2PortDevice *base, struct IOStdReq *request );
 SEC_CODE struct USB2PortUnit *PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
 SEC_CODE void PortDevice_Unregister( struct USB2PortIFace *Self, struct USB2PortUnit *unit );
+SEC_CODE BOOL PortDevice_JobClosing( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
+SEC_CODE void PortDevice_FinishJob( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
+SEC_CODE void PortDevice_ReplyClose( struct ExecIFace *IExec, struct USB2PortUnit *unit );
 
 #endif

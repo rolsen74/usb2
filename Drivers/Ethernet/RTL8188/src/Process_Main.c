@@ -27,6 +27,11 @@ Process_Main( struct EthernetUnit *unit )
 	{
 		mask = Wait( wait );
 
+		if ( mask & SIGBREAKF_CTRL_C )
+		{
+			return;
+		}
+
 		if ( mask & unit->unit_USB_Register->Stack_MsgPortBit )
 		{
 			while(( msg = (PTR) GetMsg( unit->unit_USB_Register->Stack_MsgPort ) ))
@@ -39,9 +44,9 @@ Process_Main( struct EthernetUnit *unit )
 
 					RTL8188EU_DropLink( unit );
 
-					SignalSana2Event( unit, S2EVENT_ERROR | S2EVENT_HARDWARE );
+					Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE, TRUE );
 
-					AbortPendingCommands( unit, NULL, NULL );
+					Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
 
 					ReleaseSemaphore( & unit->unit_CommandLock );
 				}
@@ -58,11 +63,6 @@ Process_Main( struct EthernetUnit *unit )
 		if ( ( ! unit->unit_Detached ) && ( mask & unit->unit_Bulk_Rx_Resource->MsgPortBit ) )
 		{
 			RTL8188EU_CompleteRX( unit );
-		}
-
-		if ( mask & SIGBREAKF_CTRL_C )
-		{
-			break;
 		}
 	}
 }

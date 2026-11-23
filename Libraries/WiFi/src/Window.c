@@ -1061,12 +1061,11 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 		scan.Update = HandleWindowInput;
 		scan.Context = & input;
 
-		if ( WiFi_Discover( adapter, unit, & scan ) == USB2WIFI_MISSING )
-		{
-			result = input.Result;
+		result = WiFi_PickNetwork( adapter, unit, & scan );
 
-			goto done;
-		}
+		result = ( result == USB2WIFI_OK ) ? input.Result : result;
+
+		goto done;
 	}
 
 	while( HandleWindowInput( & input ) )

@@ -179,7 +179,7 @@ DiscoverController( struct Bluetooth2IFace *bt2, ULONG unit )
 			return ( RETURN_FAIL );
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "Discovery requires Bluetooth.Driver 1.1 or later.\n" );
+			Printf( "Discovery requires cls_Bluetooth.Driver 1.1 or later.\n" );
 
 			return ( RETURN_FAIL );
 

@@ -13,7 +13,7 @@
 // --
 
 struct EthernetUnit *
-Unit_Alloc( U32 unitnr )
+Unit_Alloc( void )
 {
 	struct EthernetUnit *unit;
 
@@ -24,12 +24,13 @@ Unit_Alloc( U32 unitnr )
 		return ( NULL );
 	}
 
-	unit->unit_UnitNr = unitnr;
-	unit->unit_TaskState = TASK_State_Stopped;
-
 	InitSemaphore( & unit->unit_CommandLock );
 
 	NewList( & unit->unit_Pending );
+
+	NewList( & unit->unit_MulticastRanges );
+
+	NewList( & unit->unit_TrackedTypes );
 
 	NewList( & unit->unit_Multicast );
 

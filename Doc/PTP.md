@@ -1,13 +1,13 @@
 # USB PTP and MTP
 
-PTP.Driver uses one `PTP:` volume for compatible PTP cameras, MTP phones,
+cls_PTP.Driver uses one `PTP:` volume for compatible PTP cameras, MTP phones,
 and media players. Browse and download files from each device's directory.
 Uploads require the device to advertise the standard
 `SendObjectInfo` and `SendObject` operations.
 
-`PTP.Class` matches the USB Still Image Capture interface (`06/01/01`).
+`cls_PTP.Class` matches the USB Still Image Capture interface (`06/01/01`).
 The driver reads the DeviceInfo vendor extension ID to identify MTP on that
-interface. `MTP.Class` also recognizes Android-style vendor interfaces
+interface. `cls_MTP.Class` also recognizes Android-style vendor interfaces
 (`FF/FF/00`) that identify themselves with the USB interface name `MTP`.
 The filesystem requires DOS 53.95 or later on AmigaOS 4.
 
@@ -17,7 +17,7 @@ The filesystem requires DOS 53.95 or later on AmigaOS 4.
 make -C Drivers/PTP
 ```
 
-Copy `PTP.Driver`, `PTP.Class`, and `MTP.Class` from the archive's
+Copy `cls_PTP.Driver`, `cls_PTP.Class`, and `cls_MTP.Class` from the archive's
 `usb2/Libs/USB2/` directory to `LIBS:USB2/` and reboot. Connect a camera
 in PTP mode or unlock an MTP-capable phone and select **File transfer** in
 its USB settings. Open `PTP:` in Workbench or use `List PTP:` in Shell.

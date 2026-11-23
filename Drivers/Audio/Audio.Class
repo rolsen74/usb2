@@ -1,5 +1,0 @@
-TYPE Interface
-TITLE "USB Audio"
-DRIVER "Audio.Driver"
-CLASS 0x01
-SUBCLASS 0x02

@@ -18,8 +18,6 @@ unit_Process_Free( struct devUnit *unit )
 
 	unit_Process_FreeUSB( unit );
 
-	unit_Process_CloseUSBDevice( unit );
-
 	unit_Process_FreeMisc( unit );
 
 }

@@ -8,8 +8,8 @@ BINDIR				:= $(ROOTDIR)/_Data
 all: build_all
 
 .PHONY: all build_all build_dir_tree build_stack build_printer build_video build_sdr_test build_bluetooth_test \
-	build_ptp build_serial build_smartcard build_audio build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_analyzer \
-	build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_archive
+	build_ptp build_serial build_smartcard build_audio build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer \
+	build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_wait_ethernet build_archive
 
 ###########################################################################
 
@@ -28,6 +28,11 @@ build_dir_tree:
 	mkdir -p $(BINDIR)/usb2/Libs/USB2
 	mkdir -p $(BINDIR)/usb2/Kickstart
 	mkdir -p $(BINDIR)/usb2/Tools
+	# File pickers need a file for devices registered by usb2.kmod.
+	printf '\n' > "$(BINDIR)/usb2/Devs/usb2parallel.device"
+	printf '\n' > "$(BINDIR)/usb2/Devs/usb2serial.device"
+	printf '\n' > "$(BINDIR)/usb2/Devs/usb2printer.device"
+	printf '\n' > "$(BINDIR)/usb2/Devs/Networks/usb2ethernet.device"
 
 ###########################################################################
 
@@ -48,7 +53,7 @@ build_printer: | build_dir_tree
 	$(MAKE) -f makefile USBTYPE=USB2 clean && \
 	$(MAKE) -f makefile USBTYPE=USB2 && \
 	$(MAKE) -f makefile USBTYPE=USB2 strip && \
-	cp bin/usb2printer.device $(BINDIR)/usb2/Devs
+	cp bin/cls_Printer.Driver cls_Printer.Class $(BINDIR)/usb2/Libs/USB2
 	@echo "Printer done"
 
 ###########################################################################
@@ -58,7 +63,7 @@ build_video: | build_dir_tree
 	cd $(ROOTDIR)/Drivers/Video && \
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
-	cp bin/Video.Driver Video.Class $(BINDIR)/usb2/Libs/USB2
+	cp bin/cls_Video.Driver cls_Video.Class $(BINDIR)/usb2/Libs/USB2
 	cd $(ROOTDIR)/Drivers/Video/Test && \
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
@@ -78,7 +83,7 @@ build_sdr_test: | build_dir_tree
 build_bluetooth_test: | build_dir_tree
 	@echo "Building Bluetooth USB class driver"
 	$(MAKE) -C Drivers/Bluetooth/USBHCI BINDIR=bin
-	cp Drivers/Bluetooth/USBHCI/bin/Bluetooth.Driver Drivers/Bluetooth/USBHCI/Bluetooth.Class $(BINDIR)/usb2/Libs/USB2
+	cp Drivers/Bluetooth/USBHCI/bin/cls_Bluetooth.Driver Drivers/Bluetooth/USBHCI/cls_Bluetooth.Class $(BINDIR)/usb2/Libs/USB2
 	@echo "Building USB2BluetoothTest"
 	$(MAKE) -C Programs/USB2BluetoothTest
 	cp Programs/USB2BluetoothTest/bin/USB2BluetoothTest $(BINDIR)/usb2/Tools
@@ -91,7 +96,7 @@ build_ptp: | build_dir_tree
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
 	$(MAKE) -f makefile strip && \
-	cp bin/PTP.Driver PTP.Class MTP.Class $(BINDIR)/usb2/Libs/USB2
+	cp bin/cls_PTP.Driver cls_PTP.Class cls_MTP.Class $(BINDIR)/usb2/Libs/USB2
 	@echo "PTP done"
 
 ###########################################################################
@@ -101,7 +106,7 @@ build_serial: | build_dir_tree
 	cd $(ROOTDIR)/Drivers/Serial/PL2303 && \
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
-	cp bin/PL2303.Driver PL2303.Class CDCACM.Class $(BINDIR)/usb2/Libs/USB2
+	cp bin/ser_PL2303.Driver ser_PL2303.Class cls_CDCACM.Class $(BINDIR)/usb2/Libs/USB2
 	@echo "USB Serial done"
 
 ###########################################################################
@@ -110,7 +115,7 @@ build_smartcard: | build_dir_tree
 	@echo "Building USB CCID smart-card driver and test"
 	$(MAKE) -C Drivers/SmartCard
 	$(MAKE) -C Programs/USB2SmartCardTest
-	cp Drivers/SmartCard/bin/SmartCard.Driver Drivers/SmartCard/SmartCard.Class $(BINDIR)/usb2/Libs/USB2
+	cp Drivers/SmartCard/bin/cls_SmartCard.Driver Drivers/SmartCard/cls_SmartCard.Class $(BINDIR)/usb2/Libs/USB2
 	cp Programs/USB2SmartCardTest/bin/USB2SmartCardTest $(BINDIR)/usb2/Tools
 
 ###########################################################################
@@ -122,7 +127,7 @@ build_audio: | build_dir_tree
 	$(MAKE) -f makefile BINDIR=bin && \
 	$(MAKE) -C AHI BINDIR=bin clean && \
 	$(MAKE) -C AHI BINDIR=bin && \
-	cp bin/Audio.Driver Audio.Class $(BINDIR)/usb2/Libs/USB2 && \
+	cp bin/cls_Audio.Driver cls_Audio.Class $(BINDIR)/usb2/Libs/USB2 && \
 	cp AHI/bin/usb2.audio AHI/bin/bluetooth2.audio $(BINDIR)/usb2/Devs/AHI && \
 	cp AHI/bin/USB2 AHI/bin/Bluetooth2 $(BINDIR)/usb2/Devs/AudioModes
 	cd $(ROOTDIR)/Drivers/Audio/Test && \
@@ -139,7 +144,7 @@ build_rtl8152: | build_dir_tree
 	$(MAKE) -f makefile BINDIR=bin clean && \
 	$(MAKE) -f makefile BINDIR=bin && \
 	$(MAKE) -f makefile BINDIR=bin strip && \
-	cp bin/usb2rtl8152.device $(BINDIR)/usb2/Devs/Networks
+	cp bin/eth_RTL8152.Driver eth_RTL8152.Class $(BINDIR)/usb2/Libs/USB2
 	@echo "RTL8152 Ethernet done"
 
 ###########################################################################
@@ -150,7 +155,7 @@ build_rtl8188: | build_dir_tree
 	$(MAKE) -f makefile BINDIR=bin clean && \
 	$(MAKE) -f makefile BINDIR=bin && \
 	$(MAKE) -f makefile BINDIR=bin strip && \
-	cp bin/usb2rtl8188.device $(BINDIR)/usb2/Devs/Networks && \
+	cp bin/eth_RTL8188.Driver eth_RTL8188.Class $(BINDIR)/usb2/Libs/USB2 && \
 	cp Firmware/rtl8188eufw.bin Firmware/rtl8188eufw.licence $(BINDIR)/usb2/Devs/Firmware
 	@echo "RTL8188EU Wi-Fi done"
 
@@ -161,7 +166,7 @@ build_sis163u: | build_dir_tree
 	$(MAKE) -C Drivers/Ethernet/SiS163U clean
 	$(MAKE) -C Drivers/Ethernet/SiS163U
 	$(MAKE) -C Drivers/Ethernet/SiS163U strip
-	cp Drivers/Ethernet/SiS163U/bin/usb2sis163u.device $(BINDIR)/usb2/Devs/Networks
+	cp Drivers/Ethernet/SiS163U/bin/eth_SiS163U.Driver Drivers/Ethernet/SiS163U/eth_SiS163U.Class $(BINDIR)/usb2/Libs/USB2
 
 ###########################################################################
 
@@ -170,8 +175,16 @@ build_rt2870: | build_dir_tree
 	$(MAKE) -C Drivers/Ethernet/RT2870 BINDIR=bin clean
 	$(MAKE) -C Drivers/Ethernet/RT2870 BINDIR=bin
 	$(MAKE) -C Drivers/Ethernet/RT2870 BINDIR=bin strip
-	cp Drivers/Ethernet/RT2870/bin/usb2rt2870.device $(BINDIR)/usb2/Devs/Networks
+	cp Drivers/Ethernet/RT2870/bin/eth_RT2870.Driver Drivers/Ethernet/RT2870/eth_RT2870.Class $(BINDIR)/usb2/Libs/USB2
 	cp Drivers/Ethernet/RT2870/Firmware/rt2870.bin Drivers/Ethernet/RT2870/Firmware/rt2870.licence $(BINDIR)/usb2/Devs/Firmware
+
+###########################################################################
+
+build_rtl8821cu: | build_dir_tree
+	@echo "Building RTL8821CU Wi-Fi Driver"
+	$(MAKE) -C Drivers/Ethernet/RTL8821CU BINDIR=bin clean
+	$(MAKE) -C Drivers/Ethernet/RTL8821CU BINDIR=bin
+	cp Drivers/Ethernet/RTL8821CU/bin/eth_RTL8821.Driver Drivers/Ethernet/RTL8821CU/eth_RTL8821.Class $(BINDIR)/usb2/Libs/USB2
 
 ###########################################################################
 
@@ -235,8 +248,14 @@ build_wireless_manager: | build_dir_tree
 
 ###########################################################################
 
+build_wait_ethernet: | build_dir_tree
+	$(MAKE) -C Programs/USB2WaitEthernet
+	cp Programs/USB2WaitEthernet/bin/USB2WaitEthernet $(BINDIR)/usb2/Tools
+
+###########################################################################
+
 build_archive: build_stack build_printer build_video build_sdr_test build_bluetooth_test build_ptp build_serial build_smartcard build_audio \
-	build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
+	build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_wait_ethernet
 	@echo "Building Archive"
 	@rm -f usb2.lha
 	cd "$(BINDIR)" && lha a "$(ROOTDIR)/usb2.lha" usb2

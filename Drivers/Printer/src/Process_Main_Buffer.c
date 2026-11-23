@@ -84,6 +84,7 @@ __myProcess_Main_Buffer( struct PrinterUnit *unit )
 					off = usbio->io_Actual-1;
 
 					unit->unit_LastByteSend = buf[ off ];
+					unit->unit_JobHasData = TRUE;
 				}
 
 				break;

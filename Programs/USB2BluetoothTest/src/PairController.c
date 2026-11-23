@@ -194,7 +194,7 @@ PairController( struct IORequest *request, ULONG unit, const char *address, enum
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "This operation requires Bluetooth.Driver %s or later.\n",
+			Printf( "This operation requires cls_Bluetooth.Driver %s or later.\n",
 				operation == BT_TEST_PAIR ? "1.2" : "1.3" );
 
 			break;

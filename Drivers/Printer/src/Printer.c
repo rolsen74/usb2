@@ -26,9 +26,6 @@ struct UtilityIFace *	IUtility		= NULL;
 
 // --
 
-struct MsgPort *		USB2MsgPort		= NULL;
-struct IORequest *		USB2IOReq		= NULL;
-struct Device *			USB2Base		= NULL;
 struct USB2IFace *		IUSB2			= NULL;
 
 // --

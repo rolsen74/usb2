@@ -4,7 +4,7 @@
 
 .PHONY: all clean install
 
-TARGET := PL2303.Driver
+TARGET := ser_PL2303.Driver
 OBJDIR := obj
 BINDIR := bin
 HOSTOS := $(shell uname)
@@ -50,8 +50,8 @@ clean:
 install: all
 ifeq ($(HOSTOS),AmigaOS)
 	copy $(BINDIR)/$(TARGET) Libs:USB2
-	copy PL2303.Class Libs:USB2
-	copy CDCACM.Class Libs:USB2
+	copy ser_PL2303.Class Libs:USB2
+	copy cls_CDCACM.Class Libs:USB2
 else
-	@echo "Copy $(BINDIR)/$(TARGET), PL2303.Class, and CDCACM.Class to Libs:USB2 on AmigaOS."
+	@echo "Copy $(BINDIR)/$(TARGET), ser_PL2303.Class, and cls_CDCACM.Class to Libs:USB2 on AmigaOS."
 endif

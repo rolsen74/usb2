@@ -16,6 +16,7 @@ SEC_CODE struct USB2_FktDriverNode *__FDriver_CreateList( struct USBBase *usbbas
 {
 struct USB2_FktDriverNode *fdn;
 struct TagItem *tag;
+
 int error;
 
 	USBDEBUG( "__FDriver_CreateList" );
@@ -172,6 +173,26 @@ int error;
 				{
 					fdn->fdn_DeviceID = tag->ti_Data;
 				}
+				break;
+			}
+
+			case USB2Tag_FDriver_DeviceList:
+			{
+				struct ExecIFace *IExec;
+				struct List *devices;
+				struct Node *node;
+
+				IExec = usbbase->usb_IExec;
+				devices = (PTR) tag->ti_Data;
+
+				if ( devices )
+				{
+					while( ( node = IExec->RemHead( devices ) ) )
+					{
+						IExec->AddTail( & fdn->fdn_Devices, node );
+					}
+				}
+
 				break;
 			}
 

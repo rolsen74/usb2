@@ -13,26 +13,24 @@
 // --
 
 void
-Cmd_Write_Direct( struct PrinterUnit *unit, struct IOExtPar *pario )
+Cmd_Write_Direct( struct PrinterUnit *unit, struct IOStdReq *pario )
 {
-	USBERROR( "Printer : Cmd_Write_Direct : pario %p : length %ld", pario, pario->IOPar.io_Length );
+	USBERROR( "Printer : Cmd_Write_Direct : pario %p : length %ld", pario, pario->io_Length );
 
-	if ( ! pario->IOPar.io_Data )
+	if ( ! pario->io_Data )
 	{
-		pario->IOPar.io_Actual = 0;
-		pario->IOPar.io_Error = ParErr_LineErr;
-		pario->io_Status = 0;
+		pario->io_Actual = 0;
+		pario->io_Error = ParErr_LineErr;
 
 		ReplyMsg( (PTR) pario );
 
 		return;
 	}
 
-	if ( ! pario->IOPar.io_Length )
+	if ( ! pario->io_Length )
 	{
-		pario->IOPar.io_Actual = 0;
-		pario->IOPar.io_Error = 0;
-		pario->io_Status = 0;
+		pario->io_Actual = 0;
+		pario->io_Error = 0;
 
 		ReplyMsg( (PTR) pario );
 

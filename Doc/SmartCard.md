@@ -4,7 +4,7 @@ USB2 binds standard bulk CCID reader interfaces with class `0B`, subclass
 `00`, and protocol `00`. A reader receives the lowest available unit
 number, starting at 0. Each slot can be queried independently.
 
-Copy `SmartCard.Class` and `SmartCard.Driver` to `LIBS:USB2/` and reconnect
+Copy `cls_SmartCard.Class` and `cls_SmartCard.Driver` to `LIBS:USB2/` and reconnect
 the reader. Run these commands from a Shell.
 
 ```text
@@ -18,7 +18,7 @@ present in slot 0. `ATR` powers on the card, prints its answer to reset
 and leaves it active. Power-on requires a reader with automatic voltage
 selection.
 
-AmigaOS 4 applications can open the active `SmartCard.Driver` library
+AmigaOS 4 applications can open the active `cls_SmartCard.Driver` library
 and obtain its `ccid` version 1 interface. The declarations are in
 `inc_Public/interfaces/usb2smartcard.h`. Use `GetInfo` to enumerate
 readers and `Command` to check a slot, power a card on or off, or send a

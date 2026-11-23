@@ -16,6 +16,17 @@
 #define INC_PROTOS_H
 
 // --
+// DescribeDescriptors.c
+typedef void ( *DescriptorRow )( PTR target, U32 level, S32 heading, const char *field,
+	const char *size, const char *value, const char *description );
+void Describe_Descriptors( const struct USB2_FktNode *node, DescriptorRow emit, PTR target );
+
+// --
+// ExportTree.c
+S32		Save_Device_Tree( const char *path );
+void	Request_Device_Tree_Save( struct Window *window );
+
+// --
 // FktNode.c
 struct USB2_FktNode *	FktNode_Alloc( U32 type, USB2_ID id );
 void					FktNode_Delete( struct USB2_FktNode *n );
@@ -26,6 +37,7 @@ void					FktNode_Reset( struct USB2_FktNode *n );
 // MainScreen.c
 S32		Main_OpenScreen( void );
 void	Main_CloseScreen( void );
+S32		Request_Screen_Mode( struct Window *window, struct ScreenPrefs *prefs );
 
 // --
 // MainWindow.c
@@ -36,6 +48,13 @@ void	Main_DestoryWindow( void );
 void	Main_HandleWindow( void );
 void	Build_Device_Tree( void );
 void	Build_Device_Properties( struct List *list, const struct USB2_FktNode *node );
+
+// --
+// Prefs.c
+void Prefs_Load( void );
+void Prefs_OpenWindow( struct Window *parent );
+void Prefs_CloseWindow( void );
+void Prefs_HandleWindow( void );
 
 // --
 // Notify.c

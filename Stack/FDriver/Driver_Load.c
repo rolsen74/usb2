@@ -28,8 +28,6 @@ enum
 	_Class,
 	_SubClass,
 	_Protocol,
-	_Vendor,
-	_Product,
 	_Device,
 // _StackSize,
 // _Priority,
@@ -53,7 +51,7 @@ static struct CmdStruct Cmds[] =
 //	{ 8, "PRIORITY",	_Priority	},
 	{ 6, "DEVICE",		_Device		},	// VendorID:ProductID
 //	{ 6, "HOTKEY",		_Hotkey		},
-	{ 0, NULL,			0			},
+	{ 0, NULL,			_LAST		},
 };
 
 static U32 _decnumbers[] =
@@ -181,12 +179,129 @@ U32 v;
 
 // --
 
+SEC_CODE static S32
+Read_Device_ID( const char **input, U16 *id )
+{
+	const char *pos;
+	U32 digit;
+	U32 base;
+	U32 value;
+	U32 digits;
+
+	pos = *input;
+	base = 10;
+	value = 0;
+	digits = 0;
+
+	if ( ( pos[0] == '0' ) && ( ( pos[1] == 'x' ) || ( pos[1] == 'X' ) ) )
+	{
+		base = 16;
+		pos += 2;
+	}
+
+	for( ; ( *pos ) && ( (U8) *pos < 0x80 ); pos++ )
+	{
+		digit = (U32) HexData[(U8) *pos];
+
+		if ( digit >= base )
+		{
+			break;
+		}
+
+		value = value * base + digit;
+
+		if ( value > 0xffff )
+		{
+			return ( FALSE );
+		}
+
+		digits++;
+	}
+
+	if ( ! digits )
+	{
+		return ( FALSE );
+	}
+
+	*input = pos;
+	*id = value;
+
+	return ( TRUE );
+}
+
+// --
+
+SEC_CODE static S32
+Read_Device( struct USBBase *usbbase, struct List *devices, const char *pos )
+{
+	struct USB2_DeviceNode *device;
+
+	U16 vendor;
+	U16 product;
+
+	product = 0;
+
+	if ( ! Read_Device_ID( & pos, & vendor ) )
+	{
+		return ( FALSE );
+	}
+
+	while( ( *pos == ' ' ) || ( *pos == '\t' ) )
+	{
+		pos++;
+	}
+
+	if ( *pos == ':' )
+	{
+		pos++;
+
+		while( ( *pos == ' ' ) || ( *pos == '\t' ) )
+		{
+			pos++;
+		}
+
+		if ( ! Read_Device_ID( & pos, & product ) )
+		{
+			return ( FALSE );
+		}
+
+		while( ( *pos == ' ' ) || ( *pos == '\t' ) )
+		{
+			pos++;
+		}
+	}
+
+	if ( ( *pos ) && ( *pos != '\n' ) && ( *pos != '\r' ) && ( *pos != '#' ) )
+	{
+		return ( FALSE );
+	}
+
+	device = MEM_ALLOCVEC( sizeof( *device ), TRUE );
+
+	if ( ! device )
+	{
+		return ( FALSE );
+	}
+
+	device->VendorID = vendor;
+	device->DeviceID = product;
+
+	usbbase->usb_IExec->AddTail( devices, & device->Node );
+
+	return ( TRUE );
+}
+
+// --
+
 SEC_CODE struct USB2_FktDriverNode *__FDriver_Load( struct USBBase *usbbase, STR filename )
 {
 struct USB2_FktDriverNode *fdn;
 struct TagItem Tags[_LAST+1];
 struct ExamineData *ed;
 struct DOSIFace *IDOS;
+struct List devices;
+struct Node *device;
+
 U32 argstart;
 U32 nextline;
 U32 cmdstart;
@@ -207,6 +322,8 @@ S32 chr;
 	mem		= NULL;
 	dir		= 0;
 	IDOS	= usbbase->usb_IDOS;
+
+	usbbase->usb_IExec->NewList( & devices );
 
 	if (( ! IDOS ) || ( ! filename ))
 	{
@@ -240,8 +357,8 @@ S32 chr;
 	Tags[ _FNClass	].ti_Tag	= (Tag) USB2Tag_FDriver_Class_Filename;
 	Tags[ _FNClass	].ti_Data	= (Tag) filename;
 
-//	Tags[ _Device	].ti_Tag	= (Tag) USB2Tag_FDriver_DeviceList;
-//	Tags[ _Device	].ti_Data	= (Tag) & l;
+	Tags[ _Device	].ti_Tag	= (Tag) USB2Tag_FDriver_DeviceList;
+	Tags[ _Device	].ti_Data	= (Tag) & devices;
 
 //	Tags[ _Date 	].ti_Tag	= (Tag) USB2Tag_FDriver_DriverDate;
 //	Tags[ _Date		].ti_Data	= (Tag) & ed->Date;
@@ -338,7 +455,8 @@ S32 chr;
 
 			cmdstart = pos;
 
-			while(( mem[pos] ) && ( mem[pos] != 9 ) && ( mem[pos] != 32 ))
+			while(( mem[pos] ) && ( mem[pos] != 9 ) && ( mem[pos] != 32 ) &&
+				( mem[pos] != 10 ) && ( mem[pos] != 13 ))
 			{
 				pos++;
 			}
@@ -426,30 +544,21 @@ S32 chr;
 
 				case _Device:
 				{
-					if ( ( mem[pos] ) && ( mem[pos] != 10 ) )
+					if ( ! Read_Device( usbbase, & devices, & mem[pos] ) )
 					{
-						Tags[_Vendor].ti_Tag = USB2Tag_FDriver_VendorID;
-						Tags[_Vendor].ti_Data = ReadValue( & mem[pos] );
+						USBERROR( "Could not add DEVICE entry in %s", filename );
 
-						while( ( mem[pos] ) && ( mem[pos] != ':' ) && ( mem[pos] != 10 ) && ( mem[pos] != 13 ) )
-						{
-							pos++;
-						}
-
-						if ( mem[pos] == ':' )
-						{
-							Tags[_Product].ti_Tag = USB2Tag_FDriver_DeviceID;
-							Tags[_Product].ti_Data = ReadValue( & mem[pos+1] );
-						}
+						fdn = NULL;
+						goto bailout;
 					}
+
 					break;
 				}
 
-//				case _Title:
-//				case _Hotkey:
+				case _Title:
 				case _FNDriver:
 				{
-					if (( mem[pos] ) && ( mem[pos] != 10 ))
+					if ( ( mem[pos] ) && ( mem[pos] != '\n' ) && ( mem[pos] != '\r' ) )
 					{
 						/**/ if ( mem[pos] == '\'' )
 						{
@@ -468,14 +577,14 @@ S32 chr;
 						}
 						else
 						{
-							chr = 10;
+							chr = '\n';
 						}
 
 						argstart = pos;
 
 						// Find String end or Line end
 
-						while(( mem[pos] ) && ( mem[pos] != 10 ) && ( mem[pos] != chr ))
+						while( ( mem[pos] ) && ( mem[pos] != '\n' ) && ( mem[pos] != '\r' ) && ( mem[pos] != chr ) )
 						{
 							pos++;
 						}
@@ -487,12 +596,12 @@ S32 chr;
 							/**/ if ( Cmds[cmdpos].CmdType == _Title )
 							{
 								Tags[_Title].ti_Tag  = USB2Tag_FDriver_Title;
-								Tags[_Title].ti_Data = (U32) & mem[argstart];
+								Tags[_Title].ti_Data = (Tag) & mem[argstart];
 							}
 							else if ( Cmds[cmdpos].CmdType == _FNDriver )
 							{
 								Tags[_FNDriver].ti_Tag  = USB2Tag_FDriver_Driver_Filename;
-								Tags[_FNDriver].ti_Data = (U32) & mem[argstart];
+								Tags[_FNDriver].ti_Data = (Tag) & mem[argstart];
 							}
 //							else
 //							{
@@ -506,7 +615,7 @@ S32 chr;
 
 				default:
 				{
-					USBDEBUG( "CmdName '%s'", Cmds[cmdpos].CmdName );
+					USBDEBUG( "Unknown class command in %s", filename );
 					break;
 				}
 			}
@@ -520,6 +629,11 @@ S32 chr;
 	fdn = FDRIVER_CREATELIST( Tags );
 
 bailout:
+
+	while( ( device = usbbase->usb_IExec->RemHead( & devices ) ) )
+	{
+		MEM_FREEVEC( device );
+	}
 
 	if (( IDOS ) && ( ed ))
 	{

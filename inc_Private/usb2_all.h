@@ -180,6 +180,11 @@ struct CMD_AddFunctionData
 // --
 // Build Protos
 
+SEC_CODE void USB2_Bind_Enumerated( struct USBBase *usbbase );
+SEC_CODE S32 USB2_FullBoot_Wait( struct USBBase *usbbase );
+SEC_CODE void USB2_FullBoot_Complete( struct USBBase *usbbase, S32 ready );
+SEC_CODE void USB2_DeviceQuery( struct IOStdReq *ioreq, U16 type, const U16 *commands );
+
 #define USB2_CREATEFUNC(ret_type, name, ...)	ret_type __##name(__VA_ARGS__)
 #include "usb2_Protos.h"
 #undef USB2_CREATEFUNC

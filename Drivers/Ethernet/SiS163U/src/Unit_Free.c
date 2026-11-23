@@ -15,36 +15,7 @@
 void
 Unit_Free( struct EthernetUnit *unit )
 {
-	USBDEBUG( "SIS163U : Unit_Free :" );
-
-	if ( ! unit )
-	{
-		goto bailout;
-	}
-
-	// --
-
-	Forbid();
-
-	if ( unit->unit_TaskAdr )
-	{
-		Signal( unit->unit_TaskAdr, SIGBREAKF_CTRL_C );
-	}
-
-	Permit();
-
-	while( unit->unit_TaskState != TASK_State_Stopped )
-	{
-		Delay( 1 );
-	}
-
-	// --
-
 	FreeVec( unit );
-
-bailout:
-
-	return;
 }
 
 // --

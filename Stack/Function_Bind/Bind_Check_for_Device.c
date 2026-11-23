@@ -104,7 +104,8 @@ enum FDSTAT stat;
 	{
 		while( fdn->fdn_Type == USB2Val_FDriver_Device )
 		{
-			if ( fdn->fdn_Detach )
+			if ( ( fdn->fdn_Detach ) ||
+				( ( fdn->fdn_Driver_Filename ) && ( ! usbbase->usb_FrontendsReady ) ) )
 			{
 				break;
 			}

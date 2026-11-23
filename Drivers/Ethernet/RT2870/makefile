@@ -13,10 +13,10 @@
 ###########################################################################
 
 # Target binary and install path
-TARGET		:= usb2rt2870.device
+TARGET		:= eth_RT2870.Driver
 OBJDIR		:= obj
 BINDIR		:= bin
-INSTALLDIR	:= devs:networks
+INSTALLDIR	:= libs:usb2/
 MAPFILE		:= $(TARGET).map
 
 # Compiler flags
@@ -109,7 +109,7 @@ SRCS		:= $(sort $(SRCS))
 OBJS		:= $(patsubst %.c,$(OBJDIR)/%.o,$(SRCS))
 DEPS		:= $(patsubst %.c,$(OBJDIR)/%.d,$(SRCS))
 
-COMMON_SRCS	:= $(wildcard ../Common/Wireless_*.c)
+COMMON_SRCS	:= $(wildcard ../Common/EthClass_*.c ../Common/EthWireless_*.c ../Common/Wireless_*.c ../Common/Sana2_*.c)
 OBJS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(COMMON_SRCS))
 DEPS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.d,$(COMMON_SRCS))
 
@@ -139,10 +139,10 @@ clean:
 
 install:
 ifeq ($(HOSTOS),AmigaOS)
-	$(COPY) $(BINDIR)/$(TARGET) $(INSTALLDIR)
+	$(COPY) $(BINDIR)/$(TARGET) eth_RT2870.Class $(INSTALLDIR)
 else
 	@echo "Install is AmigaOS-oriented. On Linux, copy manually to target media:"
-	@echo "  $(COPY) $(BINDIR)/$(TARGET) <your-amiga-volume>/Devs/Networks/"
+	@echo "  $(COPY) $(BINDIR)/$(TARGET) eth_RT2870.Class <your-amiga-volume>/Libs/USB2/"
 endif
 
 ###########################################################################

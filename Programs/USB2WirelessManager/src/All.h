@@ -19,6 +19,7 @@
 #include <devices/timer.h>
 #include <devices/usb2rtl8188.h>
 #include <devices/usb2wireless.h>
+#include <interfaces/usb2eth.h>
 #include <dos/dos.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
@@ -62,7 +63,8 @@ typedef char *STR;
 #define S2ENC_TKIP 2
 #define S2PORT_MANAGED 7
 
-#define WIRELESS_DEVICE "usb2rtl8188.device"
+#define WIRELESS_DEVICE USB2_ETH_DEVICE
+#define WIRELESS_RTL8188_LEGACY "usb2rtl8188.device"
 #define WIRELESS_RT2870_DEVICE "usb2rt2870.device"
 #define WIRELESS_SIS163U_DEVICE "usb2sis163u.device"
 #define WIRELESS_MAX_CHANNEL 11
@@ -149,6 +151,7 @@ struct Wireless
 	U8 Station[WIRELESS_ADDR_SIZE];
 	U32 SSIDLength;
 	U32 UnitNumber;
+	ULONG AdapterType;
 	U32 ScanBeaconCount;
 	U32 ScanReportedCount;
 	U32 ScanMalformedMatches;
@@ -182,6 +185,8 @@ void WiFi_Connected( struct Wireless *wireless, U32 channel );
 S32 Run_Wireless( struct Wireless *wireless, U32 channel, U32 maxChannel, S32 open, S32 auth, S32 associate );
 S32 Valid_Password( const char *password, U32 minimum );
 S32 Wireless_Open( struct Wireless *wireless );
+void Wireless_Reset_Options( struct Wireless *wireless );
+ULONG Wireless_ResolveAdapter( const char *selector, ULONG number );
 void Wireless_Close( struct Wireless *wireless );
 S32 Wireless_Command( struct Wireless *wireless, U16 command );
 S32 Wireless_Set_Options( struct Wireless *wireless, U32 channel, const U8 *bssid, U16 aid,

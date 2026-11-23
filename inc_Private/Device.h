@@ -21,6 +21,15 @@ struct USB2_DeviceUnit
 	struct Unit						unit_Unit;
 };
 
+struct USB2_FullBootWaiter;
+
+enum USB2_FullBootState
+{
+	USB2_FullBoot_Pending,
+	USB2_FullBoot_Ready,
+	USB2_FullBoot_Failed
+};
+
 struct USBBase
 {
 	struct Library					usb_Library;
@@ -92,6 +101,9 @@ struct USBBase
 	PTR								usb_Master_Intern;
 	struct USB2_MsgPort *			usb_Master_MsgPort;
 	U32								usb_DriverDirLock;
+	enum USB2_FullBootState			usb_FullBootState;
+	struct USB2_FullBootWaiter *	usb_FullBootWaiters;
+	U8								usb_FrontendsReady;
 
 	// Queued Memory -- MEMID_x Headers
 	struct Mem_HeaderNode *			usb_Memory_Headers;

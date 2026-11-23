@@ -11,13 +11,6 @@
 
 /**************************************************************************/
 
-struct MulticastAddress
-{
-	struct Node ma_Node;
-	U32 ma_UseCount;
-	U8 ma_Address[6];
-};
-
 struct IONode
 {
 	struct Node 		Node;
@@ -42,11 +35,11 @@ struct IONode
 struct devUnit
 {
 	struct Unit				unit_Base;
-	U32					unit_UnitNumber;
+	ULONG					unit_UnitNumber;
 
-	struct Task *			unit_FinishingTask;
-	struct Task *			unit_Process;
 	int					unit_Running;
+	U8 unit_AcceptIO;
+	struct SignalSemaphore unit_DispatchLock;
 
 	uint16					unit_ChipVersion;
 
@@ -62,6 +55,8 @@ struct devUnit
 
 	struct List				unit_SampleList;
 	struct List				unit_MultiCastList;
+	struct List unit_MulticastRanges;
+	struct List unit_TrackedTypes;
 	U32					unit_MultiCastRejects;
 
 	struct MsgPort *		unit_BeginIOMsgPort;
@@ -70,9 +65,6 @@ struct devUnit
 	struct MsgPort *		unit_AbortIOMsgPort;
 	U32					unit_AbortIOMsgPortBit;
 
-	struct MsgPort *unit_USBPort;
-	struct IORequest *unit_USBReq;
-	struct Device *unit_USBDevice;
 	struct USB2IFace *unit_IUSB2;
 	struct USB2_Interface *unit_USBInterface;
 	struct USB2_Register *unit_USBRegister;
@@ -100,8 +92,6 @@ struct devUnit
 
 /**************************************************************************/
 
-struct MulticastAddress *FindMulticastAddress( struct devUnit *unit, const U8 *address );
-void CheckEvent( struct devUnit *unit, U32 events );
 void UpdateThroughput( struct devUnit *unit, U32 sent, U32 received );
 
 S32 RTL8152_SetMacAddress( struct devUnit *unit, const U8 *address );
@@ -110,17 +100,11 @@ S32 RTL8152_SetMacAddress( struct devUnit *unit, const U8 *address );
 
 int Driver_Setup( struct devUnit *unit );
 
-int unit_Start( struct devUnit *unit );
-void unit_Stop( struct devUnit *unit );
-void unit_Process( void );
-int unit_Process_Init( struct devUnit *unit );
+int unit_Process_Init( struct devUnit *unit, struct USB2_DriverMessage *msg );
 void unit_Process_Free( struct devUnit *unit );
 int unit_Process_InitMisc( struct devUnit *unit );
 void unit_Process_FreeMisc( struct devUnit *unit );
-int unit_Process_OpenUSBDevice( struct devUnit *unit );
-void unit_Process_CloseUSBDevice( struct devUnit *unit );
-int unit_Process_FindUSBDevice( struct devUnit *unit );
-int unit_Process_InitUSB( struct devUnit *unit );
+int unit_Process_InitUSB( struct devUnit *unit, struct USB2_DriverMessage *msg );
 void unit_Process_FreeUSB( struct devUnit *unit );
 void unit_Process_MainLoop( struct devUnit *unit );
 void Handle_BeginIOMessages( struct devUnit *unit );

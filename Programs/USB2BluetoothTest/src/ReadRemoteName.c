@@ -76,7 +76,7 @@ ReadRemoteName( struct IORequest *request, ULONG unit, const char *address )
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "NAME requires Bluetooth.Driver 1.4 or later.\n" );
+			Printf( "NAME requires cls_Bluetooth.Driver 1.4 or later.\n" );
 
 			break;
 

@@ -1,0 +1,5 @@
+TYPE Interface
+TITLE "RTL8152"
+DRIVER "eth_RTL8152.Driver"
+CLASS 0xff
+DEVICE 0x0bda:0x8152

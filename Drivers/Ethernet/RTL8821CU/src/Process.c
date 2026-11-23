@@ -1,0 +1,161 @@
+
+/*
+**      -+- Universal serial bus -+-
+** Copyright (c) 2012-2026 by Rene W. Olsen
+**
+** SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+// --
+
+#include "All.h"
+#include "EthClass.h"
+
+// --
+
+static S32
+AdapterPresent( struct USB2IFace *usb2, USB2_ID id )
+{
+	struct USB2_Function *fn;
+
+	U32 index;
+
+	for( index = 0; ; index++ )
+	{
+		fn = usb2->USB2_Fkt_FindTags(
+			USB2Tag_Find_VendorID, RTL8821CU_VENDOR_ID,
+			USB2Tag_Find_DeviceID, RTL8821CU_PRODUCT_ID,
+			USB2Tag_Find_Index, index,
+			TAG_END );
+
+		if ( ! fn )
+		{
+			return ( FALSE );
+		}
+
+		if ( fn->FKT_ID == id )
+		{
+			return ( TRUE );
+		}
+	}
+}
+
+// --
+
+static void
+Process_Main( struct EthernetUnit *unit, struct USB2IFace *usb2 )
+{
+	struct USB2_NotifyMessage *notice;
+	struct USB2_Register *reg;
+
+	S32 detached;
+	U32 wait_ticks;
+
+	reg = unit->unit_USB_Register;
+	detached = FALSE;
+
+	while( ! ( SetSignal( 0, SIGBREAKF_CTRL_C ) & SIGBREAKF_CTRL_C ) )
+	{
+		while( ( notice = (PTR) GetMsg( reg->Stack_MsgPort ) ) )
+		{
+			if ( notice->nm_Command == USBNC_Detached )
+			{
+				detached = TRUE;
+			}
+
+			ReplyMsg( (PTR) notice );
+		}
+
+		// USB2 can omit detach notifications while a registration holds the function.
+		if ( ( detached ) || ( ! AdapterPresent( usb2, reg->FKT_ID ) ) )
+		{
+			ObtainSemaphore( & unit->unit_CommandLock );
+
+			unit->unit_Detached = TRUE;
+			unit->unit_Online = FALSE;
+
+			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE, TRUE );
+
+			Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, S2ERR_OUTOFSERVICE, S2WERR_UNIT_DISCONNECTED );
+
+			ReleaseSemaphore( & unit->unit_CommandLock );
+
+			return;
+		}
+
+		ObtainSemaphore( & unit->unit_CommandLock );
+
+		Process_PacketIO( unit, usb2 );
+
+		wait_ticks = unit->unit_Online ? 1 : 10;
+
+		ReleaseSemaphore( & unit->unit_CommandLock );
+
+		Delay( wait_ticks );
+	}
+}
+
+// --
+
+extern const struct USB2EthOps EthClass_Ops;
+
+// --
+
+U32
+EthClass_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg )
+{
+	struct EthernetUnit *unit;
+	struct EthClassPort port;
+
+	S32 registered;
+
+	if ( ( ! msg ) || ( ! msg->IUSB2 ) || ( ! msg->Interface ) ||
+		( msg->Interface->IFC_Num != RTL8821CU_INTERFACE ) )
+	{
+		return ( FALSE );
+	}
+
+	unit = AllocVecTags( sizeof( *unit ), AVT_Clear, 0, TAG_END );
+
+	if ( ! unit )
+	{
+		return ( FALSE );
+	}
+
+	InitSemaphore( & unit->unit_CommandLock );
+
+	NewList( & unit->unit_Openers );
+
+	NewList( & unit->unit_Pending );
+
+	port.Request = (struct IORequest) { 0 };
+	port.Interface = NULL;
+	port.Unit = NULL;
+	registered = FALSE;
+
+	if ( Process_Setup_Device( unit, msg ) )
+	{
+		registered = EthClass_Register( & port, & EthClass_Ops, unit,
+			& unit->unit_UnitNr, USB2ETH_ADAPTER_RTL8821CU, msg );
+
+		if ( registered )
+		{
+			Process_Main( unit, msg->IUSB2 );
+		}
+	}
+
+	Process_Free( unit, msg->IUSB2 );
+
+	if ( registered )
+	{
+		EthClass_Unregister( & port );
+	}
+	else
+	{
+		FreeVec( unit );
+	}
+
+	return ( registered );
+}
+
+// --

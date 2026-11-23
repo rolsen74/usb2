@@ -41,6 +41,7 @@ SEC_CODE enum FSTAT __FDriver_Free( struct USBBase *usbbase, struct USB2_FktDriv
 #endif
 
 {
+struct Node *device;
 enum VSTAT vstat;
 enum FSTAT fstat;
 
@@ -121,6 +122,11 @@ enum FSTAT fstat;
 	{
 		MEM_FREEVEC( fdn->fdn_Title );
 		fdn->fdn_Title = NULL;
+	}
+
+	while( ( device = usbbase->usb_IExec->RemHead( & fdn->fdn_Devices ) ) )
+	{
+		MEM_FREEVEC( device );
 	}
 
 	// --

@@ -1,0 +1,5 @@
+TYPE Interface
+TITLE "SiS163U"
+DRIVER "eth_SiS163U.Driver"
+CLASS 0xff
+DEVICE 0x0d8e:0x0163

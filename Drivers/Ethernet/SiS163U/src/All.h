@@ -4,17 +4,19 @@
 #include <proto/dos.h>
 #include <proto/exec.h>
 #include <proto/usb2.h>
+#include <interfaces/usb2eth.h>
 #include <proto/utility.h>
 #include <devices/newstyle.h>
 #include <devices/sana2.h>
+#include "Sana2Commands.h"
 #include <dos/dostags.h>
 #include <stddef.h>
 #include <string.h>
 
 #include "Types.h"
 #include "Version.h"
-#include "Base.h"
-#include "Task.h"
+
+#define ETH_CLASS_ADAPTER USB2ETH_ADAPTER_SIS163U
 
 #define SIS163U_VENDOR 0x0d8e
 #define SIS163U_PRODUCT 0x0163
@@ -22,6 +24,9 @@
 #define SIS163U_CHANNEL_MAX 13
 #define SIS163U_RX_CHECK_READS 16
 #define SIS163U_RX_BUFFER_SIZE 2400
+#define SIS163U_WLAN_HEADER 24
+#define SIS163U_TX_DESC_SIZE 12
+#define SIS163U_TX_BUFFER_SIZE 1600
 #define SIS163U_MAC_RX_MODE 0x54922000
 
 #define USBDEBUG( ... ) ((void)0)
@@ -33,13 +38,6 @@ struct BufferManagement
 	struct Hook *bm_CopyHook;
 	PTR bm_CopyToBuff;
 	PTR bm_CopyFromBuff;
-};
-
-struct MulticastAddress
-{
-	struct Node ma_Node;
-	U32 ma_UseCount;
-	U8 ma_Address[6];
 };
 
 struct EthernetUnit
@@ -55,6 +53,8 @@ struct EthernetUnit
 	S32 unit_ManualScan;
 	struct SignalSemaphore unit_CommandLock;
 	struct List unit_Pending;
+	struct List unit_MulticastRanges;
+	struct List unit_TrackedTypes;
 	struct List unit_Multicast;
 	U64 unit_PacketsRx;
 	U64 unit_PacketsTx;
@@ -68,20 +68,16 @@ struct EthernetUnit
 	U8 unit_Channel;
 	S32 unit_RadioInitialized;
 	U8 unit_Configured;
-	enum TaskState unit_TaskState;
-	U32 unit_UnitNr;
+	ULONG unit_UnitNr;
 	S32 unit_Exclusive;
 	S32 unit_Detached;
 };
 
-S32 Resources_Init( struct EthernetBase *ethBase );
-void Resources_Free( struct EthernetBase *ethBase );
-struct EthernetUnit *Unit_Alloc( U32 unitnr );
+S32 Resources_Init( void );
+void Resources_Free( void );
+struct EthernetUnit *Unit_Alloc( void );
 void Unit_Free( struct EthernetUnit *unit );
-S32 Unit_Startup( struct EthernetUnit *unit );
-S32 Unit_Startup_USB( struct EthernetUnit *unit );
-void Ethernet_Process_Entry( void );
-S32 Process_Init( struct EthernetUnit *unit );
+S32 Process_Init( struct EthernetUnit *unit, struct USB2_DriverMessage *msg );
 void Process_Main( struct EthernetUnit *unit );
 void Process_RadioCommands( struct EthernetUnit *unit );
 void Process_Free( struct EthernetUnit *unit );
@@ -97,6 +93,7 @@ void SiS163U_StartRXCheck( struct EthernetUnit *unit );
 void SiS163U_SubmitRXCheck( struct EthernetUnit *unit );
 void SiS163U_CompleteRXCheck( struct EthernetUnit *unit );
 void SiS163U_LogRXState( struct EthernetUnit *unit, const char *stage );
+void SiS163U_WriteMgmt( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 void SiS163U_StopRX( struct EthernetUnit *unit );
 S32 SiS163U_SetChannel( struct EthernetUnit *unit, U32 channel );
 S32 SiS163U_WaitRegister( struct USB2_EPResource *control, U16 address, U32 mask );
@@ -106,13 +103,8 @@ S32 SiS163U_WriteRF( struct USB2_EPResource *control, U8 address, U16 value );
 S32 SiS163U_ProgramStationAddress( struct EthernetUnit *unit );
 S32 SiS163U_ReadRegister( struct USB2_EPResource *control, U16 address, U32 *value );
 void Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
-void AbortPendingCommands( struct EthernetUnit *unit, struct IORequest *request, struct BufferManagement *opener );
-void SignalSana2Event( struct EthernetUnit *unit, U32 events );
 struct IOSana2Req *SiS163U_FindMgmtRead( struct EthernetUnit *unit );
-void _cmd_4000_NSCmd_DeviceQuery( struct IOStdReq *ioreq );
 
-extern struct IORequest *USB2IOReq;
-extern struct MsgPort *USB2MsgPort;
 extern struct Interface *INewlib;
 extern struct Library *NewlibBase;
 

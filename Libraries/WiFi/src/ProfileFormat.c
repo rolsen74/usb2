@@ -362,8 +362,61 @@ WiFi_ProfileNetwork( struct ProfileDatabase *db, const struct USB2WiFiProfile *p
 
 // --
 
+S32
+WiFi_HasStation( const U8 *station )
+{
+	static const U8 empty[WIFI_STATION_SIZE];
+
+	return ( ( station ) && ( ! ( station[0] & 1 ) ) && ( memcmp( station, empty, sizeof( empty ) ) ) );
+}
+
+// --
+
+void
+WiFi_FormatStation( char *text, const U8 *station )
+{
+	sprintf( text, "%02X:%02X:%02X:%02X:%02X:%02X",
+		(unsigned) station[0], (unsigned) station[1], (unsigned) station[2],
+		(unsigned) station[3], (unsigned) station[4], (unsigned) station[5] );
+}
+
+// --
+
+static S32
+ReadStation( const char **text, U8 *station )
+{
+	char address[3 * WIFI_STATION_SIZE];
+
+	U32 i;
+	S32 high;
+	S32 low;
+
+	if ( ( ! ReadQuoted( text, address, sizeof( address ) ) ) || ( strlen( address ) != sizeof( address ) - 1 ) )
+	{
+		return ( FALSE );
+	}
+
+	for ( i = 0; i < WIFI_STATION_SIZE; i++ )
+	{
+		high = HexValue( address[3 * i] );
+
+		low = HexValue( address[3 * i + 1] );
+
+		if ( ( high < 0 ) || ( low < 0 ) || ( ( i + 1 < WIFI_STATION_SIZE ) && ( address[3 * i + 2] != ':' ) ) )
+		{
+			return ( FALSE );
+		}
+
+		station[i] = (U8) ( high * 16 + low );
+	}
+
+	return ( WiFi_HasStation( station ) );
+}
+
+// --
+
 struct ProfileAdapter *
-WiFi_ProfileAdapter( struct ProfileDatabase *db, const char *device, U32 unit, S32 create )
+WiFi_ProfileStation( struct ProfileDatabase *db, const char *device, U32 unit, const U8 *station, S32 create )
 {
 	struct ProfileAdapter *entry;
 	struct ProfileAdapter **next;
@@ -374,7 +427,9 @@ WiFi_ProfileAdapter( struct ProfileDatabase *db, const char *device, U32 unit, S
 	{
 		entry = *next;
 
-		if ( ( entry->Unit == unit ) && ( ! strcasecmp( entry->Device, device ) ) )
+		if ( ( ! strcasecmp( entry->Device, device ) ) &&
+			( station ? ! memcmp( entry->Station, station, WIFI_STATION_SIZE ) :
+				( ( entry->Unit == unit ) && ( ! WiFi_HasStation( entry->Station ) ) ) ) )
 		{
 			return ( entry );
 		}
@@ -393,11 +448,25 @@ WiFi_ProfileAdapter( struct ProfileDatabase *db, const char *device, U32 unit, S
 			strcpy( entry->Device, device );
 
 			entry->Unit = unit;
+
+			if ( station )
+			{
+				memcpy( entry->Station, station, WIFI_STATION_SIZE );
+			}
+
 			*next = entry;
 		}
 	}
 
 	return ( entry );
+}
+
+// --
+
+struct ProfileAdapter *
+WiFi_ProfileAdapter( struct ProfileDatabase *db, const char *device, U32 unit, S32 create )
+{
+	return ( WiFi_ProfileStation( db, device, unit, NULL, create ) );
 }
 
 // --
@@ -493,6 +562,7 @@ ReadRecord( const char *text, struct ProfileDatabase *db, struct USB2WiFiProfile
 	struct ProfileAdapter *entry;
 
 	char device[WIFI_DEVICE_NAME_SIZE];
+	U8 station[WIFI_STATION_SIZE];
 	U32 adapter;
 	U32 unit;
 	U32 security;
@@ -521,12 +591,26 @@ ReadRecord( const char *text, struct ProfileDatabase *db, struct USB2WiFiProfile
 			|| ( ! ReadQuoted( &text, profile->SSID, sizeof( profile->SSID ) ) ) || ( ! profile->SSID[0] ) || ( ! ReadComma( &text ) )
 			|| ( ! ReadName( &text, WiFi_ProfileSecurityNames, securityCount, &security ) ) || ( ! ReadComma( &text ) )
 			|| ( ! ReadNumber( &text, UINT8_MAX, &channel ) ) || ( ! ReadComma( &text ) )
-			|| ( ! ReadNumber( &text, 1, &automatic ) ) || ( *SkipSpaces( text ) ) )
+			|| ( ! ReadNumber( &text, 1, &automatic ) ) )
 		{
 			return ( FALSE );
 		}
 
-		entry = WiFi_ProfileAdapter( db, device, unit, TRUE );
+		text = SkipSpaces( text );
+
+		if ( *text )
+		{
+			if ( ( ! ReadComma( &text ) ) || ( ! ReadStation( &text, station ) ) || ( *SkipSpaces( text ) ) )
+			{
+				return ( FALSE );
+			}
+
+			entry = WiFi_ProfileStation( db, device, unit, station, TRUE );
+		}
+		else
+		{
+			entry = WiFi_ProfileAdapter( db, device, unit, TRUE );
+		}
 
 		if ( ( ! entry ) || ( entry->Profile.SSID[0] ) )
 		{
@@ -788,13 +872,14 @@ static char *
 FormatProfiles( const struct ProfileDatabase *db )
 {
 	static const char networkHeading[] = "# SSID: name, security, password, hidden\n";
-	static const char adapterHeading[] = "# ETH: device filename, unit, last SSID, security, last channel, autoconnect\n";
+	static const char adapterHeading[] = "# ETH: device filename, unit, last SSID, security, last channel, autoconnect, optional factory MAC\n";
 	const struct ProfileNetwork *network;
 	const struct ProfileAdapter *adapter;
 	const struct USB2WiFiProfile *profile;
 
 	char *buffer;
 	char *text;
+	char station[3 * WIFI_STATION_SIZE];
 	U32 capacity;
 
 	capacity = sizeof( networkHeading ) + sizeof( adapterHeading );
@@ -806,7 +891,7 @@ FormatProfiles( const struct ProfileDatabase *db )
 
 	for ( adapter = db->Adapters; adapter; adapter = adapter->Next )
 	{
-		capacity += 180 + 4 * strlen( adapter->Device );
+		capacity += 205 + 4 * strlen( adapter->Device );
 	}
 
 	if ( capacity > PROFILE_FILE_LIMIT )
@@ -869,8 +954,17 @@ FormatProfiles( const struct ProfileDatabase *db )
 
 		text = WriteQuoted( text, profile->SSID );
 
-		text += sprintf( text, ", %s, %u, %u\n", WiFi_ProfileSecurityNames[profile->Security],
+		text += sprintf( text, ", %s, %u, %u", WiFi_ProfileSecurityNames[profile->Security],
 			(unsigned)profile->Channel, ( profile->Options & USB2WIFI_PROFILE_AUTO ) ? 1U : 0U );
+
+		if ( WiFi_HasStation( adapter->Station ) )
+		{
+			WiFi_FormatStation( station, adapter->Station );
+
+			text += sprintf( text, ", \"%s\"", station );
+		}
+
+		*text++ = '\n';
 	}
 
 	*text = 0;

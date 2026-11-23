@@ -31,9 +31,12 @@ PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 
 	IExec->ObtainSemaphore( & base->Lock );
 
-	if ( ( unit ) && ( unit->BeginPort ) )
+	if ( ( unit ) && ( unit->BeginPort ) &&
+		( ( base->Type != PORT_PRINTER ) || ( request->io_Command != NSCMD_DEVICEQUERY ) ) )
 	{
-		request->io_Flags &= ~( IOF_QUICK | IOSERF_ABORT | IOSERF_QUEUED | IOSERF_ACTIVE );
+		request->io_Flags &= ~( IOF_QUICK |
+			( base->Type == PORT_SERIAL ? ( IOSERF_ABORT | IOSERF_QUEUED | IOSERF_ACTIVE ) :
+			( IOPARF_ABORT | IOPARF_QUEUED | IOPARF_ACTIVE ) ) );
 		request->io_Message.mn_Node.ln_Type = NT_MESSAGE;
 
 		IExec->PutMsg( unit->BeginPort, (PTR) request );
@@ -45,7 +48,23 @@ PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 
 	IExec->ReleaseSemaphore( & base->Lock );
 
-	request->io_Error = IOERR_UNITBUSY;
+	if ( request->io_Command == NSCMD_DEVICEQUERY )
+	{
+		PortDevice_Query( base, request );
+	}
+	else if ( base->Type == PORT_PRINTER )
+	{
+		request->io_Error = ParErr_NotOpen;
+
+		if ( request->io_Message.mn_Length >= sizeof( struct IOExtPar ) )
+		{
+			((struct IOExtPar *) request)->io_Status = 0;
+		}
+	}
+	else
+	{
+		request->io_Error = IOERR_UNITBUSY;
+	}
 
 	if ( ! ( request->io_Flags & IOF_QUICK ) )
 	{

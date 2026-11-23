@@ -12,39 +12,9 @@
 
 // --
 
-void Resources_Free( struct EthernetBase *ethBase UNUSED )
+void Resources_Free( void )
 {
 	USBDEBUG( "RTL8188 : Resources_Free" );
-
-	if ( IUSB2 )
-	{
-		DropInterface( (PTR) IUSB2 );
-
-		IUSB2 = NULL;
-	}
-
-	if ( USB2Base )
-	{
-		CloseDevice( USB2IOReq );
-
-		USB2Base = NULL;
-	}
-
-	if ( USB2IOReq )
-	{
-		FreeSysObject( ASOT_IOREQUEST, USB2IOReq );
-
-		USB2IOReq = NULL;
-	}
-
-	if ( USB2MsgPort )
-	{
-		FreeSysObject( ASOT_PORT, USB2MsgPort );
-
-		USB2MsgPort = NULL;
-	}
-
-	// --
 
 	if ( IRTL8188Timer )
 	{
@@ -63,6 +33,8 @@ void Resources_Free( struct EthernetBase *ethBase UNUSED )
 	if ( UtilityBase )
 	{
 		CloseLibrary( (PTR) UtilityBase );
+
+		UtilityBase = NULL;
 	}
 
 	// --
@@ -70,11 +42,15 @@ void Resources_Free( struct EthernetBase *ethBase UNUSED )
 	if ( IDOS )
 	{	
 		DropInterface( (PTR) IDOS );
+
+		IDOS = NULL;
 	}
 
 	if ( DOSBase )
 	{
 		CloseLibrary( (PTR) DOSBase );
+
+		DOSBase = NULL;
 	}
 
 	// --
@@ -82,11 +58,15 @@ void Resources_Free( struct EthernetBase *ethBase UNUSED )
 	if ( INewlib )
 	{	
 		DropInterface( INewlib );
+
+		INewlib = NULL;
 	}
 
 	if ( NewlibBase )
 	{
 		CloseLibrary( NewlibBase );
+
+		NewlibBase = NULL;
 	}
 
 	// --

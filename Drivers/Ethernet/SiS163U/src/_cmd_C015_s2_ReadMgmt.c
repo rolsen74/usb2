@@ -48,7 +48,7 @@ Cmd_ReadMgmt( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		ioreq->ios2_Req.io_Error = S2ERR_BAD_ARGUMENT;
 		ioreq->ios2_WireError = S2WERR_NULL_POINTER;
 	}
-	else if ( ioreq->ios2_DataLength < 36 )
+	else if ( ioreq->ios2_DataLength < SIS163U_WLAN_HEADER )
 	{
 		ioreq->ios2_Req.io_Error = IOERR_BADLENGTH;
 	}

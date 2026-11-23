@@ -267,11 +267,12 @@ StoreAdapter( struct ProfileDatabase *db, const struct EntryFields *fields, stru
 		return ( "The selected security mode or channel is invalid for this device" );
 	}
 
-	match = WiFi_ProfileAdapter( db, device, unit, FALSE );
+	match = WiFi_ProfileStation( db, device, unit,
+		( ( entry ) && ( WiFi_HasStation( entry->Station ) ) ) ? entry->Station : NULL, FALSE );
 
 	if ( ( match ) && ( match != entry ) )
 	{
-		return ( "That device and unit already exist" );
+		return ( "That adapter already exists" );
 	}
 
 	if ( ! entry )

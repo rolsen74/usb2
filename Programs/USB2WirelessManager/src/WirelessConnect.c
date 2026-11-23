@@ -216,34 +216,6 @@ Wireless_Connect( struct Wireless *wireless, U32 channel )
 	U32 cipher;
 	U32 associationLength;
 
-	if ( ( wireless->Auto ) && ( ! wireless->ScanRT2870 ) &&
-		( wireless->Command->ios2_Req.io_Device->dd_Library.lib_Version == 1 ) &&
-		( wireless->Command->ios2_Req.io_Device->dd_Library.lib_Revision < 4 ) )
-	{
-		fprintf( stderr, "AUTO needs usb2rtl8188.device 1.4 or later.\n" );
-
-		return ( WIRELESS_IO_ERROR );
-	}
-
-	if ( ( wireless->UseSAE ) && ( ! wireless->ScanRT2870 ) &&
-		( wireless->Command->ios2_Req.io_Device->dd_Library.lib_Version == 1 ) &&
-		( wireless->Command->ios2_Req.io_Device->dd_Library.lib_Revision < 2 ) )
-	{
-		fprintf( stderr, "WPA3 needs usb2rtl8188.device 1.2 or later.\n" );
-
-		return ( WIRELESS_IO_ERROR );
-	}
-
-	if ( ( wireless->UseWPA ) &&
-		( wireless->Command->ios2_Req.io_Device->dd_Library.lib_Version == 1 ) &&
-		( wireless->Command->ios2_Req.io_Device->dd_Library.lib_Revision < ( wireless->ScanRT2870 ? 22 : 3 ) ) )
-	{
-		fprintf( stderr, "WPA needs %s %s or later.\n", wireless->DeviceName,
-			wireless->ScanRT2870 ? "1.22" : "1.3" );
-
-		return ( WIRELESS_IO_ERROR );
-	}
-
 	cipher = ( wireless->WPA2 || wireless->UseSAE ) ? S2ENC_CCMP : S2ENC_NONE;
 
 	if ( wireless->UseWPA )

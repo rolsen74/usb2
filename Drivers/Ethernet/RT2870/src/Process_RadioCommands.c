@@ -36,7 +36,7 @@ ServiceReceive( struct EthernetUnit *unit )
 
 	ObtainSemaphore( & unit->unit_CommandLock );
 
-	SignalSana2Event( unit, S2EVENT_ERROR | S2EVENT_HARDWARE );
+	Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE, FALSE );
 
 	request = (PTR) GetHead( & unit->unit_Pending );
 
@@ -108,7 +108,8 @@ Process_RadioCommands( struct EthernetUnit *unit )
 			break;
 		}
 
-		if ( ( request->ios2_Req.io_Command == S2_READMGMT ) || ( request->ios2_Req.io_Command == CMD_READ ) )
+		if ( ( request->ios2_Req.io_Command == S2_READMGMT ) || ( request->ios2_Req.io_Command == CMD_READ ) ||
+			( request->ios2_Req.io_Command == S2_READORPHAN ) )
 		{
 			receive = TRUE;
 		}

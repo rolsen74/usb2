@@ -31,14 +31,26 @@ __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 
 		ioreq->io_Error = 0;
 
-		if ( unit->unit_Detached )
+		if ( ioreq->io_Message.mn_Length < sizeof( struct IOStdReq ) )
+		{
+			ioreq->io_Error = IOERR_BADLENGTH;
+
+			ReplyMsg( (PTR) ioreq );
+
+			continue;
+		}
+
+		if ( ioreq->io_Message.mn_Length >= sizeof( struct IOExtPar ) )
 		{
 			pario = (PTR) ioreq;
-			pario->IOPar.io_Actual = 0;
-			pario->IOPar.io_Error = ParErr_NotOpen;
 			pario->io_Status = 0;
+		}
 
-			ReplyMsg( (PTR) pario );
+		if ( ( unit->unit_Detached ) || ( ioreq->io_Flags & IOPARF_ABORT ) )
+		{
+			ioreq->io_Error = ( ioreq->io_Flags & IOPARF_ABORT ) ? IOERR_ABORTED : ParErr_NotOpen;
+
+			ReplyMsg( (PTR) ioreq );
 
 			continue;
 		}
@@ -65,7 +77,16 @@ __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 			{
 				USBERROR( "BeginIO : PDCMD_QUERY" );
 
-				Cmd_PDQuery( unit, (PTR) ioreq );
+				if ( ioreq->io_Message.mn_Length >= sizeof( struct IOExtPar ) )
+				{
+					Cmd_PDQuery( unit, (PTR) ioreq );
+				}
+				else
+				{
+					ioreq->io_Error = IOERR_BADLENGTH;
+
+					ReplyMsg( (PTR) ioreq );
+				}
 
 				break;
 			}

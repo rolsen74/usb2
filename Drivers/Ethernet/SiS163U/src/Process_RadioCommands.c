@@ -39,6 +39,17 @@ Process_RadioCommands( struct EthernetUnit *unit )
 			next = (PTR) GetHead( & unit->unit_Pending );
 		}
 
+		else if ( ioreq->ios2_Req.io_Command == S2_WRITEMGMT )
+		{
+			Remove( (PTR) ioreq );
+
+			SiS163U_WriteMgmt( unit, ioreq );
+
+			ReplyMsg( (PTR) ioreq );
+
+			next = (PTR) GetHead( & unit->unit_Pending );
+		}
+
 		ioreq = next;
 	}
 

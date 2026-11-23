@@ -16,16 +16,21 @@ SEC_CODE struct SerialUnit *Serial_Alloc( struct SerialContext *ctx, struct USB2
 struct SerialUnit *unit;
 struct USB2_Interface *data;
 
+const char *stage;
 U32 control_nr;
 U32 data_nr;
 U32 alt;
 U32 index;
 ULONG number;
+S32 error;
 
 	unit = AllocVecTags( sizeof( struct SerialUnit ), AVT_Clear, 0, TAG_END );
 
 	if ( ! unit )
 	{
+		DebugPrintF( "USB2 serial: %04lX:%04lX could not allocate unit\n",
+			(U32) msg->VendorID, (U32) msg->DeviceID );
+
 		return ( NULL );
 	}
 
@@ -35,13 +40,20 @@ ULONG number;
 	data_nr = control_nr;
 	alt = 0;
 
+	DebugPrintF( "USB2 serial: probing %04lX:%04lX interface %lu (%s)\n",
+		(U32) msg->VendorID, (U32) msg->DeviceID, control_nr, unit->ACM ? "CDC ACM" : "PL2303" );
+
 	NewList( & unit->ReadList );
 	NewList( & unit->WriteList );
+
+	stage = "parse CDC ACM descriptors";
 
 	if ( ( unit->ACM ) && ( ! Serial_ACM_Parse( unit, & data_nr, & alt ) ) )
 	{
 		goto bailout;
 	}
+
+	stage = "allocate serial message ports";
 
 	if ( ! ( unit->BeginPort = AllocSysObjectTags( ASOT_PORT, TAG_END ) ) )
 	{
@@ -52,6 +64,8 @@ ULONG number;
 	{
 		goto bailout;
 	}
+
+	stage = "register USB interface";
 
 	unit->Register = USB2_Reg_RegisterTags(
 		USB2Tag_Reg_DriverMessage, msg,
@@ -65,6 +79,7 @@ ULONG number;
 	}
 
 	unit->Control = unit->Register->Res_Control;
+	stage = "obtain control endpoint";
 
 	if ( ( ! unit->Control ) || ( ! unit->Control->SetupData ) ||
 		( ! unit->Control->IORequests ) || ( ! unit->Control->IORequests[0] ) )
@@ -74,6 +89,8 @@ ULONG number;
 
 	if ( unit->ACM )
 	{
+		stage = "find CDC data interface";
+
 		for( index = 0; ; index++ )
 		{
 			data = USB2_Ifc_FindTags(
@@ -94,12 +111,15 @@ ULONG number;
 			}
 		}
 
+		stage = "claim CDC data interface";
+
 		if ( ! USB2_Ifc_Claim( unit->Register, data ) )
 		{
 			goto bailout;
 		}
 
 		unit->DataInterface = data;
+		stage = "select CDC data alternate setting";
 
 		if ( ( alt ) && ( ! USB2_Ifc_SetAlt( unit->Register, data, alt ) ) )
 		{
@@ -108,6 +128,8 @@ ULONG number;
 
 		unit->DataAlt = alt;
 	}
+
+	stage = "obtain bulk IN endpoint";
 
 	unit->BulkIn = USB2_EPRes_ObtainTags( unit->Register,
 		USB2Tag_EPRes_InterfaceNr, data_nr,
@@ -123,6 +145,8 @@ ULONG number;
 		goto bailout;
 	}
 
+	stage = "obtain bulk OUT endpoint";
+
 	unit->BulkOut = USB2_EPRes_ObtainTags( unit->Register,
 		USB2Tag_EPRes_InterfaceNr, data_nr,
 		USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
@@ -134,6 +158,8 @@ ULONG number;
 	{
 		goto bailout;
 	}
+
+	stage = "obtain interrupt IN endpoint";
 
 	unit->Interrupt = USB2_EPRes_ObtainTags( unit->Register,
 		USB2Tag_EPRes_InterfaceNr, control_nr,
@@ -148,18 +174,27 @@ ULONG number;
 		goto bailout;
 	}
 
+	stage = "initialize adapter";
+
 	if ( ! Serial_Startup( ctx, unit ) )
 	{
 		goto bailout;
 	}
 
 	unit->PortRequest.io_Message.mn_Length = sizeof( unit->PortRequest );
+	stage = "open " USB2_SERIAL_DEVICE " backend";
 
-	if ( OpenDevice( USB2_SERIAL_DEVICE, USB2_PORT_BACKEND_UNIT, & unit->PortRequest, 0 ) )
+	error = OpenDevice( USB2_SERIAL_DEVICE, USB2_PORT_BACKEND_UNIT, & unit->PortRequest, 0 );
+
+	if ( error )
 	{
+		DebugPrintF( "USB2 serial: OpenDevice returned %ld\n", error );
+
 		unit->PortRequest.io_Device = NULL;
 		goto bailout;
 	}
+
+	stage = "get " USB2_SERIAL_DEVICE " interface";
 
 	unit->PortInterface = (PTR) GetInterface( (PTR) unit->PortRequest.io_Device, "main", 1, NULL );
 
@@ -168,6 +203,8 @@ ULONG number;
 		goto bailout;
 	}
 
+	stage = "register serial unit";
+
 	unit->PortUnit = unit->PortInterface->Register( unit->BeginPort, unit->AbortPort, & number );
 
 	if ( ! unit->PortUnit )
@@ -175,9 +212,15 @@ ULONG number;
 		goto bailout;
 	}
 
+	DebugPrintF( "USB2 serial: %04lX:%04lX registered " USB2_SERIAL_DEVICE " unit %lu\n",
+		(U32) msg->VendorID, (U32) msg->DeviceID, number );
+
 	return ( unit );
 
 bailout:
+	DebugPrintF( "USB2 serial: %04lX:%04lX interface %lu could not %s\n",
+		(U32) msg->VendorID, (U32) msg->DeviceID, control_nr, stage );
+
 	Serial_Free( ctx, unit );
 
 	return ( NULL );

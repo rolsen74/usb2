@@ -223,7 +223,7 @@ ConnectBluetoothInput( struct IORequest *request, ULONG unit, const char *addres
 			break;
 
 		case BT_HCI_UNSUPPORTED:
-			Printf( "INPUT requires Bluetooth.Driver 1.18 and a Classic Basic Mode L2CAP connection.\n" );
+			Printf( "INPUT requires cls_Bluetooth.Driver 1.18 and a Classic Basic Mode L2CAP connection.\n" );
 
 			break;
 

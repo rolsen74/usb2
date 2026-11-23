@@ -13,7 +13,7 @@
 // --
 
 void
-Resources_Free( struct PrinterBase *devBase UNUSED )
+Resources_Free( void )
 {
 	USBDEBUG( "Printer : Resources_Free" );
 

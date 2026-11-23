@@ -13,44 +13,32 @@
 // --
 
 static void
-__myProcess_Main_Shutdown( struct PrinterUnit *unit )
+Finish_Job( struct PrinterUnit *unit )
 {
-	U8 data[1];
-
-	USBERROR( "Printer : Got shutdown signal" );
-
-	if ( unit->unit_Shutdown )
+	if ( ! unit->unit_PortInterface->JobClosing( unit->unit_PortUnit ) )
 	{
-		USBERROR( "Printer : Shutdown allready inprocess" );
-
-		goto bailout;
+		return;
 	}
 
-	// Mark that we have started the shutdown process
-	unit->unit_Shutdown = TRUE;
-
-	// Flush Buffer, if in buffer mode
 	if ( unit->unit_Buffer_Size )
 	{
-		USBERROR( "Last byte : $%02lx (%lu)", (U32) unit->unit_LastByteSend, (U32) unit->unit_LastByteSend );
-
-		if (( unit->unit_LastByteSend != '\f' ) && ( ! unit->unit_Detached ))
-		{
-			data[0] = '\f';
-
-			Buffer_Write( unit, data, 1 );
-		}
-
 		Buffer_Flush( unit );
-
-		Buffer_Schedule( unit );
 	}
-	else
+
+	if ( ( unit->unit_USB_IOReq_ActiveCount ) || ( unit->unit_PAR_IOReq_WaitingCount ) ||
+		( unit->unit_Buffer_WaitingCount ) )
 	{
-		Direct_Schedule( unit );
+		return;
 	}
 
-bailout:
+	if ( ( ! unit->unit_Dot4_Active ) && ( unit->unit_JobHasData ) && ( unit->unit_LastByteSend != '\f' ) )
+	{
+		Send_FormFeed( unit );
+	}
 
-	return;
+	unit->unit_JobHasData = FALSE;
+
+	unit->unit_PortInterface->FinishJob( unit->unit_PortUnit );
 }
+
+// --

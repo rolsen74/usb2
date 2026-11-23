@@ -11,10 +11,6 @@
 
 // --
 
-#define DRIVER_NAME "Audio.Driver"
-
-// --
-
 struct Library *SysBase = NULL;
 struct ExecIFace *IExec = NULL;
 struct USB2IFace *IUSB2 = NULL;
@@ -78,7 +74,7 @@ static USED const struct Resident driver_res =
 	AUDIO_DRIVER_VERSION,
 	NT_LIBRARY,
 	0,
-	(STR) DRIVER_NAME,
+	(STR) AUDIO_DRIVER_NAME,
 	(STR) AUDIO_DRIVER_LABEL,
 	(PTR) Driver_Init
 };

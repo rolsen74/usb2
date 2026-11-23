@@ -15,9 +15,49 @@
 static void
 __myProcess_CleanupDevice( struct PrinterUnit *unit )
 {
+	struct USB2_IORequest *usbio;
+	struct IOStdReq *request;
+
+	U32 index;
+
 	USBERROR( "Printer : __myProcess_CleanupDevice" );
 
-	if ( unit->unit_Dot4_Ready && ! unit->unit_Detached )
+	for( index = 0; index < NR_of_TXs; index++ )
+	{
+		usbio = unit->unit_Bulk_Tx_Active[index];
+
+		if ( usbio )
+		{
+			AbortIO( (PTR) usbio );
+		}
+	}
+
+	for( index = 0; index < NR_of_TXs; index++ )
+	{
+		usbio = unit->unit_Bulk_Tx_Active[index];
+
+		if ( ! usbio )
+		{
+			continue;
+		}
+
+		WaitIO( (PTR) usbio );
+
+		if ( unit->unit_Buffer_Size )
+		{
+			FreeVec( usbio->io_UserData );
+		}
+		else
+		{
+			request = usbio->io_UserData;
+			request->io_Actual = usbio->io_Actual;
+			request->io_Error = ( request->io_Flags & IOPARF_ABORT ) ? IOERR_ABORTED : ParErr_NotOpen;
+
+			ReplyMsg( (PTR) request );
+		}
+	}
+
+	if ( ( unit->unit_Dot4_Ready ) && ( ! unit->unit_Detached ) )
 	{
 		Dot4_Shutdown( unit );
 	}
@@ -29,15 +69,16 @@ __myProcess_CleanupDevice( struct PrinterUnit *unit )
 		unit->unit_Bulk_Rx_Resource = NULL;
 	}
 
-	#if 1
-	// Unregister will free EPRes, so this is just for testing
 	if ( unit->unit_Bulk_Tx_Resource )
 	{
+		while( RemHead( unit->unit_USB_IOReq_FreeList ) )
+		{
+		}
+
 		USB2_EPRes_Release( unit->unit_Bulk_Tx_Resource );
 
 		unit->unit_Bulk_Tx_Resource = NULL;
 	}
-	#endif
 
 	if ( unit->unit_USB_Register )
 	{

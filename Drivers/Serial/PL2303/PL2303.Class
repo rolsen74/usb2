@@ -1,7 +1,0 @@
-# PL2303 USB serial adapter
-# Device ID matching is performed by the USB2 stack before launching the driver.
-
-TYPE Interface
-TITLE "PL2303 Serial"
-DRIVER "PL2303.Driver"
-DEVICE 0x067b:0x2303

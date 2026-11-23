@@ -35,7 +35,7 @@ struct AudioDriverBase *driver;
 	}
 
 	driver->Library.lib_Node.ln_Type = NT_LIBRARY;
-	driver->Library.lib_Node.ln_Name = (STR) "Audio.Driver";
+	driver->Library.lib_Node.ln_Name = (STR) AUDIO_DRIVER_NAME;
 	driver->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
 	driver->Library.lib_Version = AUDIO_DRIVER_VERSION;
 	driver->Library.lib_Revision = AUDIO_DRIVER_REVISION;
@@ -45,7 +45,7 @@ struct AudioDriverBase *driver;
 
 	AddLibrary( (PTR) driver );
 
-	AUDIO_TRACE( "Audio.Driver loaded\n" );
+	AUDIO_TRACE( AUDIO_DRIVER_NAME " loaded\n" );
 
 	return ( driver );
 }

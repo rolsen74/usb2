@@ -38,25 +38,7 @@ UpdateThroughput( struct devUnit *unit, U32 sent, U32 received )
 
 		IExec->Forbid();
 
-		if ( SANA2_SAMPLE_HAS( stats, s2ts_EndTime ) )
-		{
-			stats->s2ts_EndTime = now;
-		}
-
-		if ( SANA2_SAMPLE_HAS( stats, s2ts_BytesSent ) )
-		{
-			stats->s2ts_BytesSent += sent;
-		}
-
-		if ( SANA2_SAMPLE_HAS( stats, s2ts_BytesReceived ) )
-		{
-			stats->s2ts_BytesReceived += received;
-		}
-
-		if ( SANA2_SAMPLE_HAS( stats, s2ts_Updates ) )
-		{
-			stats->s2ts_Updates++;
-		}
+		Sana2_AccountThroughput( stats, & now, sent, received );
 
 		if ( ( SANA2_SAMPLE_HAS( stats, s2ts_EndTime ) ) &&
 			( stats->s2ts_NotifyTask ) && ( stats->s2ts_NotifyMask ) )

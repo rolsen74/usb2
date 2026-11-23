@@ -24,7 +24,7 @@ OBJDIR		:= obj
 BINDIR		:= bin
 
 # Install Dir
-INSTALLDIR	:= devs:
+INSTALLDIR	:= libs:usb2/
 
 # Compiler Flags
 CFLAGS		:= -O2
@@ -88,22 +88,22 @@ $(error Unknown Host SYS type: $(HOSTOS).)
 endif
 
 ###########################################################################
-# USB2 printer device
+# USB2 printer class driver
 
 SRCS		+= src/Printer.c
 SRCS		+= src/Resources_Init.c
 SRCS		+= src/Resources_Free.c
-SRCS		+= src/Process_Init_2_Find_Device.c
-SRCS		+= src/Process_Init_3_Setup_Device.c
+SRCS		+= src/Process_Setup_Device.c
 SRCS		+= src/Process_Main.c
+SRCS		+= src/Printer_Abort.c
+SRCS		+= src/FormFeed.c
 SRCS		+= src/Buffer_Schedule.c
 SRCS		+= src/Direct_Schedule.c
-SRCS		+= src/Unit_Startup_USB.c
 SRCS		+= src/Dot4.c
 
 CFLAGS		+= -Isrc -D__USE_INLINE__
 LDFLAGS	:= -nostartfiles -mcrt=newlib
-TARGET		:= usb2printer.device
+TARGET		:= cls_Printer.Driver
 
 ###########################################################################
 # Set Compiler
@@ -136,20 +136,16 @@ endif
 # 
 
 SRCS		+= src/Debug.c
-SRCS		+= src/Device.c
+SRCS		+= src/Driver_Library.c
 
 SRCS		+= src/Process.c
 
-SRCS		+= src/Unit_Alloc.c
-SRCS		+= src/Unit_Free.c
-SRCS		+= src/Unit_Startup.c
 
 SRCS		+= src/Buffer_Flush.c
 SRCS		+= src/Buffer_Write.c
 
 SRCS		+= src/_cmd_0003_Write_Buffer.c
 SRCS		+= src/_cmd_0003_Write_Direct.c
-SRCS		+= src/_cmd_4000_DeviceQuery.c
 
 ###########################################################################
 
@@ -184,7 +180,7 @@ clean:
 ###############################################################################
 
 install:
-	copy $(BINDIR)/$(TARGET) $(INSTALLDIR)
+	$(COPY) $(BINDIR)/$(TARGET) cls_Printer.Class $(INSTALLDIR)
 
 ###############################################################################
 

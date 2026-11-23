@@ -18,34 +18,7 @@ Cmd_GetCryptTypes( struct EthernetUnit *unit UNUSED, struct IOSana2Req *ioreq )
 {
 	static const U8 types[] = { S2ENC_NONE };
 
-	U8 *result;
-	U32 count;
-
-	ioreq->ios2_DataLength = 0;
-	ioreq->ios2_StatData = NULL;
-
-	if ( ! ioreq->ios2_Data )
-	{
-		ioreq->ios2_Req.io_Error = S2ERR_BAD_ARGUMENT;
-		ioreq->ios2_WireError = S2WERR_NULL_POINTER;
-
-		return;
-	}
-
-	count = sizeof( types );
-	result = AllocPooled( ioreq->ios2_Data, count );
-
-	if ( ! result )
-	{
-		ioreq->ios2_Req.io_Error = S2ERR_NO_RESOURCES;
-
-		return;
-	}
-
-	memcpy( result, types, count );
-
-	ioreq->ios2_DataLength = count;
-	ioreq->ios2_StatData = result;
+	Sana2_GetCryptTypes( ioreq, types, sizeof( types ) );
 }
 
 // --

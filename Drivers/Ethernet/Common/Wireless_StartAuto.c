@@ -27,7 +27,7 @@ Wireless_StartAuto( U32 adapter, U32 unit )
 		return;
 	}
 
-	if ( ( base->lib_Version > USB2WIFI_VERSION ) || ( base->lib_Revision >= USB2WIFI_STARTUP_REVISION ) )
+	if ( ( base->lib_Version > USB2WIFI_VERSION ) || ( base->lib_Revision >= USB2WIFI_SHARED_ETH_REVISION ) )
 	{
 		wifi = (struct USB2WiFiIFace *) GetInterface( base, "main", 1, NULL );
 
@@ -37,6 +37,10 @@ Wireless_StartAuto( U32 adapter, U32 unit )
 
 			DropInterface( (struct Interface *) wifi );
 		}
+	}
+	else
+	{
+		DebugPrintF( "USB2 Wi-Fi: install LIBS:" USB2WIFI_NAME " 1.27 or later for automatic connection.\n" );
 	}
 
 	CloseLibrary( base );

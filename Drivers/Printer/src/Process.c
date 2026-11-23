@@ -18,75 +18,123 @@
 
 // --
 
-void Process_Main( struct PrinterUnit *unit );
-
-void
-Printer_Process_Entry( void )
+U32
+Printer_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg )
 {
-	struct TaskStartMsg *msg;
 	struct PrinterUnit *unit;
-	struct Task *parent;
-	struct Task *self;
+	struct IORequest request;
 
-	U32 mask;
-	S32 stat;
+	const char *stage;
+	U8 protocol;
+	S32 opened;
+	S32 registered;
 
-	USBERROR( "Printer : Printer_Process_Entry : Enter" );
-
-	self	= FindTask( NULL );
-
-	msg		= (PTR) self->tc_UserData;
-	parent	= msg->Parent;
-	mask	= msg->Mask;
-	unit	= msg->Unit;
-
-	// --
-
-	unit->unit_TaskState = TASK_State_Starting;
-
-	stat = __myProcess_Init( unit );
-
-	if ( stat )
+	if ( ( ! msg ) || ( ! msg->IUSB2 ) || ( ! msg->Interface ) || ( ! msg->InterfaceDescriptor ) ||
+		( msg->InterfaceDescriptor->InterfaceClass != USBCLASS_Printer ) ||
+		( msg->InterfaceDescriptor->InterfaceSubClass != USBPRT_SUBCLASS_Printer ) )
 	{
-		unit->unit_TaskAdr = self;
-
-		msg->Result = TRUE;
-
-		Signal( parent, mask );
-
-		// --
-
-		unit->unit_TaskState = TASK_State_Running;
-
-		Process_Main( unit );
-
-		unit->unit_TaskState = TASK_State_Stopping;
-
-		// --
-
-		parent	= unit->unit_ExitParent;
-		mask	= unit->unit_ExitMask;
-
-		unit->unit_TaskAdr = NULL;
+		return ( FALSE );
 	}
 
-	__myProcess_Free( unit );
+	protocol = msg->InterfaceDescriptor->InterfaceProtocol;
 
-	// --
-
-	Disable();
-
-	unit->unit_TaskState = TASK_State_Stopped;
-
-	USBERROR( "Printer : Printer_Process_Entry : Leave" );
-
-	// --
-	// Parent can be NULL
-
-	if ( parent )
+	if ( ( protocol < USBPRT_PROTOCOL_UNIDIRECTIONAL ) || ( protocol > USBPRT_PROTOCOL_IEEE1284_4 ) )
 	{
-		Signal( parent, mask );
+		return ( FALSE );
 	}
+
+	IUSB2 = msg->IUSB2;
+	opened = FALSE;
+	registered = FALSE;
+	stage = "allocate unit";
+
+	unit = AllocVecTags( sizeof( *unit ), AVT_Clear, 0, TAG_END );
+
+	if ( ! unit )
+	{
+		goto bailout;
+	}
+
+	unit->unit_USB_Interface = msg->Interface;
+	unit->unit_Dot4_Active = protocol == USBPRT_PROTOCOL_IEEE1284_4;
+	stage = "open " USB2_PRINTER_DEVICE;
+
+	memset( & request, 0, sizeof( request ) );
+
+	request.io_Message.mn_Length = sizeof( request );
+
+	if ( OpenDevice( USB2_PRINTER_DEVICE, USB2_PORT_BACKEND_UNIT, & request, 0 ) )
+	{
+		goto bailout;
+	}
+
+	opened = TRUE;
+	stage = "obtain printer registration interface";
+
+	unit->unit_PortInterface = (PTR) GetInterface( (PTR) request.io_Device, "main", 1, NULL );
+
+	if ( ! unit->unit_PortInterface )
+	{
+		goto bailout;
+	}
+
+	stage = "initialize printer endpoints";
+
+	if ( ! __myProcess_Init( unit, msg ) )
+	{
+		goto bailout;
+	}
+
+	stage = "register printer unit";
+
+	unit->unit_PortUnit = unit->unit_PortInterface->Register(
+		unit->unit_PRT_Begin_MsgPort, unit->unit_PRT_Abort_MsgPort, & unit->unit_UnitNr );
+
+	if ( ! unit->unit_PortUnit )
+	{
+		goto bailout;
+	}
+
+	registered = TRUE;
+
+	__myProcess_1_Get_Config( unit );
+
+	DebugPrintF( "USB2 printer: %04lX:%04lX registered " USB2_PRINTER_DEVICE " unit %lu\n",
+		(ULONG) msg->VendorID, (ULONG) msg->DeviceID, unit->unit_UnitNr );
+
+	Process_Main( unit );
+
+bailout:
+
+	if ( ! registered )
+	{
+		DebugPrintF( "USB2 printer: %04lX:%04lX could not %s\n",
+			(ULONG) msg->VendorID, (ULONG) msg->DeviceID, stage );
+	}
+
+	if ( unit )
+	{
+		if ( unit->unit_PortUnit )
+		{
+			unit->unit_PortInterface->Unregister( unit->unit_PortUnit );
+		}
+
+		__myProcess_Free( unit );
+
+		if ( unit->unit_PortInterface )
+		{
+			DropInterface( (PTR) unit->unit_PortInterface );
+		}
+
+		FreeVec( unit );
+	}
+
+	if ( opened )
+	{
+		CloseDevice( & request );
+	}
+
+	return ( registered );
 }
 
 // --

@@ -13,14 +13,14 @@
 
 // --
 
-#define DEVNAME		"usb2printer.device"
+#define DEVNAME		"cls_Printer.Driver"
 
 #define VERSION		1
-#define REVISION	1
-#define DATE		"27.8.2025"
-#define VERS		DEVNAME " 1.1"
-#define VSTRING		DEVNAME " 1.1 (" DATE ")\r\n"
-#define VERSTAG		"\0$VER: " DEVNAME " 1.1 (" DATE ")"
+#define REVISION	4
+#define DATE		"22.11.2026"
+#define VERS		DEVNAME " 1.4"
+#define VSTRING		DEVNAME " 1.4 (" DATE ")\r\n"
+#define VERSTAG		"\0$VER: " DEVNAME " 1.4 (" DATE ")"
 
 // --
 

@@ -37,10 +37,8 @@ extern struct List		IORequestGUIList;
 
 // --
 // Prefs.c
-extern enum SCRTYPE		Prefs_ScrType;
-extern U32				Prefs_ScrMode;
-extern S32				Prefs_ScrWidth;
-extern S32				Prefs_ScrHeight;
+extern struct ScreenPrefs Prefs_Screen;
+extern U32 Prefs_WindowBits;
 
 // --
 // USB.c
@@ -48,6 +46,7 @@ extern U32				USBNotifyBit;
 
 // --
 // USB2Analyzer.c
+extern S32				Restart;
 extern S32				Running;
 
 #endif

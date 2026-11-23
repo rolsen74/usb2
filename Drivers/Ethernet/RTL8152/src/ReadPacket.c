@@ -24,6 +24,7 @@ ReadPacket( struct devUnit *unit, U8 *data, U32 length )
 	U32 header;
 	U32 old_length;
 	U8 old_flags;
+	S32 typed;
 
 	packet_type = ( (U32) data[12] << 8 ) | data[13];
 	flags = 0;
@@ -39,7 +40,8 @@ ReadPacket( struct devUnit *unit, U8 *data, U32 length )
 	}
 	else if ( IS_MULTICAST( data ) )
 	{
-		if ( ! FindMulticastAddress( unit, data ) )
+		if ( ( ! Sana2_MulticastMatch( & unit->unit_MultiCastList, data ) ) &&
+			( ! Sana2_MulticastMatch( & unit->unit_MulticastRanges, data ) ) )
 		{
 			unit->unit_MultiCastRejects++;
 
@@ -86,9 +88,13 @@ ReadPacket( struct devUnit *unit, U8 *data, U32 length )
 		ioreq = (PTR) IExec->GetSucc( (PTR) ioreq );
 	}
 
-	if ( ! ioreq )
+	typed = ioreq != NULL;
+
+	if ( ! typed )
 	{
 		unit->unit_UnknownTypesReceived++;
+
+		Sana2_AccountType( & unit->unit_TrackedTypes, packet_type, length - 14, TRUE, TRUE );
 
 		if ( ! orphan )
 		{
@@ -115,10 +121,19 @@ ReadPacket( struct devUnit *unit, U8 *data, U32 length )
 
 	if ( ! Copy_To_Buffer( unit, ioreq, data + header ) )
 	{
-		CheckEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF );
+		Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF, TRUE );
 
 		ioreq->ios2_Req.io_Error = S2ERR_NO_RESOURCES;
 		ioreq->ios2_WireError = S2WERR_BUFF_ERROR;
+
+		if ( typed )
+		{
+			Sana2_AccountType( & unit->unit_TrackedTypes, packet_type, length - 14, TRUE, TRUE );
+		}
+	}
+	else if ( typed )
+	{
+		Sana2_AccountType( & unit->unit_TrackedTypes, packet_type, length - 14, TRUE, FALSE );
 	}
 
 	IExec->ReplyMsg( (PTR) ioreq );

@@ -19,8 +19,8 @@ make -C Drivers/Audio
 make -C Drivers/Audio/Test
 ```
 
-Install the current USB2 stack and copy `Audio.Driver` and `Audio.Class` to
-`LIBS:USB2/`. Reboot after installing `Audio.Class` so the USB2 stack
+Install the current USB2 stack and copy `cls_Audio.Driver` and `cls_Audio.Class` to
+`LIBS:USB2/`. Reboot after installing `cls_Audio.Class` so the USB2 stack
 loads the class rule at startup. The archive places `USB2AudioTest` in
 `Tools/`. Stop the webcam preview before testing the microphone on the same
 EHCI controller.
@@ -60,13 +60,13 @@ samples.
 
 ## USB Audio Class 2.0
 
-Audio.Driver 1.2 adds experimental UAC2 capture and playback for mono and
+cls_Audio.Driver 1.2 adds experimental UAC2 capture and playback for mono and
 stereo PCM16. The driver uses the current rate reported by the stream's
 directly connected Clock Source. Playback requires a synchronous or adaptive
 endpoint without feedback. Clock selectors, rate switching, UAC2 gain
 controls, and wider PCM formats are outside this initial support.
 
-Install both the updated `Audio.Class` and `Audio.Driver` and reboot.
+Install both the updated `cls_Audio.Class` and `cls_Audio.Driver` and reboot.
 Use `USB2AudioTest PLAY` for playback or `USB2AudioTest` for capture.
 UAC2 has passed descriptor tests and awaits hardware testing.
 

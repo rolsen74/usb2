@@ -75,7 +75,7 @@ backend driver. Hardware testing is pending.
 
 The Bluetooth USB class driver registers compatible HCI controllers with
 `bluetooth2.device` when they are connected and removes them on detach.
-Install `Bluetooth.Class` and `Bluetooth.Driver` in `LIBS:USB2/` and load
+Install `cls_Bluetooth.Class` and `cls_Bluetooth.Driver` in `LIBS:USB2/` and load
 `bluetooth2.kmod` at boot. The module comes from the companion
 [Bluetooth2 repository](https://github.com/rolsen74/bt2).
 
@@ -163,18 +163,20 @@ usb2/
 │   └── usb2printer.device
 ├── Libs/
 │   ├── USB2/
-│   │   ├── Audio.Class
-│   │   ├── Audio.Driver
-│   │   ├── Bluetooth.Class
-│   │   ├── Bluetooth.Driver
+│   │   ├── cls_Audio.Class
+│   │   ├── cls_Audio.Driver
+│   │   ├── cls_Bluetooth.Class
+│   │   ├── cls_Bluetooth.Driver
 │   │   ├── CDCACM.Class
 │   │   ├── PL2303.Class
 │   │   ├── PL2303.Driver
-│   │   ├── MTP.Class
-│   │   ├── PTP.Class
-│   │   ├── PTP.Driver
-│   │   ├── Video.Class
-│   │   └── Video.Driver
+│   │   ├── cls_MTP.Class
+│   │   ├── cls_PTP.Class
+│   │   ├── cls_PTP.Driver
+│   │   ├── cls_SmartCard.Class
+│   │   ├── cls_SmartCard.Driver
+│   │   ├── cls_Video.Class
+│   │   └── cls_Video.Driver
 │   ├── usb2wifi.library
 │   ├── usb2wpa.library
 │   ├── usb2wpa2.library

@@ -16,6 +16,8 @@
 void
 Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 {
+	struct BufferManagement *opener;
+
 	S32 pending;
 
 	pending = FALSE;
@@ -38,7 +40,7 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		switch( ioreq->ios2_Req.io_Command )
 		{
 			case CMD_INVALID:
-				Cmd_Invalid( unit, ioreq );
+				ioreq->ios2_Req.io_Error = IOERR_NOCMD;
 
 				break;
 
@@ -73,12 +75,8 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 				break;
 
 			case S2_ADDMULTICASTADDRESS:
-				Cmd_AddMultiCastAddress( unit, ioreq );
-
-				break;
-
 			case S2_DELMULTICASTADDRESS:
-				Cmd_DelMultiCastAddress( unit, ioreq );
+				Sana2_MulticastRange( & unit->unit_Multicast, ioreq );
 
 				break;
 
@@ -93,12 +91,26 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 				break;
 
 			case S2_GETSPECIALSTATS:
-				Cmd_GetSpecialStats( unit, ioreq );
+				Sana2_GetSpecialStats( ioreq, NULL );
 
 				break;
 
 			case S2_GETGLOBALSTATS:
-				Cmd_GetGlobalStats( unit, ioreq );
+				Sana2_GetPacketStats( ioreq, unit->unit_PacketsRx, unit->unit_PacketsTx, 0,
+					unit->unit_UnknownPackets );
+
+				break;
+
+			case S2_ADDMULTICASTADDRESSES:
+			case S2_DELMULTICASTADDRESSES:
+				Sana2_MulticastRange( & unit->unit_MulticastRanges, ioreq );
+
+				break;
+
+			case S2_TRACKTYPE:
+			case S2_UNTRACKTYPE:
+			case S2_GETTYPESTATS:
+				Sana2_TrackType( & unit->unit_TrackedTypes, ioreq );
 
 				break;
 
@@ -123,17 +135,28 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 				break;
 
 			case S2_GETEXTENDEDGLOBALSTATS:
-				Cmd_GetExtendedGlobalStats( unit, ioreq );
+				Sana2_GetExtendedPacketStats( ioreq, unit->unit_PacketsRx, unit->unit_PacketsTx, 0,
+					unit->unit_UnknownPackets, FALSE );
 
 				break;
 
 			case S2_SAMPLE_THROUGHPUT:
-				pending = Cmd_SampleThroughput( unit, ioreq );
+				if ( ! ioreq->ios2_BufferManagement )
+				{
+					ioreq->ios2_Req.io_Error = S2ERR_BAD_ARGUMENT;
+					ioreq->ios2_WireError = S2WERR_NULL_POINTER;
+				}
+				else
+				{
+					pending = Sana2_QueueThroughput( & unit->unit_Pending, ioreq, NULL, FALSE );
+				}
 
 				break;
 
 			case S2_SANA2HOOK:
-				Cmd_Sana2Hook( unit, ioreq );
+				opener = ioreq->ios2_BufferManagement;
+
+				Sana2_SetCopyHook( ioreq, opener ? & opener->bm_CopyHook : NULL, FALSE );
 
 				break;
 
@@ -165,7 +188,7 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 				break;
 
 			case S2_WRITEMGMT:
-				Cmd_WriteMgmt( unit, ioreq );
+				pending = Cmd_WriteMgmt( unit, ioreq );
 
 				break;
 
@@ -175,7 +198,7 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 				break;
 
 			default:
-				Cmd_Invalid( unit, ioreq );
+				ioreq->ios2_Req.io_Error = IOERR_NOCMD;
 
 				break;
 		}

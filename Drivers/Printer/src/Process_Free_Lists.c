@@ -16,7 +16,7 @@ static void
 __myProcess_Free_Lists( struct PrinterUnit *unit )
 {
 	struct PrtBuffer *pb;
-	struct IOExtPar *pario;
+	struct IOStdReq *pario;
 
 	USBERROR( "Printer : __myProcess_Free_Lists" );
 
@@ -55,9 +55,8 @@ __myProcess_Free_Lists( struct PrinterUnit *unit )
 
 		while(( pario = (PTR) RemHead( unit->unit_PAR_IOReq_WaitingList )))
 		{
-			pario->IOPar.io_Actual = 0;
-			pario->IOPar.io_Error = ParErr_NotOpen;
-			pario->io_Status = 0;
+			pario->io_Actual = 0;
+			pario->io_Error = ( pario->io_Flags & IOPARF_ABORT ) ? IOERR_ABORTED : ParErr_NotOpen;
 
 			ReplyMsg( (PTR) pario );
 		}

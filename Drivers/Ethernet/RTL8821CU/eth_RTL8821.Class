@@ -1,0 +1,6 @@
+TYPE Interface
+TITLE "RTL8821CU"
+DRIVER "eth_RTL8821.Driver"
+CLASS 0xff
+SUBCLASS 0xff
+DEVICE 0x0bda:0xc820

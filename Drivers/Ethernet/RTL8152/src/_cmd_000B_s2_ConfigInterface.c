@@ -26,7 +26,7 @@ s2_ConfigInterface( struct devUnit *unit, struct IOSana2Req *ioreq )
 	    goto bailout;
     }
 
-	if ( unit->unit_Configured )
+	if ( ( unit->unit_Configured ) && ( unit->unit_Online ) )
     {
 	    ioreq->ios2_Req.io_Error= IOERR_SELFTEST;
 	    ioreq->ios2_WireError   = 0;
@@ -51,7 +51,7 @@ s2_ConfigInterface( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	Schedule_RxIOReq( unit );
 
-	CheckEvent( unit, S2EVENT_ONLINE | S2EVENT_CONFIGCHANGED );
+	Sana2_SignalEvent( & unit->unit_EventsList, S2EVENT_ONLINE | S2EVENT_CONFIGCHANGED, TRUE );
 
 bailout:
 

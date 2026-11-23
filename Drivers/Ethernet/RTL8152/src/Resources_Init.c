@@ -12,8 +12,8 @@
 
 // --
 
-int
-OpenResources( struct devBase *devBase )
+S32
+Resources_Init( void )
 {
 struct ExecBase *ExecBase;
 struct Library *TimerBase;
@@ -25,7 +25,11 @@ int retval;
 	// --
 
     NewlibBase = IExec->OpenLibrary( "newlib.library", 53 );
-    INewlib = IExec->GetInterface( NewlibBase, "main", 1, NULL );
+
+	if ( NewlibBase )
+	{
+	INewlib = IExec->GetInterface( NewlibBase, "main", 1, NULL );
+	}
 
     if ( INewlib == NULL )
     {
@@ -36,7 +40,11 @@ int retval;
 	// --
 
     DOSBase = IExec->OpenLibrary( "dos.library", 53 );
-    IDOS = (APTR)IExec->GetInterface( DOSBase, "main", 1, NULL );
+
+	if ( DOSBase )
+	{
+	IDOS = (APTR)IExec->GetInterface( DOSBase, "main", 1, NULL );
+	}
 
     if ( IDOS == NULL )
     {
@@ -47,7 +55,11 @@ int retval;
 	// --
 
     UtilityBase = IExec->OpenLibrary( "utility.library", 53 );
-    IUtility = (APTR)IExec->GetInterface( UtilityBase, "main", 1, NULL );
+
+	if ( UtilityBase )
+	{
+	IUtility = (APTR)IExec->GetInterface( UtilityBase, "main", 1, NULL );
+	}
 
     if ( IUtility == NULL )
     {
@@ -59,17 +71,17 @@ int retval;
 
 	ExecBase	= (APTR) IExec->Data.LibBase;
 	TimerBase	= (APTR) IExec->FindName( & ExecBase->DeviceList, "timer.device" );
+
+	if ( TimerBase )
+	{
 	ITimer		= (APTR) IExec->GetInterface( TimerBase, "main", 1, NULL );
+	}
 
 	if ( ITimer == NULL )
 	{
 		SHOWMSG( "Error getting Timer Interface" );
 		goto bailout;
 	}
-
-	// --
-
-	IExec->InitSemaphore( & devBase->dev_GlobalLock );
 
 	// --
 

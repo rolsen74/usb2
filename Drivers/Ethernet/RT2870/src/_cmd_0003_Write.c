@@ -93,6 +93,7 @@ Cmd_Write( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	U32 length;
 	U32 type;
 	U32 dhcp;
+	U32 payload_length;
 	U16 info;
 	S32 raw;
 	S32 eapol;
@@ -202,6 +203,7 @@ Cmd_Write( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 
 	frame[30] = type >> 8;
 	frame[31] = type;
+	payload_length = length;
 	length += 32;
 
 	if ( ( info != RT2870_EAPOL_M2 ) && ( info != RT2870_EAPOL_M4 ) &&
@@ -241,6 +243,19 @@ Cmd_Write( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 
 	if ( ! error )
 	{
+		if ( ! eapol )
+		{
+			ObtainSemaphore( & unit->unit_CommandLock );
+
+			unit->unit_PacketsTx++;
+
+			Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, FALSE, FALSE );
+
+			Sana2_UpdateThroughput( & unit->unit_Pending, payload_length + 14, 0 );
+
+			ReleaseSemaphore( & unit->unit_CommandLock );
+		}
+
 		RT2870_ReportDHCP( & unit->unit_DHCPSent, dhcp, "submitted to the radio" );
 	}
 

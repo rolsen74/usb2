@@ -16,10 +16,10 @@
 #include <devices/serial.h>
 #include <interfaces/usb2port.h>
 
-#define SERIAL_DRIVER_NAME "PL2303.Driver"
+#define SERIAL_DRIVER_NAME "ser_PL2303.Driver"
 #define SERIAL_DRIVER_VERSION 1
-#define SERIAL_DRIVER_REVISION 2
-#define SERIAL_DRIVER_ID SERIAL_DRIVER_NAME " 1.2 (21.11.2026)\r\n"
+#define SERIAL_DRIVER_REVISION 3
+#define SERIAL_DRIVER_ID SERIAL_DRIVER_NAME " 1.3 (22.11.2026)\r\n"
 
 #define SERIAL_RX_SIZE 4096
 #define SERIAL_UART_INDEX 8

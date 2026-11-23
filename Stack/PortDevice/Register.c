@@ -22,8 +22,10 @@ PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct M
 
 	U32 index;
 
+	// Exec stores allocation flags alongside the arrival action.
 	if ( ( ! begin ) || ( ! abort ) || ( ! number ) ||
-		( begin->mp_Flags != PA_SIGNAL ) || ( abort->mp_Flags != PA_SIGNAL ) ||
+		( ( begin->mp_Flags & PF_ACTION ) != PA_SIGNAL ) ||
+		( ( abort->mp_Flags & PF_ACTION ) != PA_SIGNAL ) ||
 		( begin == abort ) || ( ! begin->mp_SigTask ) ||
 		( begin->mp_SigTask != abort->mp_SigTask ) ||
 		( begin->mp_SigBit == abort->mp_SigBit ) ||

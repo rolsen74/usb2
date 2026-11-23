@@ -16,7 +16,7 @@ extern struct Interface *INewlib;
 extern struct Library *NewlibBase;
 
 S32
-Resources_Init( struct PrinterBase *devBase UNUSED )
+Resources_Init( void )
 {
 	S32 retval;
 
@@ -28,7 +28,10 @@ Resources_Init( struct PrinterBase *devBase UNUSED )
 
 	NewlibBase = OpenLibrary( "newlib.library", 50 );
 
-	INewlib = GetInterface( NewlibBase, "main", 1, NULL );
+	if ( NewlibBase )
+	{
+		INewlib = GetInterface( NewlibBase, "main", 1, NULL );
+	}
 
 	if ( ! INewlib )
 	{
@@ -41,7 +44,10 @@ Resources_Init( struct PrinterBase *devBase UNUSED )
 
 	DOSBase = OpenLibrary( "dos.library", 50 );
 
-	IDOS = (PTR) GetInterface( (PTR) DOSBase, "main", 1, NULL );
+	if ( DOSBase )
+	{
+		IDOS = (PTR) GetInterface( (PTR) DOSBase, "main", 1, NULL );
+	}
 
 	if ( ! IDOS )
 	{
@@ -54,7 +60,10 @@ Resources_Init( struct PrinterBase *devBase UNUSED )
 
 	UtilityBase = OpenLibrary( "utility.library", 50 );
 
-	IUtility = (PTR) GetInterface( (PTR) UtilityBase, "main", 1, NULL );
+	if ( UtilityBase )
+	{
+		IUtility = (PTR) GetInterface( (PTR) UtilityBase, "main", 1, NULL );
+	}
 
 	if ( ! IUtility )
 	{
@@ -62,17 +71,6 @@ Resources_Init( struct PrinterBase *devBase UNUSED )
 
 		goto bailout;
 	}
-
-	// --
-
-//	InitSemaphore( & devBase->dev_PRT_Semaphore );
-
-	// --
-
-
-
-
-	// --
 
 	retval = TRUE;
 

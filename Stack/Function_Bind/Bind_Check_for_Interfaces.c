@@ -245,98 +245,81 @@ bailout:
 
 // --
 
-SEC_CODE static S32 _Check_Interface( 
-	struct USBBase *usbbase, 
-	struct RealFunctionNode *fn, 
-	struct USB2_InterfaceHeader *ih,
-	struct USB2_ASync *as )
+SEC_CODE static S32
+_Check_Interface( struct USBBase *usbbase, struct RealFunctionNode *fn,
+	struct USB2_InterfaceHeader *ih, struct USB2_ASync *as )
 {
-struct USB2_FktDriverNode *fdn;
-struct USB2_Interface_Desc *ifcdsc;
-S32 retval;
-S32 stat;
+	struct USB2_FktDriverNode *fdn;
+	struct USB2_Interface_Desc *ifcdsc;
+	enum DriverDeviceMatch wanted;
 
-//	USBERROR( "_Check_Interface" );
+	S32 stat;
 
-	retval = FALSE;
-	ifcdsc = ( ih->ih_Active ) ? ih->ih_Active->in_Descriptor : NULL;
+	ifcdsc = ih->ih_Active ? ih->ih_Active->in_Descriptor : NULL;
 
 	if ( ! ifcdsc )
 	{
 		return ( FALSE );
 	}
 
-	fdn = Header_Head( & usbbase->usb_FDriver_Header );
-
-	while( fdn )
+	// Try device-specific classes first, keeping the existing order within each pass.
+	for( wanted = DriverMatch_ID; wanted != DriverMatch_None; wanted-- )
 	{
-		while( fdn->fdn_Type == USB2Val_FDriver_Interface )
+		for( fdn = Header_Head( & usbbase->usb_FDriver_Header ); fdn; fdn = Node_Next( fdn ) )
 		{
-			if ( ( fdn->fdn_VendorID ) &&
-				( fdn->fdn_VendorID != LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ) ) )
+			if ( ( fdn->fdn_Type != USB2Val_FDriver_Interface ) || ( fdn->fdn_Detach ) ||
+				( ( fdn->fdn_Driver_Filename ) && ( ! usbbase->usb_FrontendsReady ) ) )
 			{
-				break;
+				continue;
 			}
 
-			if ( ( fdn->fdn_DeviceID ) &&
-				( fdn->fdn_DeviceID != LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ) ) )
+			if ( Match_Driver_Device( usbbase, fdn, fn->fkt_DeviceDescriptor ) != wanted )
 			{
-				break;
+				continue;
 			}
 
-//			usbbase->usb_IExec->DebugPrintF( "FDN Check Interface : %p\n", fdn );
-
-			if ( fdn->fdn_Detach )
+			#ifdef USB2_BIND_DEBUG
+			if ( ( wanted == DriverMatch_ID ) && ( fdn->fdn_Driver_Filename ) )
 			{
-				USBERROR( "IFC : fdn_Detach" );
-				break;
+				usbbase->usb_IExec->DebugPrintF( "USB2 bind: '%s' ID match, interface %lu %02lX/%02lX/%02lX, filter %lX/%lX/%lX\n",
+					fdn->fdn_Driver_Filename, (U32) ifcdsc->InterfaceNumber, (U32) ifcdsc->InterfaceClass,
+					(U32) ifcdsc->InterfaceSubClass, (U32) ifcdsc->InterfaceProtocol,
+					(U32) fdn->fdn_Class, (U32) fdn->fdn_SubClass, (U32) fdn->fdn_Protocol );
 			}
+			#endif
 
-			if (( fdn->fdn_Class != ifcdsc->InterfaceClass ) && ( fdn->fdn_Class != FDCLASS_Any ))
+			if ( ( ( fdn->fdn_Class != ifcdsc->InterfaceClass ) && ( fdn->fdn_Class != FDCLASS_Any ) ) ||
+				( ( fdn->fdn_SubClass != ifcdsc->InterfaceSubClass ) && ( fdn->fdn_SubClass != FDSUBCLASS_Any ) ) ||
+				( ( fdn->fdn_Protocol != ifcdsc->InterfaceProtocol ) && ( fdn->fdn_Protocol != FDPROTOCOL_Any ) ) )
 			{
-//				USBERROR( "IFC : fdn_Class : %ld : %ld :", fdn->fdn_Class, ifcdsc->InterfaceClass );
-				break;
+				continue;
 			}
-
-			if (( fdn->fdn_SubClass != ifcdsc->InterfaceSubClass ) && ( fdn->fdn_SubClass != FDSUBCLASS_Any ))
-			{
-//				USBERROR( "IFC : fdn_SubClass : %ld : %ld :", fdn->fdn_SubClass, ifcdsc->InterfaceSubClass );
-				break;
-			}
-
-			if (( fdn->fdn_Protocol != ifcdsc->InterfaceProtocol ) && ( fdn->fdn_Protocol != FDPROTOCOL_Any ))
-			{
-//				USBERROR( "IFC : fdn_Protocol : %ld : %ld :", fdn->fdn_Protocol, ifcdsc->InterfaceProtocol );
-				break;
-			}
-
-//			USBDEBUG( "Found Interface [ possible : '%s' ]", (fdn->fdn_Title)?fdn->fdn_Title:"" );
-//			USBERROR( "Found Interface [ possible : '%s' ]", (fdn->fdn_Title)?fdn->fdn_Title:"" );
 
 			stat = _Start_Interface( usbbase, fn, fdn, ih, as );
 
-			if ( myIS_TASKRETURN_ERR( stat ))
+			#ifdef USB2_BIND_DEBUG
+			if ( fdn->fdn_Driver_Filename )
 			{
-//				USBERROR( "Skipping Interface : Stat $%08lx", stat );
-				break;
+				usbbase->usb_IExec->DebugPrintF( "USB2 bind: '%s' interface %lu start result $%08lX\n",
+					fdn->fdn_Driver_Filename, (U32) ifcdsc->InterfaceNumber, (U32) stat );
 			}
+			else if ( ( fdn->fdn_Entry ) && ( fdn->fdn_Title ) )
+			{
+				usbbase->usb_IExec->DebugPrintF( "USB2 bind: '%s' %04lX:%04lX interface %lu start result $%08lX\n",
+					fdn->fdn_Title, (U32) LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ),
+					(U32) LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ),
+					(U32) ifcdsc->InterfaceNumber, (U32) stat );
+			}
+			#endif
 
-//			USBDEBUG( "Found Interface" );
-//			USBERROR( "Found Interface : Stat $%08lx", stat );
-
-			retval = TRUE;
-			break;
+			if ( ! myIS_TASKRETURN_ERR( stat ) )
+			{
+				return ( TRUE );
+			}
 		}
-
-		if ( retval )
-		{
-			break;
-		}
-
-		fdn = Node_Next( fdn );
 	}
 
-	return( retval );
+	return ( FALSE );
 }
 
 // --

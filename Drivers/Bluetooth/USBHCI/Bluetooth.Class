@@ -1,6 +1,0 @@
-TYPE Interface
-TITLE "Bluetooth USB HCI"
-DRIVER "Bluetooth.Driver"
-CLASS 0xe0
-SUBCLASS 0x01
-PROTOCOL 0x01

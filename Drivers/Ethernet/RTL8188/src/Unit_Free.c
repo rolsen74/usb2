@@ -14,43 +14,13 @@
 
 void Unit_Free( struct EthernetUnit *unit )
 {
-	USBDEBUG( "RTL8188 : Unit_Free :" );
+	Sana2_FreeList( & unit->unit_MulticastRanges );
 
-	if ( ! unit )
-	{
-		goto bailout;
-	}
+	Sana2_FreeList( & unit->unit_TrackedTypes );
 
-	// --
-
-	Forbid();
-
-	if ( unit->unit_TaskAdr )
-	{
-		Signal( unit->unit_TaskAdr, SIGBREAKF_CTRL_C );
-	}
-
-	Permit();
-
-	while( unit->unit_TaskState != TASK_State_Stopped )
-	{
-		Delay( 1 );
-	}
-
-	// --
-	
-	if ( unit->unit_TaskName )
-	{
-		FreeVec( unit->unit_TaskName );
-	}
-
-	// --
+	Sana2_FreeList( & unit->unit_Multicast );
 
 	FreeVec( unit );
-
-bailout:
-
-	return;
 }
 
 // --

@@ -118,8 +118,8 @@ BuildTabs( const struct ProfileEditor *editor, struct EditorLists *lists, Object
 	static const char *const tabs[] = { "SSIDs", "Devices", NULL };
 	static const struct ColumnInfo networkColumns[] = { { 55, "SSID", 0 }, { 25, "Security", 0 },
 		{ 20, "Hidden", 0 }, { -1, NULL, 0 } };
-	static const struct ColumnInfo adapterColumns[] = { { 35, "Device filename", 0 }, { 10, "Unit", 0 },
-		{ 32, "SSID", 0 }, { 23, "Autoconnect", 0 }, { -1, NULL, 0 } };
+	static const struct ColumnInfo adapterColumns[] = { { 31, "Device filename", 0 }, { 23, "MAC or unit", 0 },
+		{ 30, "SSID", 0 }, { 16, "Autoconnect", 0 }, { -1, NULL, 0 } };
 
 	Object *networks;
 	Object *adapters;
@@ -226,7 +226,7 @@ RefreshRows( const struct ProfileEditor *editor, struct EditorLists *lists, stru
 	const struct ProfileAdapter *adapter;
 	struct Node *node;
 
-	char unit[12];
+	char identity[3 * WIFI_STATION_SIZE];
 	ULONG active;
 	S32 complete;
 
@@ -261,11 +261,18 @@ RefreshRows( const struct ProfileEditor *editor, struct EditorLists *lists, stru
 
 	for ( adapter = editor->Database.Adapters; adapter; adapter = adapter->Next )
 	{
-		snprintf( unit, sizeof( unit ), "%lu", (unsigned long)adapter->Unit );
+		if ( WiFi_HasStation( adapter->Station ) )
+		{
+			WiFi_FormatStation( identity, adapter->Station );
+		}
+		else
+		{
+			snprintf( identity, sizeof( identity ), "%lu", (unsigned long) adapter->Unit );
+		}
 
 		node = editor->ListBrowser->AllocListBrowserNode( 4, LBNA_UserData, adapter,
 			LBNA_Column, 0, LBNCA_CopyText, TRUE, LBNCA_Text, adapter->Device,
-			LBNA_Column, 1, LBNCA_CopyText, TRUE, LBNCA_Text, unit,
+			LBNA_Column, 1, LBNCA_CopyText, TRUE, LBNCA_Text, identity,
 			LBNA_Column, 2, LBNCA_CopyText, TRUE, LBNCA_Text, adapter->Profile.SSID,
 			LBNA_Column, 3, LBNCA_Text, ( adapter->Profile.Options & USB2WIFI_PROFILE_AUTO ) ? "Yes" : "No", TAG_END );
 

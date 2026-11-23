@@ -135,7 +135,7 @@ MSD_DEBUG	?= 0
 
 ###########################################################################
 
-SRCDIRS		:= Stack/PortDevice
+SRCDIRS		:= Stack/PortDevice Stack/EthDevice
 
 ifeq ($(DRV_MSD),1)
 SRCDIRS		+= Drivers/MSD
@@ -183,6 +183,7 @@ RESSRCS		:= Stack/Device/Device.c
 RESSRCS		+= Stack/Device/Fullboot.c		# Fullboot should be after Device.c
 #
 SRCS		+= Stack/Config/Alloc.c
+SRCS		+= Stack/Device/Fullboot_Wait.c
 SRCS		+= Stack/Config/Free.c
 SRCS		+= Stack/Config/Lock.c
 SRCS		+= Stack/Config/Unlock.c
@@ -218,6 +219,7 @@ SRCS		+= Stack/Function/Detach_Mark.c
 #SRCS		+= Stack/Function/Detach_Free.c
 SRCS		+= Stack/Function_Init/Init.c
 SRCS		+= Stack/Function_Bind/Bind.c
+SRCS		+= Stack/Function_Bind/Bind_All.c
 SRCS		+= Stack/FDriver/Driver_Create.c
 SRCS		+= Stack/FDriver/Driver_Delete.c
 SRCS		+= Stack/FDriver/Driver_Load.c
@@ -356,6 +358,7 @@ SRCS		+= Stack/Misc/Tag_GetValue.c
 SRCS		+= Stack/Misc/Tag_NextTagItem.c
 SRCS		+= Stack/Misc/TaskNode.c
 SRCS		+= Stack/Misc/Task_Find.c
+SRCS		+= Stack/Misc/DeviceQuery.c
 SRCS		+= Stack/Misc/Task_SetPri.c
 SRCS		+= Stack/Misc/Wait.c
 SRCS		+= Stack/Misc/MicroDelay.c

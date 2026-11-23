@@ -4,7 +4,7 @@
 
 .PHONY: all clean
 
-TARGET := SmartCard.Driver
+TARGET := cls_SmartCard.Driver
 OBJDIR := obj
 BINDIR := bin
 HOSTOS := $(shell uname)
