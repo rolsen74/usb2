@@ -19,6 +19,8 @@ BTUSB_Close( struct BTUSB *usb )
 
 	BTUSB_CancelEvent( usb );
 
+	BTUSB_CloseTimer( usb );
+
 	if ( usb->ACLOut )
 	{
 		usb->USB2->USB2_EPRes_Release( usb->ACLOut );

@@ -13,26 +13,42 @@
 
 // --
 
-static S32
-Detached( struct USB2_Register *reg )
+#define PROBE_HAS( probe, member ) \
+	( ( probe )->Message.mn_Length >= offsetof( struct BTControllerProbe, member ) + sizeof( ( probe )->member ) )
+
+static U32 *
+ProbeCancelFlag( struct BTControllerProbe *probe )
 {
-	struct USB2_NotifyMessage *message;
-
-	S32 detached;
-
-	detached = FALSE;
-
-	while(( message = (PTR) GetMsg( reg->Stack_MsgPort ) ))
+	if ( ( PROBE_HAS( probe, HID ) ) && ( probe->HID ) )
 	{
-		if ( message->nm_Command == USBNC_Detached )
-		{
-			detached = TRUE;
-		}
-
-		ReplyMsg( & message->nm_Message );
+		return ( & probe->HID->Cancel );
+	}
+	if ( ( PROBE_HAS( probe, PCM ) ) && ( probe->PCM ) )
+	{
+		return ( & probe->PCM->Audio.Cancel );
+	}
+	if ( ( PROBE_HAS( probe, Audio ) ) && ( probe->Audio ) )
+	{
+		return ( & probe->Audio->Cancel );
+	}
+	if ( ( PROBE_HAS( probe, LE ) ) && ( probe->LE ) )
+	{
+		return ( & probe->LE->Cancel );
+	}
+	if ( ( PROBE_HAS( probe, ObjectPush ) ) && ( probe->ObjectPush ) )
+	{
+		return ( & probe->ObjectPush->Cancel );
+	}
+	if ( ( PROBE_HAS( probe, SerialCapture ) ) && ( probe->SerialCapture ) )
+	{
+		return ( & probe->SerialCapture->Cancel );
+	}
+	if ( ( PROBE_HAS( probe, SerialFile ) ) && ( probe->SerialFile ) )
+	{
+		return ( & probe->SerialFile->Cancel );
 	}
 
-	return ( detached );
+	return ( NULL );
 }
 
 // --
@@ -50,20 +66,23 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 {
 	struct BTControllerProbe *probe;
 	struct BTACLTransport transport;
+	struct BTHCIError cleanupError;
 
 	U32 signals;
 	U32 mask;
+	S32 cancelled;
 
+	usb->RequestSignal = 1UL << requests->mp_SigBit;
 	transport.HCI.Context = usb;
 	transport.HCI.StartCommand = BTUSB_StartCommand;
 	transport.HCI.ReadEventChunk = BTUSB_ReadEventChunk;
 	transport.WriteACL = BTUSB_WriteACL;
 	transport.ReadACLChunk = BTUSB_ReadACLChunk;
-	mask = usb->Registration->Stack_MsgPortBit | ( 1UL << requests->mp_SigBit ) | SIGBREAKF_CTRL_C;
+	mask = usb->Registration->Stack_MsgPortBit | usb->RequestSignal | SIGBREAKF_CTRL_C;
 
 	for( ;; )
 	{
-		if ( ( SetSignal( 0, SIGBREAKF_CTRL_C ) & SIGBREAKF_CTRL_C ) || ( Detached( usb->Registration ) ) )
+		if ( BTUSB_StopError( usb ) )
 		{
 			return;
 		}
@@ -81,6 +100,24 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 
 			continue;
 		}
+
+		if ( ! PROBE_HAS( probe, Result ) )
+		{
+			ReplyMsg( & probe->Message );
+
+			continue;
+		}
+
+		if ( ( ! PROBE_HAS( probe, Inquiry ) ) || ( ! probe->Error ) )
+		{
+			probe->Result = BT_HCI_INVALID_ARGUMENT;
+
+			ReplyMsg( & probe->Message );
+
+			continue;
+		}
+
+		usb->Cancel = ProbeCancelFlag( probe );
 
 		probe->Result = bt2->ResetController( & transport.HCI, probe->Error );
 
@@ -189,11 +226,20 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 			}
 		}
 
-		if ( usb->PrefetchEvents )
-		{
-			usb->PrefetchEvents = FALSE;
+		cancelled = ( usb->Cancel ) && ( __atomic_load_n( usb->Cancel, __ATOMIC_RELAXED ) );
 
-			BTUSB_CancelEvent( usb );
+		if ( cancelled )
+		{
+			probe->Result = ( PROBE_HAS( probe, LE ) && probe->LE ) ? BT_LE_CANCELLED : BT_RFCOMM_CANCELLED;
+		}
+
+		usb->Cancel = NULL;
+		usb->PrefetchEvents = FALSE;
+
+		if ( ( cancelled ) && ( ! BTUSB_StopError( usb ) ) )
+		{
+			// A transport-level cancel can interrupt the protocol's disconnect.
+			bt2->ResetController( & transport.HCI, & cleanupError );
 		}
 
 		ReplyMsg( & probe->Message );
@@ -227,8 +273,10 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 	struct MsgPort *requests;
 	struct BTUSB usb;
 	struct BTControllerLocation location;
+	struct BTHCITransport transport;
+	struct BTHCIError error;
 
-	U8 endpoint;
+	U32 status;
 	U32 result;
 	S32 unit;
 	S32 discovery;
@@ -236,13 +284,6 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 
 	if ( ( ! message ) || ( ! message->Interface ) || ( ! message->InterfaceDescriptor ) ||
 		( message->InterfaceDescriptor->InterfaceProtocol != 1 ) )
-	{
-		return ( FALSE );
-	}
-
-	endpoint = BTUSB_FindEventEndpoint( message->IUSB2, message->Interface );
-
-	if ( ! endpoint )
 	{
 		return ( FALSE );
 	}
@@ -330,16 +371,30 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 		goto drop_interface;
 	}
 
-	if ( BTUSB_Open( & usb, message, endpoint ) )
+	if ( BTUSB_Open( & usb, message ) )
 	{
 		if ( ! BTUSB_InitializeRealtek( & usb, message->VendorID, message->DeviceID ) )
 		{
 			goto close_transport;
 		}
 
+		transport.Context = & usb;
+		transport.StartCommand = BTUSB_StartCommand;
+		transport.ReadEventChunk = BTUSB_ReadEventChunk;
+
+		status = bt2->ResetController( & transport, & error );
+
+		if ( status != BT_HCI_OK )
+		{
+			DebugPrintF( "Bluetooth USB: HCI readiness check failed for %04lx:%04lx (result %lu, transport %ld)\n",
+				(U32) message->VendorID, (U32) message->DeviceID, status, error.TransportError );
+
+			goto close_transport;
+		}
+
 		location.VendorID = message->VendorID;
 		location.ProductID = message->DeviceID;
-		location.EventEndpoint = endpoint;
+		location.EventEndpoint = usb.EventEndpoint;
 
 		if ( le )
 		{

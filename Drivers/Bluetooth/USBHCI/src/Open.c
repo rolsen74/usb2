@@ -13,14 +13,29 @@
 // --
 
 S32
-BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint )
+BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message )
 {
 	struct USB2_EPResource *control;
+
+	U8 endpoint;
 
 	usb->USB2 = message->IUSB2;
 	usb->InterfaceNumber = message->Interface->IFC_Num;
 	usb->EventPending = BTUSB_EVENT_IDLE;
 	usb->PrefetchEvents = FALSE;
+	usb->TimerPort = NULL;
+	usb->TimerRequest = NULL;
+	usb->Timer = NULL;
+	usb->Cancel = NULL;
+	usb->RequestSignal = 0;
+	usb->EventOffset = 0;
+	usb->EventBytes = 0;
+	usb->FrameUsed = 0;
+	usb->FrameLength = 2;
+	usb->ResponsePending = FALSE;
+	usb->UncertainResponse = FALSE;
+	usb->Detached = FALSE;
+	usb->Stopping = FALSE;
 	usb->Events = NULL;
 	usb->ACLIn = NULL;
 	usb->ACLOut = NULL;
@@ -40,9 +55,31 @@ BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint )
 		return ( FALSE );
 	}
 
+	endpoint = BTUSB_FindEventEndpoint( message, & usb->CommandRecipient );
+
+	if ( ! endpoint )
+	{
+		return ( FALSE );
+	}
+
+	if ( ! usb->USB2->USB2_Ifc_SetAlt( usb->Registration, message->Interface, 0 ) )
+	{
+		DebugPrintF( "Bluetooth USB: could not select legacy HCI alternate 0\n" );
+
+		return ( FALSE );
+	}
+
+	if ( ! BTUSB_OpenTimer( usb ) )
+	{
+		return ( FALSE );
+	}
+
+	usb->EventEndpoint = endpoint;
+
 	usb->Events = usb->USB2->USB2_EPRes_ObtainTags( usb->Registration,
 		USB2Tag_EPRes_InterfaceNr, usb->InterfaceNumber,
-		USB2Tag_EPRes_EndPointNr, endpoint, USB2Tag_EPRes_NrOfIORequest, 1,
+		USB2Tag_EPRes_EndPointNr, endpoint, USB2Tag_EPRes_EPType, EPATT_Type_Interrupt,
+		USB2Tag_EPRes_NrOfIORequest, 1,
 		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize, USB2Tag_EPRes_AllowShortPackets, TRUE,
 		USB2Tag_EPRes_TimeOut, HCI_USB_TIMEOUT, TAG_END );
 

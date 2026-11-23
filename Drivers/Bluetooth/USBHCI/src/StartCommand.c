@@ -12,6 +12,42 @@
 
 // --
 
+static S32
+BTUSB_RetireResponse( struct BTUSB *usb, U16 opcode )
+{
+	const U8 *event;
+
+	U32 length;
+	U32 reads;
+	S32 error;
+
+	usb->CommandOpcode = opcode;
+	usb->ResponsePending = TRUE;
+
+	usb->ResponseDeadline = BTUSB_Now( usb ) + HCI_USB_TIMEOUT;
+
+	for( reads = 0; ( reads < 8 ) && ( usb->UncertainResponse ); reads++ )
+	{
+		error = BTUSB_ReadEventChunk( usb, & event, & length );
+
+		if ( error )
+		{
+			return ( error );
+		}
+	}
+
+	if ( usb->UncertainResponse )
+	{
+		usb->ResponsePending = FALSE;
+
+		return ( BT_HCI_TRANSPORT_TIMEOUT );
+	}
+
+	return ( 0 );
+}
+
+// --
+
 S32
 BTUSB_StartCommand( PTR context, const U8 *command, U32 length )
 {
@@ -21,17 +57,36 @@ BTUSB_StartCommand( PTR context, const U8 *command, U32 length )
 	struct USB2_SetupData *setup;
 
 	S32 error;
+	U16 opcode;
 
 	usb = context;
+
+	if ( ( ! command ) || ( length < 3 ) || ( length != 3U + command[2] ) )
+	{
+		return ( USB2Err_Stack_InvalidStructure );
+	}
+
+	opcode = command[0] | ( (U16) command[1] << 8 );
+
+	if ( ( usb->UncertainResponse ) && ( opcode == usb->UncertainOpcode ) )
+	{
+		error = BTUSB_RetireResponse( usb, opcode );
+
+		if ( error )
+		{
+			return ( error );
+		}
+	}
+
 	control = usb->Registration->Res_Control;
 	request = control->IORequests[0];
 	setup = control->SetupData;
 
 	setup->RequestType = REQTYPE_Write | REQTYPE_Class |
-		( usb->InterfaceNumber ? REQTYPE_Interface : REQTYPE_Device );
+		usb->CommandRecipient;
 	setup->RequestCode = 0;
 	setup->Value = 0;
-	setup->Index = LE_SWAP16( usb->InterfaceNumber );
+	setup->Index = ( usb->CommandRecipient == REQTYPE_Interface ) ? LE_SWAP16( usb->InterfaceNumber ) : 0;
 	setup->Length = LE_SWAP16( length );
 	request->io_Command = CMD_WRITE;
 	request->io_SetupData = setup;
@@ -40,13 +95,7 @@ BTUSB_StartCommand( PTR context, const U8 *command, U32 length )
 	request->io_Length = length;
 	request->io_TimeOut = HCI_USB_TIMEOUT;
 
-	// A prefetched ACL completion must not stand in for a command response.
-	BTUSB_CancelEvent( usb );
-
-	BTUSB_QueueEvent( usb, BTUSB_EVENT_ON_DEMAND );
-
-	error = DoIO( (PTR) request );
-
+	error = BTUSB_Do( usb, request );
 	request->io_Data = NULL;
 
 	if ( ( ! error ) && ( request->io_Actual != length ) )
@@ -54,9 +103,12 @@ BTUSB_StartCommand( PTR context, const U8 *command, U32 length )
 		error = USB2Err_Host_RuntPacket;
 	}
 
-	if ( error )
+	if ( ! error )
 	{
-		BTUSB_CancelEvent( usb );
+		usb->CommandOpcode = opcode;
+		usb->ResponsePending = TRUE;
+
+		usb->ResponseDeadline = BTUSB_Now( usb ) + HCI_USB_TIMEOUT;
 	}
 
 	return ( error );

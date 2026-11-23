@@ -26,7 +26,9 @@ BTUSB_ReadACLChunk( PTR context, const U8 **data, U32 *length )
 	request->io_Data = usb->ACLIn->Buffers[0];
 	request->io_Length = usb->ACLIn->BufferSize;
 
-	error = DoIO( (PTR) request );
+	error = BTUSB_Do( usb, request );
+
+	BTUSB_RecoverStall( usb, usb->ACLIn, error );
 
 	if ( ( error == USB2Err_Host_Timeout ) && ( ! request->io_Actual ) )
 	{

@@ -40,63 +40,43 @@ ReadLE32( const U8 *data )
 static S32
 Command( struct BTUSB *usb, U8 *command, U32 length, U8 *reply, U32 reply_size )
 {
-	const U8 *chunk;
+	const U8 *event;
 
-	U8 event[257];
-	U32 used;
 	U32 count;
-	U32 event_size;
 	U32 bytes;
-	U32 index;
 
 	if ( BTUSB_StartCommand( usb, command, length ) )
 	{
 		return ( FALSE );
 	}
 
-	used = 0;
-	event_size = 2;
-
-	for( count = 0; count < 16; count++ )
+	for( count = 0; count < 32; count++ )
 	{
-		if ( BTUSB_ReadEventChunk( usb, & chunk, & bytes ) )
+		if ( BTUSB_ReadEventChunk( usb, & event, & bytes ) )
 		{
 			return ( FALSE );
 		}
 
-		for( index = 0; index < bytes; index++ )
+		if ( ( bytes == 6 ) && ( event[0] == 0x0f ) && ( event[2] ) &&
+			( event[4] == command[0] ) && ( event[5] == command[1] ) )
 		{
-			event[used++] = chunk[index];
+			return ( FALSE );
+		}
 
-			if ( used != event_size )
+		if ( ( bytes >= 6 ) && ( event[0] == 0x0e ) &&
+			( event[3] == command[0] ) && ( event[4] == command[1] ) )
+		{
+			if ( ( event[5] ) || ( bytes != 6 + reply_size ) )
 			{
-				continue;
+				return ( FALSE );
 			}
 
-			if ( ( used == 2 ) && ( event_size == 2 ) && ( event[1] ) )
+			if ( reply_size )
 			{
-				event_size = 2U + event[1];
-				continue;
+				CopyMem( event + 6, reply, reply_size );
 			}
 
-			if ( ( used >= 6 ) && ( event[0] == 0x0e ) &&
-				( event[3] == command[0] ) && ( event[4] == command[1] ) )
-			{
-				if ( ( event[5] ) || ( used != 6 + reply_size ) )
-				{
-					return ( FALSE );
-				}
-
-				if ( reply_size )
-				{
-					CopyMem( event + 6, reply, reply_size );
-				}
-
-				return ( TRUE );
-			}
-
-			used = 0;
-			event_size = 2;
+			return ( TRUE );
 		}
 	}
 
@@ -308,7 +288,8 @@ BTUSB_InitializeRealtek( struct BTUSB *usb, U16 vendor, U16 product )
 
 	if ( ReadLE16( version + 6 ) != 0x8761 )
 	{
-		return ( TRUE ); // The controller already runs a firmware patch.
+		// Leave retained firmware alone. Entry verifies HCI before publishing the unit.
+		return ( ( ReadLE16( version + 6 ) != 0 ) && ( ReadLE16( version + 6 ) != 0xffff ) );
 	}
 
 	if ( ( version[0] != 0x0a ) || ( ReadLE16( version + 1 ) != 0x000b ) ||
@@ -373,7 +354,8 @@ BTUSB_InitializeRealtek( struct BTUSB *usb, U16 vendor, U16 product )
 
 	if ( ( ! Download( usb, data + offset, patch_size + config_size ) ) ||
 		( ! Command( usb, version_command, sizeof( version_command ), version, sizeof( version ) ) ) ||
-		( ReadLE16( version + 6 ) == 0x8761 ) )
+		( ReadLE16( version + 4 ) != 93 ) || ( ! ReadLE16( version + 6 ) ) ||
+		( ReadLE16( version + 6 ) == 0xffff ) || ( ReadLE16( version + 6 ) == 0x8761 ) )
 	{
 		DebugPrintF( "Bluetooth USB: RTL8761BU firmware startup failed\n" );
 		goto free_data;

@@ -21,7 +21,7 @@ version, manufacturer ID, and Bluetooth address.
 
 ### Realtek RTL8761BU adapters
 
-cls_Bluetooth.Driver 1.20 can load firmware for the ASUS USB-BT500
+cls_Bluetooth.Driver 1.21 can load firmware for the ASUS USB-BT500
 (`0B05:190E`), TP-Link UB500 (`2357:0604`), and Realtek reference
 adapter (`0BDA:8771`). The USB IDs identify the revisions covered here.
 Copy `rtl8761bu_fw.bin` and, if available, `rtl8761bu_config.bin` from
@@ -243,7 +243,9 @@ USB2BluetoothTest UNIT=0 HID=AA:BB:CC:DD:EE:FF INPUT
 The session sends Boot Protocol keys, modifiers, relative movement and
 three mouse buttons to `input.device`. Ctrl-C or disconnect ends the
 session and releases any keys or buttons that are still held. The adapter
-is reserved for input while the command runs. Physical validation, key
+is reserved for input while the command runs. Bluetooth2 1.24 returns a busy
+result to conflicting controller requests during an input or audio session.
+Physical validation, key
 repeat, keyboard LEDs, and BLE HID over GATT are pending.
 
 ## Scan and advertise over Bluetooth LE

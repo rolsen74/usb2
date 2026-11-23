@@ -14,8 +14,8 @@
 // --
 
 #define DRIVER_NAME "cls_Bluetooth.Driver"
-#define DRIVER_REVISION 20
-#define DRIVER_ID DRIVER_NAME " 1.20 (23.11.2026)"
+#define DRIVER_REVISION 21
+#define DRIVER_ID DRIVER_NAME " 1.21 (24.11.2026)"
 
 // --
 
