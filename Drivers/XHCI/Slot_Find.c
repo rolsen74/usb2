@@ -37,3 +37,11 @@ XHCI_Slot_Find ( struct USB2_HCDNode * hn, USB2_ID function_id )
 }
 
 // --
+
+SEC_CODE S32
+XHCI_Slot_Is_Retired ( struct USB2_HCDNode * hn, USB2_ID function_id )
+{
+	return ( ! XHCI_Slot_Find ( hn, function_id ) );
+}
+
+// --

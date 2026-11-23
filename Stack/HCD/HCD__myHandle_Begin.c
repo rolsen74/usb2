@@ -77,7 +77,7 @@ __myHandle_Begin ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 			{
 				SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
-				if ( ! fn->fkt_Detach )
+				if ( ( ! fn->fkt_Detach ) && ( ! fn->fkt_PortRecovery ) )
 				{
 #ifdef DO_DEBUG
 

@@ -51,6 +51,7 @@ struct HCDFunctions
 	U32 ( *Handler_Reset ) ( struct ExceptionContext *, struct ExecBase *, PTR );
 	void ( *Handler_HCD ) ( struct USB2_HCDNode *, U32 );
 	S32 ( *Retire_Detached ) ( struct USB2_HCDNode * );
+	S32 ( *Function_Retired ) ( struct USB2_HCDNode *, USB2_ID );
 
 	// -- Root HUB Functions --
 
@@ -165,6 +166,7 @@ struct USB2_HCDNode
 	struct RealFunctionNode **	hn_Function_Array;
 	struct USB2_Header			hn_Active_Transfer_List;
 	U32							hn_DetachPending;
+	U32								hn_PortRecoveryPending;
 
 	// ---
 

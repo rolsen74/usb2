@@ -49,6 +49,30 @@ IOREQUEST_PRINT ( struct USBBase * usbbase, struct RealRequest * ioreq )
 #endif
 }
 
+static S32
+AllowControlStateChange ( struct RealRequest * ioreq )
+{
+	struct USB2_SetupData * setup;
+
+	setup = ioreq->req_Public.io_SetupData;
+
+	if ( ( setup->RequestCode == REQCODE_Set_Interface )
+		 && ( setup->RequestType == ( REQTYPE_Write | REQTYPE_Standard | REQTYPE_Interface ) ) )
+	{
+		return ( ioreq->req_AltHeader != NULL );
+	}
+
+	if ( ( setup->RequestCode == REQCODE_Set_Configuration )
+		 && ( setup->RequestType == ( REQTYPE_Write | REQTYPE_Standard | REQTYPE_Device ) ) )
+	{
+		return ( ioreq->req_SetConfig );
+	}
+
+	return ( TRUE );
+}
+
+// --
+
 // Called with the stack lock held.
 static struct RealRequest *
 FindLiveRequest ( struct USBBase * usbbase, const struct IORequest * request )
@@ -99,6 +123,7 @@ PrepareHaltClear ( struct USBBase * usbbase, struct RealRequest * ioreq, struct 
 	struct USB2_SetupData *		setup;
 	struct USB2_EndPointNode *	target;
 	struct USB2_InterfaceNode * in;
+	struct RealEndPointResource * resource;
 
 	U32 address;
 	U32 slot;
@@ -136,8 +161,11 @@ PrepareHaltClear ( struct USBBase * usbbase, struct RealRequest * ioreq, struct 
 	}
 
 	in = target->ep_Interface;
+	resource = ioreq->req_Resource;
 
-	if ( ( in ) && ( ( in->in_Parent->ih_Changing ) || ( in->in_Parent->ih_Active != in ) ) )
+	if ( ( in ) && ( ( in->in_Parent->ih_Changing ) || ( in->in_Parent->ih_Active != in )
+		 || ( ( resource ) && ( in->in_Parent->ih_Owner != resource->epr_Register )
+			  && ( ioreq->req_Function->fkt_Owner != resource->epr_Register ) ) ) )
 	{
 		return ( FALSE );
 	}
@@ -210,12 +238,14 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			in		 = ioreq->req_EndPoint->ep_Interface;
 			resource = ioreq->req_Resource;
 
-			if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ioreq->req_FreeMe ) || ( ioreq->req_Detach )
+			if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( fn->fkt_PortRecovery ) || ( ioreq->req_FreeMe ) || ( ioreq->req_Detach )
 				 || ( ( resource ) && ( ( resource->epr_FreeMe ) || ( resource->epr_Register->reg_FreeMe ) ) ) )
 			{
 				request->io_Error = USB2Err_Device_Detached;
 			}
-			else if ( ( in ) && ( in->in_Parent->ih_Changing ) )
+			else if ( ( in ) && ( ( in->in_Parent->ih_Changing ) || ( in->in_Parent->ih_Active != in )
+					 || ( ( resource ) && ( in->in_Parent->ih_Owner != resource->epr_Register )
+						  && ( fn->fkt_Owner != resource->epr_Register ) ) ) )
 			{
 				request->io_Error = USB2Err_Stack_EndPointNotFound;
 			}
@@ -234,6 +264,12 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 				 && ( ! ValidControlRequest ( &ioreq->req_Public ) ) )
 			{
 				request->io_Error = USB2Err_Stack_InvalidStructure;
+			}
+			else if ( ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Control )
+				 && ( ( request->io_Command == CMD_READ ) || ( request->io_Command == CMD_WRITE ) )
+				 && ( ! AllowControlStateChange ( ioreq ) ) )
+			{
+				request->io_Error = IOERR_NOCMD;
 			}
 			else if ( ! PrepareHaltClear ( usbbase, ioreq, hn ) )
 			{

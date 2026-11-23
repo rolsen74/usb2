@@ -94,22 +94,66 @@ __myHandle_Abort ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 
 // --
 SEC_CODE static void
+CheckPortRecovery ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
+{
+	struct RealFunctionNode * fn;
+	struct USB2_Node * node;
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_Fkt_Semaphore );
+
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+	hn->hn_PortRecoveryPending = FALSE;
+
+	for ( node = usbbase->usb_Fkt_Header.uh_Head; node; node = Node_Next ( node ) )
+	{
+		fn = node->un_Data;
+
+		if ( ( fn->fkt_HCD != hn ) || ( fn->fkt_PortRecovery != PORT_RECOVERY_DRAINING )
+		  || ( ! fn->fkt_HUB_Data ) || ( fn->fkt_HCDGeneration != hn->hn_Generation ) )
+		{
+			continue;
+		}
+
+		if ( ( ! fn->fkt_Detach ) || ( fn->fkt_ActiveIOReq )
+		  || ( ( hn->HCD_Functions.Function_Retired ) && ( ! hn->HCD_Functions.Function_Retired ( hn, fn->fkt_NotifyID ) ) ) )
+		{
+			hn->hn_PortRecoveryPending = TRUE;
+		}
+		else
+		{
+			fn->fkt_PortRecovery = PORT_RECOVERY_READY;
+		}
+	}
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_Fkt_Semaphore );
+}
+
+// --
+
+SEC_CODE static void
 DrainDetachedFunctions ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 {
 	struct RealFunctionNode * fn;
 	struct RealRequest *	  ioreq;
 	struct RealRequest *	  next;
+	struct USB2_Node *		  node;
+	struct USB2_Node *		  next_node;
 
 	S32 pending;
+	S32 recovering;
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	pending				 = hn->hn_DetachPending;
+	pending = hn->hn_DetachPending;
+	recovering = hn->hn_PortRecoveryPending;
 	hn->hn_DetachPending = FALSE;
 
 	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
-	if ( ! pending )
+	if ( ( ! pending ) && ( ! recovering ) )
 	{
 		return;
 	}
@@ -147,9 +191,49 @@ DrainDetachedFunctions ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 		}
 	}
 
-	if ( ( hn->hn_AcceptIO ) && ( hn->HCD_Functions.Retire_Detached ) )
+	if ( ! hn->hn_AcceptIO )
 	{
-		hn->HCD_Functions.Retire_Detached ( hn );
+		return;
+	}
+
+	if ( recovering )
+	{
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+		for ( node = usbbase->usb_IORequests.uh_Head; node; node = next_node )
+		{
+			next_node = Node_Next ( node );
+			ioreq = node->un_Data;
+			fn = ioreq->req_Function;
+
+			if ( ( fn->fkt_HCD == hn ) && ( fn->fkt_Detach )
+			  && ( fn->fkt_PortRecovery == PORT_RECOVERY_DRAINING ) && ( ioreq->req_PublicStat == IORS_HCD_Queued ) )
+			{
+				NODE_REMNODE ( &ioreq->req_EndPoint->ep_Request_Queue, ioreq );
+
+				ioreq->req_Public.io_Actual = 0;
+				ioreq->req_Public.io_Error = USB2Err_Device_Detached;
+
+				HCD_REPLY ( ioreq );
+			}
+		}
+
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+	}
+
+	if ( ( hn->HCD_Functions.Retire_Detached ) && ( ! hn->HCD_Functions.Retire_Detached ( hn ) ) )
+	{
+		if ( ( recovering ) && ( hn->hn_AcceptIO ) )
+		{
+			USB2_HCD_RequestReset ( hn );
+		}
+
+		return;
+	}
+
+	if ( ( hn->hn_AcceptIO ) && ( recovering ) )
+	{
+		CheckPortRecovery ( usbbase, hn );
 	}
 }
 

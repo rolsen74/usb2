@@ -87,7 +87,9 @@ __EndPointRes_Destall ( struct USBBase * usbbase, struct USB2_EPResource * epr )
 	in = ep->ep_Interface;
 
 	if ( ( real->epr_FreeMe ) || ( real->epr_Register->reg_FreeMe ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe )
-		 || ( ! ep->ep_Active ) || ( ( in ) && ( ( in->in_Parent->ih_Changing ) || ( in->in_Parent->ih_Active != in ) ) ) )
+		 || ( fn->fkt_PortRecovery ) || ( ! ep->ep_Active )
+		 || ( ( in ) && ( ( in->in_Parent->ih_Changing ) || ( in->in_Parent->ih_Active != in )
+			  || ( ( in->in_Parent->ih_Owner != real->epr_Register ) && ( fn->fkt_Owner != real->epr_Register ) ) ) ) )
 	{
 		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 

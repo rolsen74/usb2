@@ -221,6 +221,11 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 			// --
 			// Time to activate it
 
+			if ( ioreq->req_AltHeader )
+			{
+				ioreq->req_AltStarted = TRUE;
+			}
+
 			ioreq->req_PublicStat = IORS_HCD_Active;
 			NODE_ADDTAIL ( &hn->hn_Active_Transfer_List, ioreq );
 

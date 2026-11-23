@@ -87,6 +87,8 @@ struct RealRequest
 	struct USB2_EndPointNode *	  req_DestallTarget;
 	struct RealEndPointResource * req_Resource;
 	U8							  req_AltApplied;
+	U8							  req_AltStarted;
+	U8							  req_SetConfig;
 	struct USB2_EndPointNode *	  req_EndPoint;
 	struct USB2_MsgPort			  req_MsgPort;
 	struct TimeRequest			  req_TimerIOReq;

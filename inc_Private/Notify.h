@@ -27,6 +27,7 @@ struct USB2_NotifyNode
 	U32								nn_Type;
 };
 
+void USB2_Notify_Interface( struct USBBase *usbbase, struct USB2_InterfaceHeader *ih );
 void USB2_Notify_Function( struct USBBase *usbbase, struct RealFunctionNode *fn, U32 command );
 
 /***************************************************************************/

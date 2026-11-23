@@ -32,11 +32,9 @@ _main_Ifc_Declaim ( struct USB2IFace * Self, struct RealRegister * reg, struct U
 
 	if ( ih )
 	{
-		INTERFACE_DECLAIMHEADER ( reg, ih );
+		retval = INTERFACE_DECLAIMHEADER ( reg, ih );
 
 		INTERFACE_UNLOCKHEADER ( ih );
-
-		retval = TRUE;
 	}
 
 	REGISTER_UNLOCK ( reg );

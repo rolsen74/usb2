@@ -62,6 +62,15 @@ struct USB2_Node *n;
 		{
 			USBDEBUG( "HUB_Main__Free_FNs                :  1 : FN    %p : Locks %2ld", fn, fn->fkt_Locks );
 
+			// Keep the old child in its port until recovery drains the controller.
+			if ( ( in->Running ) && ( ! in->Function->fkt_Detach ) && ( fn->fkt_HUB_Data == in->HUB_ID )
+			  && ( fn->fkt_PortRecovery >= PORT_RECOVERY_DRAINING )
+			  && ( fn->fkt_HCDGeneration == fn->fkt_HCD->hn_Generation ) )
+			{
+				n = next;
+				continue;
+			}
+
 			// -- Release own lock
 
 			if ( fn->fkt_HUB_Data == in->HUB_ID )

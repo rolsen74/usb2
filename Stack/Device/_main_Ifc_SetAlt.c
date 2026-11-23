@@ -42,13 +42,14 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 	struct RealRequest *		  ioreq;
 	struct USB2_SetupData		  setup;
 	struct RealFunctionNode *	  fn;
+	struct USB2_HCDNode *		  hn;
 	struct RealRegister *		  reg;
 	struct USBBase *			  usbbase;
 
 	U32 offset;
 	U32 slot;
 	S32 result;
-	S32 applied;
+	S32 uncertain;
 
 	if ( ( ! pubreg ) || ( ! ifc ) || ( alt > 255 ) )
 	{
@@ -74,12 +75,15 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 	}
 
 	fn = ih->ih_Function;
+	hn = fn->fkt_HCD;
 
 	SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner != reg ) || ( ih->ih_Changing ) )
+	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( fn->fkt_PortRecovery ) || ( reg->reg_FreeMe )
+		 || ( ih->ih_Owner != reg ) || ( ih->ih_Changing ) || ( ! hn->hn_AcceptIO )
+		 || ( ( fn->fkt_Tier ) && ( fn->fkt_HCDGeneration != hn->hn_Generation ) ) )
 	{
 		goto unlock;
 	}
@@ -137,7 +141,8 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 	IO_DO ( ioreq );
 
 	result	= ioreq->req_Public.io_Error == USB2Err_NoError;
-	applied = ( ioreq->req_AltApplied ) || ( ioreq->req_Public.io_Error == USB2Err_Host_Timeout );
+	uncertain = ( ioreq->req_AltApplied )
+		   || ( ( ioreq->req_AltStarted ) && ( ioreq->req_Public.io_Error != USB2Err_Host_Stall ) );
 
 	IOREQUEST_FREE ( ioreq );
 
@@ -145,24 +150,30 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	if ( ( ! result ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ih->ih_Owner != reg ) )
+	if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( fn->fkt_HCDGeneration != hn->hn_Generation ) )
 	{
-		// A device-side switch without a matching controller state requires re-enumeration.
-		ih->ih_Changing = applied;
-		result			= FALSE;
-		goto unlock;
-	}
-
-	in = FindAlternate ( ih, alt );
-
-	if ( ! in )
-	{
+		ih->ih_Changing = FALSE;
 		result = FALSE;
 		goto unlock;
 	}
 
+	if ( ( ! result ) || ( fn->fkt_PortRecovery ) || ( ! hn->hn_AcceptIO ) )
+	{
+		ih->ih_Changing = uncertain;
+		result = FALSE;
+
+		if ( ( uncertain ) && ( ! fn->fkt_PortRecovery ) )
+		{
+			fn->fkt_PortRecovery = PORT_RECOVERY_REQUESTED;
+
+			USBERROR ( "SetAlt: scheduling port recovery for function %p, interface %lu", fn, ih->ih_Number );
+		}
+
+		goto unlock;
+	}
+
 	old	   = ih->ih_Active;
-	array  = fn->fkt_HCD->hn_EndPoint_Array;
+	array  = hn->hn_EndPoint_Array;
 	offset = fn->fkt_Address * 32;
 	ep	   = ( old ) ? old->in_EndPoints.uh_Head : NULL;
 
@@ -195,6 +206,8 @@ _main_Ifc_SetAlt ( struct USB2IFace * Self, struct USB2_Register * pubreg, struc
 	}
 
 	ih->ih_Changing = FALSE;
+
+	USB2_Notify_Interface ( usbbase, ih );
 
 	result = TRUE;
 

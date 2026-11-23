@@ -206,7 +206,11 @@ S32 locked;
 	ioreq->req_Public.io_SetupData	= & sd;
 	ioreq->req_Public.io_SetupLength	= sizeof( struct USB2_SetupData );
 
+	ioreq->req_SetConfig = TRUE;
+
 	IO_DO( ioreq );
+
+	ioreq->req_SetConfig = FALSE;
 
 	if ( ioreq->req_Public.io_Error != USB2Err_NoError )
 	{

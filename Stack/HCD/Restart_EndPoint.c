@@ -24,7 +24,7 @@ __HCD_Restart_EndPoint ( struct USBBase * usbbase, struct USB2_HCDNode * hn, str
 
 	while ( ( hn->hn_AcceptIO ) && ( ioreq = ep->ep_Request_Queue.uh_Head ) )
 	{
-		if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ep->ep_Detach ) || ( ep->ep_FreeMe ) )
+		if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( fn->fkt_PortRecovery ) || ( ep->ep_Detach ) || ( ep->ep_FreeMe ) )
 		{
 			NODE_REMNODE ( &ep->ep_Request_Queue, ioreq );
 

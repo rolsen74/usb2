@@ -44,6 +44,58 @@
 
 // --
 
+SEC_CODE static void
+RecoverPorts( struct USBBase *usbbase, struct intern *in )
+{
+	struct RealFunctionNode *fn;
+	struct USB2_HCDNode *hn;
+
+	U32 port;
+	U8 recovery;
+
+	hn = in->Function->fkt_HCD;
+
+	for( port = 1; port <= in->Ports; port++ )
+	{
+		recovery = PORT_RECOVERY_NONE;
+
+		SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+		fn = in->PortFunctions[port];
+
+		if ( ( fn ) && ( hn->hn_AcceptIO ) && ( ! in->Function->fkt_Detach )
+		  && ( ! in->Function->fkt_FreeMe ) && ( fn->fkt_HCDGeneration == hn->hn_Generation ) )
+		{
+			recovery = fn->fkt_PortRecovery;
+
+			if ( ( recovery == PORT_RECOVERY_REQUESTED ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) )
+			{
+				fn->fkt_PortRecovery = PORT_RECOVERY_DRAINING;
+				hn->hn_PortRecoveryPending = TRUE;
+			}
+			else if ( recovery != PORT_RECOVERY_READY )
+			{
+				recovery = PORT_RECOVERY_NONE;
+			}
+		}
+
+		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+		if ( recovery == PORT_RECOVERY_REQUESTED )
+		{
+			FUNCTION_MARKDETACH( fn );
+
+			TASK_STOP_FN( fn );
+		}
+		else if ( recovery == PORT_RECOVERY_READY )
+		{
+			HUB__Port_Chg( usbbase, in, port );
+		}
+	}
+}
+
+// --
+
 SEC_CODE void HUB_Main__Normal( struct USBBase *usbbase, struct intern *in )
 {
 U32 wait;
@@ -74,18 +126,6 @@ U32 mask;
 
 		mask = TASK_WAIT( wait );
 
-		if ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask )
-		{
-//			USBDEBUG( "HUB : Normal : Got Timer Tick" );
-			if ( MSGPORT_GETMSG( & in->Tick_MsgPort ))
-			{
-				HUB_Main__Free_FNs( usbbase, in );
-				in->Tick_TimeRequest.Time.Seconds = 2;
-				in->Tick_TimeRequest.Time.Microseconds = 0;
-				IO_SEND( & in->Tick_TimeRequest );
-			}
-		}
-
 		if ( mask &	in->Res_Interrupt->MsgPortBit )
 		{
 			USBDEBUG( "HUB : Normal : Got Int Bit" );
@@ -110,6 +150,22 @@ U32 mask;
 		{
 			USBDEBUG( "HUB : Normal : Got CTRL+D" );
 			HUB_Main__Free_FNs( usbbase, in );
+		}
+		if ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask )
+		{
+//			USBDEBUG( "HUB : Normal : Got Timer Tick" );
+			if ( MSGPORT_GETMSG( & in->Tick_MsgPort ))
+			{
+				if ( in->Running )
+				{
+					RecoverPorts( usbbase, in );
+				}
+
+				HUB_Main__Free_FNs( usbbase, in );
+				in->Tick_TimeRequest.Time.Seconds = 2;
+				in->Tick_TimeRequest.Time.Microseconds = 0;
+				IO_SEND( & in->Tick_TimeRequest );
+			}
 		}
 	}
 }

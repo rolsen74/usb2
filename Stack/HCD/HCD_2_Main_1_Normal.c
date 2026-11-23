@@ -105,6 +105,8 @@ __Normal ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * i
 				IO_SEND ( &in->Tick_TimeRequest );
 			}
 
+			DrainDetachedFunctions ( usbbase, hn );
+
 			__myHandle_HCD ( usbbase, hn, -1 );
 		}
 

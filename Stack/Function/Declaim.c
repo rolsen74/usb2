@@ -24,6 +24,8 @@ SEC_CODE void __Function_Declaim( struct USBBase *usbbase, struct RealRegister *
 		{
 			SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
 
+			SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 			while( TRUE )
 			{
 				if ( ! fn->fkt_Owner )
@@ -44,6 +46,8 @@ SEC_CODE void __Function_Declaim( struct USBBase *usbbase, struct RealRegister *
 				break;
 			}
 		
+			SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
 			SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
 			FUNCTION_UNLOCK( fn );
 		}

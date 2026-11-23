@@ -237,7 +237,7 @@ __EndPointRes_ObtainList ( struct USBBase * usbbase, struct RealRegister * reg, 
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-	if ( ( reg->reg_FreeMe ) || ( ! fn ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) )
+	if ( ( reg->reg_FreeMe ) || ( ! fn ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( fn->fkt_PortRecovery ) )
 	{
 		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
@@ -488,7 +488,8 @@ __EndPointRes_ObtainList ( struct USBBase * usbbase, struct RealRegister * reg, 
 
 	in = epn->ep_Interface;
 
-	if ( ( ! reg->reg_FreeMe ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) && ( epn->ep_Active )
+	if ( ( ! reg->reg_FreeMe ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe )
+		 && ( ! fn->fkt_PortRecovery ) && ( epn->ep_Active )
 		 && ( ( ! in )
 			  || ( ( ! in->in_Parent->ih_Changing ) && ( in->in_Parent->ih_Active == in )
 				   && ( ( in->in_Parent->ih_Owner == reg ) || ( fn->fkt_Owner == reg ) ) ) ) )

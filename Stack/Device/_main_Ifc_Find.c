@@ -116,6 +116,7 @@ _main_Ifc_FindTags ( struct USB2IFace * Self, ... )
 static struct USB2_Interface *
 _main_Ifc_FindList ( struct USB2IFace * Self, struct TagItem * taglist )
 {
+	struct USB2_Interface_Desc *  desc;
 	struct USB2_InterfaceHeader * ih;
 	struct USB2_InterfaceGroup *  ig;
 	struct RealFunctionNode *	  fn;
@@ -305,24 +306,12 @@ _main_Ifc_FindList ( struct USB2IFace * Self, struct TagItem * taglist )
 			}
 		}
 
-		// Check Interface Class
-		if ( DoClass )
-		{
-			if ( ig->ig_Class != Class )
-			{
-				//				USBERROR( "ifc Class : %lu", (U32) ig->ig_Class );
-				found = FALSE;
-			}
-		}
+		desc = ( ih->ih_Active ) ? ih->ih_Active->in_Descriptor : NULL;
 
-		// Check Interface SubClass
-		if ( DoSubClass )
+		if ( ( ( DoClass ) && ( ( ! desc ) || ( desc->InterfaceClass != Class ) ) )
+		  || ( ( DoSubClass ) && ( ( ! desc ) || ( desc->InterfaceSubClass != SubClass ) ) ) )
 		{
-			if ( ig->ig_SubClass != SubClass )
-			{
-				//				USBERROR( "ifc SubClass : %lu", (U32) ig->ig_SubClass );
-				found = FALSE;
-			}
+			found = FALSE;
 		}
 
 		// Check SeeClaimed Devices

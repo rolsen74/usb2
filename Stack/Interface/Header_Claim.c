@@ -31,9 +31,12 @@ __Interface_ClaimHeader ( struct USBBase * usbbase, struct RealRegister * reg, s
 			fn = ih->ih_Function;
 			SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
+			SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
 			while ( TRUE )
 			{
-				if ( ( fn != reg->reg_Function ) || ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) )
+				if ( ( fn != reg->reg_Function ) || ( reg->reg_FreeMe ) || ( fn->fkt_Detach )
+				  || ( fn->fkt_FreeMe ) || ( fn->fkt_PortRecovery ) )
 				{
 					USBERROR ( "__Interface_ClaimHeader : Wrong or detached function : FN    %p", fn );
 					break;
@@ -48,9 +51,9 @@ __Interface_ClaimHeader ( struct USBBase * usbbase, struct RealRegister * reg, s
 				}
 
 				// Should I allowed Owner claiming it self again??
-				if ( ih->ih_Owner )
+				if ( ( ih->ih_Owner ) || ( ih->ih_Changing ) )
 				{
-					USBERROR ( "__Interface_ClaimHeader : Interface allready claimed" );
+					USBERROR ( "__Interface_ClaimHeader : Interface busy or already claimed" );
 					break;
 				}
 
@@ -66,6 +69,8 @@ __Interface_ClaimHeader ( struct USBBase * usbbase, struct RealRegister * reg, s
 				retval		 = TRUE;
 				break;
 			}
+
+			SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 			SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );
 			INTERFACE_UNLOCKHEADER ( ih );

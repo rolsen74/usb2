@@ -28,6 +28,8 @@ S32 retval;
 		{
 			SEMAPHORE_OBTAIN( & fn->fkt_Semaphore );
 
+			SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
 			while( TRUE )
 			{
 				if (( fn->fkt_Detach ) || ( fn->fkt_FreeMe ))
@@ -61,6 +63,8 @@ S32 retval;
 				retval = TRUE;
 				break;
 			}
+
+			SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 			SEMAPHORE_RELEASE( & fn->fkt_Semaphore );
 			FUNCTION_UNLOCK( fn );

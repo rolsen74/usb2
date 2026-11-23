@@ -40,35 +40,13 @@ struct USB2_SetupData *setup;
 SEC_CODE S32
 Video_Stream_SetAlt( struct VideoUnit *unit, U32 alt )
 {
-	struct USB2_Interface *interface;
-	struct USB2_IORequest *request;
-
-	interface = unit->StartMsg->Interface;
-	request = unit->Control->IORequests[0];
-	request->io_Error = USB2Err_NoError;
-
-	if ( USB2_Ifc_SetAlt( unit->Register, interface, alt ) )
+	if ( USB2_Ifc_SetAlt( unit->Register, unit->StartMsg->Interface, alt ) )
 	{
 		return ( TRUE );
 	}
 
-	if ( ( request->io_Error == USB2Err_Host_Stall ) &&
-		( USB2_EPRes_Destall( unit->Control ) ) &&
-		( USB2_Ifc_SetAlt( unit->Register, interface, alt ) ) )
-	{
-		return ( TRUE );
-	}
-
-	if ( request->io_Error )
-	{
-		DebugPrintF( "USB Video: %04lx:%04lx unit %lu SET_INTERFACE alt %lu failed, USB error %ld\n",
-			unit->Format.VendorID, unit->Format.DeviceID, unit->UnitNr, alt, (S32) request->io_Error );
-	}
-	else
-	{
-		DebugPrintF( "USB Video: %04lx:%04lx unit %lu stack rejected alt %lu before SET_INTERFACE\n",
-			unit->Format.VendorID, unit->Format.DeviceID, unit->UnitNr, alt );
-	}
+	DebugPrintF( "USB Video: %04lx:%04lx unit %lu could not select alternate %lu\n",
+		unit->Format.VendorID, unit->Format.DeviceID, unit->UnitNr, alt );
 
 	return ( FALSE );
 }

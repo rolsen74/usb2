@@ -59,7 +59,7 @@ USB2_CREATEFUNC( void,							HCD_Transfer_Remove,		struct USBBase *usbbase, stru
 // -- Interface
 
 USB2_CREATEFUNC( S32,							Interface_ClaimHeader,		struct USBBase *usbbase, struct RealRegister *reg, struct USB2_InterfaceHeader *ih );
-USB2_CREATEFUNC( void,							Interface_DeclaimHeader,	struct USBBase *usbbase, struct RealRegister *reg, struct USB2_InterfaceHeader *ih );
+USB2_CREATEFUNC( S32,							Interface_DeclaimHeader,	struct USBBase *usbbase, struct RealRegister *reg, struct USB2_InterfaceHeader *ih );
 
 // -- IORequest
 

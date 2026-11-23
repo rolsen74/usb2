@@ -15,6 +15,14 @@
 
 /***************************************************************************/
 
+enum USB2_PortRecovery
+{
+	PORT_RECOVERY_NONE,
+	PORT_RECOVERY_REQUESTED,
+	PORT_RECOVERY_DRAINING,
+	PORT_RECOVERY_READY
+};
+
 struct RealFunctionNode
 {
 	struct USB2_Function			fkt_Public;					// At the moment must be first, todo: do same as EPResource or ?
@@ -35,6 +43,7 @@ struct RealFunctionNode
 
 	U8								fkt_SelfPowered;
 	U8								fkt_Initialized;
+	U8								fkt_PortRecovery;
 //	U8								fkt_NeedPromotion;
 //	U8								fkt_Freeing;				// Used by Unlock function
 //	U8								fkt_FreeAgain;				// Some resources have been freeing

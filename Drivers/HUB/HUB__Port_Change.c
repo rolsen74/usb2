@@ -96,10 +96,12 @@ WaitForReconnectedPort( struct USBBase *usbbase, struct intern *in, U32 port )
 SEC_CODE void HUB__Port_Chg( struct USBBase *usbbase, struct intern *in, U32 port )
 {
 struct RealFunctionNode *fn;
+struct USB2_HCDNode *hn;
 struct USB2_PortStatus stat;
 
 S32 err;
 S32 reconnect;
+S32 recover;
 
 	// --
 
@@ -139,7 +141,17 @@ S32 reconnect;
 
 	// -- Handle Port Change
 
-	if ( stat.wPortChange & PORTCHGF_Connection )
+	hn = in->Function->fkt_HCD;
+	fn = in->PortFunctions[port];
+
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	recover = ( fn ) && ( fn->fkt_PortRecovery == PORT_RECOVERY_READY ) && ( hn->hn_AcceptIO )
+		&& ( ! in->Function->fkt_Detach ) && ( fn->fkt_HCDGeneration == hn->hn_Generation );
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+	if ( ( recover ) || ( stat.wPortChange & PORTCHGF_Connection ) )
 	{
 		#ifdef DO_INFO
 		usbbase->usb_IExec->Disable();
@@ -149,15 +161,17 @@ S32 reconnect;
 		usbbase->usb_IExec->Enable();
 		#endif
 
-		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_CONNECTION );
-
-		if ( err != USB2Err_NoError )
+		if ( stat.wPortChange & PORTCHGF_Connection )
 		{
-			USBERROR( "HUB__Port_Chg : Error clearing Port Connect (%ld)", err );
-			goto bailout;
+			err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_CONNECTION );
+
+			if ( err != USB2Err_NoError )
+			{
+				USBERROR( "HUB__Port_Chg : Error clearing Port Connect (%ld)", err );
+				goto bailout;
+			}
 		}
 
-		fn = in->PortFunctions[port];
 		reconnect = ( fn ) && ( stat.wPortStatus & PORTSTATF_Connection ) &&
 			( in->Function->fkt_Speed < USBSPEED_Super );
 
