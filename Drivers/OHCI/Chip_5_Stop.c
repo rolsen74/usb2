@@ -80,6 +80,7 @@ U32 val;
 	// --
 	// Wait until controller leaves operational state
 
+	retval = FALSE;
 	timeout = 100;	// max 200ms
 
 	while( timeout-- )
@@ -88,6 +89,7 @@ U32 val;
 
 		if (( val & OHCI_HCFS_MASK ) == OHCI_HCFS_SUSPEND )
 		{
+			retval = TRUE;
 			break;
 		}
 		else
@@ -96,7 +98,6 @@ U32 val;
 		}
 	}
 
-	retval = ( timeout ) ? TRUE : FALSE ;
 
 	// --
 

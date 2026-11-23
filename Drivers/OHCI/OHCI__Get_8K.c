@@ -63,6 +63,11 @@ OHCI_Get_8kBuffer ( struct USB2_HCDNode * hn, struct OHCI_TD * td, PTR data, U32
 
 	// --
 
+	if ( len > 2 * 4096 )
+	{
+		goto bailout;
+	}
+
 	mem = MEMORY_ALLOC ( MEMID_HCD_8k, FALSE );
 
 	if ( ! mem )
@@ -86,10 +91,7 @@ OHCI_Get_8kBuffer ( struct USB2_HCDNode * hn, struct OHCI_TD * td, PTR data, U32
 		USBPANIC ( "Bad Alignment 0x%08lx", phy );
 	}
 
-	if ( len > 2 * 4096 )
-	{
-		USBPANIC ( "Buffer overflow ( len : %ld )", len );
-	}
+
 
 #endif
 

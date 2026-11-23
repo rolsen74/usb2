@@ -42,6 +42,7 @@ struct RealFunctionNode
 
 	U32								fkt_Tier;
 	U32								fkt_Address;
+	U32								fkt_HCDGeneration;
 	U32								fkt_PortNr;
 	U32								fkt_LanguageID;
 

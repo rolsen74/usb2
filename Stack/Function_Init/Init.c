@@ -28,6 +28,7 @@ FunctionAttached( struct RealFunctionNode *fn )
 	parent = fn->fkt_Parent;
 
 	return ( ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) &&
+		( fn->fkt_HCD->hn_AcceptIO ) && ( fn->fkt_HCDGeneration == fn->fkt_HCD->hn_Generation ) &&
 		( ( ! parent ) || ( ( ! parent->fkt_Detach ) && ( ! parent->fkt_FreeMe ) ) ) );
 }
 

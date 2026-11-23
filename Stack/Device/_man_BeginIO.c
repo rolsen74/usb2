@@ -68,6 +68,30 @@ FindLiveRequest ( struct USBBase * usbbase, const struct IORequest * request )
 
 // --
 
+SEC_CODE static S32
+ValidControlRequest ( const struct USB2_IORequest * request )
+{
+	const struct USB2_SetupData * setup;
+
+	setup = request->io_SetupData;
+
+	if ( ( ! setup ) || ( request->io_SetupLength != sizeof ( *setup ) )
+		 || ( request->io_Length != LE_SWAP16 ( setup->Length ) ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( request->io_Length )
+	{
+		return ( ( request->io_Data ) &&
+			( ( request->io_Command == CMD_READ ) == ( ( setup->RequestType & REQTYPE_Read ) != 0 ) ) );
+	}
+
+	return ( TRUE );
+}
+
+// --
+
 // Called with the stack lock held.
 static S32
 PrepareHaltClear ( struct USBBase * usbbase, struct RealRequest * ioreq, struct USB2_HCDNode * hn )
@@ -197,6 +221,17 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			}
 
 			else if ( HCD_VALID ( hn ) != VSTAT_Okay )
+			{
+				request->io_Error = USB2Err_Stack_InvalidStructure;
+			}
+			else if ( ( ! hn->hn_AcceptIO ) ||
+				 ( ( fn->fkt_Tier ) && ( fn->fkt_HCDGeneration != hn->hn_Generation ) ) )
+			{
+				request->io_Error = USB2Err_Device_Detached;
+			}
+			else if ( ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Control )
+				 && ( ( request->io_Command == CMD_READ ) || ( request->io_Command == CMD_WRITE ) )
+				 && ( ! ValidControlRequest ( &ioreq->req_Public ) ) )
 			{
 				request->io_Error = USB2Err_Stack_InvalidStructure;
 			}

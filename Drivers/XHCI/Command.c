@@ -44,8 +44,7 @@ XHCI_Command ( struct USB2_HCDNode * hn, U32 low, U32 high, U32 status, U32 cont
 		HCD_WAIT_MS ( hn, 1 );
 	}
 
-	XHCI_Chip_Stop ( hn );
-	TASK_SIGNAL ( hn->hn_Task->tn_TaskAdr, hn->HCD_Restart_Chip.sig_Signal_Mask );
+	USB2_HCD_RequestReset ( hn );
 
 	return ( FALSE );
 }

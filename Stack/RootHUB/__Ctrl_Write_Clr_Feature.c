@@ -82,6 +82,11 @@ S32 err;
 					USBDEBUG( "__Clr_Feature : PORT_CLR_CONNECTION : Port #%ld", port );
 
 					err = hn->HCD_Functions.Port_Clr_Connection_Chg( hn, port );
+
+					if ( ( err == USB2Err_NoError ) && ( port < sizeof( hn->hn_RescanPort ) ) )
+					{
+						hn->hn_RescanPort[port] = FALSE;
+					}
 				}
 				#ifdef DO_DEBUG
 				else

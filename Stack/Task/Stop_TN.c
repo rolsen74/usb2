@@ -59,6 +59,8 @@ __Task_Stop_TN ( struct USBBase * usbbase, struct USB2_TaskNode * tn )
 
 	if ( task )
 	{
+		tn->tn_StopRequested = TRUE;
+
 		usbbase->usb_IExec->Signal ( task, SIGBREAKF_CTRL_C );
 	}
 

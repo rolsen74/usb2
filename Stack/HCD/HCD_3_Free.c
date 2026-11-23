@@ -40,12 +40,12 @@ struct intern *in;
 
 	// --
 
-	__Free_3_Rem_HUB( usbbase, hn, in );
-
-	if ( hn->HCD_Functions.Chip_Stop )
+	while ( ! HCD_StopDMA( hn ) )
 	{
-		 hn->HCD_Functions.Chip_Stop( hn );
+		HCD_WAIT_MS( hn, 1000 );
 	}
+
+	__Free_3_Rem_HUB( usbbase, hn, in );
 
 	__Free_3_Rem_Int( usbbase, hn, in );
 

@@ -152,6 +152,11 @@ U16 val;
 
 		portstat->wPortStatus = LE_SWAP16( val );
 
+		if ( hn->hn_RescanPort[port] )
+		{
+			status |= HUBF_Chg_Connection;
+		}
+
 		val =	(( status &	HUBF_Chg_Connection )	? PORTCHGF_Connection	: 0 ) |
 				(( status &	HUBF_Chg_Enable )		? PORTCHGF_Enable		: 0 ) |
 				(( status &	HUBF_Chg_Suspend )		? PORTCHGF_Suspend		: 0 ) |

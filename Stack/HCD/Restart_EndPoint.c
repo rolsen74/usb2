@@ -22,7 +22,7 @@ __HCD_Restart_EndPoint ( struct USBBase * usbbase, struct USB2_HCDNode * hn, str
 
 	SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );
 
-	while ( ( ioreq = ep->ep_Request_Queue.uh_Head ) )
+	while ( ( hn->hn_AcceptIO ) && ( ioreq = ep->ep_Request_Queue.uh_Head ) )
 	{
 		if ( ( fn->fkt_Detach ) || ( fn->fkt_FreeMe ) || ( ep->ep_Detach ) || ( ep->ep_FreeMe ) )
 		{

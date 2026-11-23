@@ -147,7 +147,7 @@ DrainDetachedFunctions ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 		}
 	}
 
-	if ( hn->HCD_Functions.Retire_Detached )
+	if ( ( hn->hn_AcceptIO ) && ( hn->HCD_Functions.Retire_Detached ) )
 	{
 		hn->HCD_Functions.Retire_Detached ( hn );
 	}

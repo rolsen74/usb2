@@ -53,236 +53,111 @@
 ** Should set io_Error if there are transfer errors
 */
 
-SEC_CODE U32 OHCI_Control_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
+SEC_CODE U32
+OHCI_Control_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
-struct OHCI_ED *ed;
-struct OHCI_TD *td;
-U32 status;
-U32 actual;
-U32 bytes;
-S32 copy;
-U32 size;
-PTR mem;
-U32 len;
-U32 CBP;
-U32 BE;
-U8 err;
+	struct USBBase *usbbase UNUSED;
+	struct OHCI_ED *ed;
+	struct OHCI_TD *td;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "OHCI : OHCI_Control_Length" );
+	U32 status;
+	U32 actual;
+	U32 remaining;
+	U32 length;
+	U32 cbp;
+	U32 end;
+	S32 error;
 
+	usbbase = hn->hn_USBBase;
+	ed = ioreq->req_HCD.OHCI.ED_Header;
 	actual = 0;
 
-	// --
+	TASK_NAME_ENTER( "OHCI : OHCI_Control_Length" );
 
-	mem = ioreq->req_Public.io_Data;
-	ed	= ioreq->req_HCD.OHCI.ED_Header;
-
-	if ( ! ed )
+	if ( ed )
 	{
-		goto bailout;
-	}
-
-	if (( ioreq->req_Public.io_Command == CMD_READ ) && ( mem ))
-	{
-		copy = TRUE;
-	}
-	else
-	{
-		copy = FALSE;
-	}
-
-	// -- Setup Data
-
-	td = ed->ped_first_td;
-
-	if ( ! td )
-	{
-		goto bailout;
-	}
-
-	status = OHCI_TD_GET_CC( LE_SWAP32( td->td_flags ) );
-
-	/**/ if ( status == OHCI_CC_NOT_ACCESSED )
-	{
-		// Transfer not finished yet
-		goto bailout;
-	}
-	else if ( status != OHCI_CC_NO_ERROR )
-	{
-		switch( status )
+		// The dummy tail is never executed.
+		for ( td = ed->ped_first_td ; ( td ) && ( td->ptd_virt_next ) ; td = td->ptd_virt_next )
 		{
-			case OHCI_CC_STALL:
+			status = OHCI_TD_GET_CC( LE_SWAP32( td->td_flags ) );
+
+			switch ( status )
 			{
-				err = USB2Err_Host_Stall;
-				break;
-			}
-
-			case OHCI_CC_CRC:
-			case OHCI_CC_BIT_STUFFING:
-			case OHCI_CC_PID_CHECK_FAILURE:
-			{
-				err = USB2Err_Host_CRCError;
-				break;
-			}
-
-			case OHCI_CC_DEVICE_NOT_RESPONDING:
-			{
-				err = USB2Err_Host_Timeout;
-				break;
-			}
-
-			case OHCI_CC_DATA_OVERRUN:
-			case OHCI_CC_BUFFER_OVERRUN:
-			{
-				err = USB2Err_Host_Overflow;
-				break;
-			}
-
-			case OHCI_CC_DATA_UNDERRUN:
-			case OHCI_CC_BUFFER_UNDERRUN:
-			{
-				err = USB2Err_Host_RuntPacket;
-				break;
-			}
-
-			case OHCI_CC_UNEXPECTED_PID:
-			case OHCI_CC_DATA_TOGGLE_MISMATCH:
-			{
-				err = USB2Err_Host_HostError;
-				break;
-			}
-	
-			default:
-			{
-				err = USB2Err_Host_UnknownError;
-				break;
-			}
-		}
-
-		ioreq->req_Public.io_Error = err;
-		goto bailout;
-	}
-
-	// Skip first Setup TD
-	td = td->ptd_virt_next;
-
-	// --
-	// run all execpt last one
-
-	while( td )
-	{
-		if ( ! td->ptd_buffer_virt )
-		{
-			break;
-		}
-
-		BE  	= LE_SWAP32( td->td_be );
-		CBP		= LE_SWAP32( td->td_cbp );
-		status	= OHCI_TD_GET_CC( LE_SWAP32( td->td_flags ) );
- 		size	= td->ptd_buffer_size;
-
-		/**/ if ( CBP == 0 )
-		{
-			bytes = 0;
-		}
-		else if ( BE >= CBP )
-		{
-			bytes = BE - CBP + 1;
-		}
-		else
-		{
-			bytes = 0;
-		}
-
- 		len	= ( size >= bytes ) ? ( size - bytes ) : ( 0 ) ;
-
-		/**/ if ( status == OHCI_CC_NOT_ACCESSED )
-		{
-			break;
-		}
-		else if (( status != OHCI_CC_NO_ERROR ) && ( status != OHCI_CC_DATA_UNDERRUN ))
-		{
-			// treat 'OHCI_CC_DATA_UNDERRUN' as normal completion, correct for Control/Bulk
-
-			switch( status )
-			{
-				case OHCI_CC_STALL:
-				{
-					err = USB2Err_Host_Stall;
+				case OHCI_CC_NO_ERROR:
+					error = USB2Err_NoError;
 					break;
-				}
-
+				case OHCI_CC_STALL:
+					error = USB2Err_Host_Stall;
+					break;
 				case OHCI_CC_CRC:
 				case OHCI_CC_BIT_STUFFING:
 				case OHCI_CC_PID_CHECK_FAILURE:
-				{
-					err = USB2Err_Host_CRCError;
+					error = USB2Err_Host_CRCError;
 					break;
-				}
-	
 				case OHCI_CC_DEVICE_NOT_RESPONDING:
-				{
-					err = USB2Err_Host_Timeout;
+					error = USB2Err_Host_Timeout;
 					break;
-				}
-	
 				case OHCI_CC_DATA_OVERRUN:
 				case OHCI_CC_BUFFER_OVERRUN:
-				{
-					err = USB2Err_Host_Overflow;
+					error = USB2Err_Host_Overflow;
 					break;
-				}
-
+				case OHCI_CC_DATA_UNDERRUN:
+					error = ( ( td != ed->ped_first_td ) && ( td->ptd_buffer_virt ) &&
+						( ioreq->req_Public.io_Command == CMD_READ ) && ( ioreq->req_Public.io_AllowShortPackets ) )
+						? USB2Err_NoError : USB2Err_Host_RuntPacket;
+					break;
 				case OHCI_CC_BUFFER_UNDERRUN:
-				{
-					err = USB2Err_Host_RuntPacket;
+					error = USB2Err_Host_RuntPacket;
 					break;
-				}
-	
 				case OHCI_CC_UNEXPECTED_PID:
 				case OHCI_CC_DATA_TOGGLE_MISMATCH:
-				{
-					err = USB2Err_Host_HostError;
+				case OHCI_CC_NOT_ACCESSED:
+					error = USB2Err_Host_HostError;
 					break;
-				}
-	
 				default:
-				{
-					err = USB2Err_Host_UnknownError;
+					error = USB2Err_Host_UnknownError;
 					break;
-				}
 			}
 
-			ioreq->req_Public.io_Error = err;
-			goto bailout;
+			if ( error )
+			{
+				ioreq->req_Public.io_Error = error;
+				break;
+			}
+
+			if ( ( td == ed->ped_first_td ) || ( ! td->ptd_buffer_virt ) )
+			{
+				continue;
+			}
+
+			cbp = LE_SWAP32( td->td_cbp );
+			end = LE_SWAP32( td->td_be );
+			remaining = ( cbp && ( end >= cbp ) ) ? end - cbp + 1 : 0;
+
+			if ( remaining > td->ptd_buffer_size )
+			{
+				ioreq->req_Public.io_Error = USB2Err_Host_HostError;
+				break;
+			}
+
+			length = td->ptd_buffer_size - remaining;
+
+			if ( ( length ) && ( ioreq->req_Public.io_Command == CMD_READ ) )
+			{
+				MEM_COPY( td->ptd_buffer_virt, (U8 *) ioreq->req_Public.io_Data + actual, length );
+			}
+
+			actual += length;
 		}
-
-		if (( copy ) && ( len ))
-		{
-			// copy src, dest, len
-			MEM_COPY( td->ptd_buffer_virt, mem, len );
-		}
-
-		actual	+= len;
-		mem		+= len;
-
-		// Check for short Packet
-		if ( len < size )
-		{
-			break;
-		}
-
-		td = td->ptd_virt_next;
 	}
-
-	// --
-
-bailout:
+	else
+	{
+		ioreq->req_Public.io_Error = USB2Err_Host_HostError;
+	}
 
 	TASK_NAME_LEAVE();
 
-	return( actual );
+	return ( actual );
 }
 
 // --

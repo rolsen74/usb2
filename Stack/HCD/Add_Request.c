@@ -40,7 +40,7 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 	fn	= ioreq->req_Function;
 	ep	= ioreq->req_EndPoint;
 
-	if ( ( hn->hn_HCDType == HCDTYPE_EHCI ) && ( ep->ep_Type == EPATT_Type_Interrupt ) && ( ep->ep_Transactions > 1 ) )
+	if ( ( hn->hn_IsEHCI ) && ( ep->ep_Type == EPATT_Type_Interrupt ) && ( ep->ep_Transactions > 1 ) )
 	{
 		ioreq->req_Public.io_Error = USB2Err_Host_NoBandWidth;
 
@@ -240,7 +240,7 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 			{
 				timeout = ioreq->req_Public.io_TimeOut;
 
-				if ( ( hn->hn_HCDType == HCDTYPE_EHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous )
+				if ( ( hn->hn_IsEHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous )
 					 && ( fn->fkt_Speed == USBSPEED_Full ) && ( ioreq->req_Public.io_Command == CMD_WRITE )
 					 && ( ioreq->req_Public.io_IsoPacketLengths ) )
 				{
@@ -331,7 +331,7 @@ __HCD_Request_CanStart ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	command = ioreq->req_Public.io_Command;
 
 	// Keep one batch ahead when the driver supplies individual packet results.
-	if ( ( ep->ep_Request_ActiveNext ) || ( hn->hn_HCDType != HCDTYPE_EHCI ) || ( ep->ep_Type != EPATT_Type_Isochronous )
+	if ( ( ep->ep_Request_ActiveNext ) || ( ! hn->hn_IsEHCI ) || ( ep->ep_Type != EPATT_Type_Isochronous )
 		 || ( active->req_Public.io_Command != command )
 		 || ( ! ( ( ( speed == USBSPEED_High ) && ( command == CMD_READ ) )
 				  || ( ( speed == USBSPEED_Full ) && ( command == CMD_WRITE ) ) ) )

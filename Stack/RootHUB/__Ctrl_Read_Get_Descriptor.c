@@ -31,7 +31,7 @@ __Get_Descriptor ( struct USB2_SetupData * sd, struct USB2_HCDNode * hn, struct 
 		{
 			USBDEBUG ( "Device Descriptor" );
 
-			if ( ( hn->hn_HCDType == HCDTYPE_EHCI ) || ( hn->hn_HCDType == HCDTYPE_XHCI ) )
+			if ( ( hn->hn_IsEHCI ) || ( hn->hn_HCDType == HCDTYPE_XHCI ) )
 			{
 				MEM_COPY ( (PTR)&HUB20_DeviceDsc, buffer, sizeof ( struct USB2_Device_Desc ) );
 			}

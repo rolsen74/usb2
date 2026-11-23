@@ -36,12 +36,21 @@ __Normal ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * i
 
 		mask = TASK_WAIT ( wait );
 
+		if ( ( mask & SIGBREAKF_CTRL_C ) && ( tn->tn_StopRequested ) )
+		{
+			break;
+		}
+
 		//		usbbase->usb_IExec->DebugPrintF( "HCD Mask $%08lx\n", mask );
 
 		// Lets put it first
 		if ( mask & hn->HCD_Restart_Chip.sig_Signal_Mask )
 		{
-			__myHandle_Reset ( usbbase, hn );
+			if ( ! __myHandle_Reset ( usbbase, hn ) )
+			{
+				break;
+			}
+
 			mask &= ~hn->HCD_Mask;
 		}
 
@@ -79,7 +88,10 @@ __Normal ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * i
 
 			DrainDetachedFunctions ( usbbase, hn );
 
-			ROOTHUB_HANDLE_CHANGE ( hn );
+			if ( hn->hn_AcceptIO )
+			{
+				ROOTHUB_HANDLE_CHANGE ( hn );
+			}
 		}
 
 		if ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask )
@@ -94,24 +106,6 @@ __Normal ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * i
 			}
 
 			__myHandle_HCD ( usbbase, hn, -1 );
-		}
-
-		if ( mask & SIGBREAKF_CTRL_C )
-		{
-			//			usbbase->usb_IExec->DebugPrintF( " : SIGBREAKF_CTRL_C\n" );
-
-			if ( tn->tn_Parent )
-			{
-				//				usbbase->usb_IExec->DebugPrintF( "\n" );
-				USBINFO ( "__myMain (HCD)           : Normal :: Index #%ld :: Exit Signal", hn->hn_HCDIndex );
-				break;
-			}
-			else
-			{
-				USBINFO ( "__myMain (HCD)           : Normal :: Index #%ld :: Someone tryed to stop us, ignoring",
-						  hn->hn_HCDIndex );
-			}
-			break;
 		}
 
 		if ( mask & SIGBREAKF_CTRL_D )

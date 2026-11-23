@@ -12,28 +12,24 @@
 
 // --
 
-SEC_CODE static void __Shutdown( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct intern *in UNUSED )
+SEC_CODE static S32
+__Shutdown( struct USBBase *usbbase, struct USB2_HCDNode *hn )
 {
-struct RealFunctionNode *fn;
-
-	// Yes all should have been shutdown now
-	// lets free RootHub Function (not the driver)
-
-	USBINFO( "__myMain (HCD)           : __Shutdown (4) ::" );
-	TASK_NAME_ENTER( "HCD Main : __Shutdown" );
+	struct RealFunctionNode *fn;
 
 	fn = hn->hn_Function_Array[0];
 
-	if ( FUNCTION_FREE(fn) == FSTAT_Okay )
+	if ( fn )
 	{
+		if ( FUNCTION_FREE( fn ) != FSTAT_Okay )
+		{
+			return ( FALSE );
+		}
+
 		hn->hn_Function_Array[0] = NULL;
 	}
-	else
-	{
-		USBERROR( "__myMain (HCD)           : Index #%ld :: --> Unable to free RootHub Function", hn->hn_HCDIndex );
-	}
 
-	TASK_NAME_LEAVE();
+	return ( TRUE );
 }
 
 // --

@@ -123,6 +123,7 @@ S32 error;
 	}
 
 	fn->fkt_HCD = hn;
+	fn->fkt_HCDGeneration = hn->hn_Generation;
 
 	// Every Function has aleast the Control EndPoint
 

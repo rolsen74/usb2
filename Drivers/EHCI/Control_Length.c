@@ -53,148 +53,98 @@
 ** Should set io_Error if there are transfer errors
 */
 
-SEC_CODE U32 EHCI_Control_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
+SEC_CODE U32
+EHCI_Control_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
-struct EHCI_TD *td;
-struct EHCI_QH *qh;
-U32 status;
-U32 actual;
-U32 bytes;
-S32 copy;
-U32 size;
-PTR mem;
-U32 len;
-U8 err;
+	struct USBBase *usbbase UNUSED;
+	struct EHCI_TD *td;
+	struct EHCI_QH *qh;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "EHCI : EHCI_Control_Length" );
-//	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Length : IOReq %p\n", ioreq );
+	U32 status;
+	U32 actual;
+	U32 remaining;
+	U32 length;
+	S32 short_packet;
 
-	actual = 0;
-
-	mem = ioreq->req_Public.io_Data;
-
+	usbbase = hn->hn_USBBase;
 	qh = ioreq->req_HCD.EHCI.QH_Header;
+	actual = 0;
+	short_packet = FALSE;
+
+	TASK_NAME_ENTER( "EHCI : EHCI_Control_Length" );
 
 	if ( ! qh )
 	{
+		ioreq->req_Public.io_Error = USB2Err_Host_HostError;
 		goto bailout;
 	}
 
-	if (( ioreq->req_Public.io_Command == CMD_READ ) && ( mem ))
+	for ( td = qh->pqh_first_td ; td ; td = td->ptd_virt_next )
 	{
-		copy = TRUE;
-	}
-	else
-	{
-		copy = FALSE;
-	}
+		status = LE_SWAP32( td->td_status );
 
-	// -- Setup Data
-
-	td = qh->pqh_first_td;
-
-	if ( ! td )
-	{
-		goto bailout;
-	}
-
-	status = LE_SWAP32( td->td_status );
-
-	if ( status & EHCI_TD_HALTED )
-	{
-		/**/ if ( status & EHCI_TD_BABBLE ) 
+		if ( status & EHCI_TD_STATERRS )
 		{
-			err = USB2Err_Host_Overflow;		// IN: device sent too much (babble)
-		} 
-		else if ( status & EHCI_TD_BUFERR )
-		{
-			err = USB2Err_Host_UnknownError;	// buffer/page problem on host side
-		} 
-		else if ( status & EHCI_TD_XACTERR )
-		{
-			err = USB2Err_Host_Timeout;			// CRC/timeout type error bucket
-		} 
-		else 
-		{
-			err = USB2Err_Host_Stall;			// clean HALT => STALL handshake
-		}
-
-		ioreq->req_Public.io_Error = err;
-		goto bailout;
-	}
-
-	if ( status & EHCI_TD_ACTIVE )
-	{
-		goto bailout;
-	}
-
-	// Skip first Setup TD
-	td = td->ptd_virt_next;
-
-	// --
-	// run all execpt last one
-
-	while(( td ) && ( td->ptd_virt_next ))
-	{
-		status	= LE_SWAP32( td->td_status );
-		bytes	= EHCI_TD_GET_BYTES( status );
-		size	= td->ptd_buffer_size;
-		len		= ( size >= bytes ) ? ( size - bytes ) : ( 0 ) ;
-
-		if ( status & EHCI_TD_HALTED )
-		{
-			/**/ if ( status & EHCI_TD_BABBLE ) 
+			if ( status & EHCI_TD_BABBLE )
 			{
-				err = USB2Err_Host_Overflow;		// IN: device sent too much (babble)
-			} 
+				ioreq->req_Public.io_Error = USB2Err_Host_Overflow;
+			}
 			else if ( status & EHCI_TD_BUFERR )
 			{
-				err = USB2Err_Host_UnknownError;	// buffer/page problem on host side
-			} 
+				ioreq->req_Public.io_Error = USB2Err_Host_UnknownError;
+			}
 			else if ( status & EHCI_TD_XACTERR )
 			{
-				err = USB2Err_Host_Timeout;			// CRC/timeout type error bucket
-			} 
-			else 
+				ioreq->req_Public.io_Error = USB2Err_Host_Timeout;
+			}
+			else
 			{
-				err = USB2Err_Host_Stall;			// clean HALT => STALL handshake
+				ioreq->req_Public.io_Error = USB2Err_Host_Stall;
 			}
 
-			ioreq->req_Public.io_Error = err;
-			break;
+			goto bailout;
 		}
 
 		if ( status & EHCI_TD_ACTIVE )
 		{
-			break;
+			ioreq->req_Public.io_Error = USB2Err_Host_HostError;
+			goto bailout;
 		}
 
-		if (( copy ) && ( len ))
+		if ( ( td == qh->pqh_first_td ) || ( ! td->ptd_buffer_virt ) )
 		{
-			// copy src, dest, len
-			MEM_COPY( td->ptd_buffer_virt, mem, len );
+			continue;
 		}
 
-		actual	+= len;
-		mem		+= len;
+		remaining = EHCI_TD_GET_BYTES( status );
 
-		// Check for short Packet
-		if ( bytes )
+		if ( remaining > td->ptd_buffer_size )
 		{
-			break;
+			ioreq->req_Public.io_Error = USB2Err_Host_HostError;
+			goto bailout;
 		}
 
-		td = td->ptd_virt_next;
+		length = td->ptd_buffer_size - remaining;
+		short_packet = remaining != 0;
+
+		if ( ( length ) && ( ioreq->req_Public.io_Command == CMD_READ ) )
+		{
+			MEM_COPY( td->ptd_buffer_virt, (U8 *) ioreq->req_Public.io_Data + actual, length );
+		}
+
+		actual += length;
 	}
 
-	// --
+	if ( ( short_packet ) && ( ! ioreq->req_Public.io_AllowShortPackets ) )
+	{
+		ioreq->req_Public.io_Error = USB2Err_Host_RuntPacket;
+	}
 
 bailout:
 
 	TASK_NAME_LEAVE();
 
-	return( actual );
+	return ( actual );
 }
 
 // --

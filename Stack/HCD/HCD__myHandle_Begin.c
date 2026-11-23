@@ -68,6 +68,11 @@ __myHandle_Begin ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 			{
 				ioreq->req_Public.io_Error = IOERR_ABORTED;
 			}
+			else if ( ( ! hn->hn_AcceptIO ) ||
+				 ( ( fn->fkt_Tier ) && ( fn->fkt_HCDGeneration != hn->hn_Generation ) ) )
+			{
+				ioreq->req_Public.io_Error = USB2Err_Device_Detached;
+			}
 			else if ( FUNCTION_LOCK ( fn ) == LSTAT_Okay )
 			{
 				SEMAPHORE_OBTAIN ( &fn->fkt_Semaphore );

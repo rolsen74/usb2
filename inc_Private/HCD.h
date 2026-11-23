@@ -126,6 +126,10 @@ struct USB2_HCDNode
 	//	struct USB2_TaskNode *			hn_TaskPtr;
 	USB2_ID hn_NotifyID;
 	U32		hn_HCDType;
+	U32		hn_IsEHCI;
+	U32		hn_AcceptIO;
+	U32		hn_DMAActive;
+	U32		hn_Generation;
 	U32		hn_HCDIndex;
 	U32		hn_HCDInterruptNr;
 	U32		hn_MaxSpeed;
@@ -181,6 +185,7 @@ struct USB2_HCDNode
 	struct USB2_Signal	  hn_HUB_Signal;	 // Root HUB
 	U32					  hn_HUB_NumPorts;	 // Set by HCD driver
 	U32					  hn_HUB_ConfigNr;
+	U8					  hn_RescanPort[256];
 
 	//	U8								hn_Running;
 	//	U8								hn_paddd11;
@@ -213,5 +218,6 @@ struct USB2_HCDNode
 /***************************************************************************/
 
 S32 __HCD_Request_CanStart ( struct USB2_HCDNode * hn, struct RealRequest * ioreq );
+void USB2_HCD_RequestReset ( struct USB2_HCDNode * hn );
 
 #endif // INC_PRIVATE_HCD_H

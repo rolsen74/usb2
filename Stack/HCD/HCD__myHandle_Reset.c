@@ -12,151 +12,138 @@
 
 // --
 
+// The caller has stopped DMA before dropping any active request.
 SEC_CODE static void
-__myHandle_Reset_Abort ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
+DrainStoppedTransfers( struct USBBase *usbbase, struct USB2_HCDNode *hn, S32 error )
 {
-	struct USB2_EndPointNode * ep;
-	struct RealRequest *	   ioreq;
+	struct USB2_EndPointNode *ep;
+	struct RealRequest *ioreq;
+	struct USB2_Node *node;
+	struct USB2_Node *next;
 
-	TASK_NAME_ENTER ( "HCD : __myHandle_Reset_Abort" );
-
-	while ( TRUE )
+	while ( ( ioreq = NODE_REMHEAD( & hn->hn_Active_Transfer_List ) ) )
 	{
-		ioreq = NODE_REMHEAD ( &hn->hn_Active_Transfer_List );
-
-		usbbase->usb_IExec->DebugPrintF ( "__myHandle_Reset         : 1.2B - IOReq %p\n", ioreq );
-
-		if ( ! ioreq )
-		{
-			break;
-		}
-
-		// --
-
 		ep = ioreq->req_EndPoint;
 
-		if ( ENDPOINT_LOCK ( ep ) != LSTAT_Okay )
-		{
-			continue;
-		}
+		// The active request pins the endpoint until its reply.
+		ENDPOINT_LOCK( ep );
 
-		// IOReq and Active should be the same
-		usbbase->usb_IExec->DebugPrintF ( "__myHandle_Reset         : 1.2B - ep %p (Active)\n", ep->ep_Request_Active );
-
-		ep->ep_Request_Active	  = NULL;
+		ep->ep_Request_Active = NULL;
 		ep->ep_Request_ActiveNext = NULL;
 
-		// --
-
-		usbbase->usb_IExec->DebugPrintF ( "__myHandle_Reset         : 1.2C - Stop Timer\n" );
-
-		// Stop/Remove timer if started
 		if ( ioreq->req_TimerAdded )
 		{
-			IO_STOP ( &ioreq->req_TimerIOReq );
+			IO_STOP( & ioreq->req_TimerIOReq );
+
 			ioreq->req_TimerAdded = FALSE;
 		}
 
-		usbbase->usb_IExec->DebugPrintF ( "__myHandle_Reset         : 1.2D - Transfer Free\n" );
+		ioreq->req_Public.io_Actual = 0;
+		ioreq->req_Public.io_Error = error;
 
-		// Free any buffers allocated
 		if ( hn->HCD_Functions.Transfer_Free )
 		{
-			hn->HCD_Functions.Transfer_Free ( hn, ioreq );
+			hn->HCD_Functions.Transfer_Free( hn, ioreq );
 		}
 
-		usbbase->usb_IExec->DebugPrintF ( "__myHandle_Reset         : 1.2E - Reply 1\n" );
+		HCD_REPLY( ioreq );
 
-		// Send back to user
-		ioreq->req_Public.io_Actual = 0;
-		ioreq->req_Public.io_Error	= USB2Err_Device_Nak;
-		//		ioreq->req_PublicStat = IORS_User;
-		//		MSGPORT_REPLYMSG( ioreq );
-		//		IOREQUEST_ACTIVE_SUB( ioreq );
-
-		HCD_REPLY ( ioreq );
-		ioreq = NULL;
-
-		// -- The EndPoint may have queued more IORequests
-
-		while ( TRUE )
-		{
-			ioreq = NODE_REMHEAD ( &ep->ep_Request_Queue );
-
-			//			usbbase->usb_IExec->DebugPrintF( "__myHandle_Reset         : 1.5A - IOReq %p\n", ioreq );
-
-			if ( ! ioreq )
-			{
-				break;
-			}
-
-			// These are not active only queued, so no Timers or buffers
-			//			usbbase->usb_IExec->DebugPrintF( "__myHandle_Reset         : 1.5B - Reply 2\n" );
-
-			// Send back to user
-			ioreq->req_Public.io_Actual = 0;
-			ioreq->req_Public.io_Error	= USB2Err_Device_Nak;
-			//			ioreq->req_PublicStat = IORS_User;
-			//			MSGPORT_REPLYMSG( ioreq );
-			//			IOREQUEST_ACTIVE_SUB( ioreq );
-
-			HCD_REPLY ( ioreq );
-			ioreq = NULL;
-		}
-
-		ENDPOINT_UNLOCK ( ep );
+		ENDPOINT_UNLOCK( ep );
 	}
 
-	TASK_NAME_LEAVE ();
+	// A queue can remain without an active transfer while its interface is changing.
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	for ( node = usbbase->usb_IORequests.uh_Head ; node ; node = next )
+	{
+		next = Node_Next( node );
+		ioreq = node->un_Data;
+
+		if ( ( ioreq->req_PublicStat == IORS_HCD_Queued ) && ( ioreq->req_Function->fkt_Tier ) &&
+			( ioreq->req_Function->fkt_HCD == hn ) )
+		{
+			NODE_REMNODE( & ioreq->req_EndPoint->ep_Request_Queue, ioreq );
+
+			ioreq->req_Public.io_Actual = 0;
+			ioreq->req_Public.io_Error = error;
+
+			HCD_REPLY( ioreq );
+		}
+	}
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 }
 
 // --
 
-SEC_CODE static void
-__myHandle_Reset ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
+SEC_CODE static S32
+__myHandle_Reset( struct USBBase *usbbase, struct USB2_HCDNode *hn )
 {
-	//	usbbase->usb_IExec->DebugPrintF( "__myHandle_Reset         : 1 - Reset\n" );
+	U32 port;
 
-	if ( hn->HCD_Functions.Chip_Reset )
+	HCD_CloseSubmissions( usbbase, hn );
+
+	__myHandle_Begin( usbbase, hn );
+
+	if ( ! HCD_StopDMA( hn ) )
 	{
-		if ( ! hn->HCD_Functions.Chip_Reset ( hn ) )
-		{
-			usbbase->usb_IExec->DebugPrintF ( "__myHandle_Reset         : Chip_Reset() Failed\n" );
-		}
+		usbbase->usb_IExec->DebugPrintF( "USB HCD %lu: halt failed, retaining DMA resources\n", hn->hn_HCDIndex );
+
+		return ( FALSE );
 	}
 
-	//	usbbase->usb_IExec->DebugPrintF( "__myHandle_Reset         : 1.2A - Transfers (Active)\n" );
+	DrainStoppedTransfers( usbbase, hn, USB2Err_Host_HostError );
 
-	__myHandle_Reset_Abort ( usbbase, hn );
+	if ( ( hn->HCD_Functions.Chip_Reset ) && ( ! hn->HCD_Functions.Chip_Reset( hn ) ) )
+	{
+		usbbase->usb_IExec->DebugPrintF( "USB HCD %lu: reset failed\n", hn->hn_HCDIndex );
 
-	//	usbbase->usb_IExec->DebugPrintF( "__myHandle_Reset         : 2 - Deinit\n" );
+		return ( FALSE );
+	}
 
 	if ( hn->HCD_Functions.Chip_Deinit )
 	{
-		hn->HCD_Functions.Chip_Deinit ( hn );
+		hn->HCD_Functions.Chip_Deinit( hn );
 	}
 
-	//	usbbase->usb_IExec->DebugPrintF( "__myHandle_Reset         : 3 - Init\n" );
-
-	if ( hn->HCD_Functions.Chip_Init )
+	if ( ( hn->HCD_Functions.Chip_Init ) && ( ! hn->HCD_Functions.Chip_Init( hn ) ) )
 	{
-		if ( ! hn->HCD_Functions.Chip_Init ( hn ) )
-		{
-			usbbase->usb_IExec->DebugPrintF ( "__myHandle_Reset         : Chip_Init() Failed\n" );
-		}
-	}
+		usbbase->usb_IExec->DebugPrintF( "USB HCD %lu: initialization failed after reset\n", hn->hn_HCDIndex );
 
-	//	usbbase->usb_IExec->DebugPrintF( "__myHandle_Reset         : 4 - Start\n" );
+		return ( FALSE );
+	}
 
 	if ( hn->HCD_Functions.Chip_Start )
 	{
-		if ( ! hn->HCD_Functions.Chip_Start ( hn ) )
+		hn->hn_DMAActive = TRUE;
+
+		if ( ! hn->HCD_Functions.Chip_Start( hn ) )
 		{
-			usbbase->usb_IExec->DebugPrintF ( "__myHandle_Reset         : Chip_Start() Failed\n" );
+			usbbase->usb_IExec->DebugPrintF( "USB HCD %lu: failed to start after reset\n", hn->hn_HCDIndex );
+
+			return ( FALSE );
 		}
 	}
 
-	//	usbbase->usb_IExec->DebugPrintF( "__myHandle_Reset         : 5 - Done\n" );
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	if ( hn->hn_HCDType == HCDTYPE_XHCI )
+	{
+		hn->hn_Generation++;
+
+		for ( port = 1 ; ( port <= hn->hn_HUB_NumPorts ) && ( port < sizeof( hn->hn_RescanPort ) ) ; port++ )
+		{
+			hn->hn_RescanPort[port] = TRUE;
+		}
+	}
+
+	hn->hn_AcceptIO = TRUE;
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+	ROOTHUB_HANDLE_CHANGE( hn );
+
+	return ( TRUE );
 }
 
 // --

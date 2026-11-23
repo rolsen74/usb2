@@ -51,38 +51,10 @@
 
 SEC_CODE void EHCI_Chip_Dealloc( struct USB2_HCDNode *hn )
 {
-	struct EHCI_ITD *itd;
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Dealloc" );
 
 	// --
-
-	if ( hn->hn_HCD.EHCI.IsoRetired )
-	{
-		if ( ! ( PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) & EHCI_STS_HCH ) )
-		{
-			MISC_MICRODELAY( 2000 );
-		}
-
-		EHCI_Isochronous_Reap( hn, TRUE );
-	}
-
-	if ( hn->hn_HCD.EHCI.IsoOrphan )
-	{
-		if ( ! ( PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) & EHCI_STS_HCH ) )
-		{
-			TASK_NAME_LEAVE();
-
-			return;
-		}
-
-		while ( ( itd = hn->hn_HCD.EHCI.IsoOrphan ) )
-		{
-			hn->hn_HCD.EHCI.IsoOrphan = itd->Next;
-
-			MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
-		}
-	}
 
 	if ( hn->hn_HCD.EHCI.IsoFrames )
 	{

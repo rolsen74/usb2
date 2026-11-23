@@ -49,63 +49,38 @@
 
 // --
 
-SEC_CODE S32 EHCI_Chip_Stop( struct USB2_HCDNode *hn )
+SEC_CODE S32
+EHCI_Chip_Stop( struct USB2_HCDNode *hn )
 {
-S32 retval;
-U32 cnt;
-U32 val;
+	struct USBBase *usbbase;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+	U32 count;
+	U32 command;
+
+	usbbase = hn->hn_USBBase;
+
 	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Stop" );
 
-	retval = FALSE;
+	command = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );
 
-	USBDEBUG( "EHCI_Chip_Stop           : Halt Chip" );
+	PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD, command & ~EHCI_CMD_RS );
 
-	// --
-	// Halt controller (if running)
-
-	val = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );
-
-	if ( val & EHCI_CMD_RS )
+	for ( count = 0 ; count < 20 ; count++ )
 	{
-		val &= ~EHCI_CMD_RS;
-		PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD, val );
-
-		// --
-		#define MAXMS	20		// max 5x20 = 100ms
-
-		for( cnt=0 ; cnt<MAXMS ; cnt++ )
+		if ( PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) & EHCI_STS_HCH )
 		{
-			if ( PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) & EHCI_STS_HCH )
-			{
-				break;
-			}
-			else
-			{
-				HCD_WAIT_MS( hn, 5 );		// Wait 5ms
-			}
+			TASK_NAME_LEAVE();
+
+			return ( TRUE );
 		}
 
-		if ( cnt == MAXMS )
-		{
-			USBDEBUG( "EHCI_Chip_Stop           : Error Stopping Controller" );
-			goto bailout;
-		}
-
-		#undef MAXMS
-		// --
+		HCD_WAIT_MS( hn, 5 );
 	}
 
-	// --
-
-	retval = TRUE;
-
-bailout:
-
+	USBERROR( "EHCI_Chip_Stop : Controller did not halt" );
 	TASK_NAME_LEAVE();
 
-	return( retval );
+	return ( FALSE );
 }
 
 // --

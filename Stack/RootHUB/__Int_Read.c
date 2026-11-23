@@ -48,7 +48,7 @@ U32 port;
 			| HUBF_Chg_Over_Current
 			| HUBF_Chg_Reset );
 
-		if ( changed )
+		if ( ( changed ) || ( ( port < sizeof( hn->hn_RescanPort ) ) && ( hn->hn_RescanPort[port] ) ) )
 		{
 			buffer[ port / 8 ] |= ( 1UL << ( port & 0x07 ));
 			update = TRUE;

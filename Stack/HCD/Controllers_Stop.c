@@ -16,6 +16,10 @@ SEC_CODE void __HCD_Controllers_Stop( struct USBBase *usbbase )
 {
 struct USB2_HCDNode *next;
 struct USB2_HCDNode *hn;
+struct PCIResourceRange *range;
+struct PCIDevice *pcidev;
+
+U32 locked;
 
 	USBINFO( "__HCD_Controllers_Stop   :  1 : Send CTRL to HCDs" );
 	TASK_NAME_ENTER( "HCD : __HCD_Controllers_Stop" );
@@ -46,16 +50,33 @@ struct USB2_HCDNode *hn;
 			break;
 		}
 
-		USBINFO( "__HCD_Controllers_Stop   :  4 : Freeing hn %p", hn );
-		if ( hn->hn_PCIDevice )
+		pcidev = hn->hn_PCIDevice;
+		range = hn->hn_PCIDevResource;
+		locked = hn->hn_PCIDevLock;
+
+		if ( HCD_FREE( hn ) != FSTAT_Okay )
 		{
-			if ( hn->hn_PCIDevResource )
-				hn->hn_PCIDevice->FreeResourceRange( hn->hn_PCIDevResource );
-			if ( hn->hn_PCIDevLock ) hn->hn_PCIDevice->Unlock();
-			usbbase->usb_IPCI->FreeDevice( hn->hn_PCIDevice );
+			NODE_ADDTAIL( & usbbase->usb_HCDHeader, hn );
+
+			MISC_WAIT( 1000 );
+
+			continue;
 		}
 
-		HCD_FREE( hn );
+		if ( pcidev )
+		{
+			if ( range )
+			{
+				pcidev->FreeResourceRange( range );
+			}
+
+			if ( locked )
+			{
+				pcidev->Unlock();
+			}
+
+			usbbase->usb_IPCI->FreeDevice( pcidev );
+		}
 	}
 
 	USBINFO( "__HCD_Controllers_Stop   :  5 : Exit" );

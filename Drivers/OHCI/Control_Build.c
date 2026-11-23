@@ -69,6 +69,15 @@ OHCI_Control_Build ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	struct USBBase * usbbase UNUSED = hn->hn_USBBase;
 	TASK_NAME_ENTER ( "OHCI : OHCI_Control_Build" );
 
+	if ( ioreq->req_Public.io_Length > 2 * 4096 )
+	{
+		ioreq->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
+
+		TASK_NAME_LEAVE();
+
+		return ( TRUE );
+	}
+
 	fn = ioreq->req_Function;
 	ep = ioreq->req_EndPoint;
 

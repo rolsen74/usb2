@@ -16,6 +16,7 @@
 
 // --
 
+#include "HCD__Stop_DMA.c"
 #include "HCD_1_Init.c"
 #include "HCD_2_Main.c"
 #include "HCD_3_Free.c"

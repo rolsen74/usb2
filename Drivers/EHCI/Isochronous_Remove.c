@@ -120,7 +120,7 @@ EHCI_Isochronous_Remove ( struct USB2_HCDNode *hn, struct RealRequest *req )
 
 	if ( restart )
 	{
-		TASK_SIGNAL( hn->hn_Task->tn_TaskAdr, hn->HCD_Restart_Chip.sig_Signal_Mask );
+		USB2_HCD_RequestReset( hn );
 	}
 }
 

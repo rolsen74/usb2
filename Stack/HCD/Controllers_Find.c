@@ -184,6 +184,7 @@ struct USB2_HCDNode *node;
 	else if ( fs->fs_Type2 == FT2_EHCI )
 	{
 		in->ehci++;
+		node->hn_IsEHCI = TRUE;
 
 		node->hn_HCDIndex		= in->idx++;
 		node->hn_MaxSpeed		= USBSPEED_High;
@@ -277,6 +278,7 @@ U32 cnt;
 		if ( ! node )
 		{
 			USBERROR( "Error allocating EHCI HCD Node" );
+			IPCI->FreeDevice( pcidev );
 			// Out of mem can't add more
 			break;
 		}
@@ -383,6 +385,7 @@ U32 cnt;
 		else if ( fs->fs_Type2 == FT2_EHCI )
 		{
 			in->ehci++;
+			node->hn_IsEHCI = TRUE;
 
 			node->hn_HCDIndex		= in->idx++;
 			node->hn_MaxSpeed		= USBSPEED_High;

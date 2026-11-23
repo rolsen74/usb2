@@ -28,6 +28,13 @@ __HCD_Transfer_Check ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struc
 	TASK_NAME_ENTER ( "HCD : __HCD_Transfer_Check : 1 :" );
 	USBDEBUG ( "__HCD_Transfer_Check     : IOReq %p : Force %ld", ioreq, Force );
 
+	if ( ! hn->hn_AcceptIO )
+	{
+		TASK_NAME_LEAVE ();
+
+		return ( FALSE );
+	}
+
 #ifdef DO_DEBUG
 
 	if ( HCD_VALID ( hn ) != VSTAT_Okay )
@@ -59,6 +66,13 @@ __HCD_Transfer_Check ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struc
 			USBDEBUG ( "__HCD_Transfer_Check     : Transfer_Check : Implement me" );
 			remove = FALSE;
 		}
+	}
+
+	if ( ! hn->hn_AcceptIO )
+	{
+		TASK_NAME_LEAVE ();
+
+		return ( FALSE );
 	}
 
 	if ( remove )
@@ -99,6 +113,17 @@ __HCD_Transfer_Check ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struc
 		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 5" );
 
 		HCD_TRANSFER_REMOVE ( hn, ioreq );
+
+		if ( ioreq->req_PublicStat == IORS_HCD_Active )
+		{
+			NODE_ADDHEAD ( &hn->hn_Active_Transfer_List, ioreq );
+
+			ENDPOINT_UNLOCK ( ep );
+
+			TASK_NAME_LEAVE ();
+
+			return ( FALSE );
+		}
 
 		if ( ( ioreq->req_AltHeader ) && ( ioreq->req_Public.io_Error == USB2Err_NoError ) )
 		{

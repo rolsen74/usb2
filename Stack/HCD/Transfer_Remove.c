@@ -25,6 +25,7 @@ __HCD_Transfer_Remove ( struct USBBase * usbbase, struct USB2_HCDNode * hn, stru
 	struct USB2_EndPointNode * ep;
 	struct RealFunctionNode *  fn;
 
+	S32 active;
 	U32 actual;
 	U32 index;
 
@@ -63,40 +64,11 @@ __HCD_Transfer_Remove ( struct USBBase * usbbase, struct USB2_HCDNode * hn, stru
 	}
 
 	// --
-	// Check if a Destall succeded
-
-	if ( ioreq->req_DestallTarget )
-	{
-		destall_ep = ioreq->req_DestallTarget;
-		index	   = LE_SWAP16 ( ioreq->req_Public.io_SetupData->Index );
-
-		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
-
-		if ( ( ioreq->req_PublicStat == IORS_HCD_Active ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe )
-			 && ( destall_ep->ep_Active ) && ( ioreq->req_Public.io_Error == USB2Err_NoError ) )
-		{
-			usbbase->usb_IExec->DebugPrintF ( "[%s] We successfully Destalled -- Addr %ld : EP    $%02lx : EPN Info : EPNr "
-											  "%ld : EPDir %ld : EPSize %ld : EPType %ld\n",
-											  usbbase->usb_IExec->FindTask ( NULL )->tc_Node.ln_Name, fn->fkt_Address, index,
-											  destall_ep->ep_Number, destall_ep->ep_Direction, destall_ep->ep_MaxPacketSize,
-											  destall_ep->ep_Type );
-
-			destall_ep->ep_DataToggle = 0;
-			destall_ep->ep_Stalled	  = FALSE;
-		}
-		else
-		{
-			usbbase->usb_IExec->DebugPrintF ( "[%s] Destalled Failed -- Addr %ld -- EP $%02lx\n",
-											  usbbase->usb_IExec->FindTask ( NULL )->tc_Node.ln_Name, fn->fkt_Address, index );
-		}
-
-		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-	}
-
-	// --
 	// Remove Active IOReq
 
-	if ( ioreq->req_PublicStat == IORS_HCD_Active )
+	active = ioreq->req_PublicStat == IORS_HCD_Active;
+
+	if ( active )
 	{
 		// EHCI's DoorBell need the HCD Context
 
@@ -161,6 +133,13 @@ __HCD_Transfer_Remove ( struct USBBase * usbbase, struct USB2_HCDNode * hn, stru
 				USBDEBUG ( "__HCD_Transfer_Remove : Invalid ep_Type %ld", (S32)ep->ep_Type );
 				break;
 			}
+		}
+
+		if ( ! hn->hn_AcceptIO )
+		{
+			TASK_NAME_LEAVE ();
+
+			return;
 		}
 
 		// hmm Functions may not be implemented..
@@ -251,6 +230,37 @@ __HCD_Transfer_Remove ( struct USBBase * usbbase, struct USB2_HCDNode * hn, stru
 	}
 
 	ioreq->req_Public.io_Actual = actual;
+
+	// --
+	// Check if a Destall succeded
+
+	if ( ioreq->req_DestallTarget )
+	{
+		destall_ep = ioreq->req_DestallTarget;
+		index	   = LE_SWAP16 ( ioreq->req_Public.io_SetupData->Index );
+
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+		if ( ( active ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe )
+			 && ( destall_ep->ep_Active ) && ( ioreq->req_Public.io_Error == USB2Err_NoError ) )
+		{
+			usbbase->usb_IExec->DebugPrintF ( "[%s] We successfully Destalled -- Addr %ld : EP    $%02lx : EPN Info : EPNr "
+											  "%ld : EPDir %ld : EPSize %ld : EPType %ld\n",
+											  usbbase->usb_IExec->FindTask ( NULL )->tc_Node.ln_Name, fn->fkt_Address, index,
+											  destall_ep->ep_Number, destall_ep->ep_Direction, destall_ep->ep_MaxPacketSize,
+											  destall_ep->ep_Type );
+
+			destall_ep->ep_DataToggle = 0;
+			destall_ep->ep_Stalled	  = FALSE;
+		}
+		else
+		{
+			usbbase->usb_IExec->DebugPrintF ( "[%s] Destalled Failed -- Addr %ld -- EP $%02lx\n",
+											  usbbase->usb_IExec->FindTask ( NULL )->tc_Node.ln_Name, fn->fkt_Address, index );
+		}
+
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+	}
 
 	// --
 	// Set stall flags, if needed

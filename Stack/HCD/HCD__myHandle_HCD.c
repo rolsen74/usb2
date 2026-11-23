@@ -14,6 +14,11 @@
 
 SEC_CODE static void __myHandle_HCD( struct USBBase *usbbase UNUSED, struct USB2_HCDNode *hn, U32 mask )
 {
+	if ( ! hn->hn_AcceptIO )
+	{
+		return;
+	}
+
 	if ( hn->HCD_Functions.Handler_HCD )
 	{
 		 hn->HCD_Functions.Handler_HCD( hn, mask );

@@ -220,7 +220,8 @@ S32 retval;
 
 	ed = ioreq->req_HCD.OHCI.ED_Header;
 
-	if ( ( ed ) && ( ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Bulk ) ||
+	if ( ( ed ) && ( ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Control ) ||
+		( ioreq->req_EndPoint->ep_Type == EPATT_Type_Bulk ) ||
 		( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous ) ) )
 	{
 		U32 head;

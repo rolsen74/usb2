@@ -49,7 +49,7 @@
 
 // --
 
-SEC_CODE static S32 __is_QH_Finished( struct USB2_HCDNode *hn UNUSED, struct EHCI_QH *qh )
+SEC_CODE static S32 __is_QH_Finished( struct USB2_HCDNode *hn UNUSED, struct EHCI_QH *qh, S32 control )
 {
 struct EHCI_TD *td;
 S32 retval;
@@ -118,7 +118,7 @@ U32 l;
 				l = 20*1024;
 			}
 
-			if (( len != l ) && ( len != 0 ))
+			if ( ( ! control ) && ( len != l ) && ( len != 0 ) )
 			{
 				// Short packet - We are done
 				break;
@@ -254,7 +254,7 @@ S32 retval;
 
 	if ( qh )
 	{
-		retval = __is_QH_Finished( hn, qh );
+		retval = __is_QH_Finished( hn, qh, ioreq->req_EndPoint->ep_Type == EPATT_Type_Control );
 	}
 	else
 	{

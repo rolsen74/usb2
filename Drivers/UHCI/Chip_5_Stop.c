@@ -49,14 +49,24 @@ UHCI_Chip_Stop ( struct USB2_HCDNode * hn )
 	struct USBBase * usbbase;
 
 	U32 cmd;
+	U32 count;
+
 	usbbase = hn->hn_USBBase;
 	cmd = PCI_READWORD ( UHCI_CMD );
 
 	PCI_WRITEWORD ( UHCI_CMD, cmd & ~UHCI_CMD_RS );
-	/* Give the controller time to stop fetching descriptors. */
-	HCD_WAIT_MS ( hn, 2 );
 
-	return ( TRUE );
+	for ( count = 0 ; count < 50 ; count++ )
+	{
+		if ( PCI_READWORD ( UHCI_STS ) & UHCI_STS_HCH )
+		{
+			return ( TRUE );
+		}
+
+		HCD_WAIT_MS ( hn, 2 );
+	}
+
+	return ( FALSE );
 }
 
 // --

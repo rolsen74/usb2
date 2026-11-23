@@ -65,6 +65,11 @@ U8 *mem;
 
 	retval = FALSE;
 
+	if ( len > 5 * 4096 )
+	{
+		goto bailout;
+	}
+
 	mem = MEMORY_ALLOC( MEMID_HCD_20k, FALSE );
 
 	if ( ! mem )
@@ -87,10 +92,7 @@ U8 *mem;
 		USBPANIC( "Bad Alignment 0x%08lx", phy );
 	}
 
-	if ( len > 5 * 4096 )
-	{
-		USBPANIC( "Buffer overflow ( len : %lu )", len );
-	}
+
 	
 	#endif
 

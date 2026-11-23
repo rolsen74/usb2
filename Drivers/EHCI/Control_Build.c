@@ -70,6 +70,15 @@ PTR buf;
 	#endif
 
 	TASK_NAME_ENTER( "EHCI : EHCI_Control_Build" );
+
+	if ( ioreq->req_Public.io_Length > 5 * 4096 )
+	{
+		ioreq->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
+
+		TASK_NAME_LEAVE();
+
+		return ( TRUE );
+	}
 //	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Control_Build : IOReq %p\n", ioreq );
 
 //	fn			= ioreq->req_Function;

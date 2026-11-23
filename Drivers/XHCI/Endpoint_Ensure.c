@@ -111,7 +111,10 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 	if ( ! XHCI_Command ( hn, slot->Input_Physical, 0, 0, XHCI_TRB_TYPE ( XHCI_TRB_CONFIGURE_EP ) | ( slot->Slot_ID << 24 ),
 						  NULL ) )
 	{
-		XHCI_Ring_Free ( hn, ring );
+		if ( state->Command_Done )
+		{
+			XHCI_Ring_Free ( hn, ring );
+		}
 
 		return ( FALSE );
 	}

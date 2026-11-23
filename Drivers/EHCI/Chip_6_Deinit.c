@@ -52,17 +52,21 @@
 SEC_CODE void EHCI_Chip_Deinit( struct USB2_HCDNode *hn )
 {
 struct EHCI_QH *qh;
+struct EHCI_ITD *itd;
+
 U32 cnt;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Deinit" );
 
-	if ( ( hn->hn_HCD.EHCI.IsoOrphan ) &&
-		( ! ( PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) & EHCI_STS_HCH ) ) )
-	{
-		TASK_NAME_LEAVE();
+	// Cleanup runs only after the hardware has halted.
+	EHCI_Isochronous_Reap( hn, TRUE );
 
-		return;
+	while ( ( itd = hn->hn_HCD.EHCI.IsoOrphan ) )
+	{
+		hn->hn_HCD.EHCI.IsoOrphan = itd->Next;
+
+		MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
 	}
 
 	// --

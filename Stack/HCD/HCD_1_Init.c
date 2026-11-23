@@ -120,6 +120,8 @@ S32 undo;
 
 	if ( hn->HCD_Functions.Chip_Start )
 	{
+		hn->hn_DMAActive = TRUE;
+
 		if ( ! hn->HCD_Functions.Chip_Start( hn ) )
 		{
 			USBDEBUG( "__myInit (HCD)           : Chip_Start() Failed" );
@@ -134,6 +136,12 @@ S32 undo;
 		USBDEBUG( "__myInit (HCD)           : __Init_1_Add_HUB() Failed" );
 		goto bailout;
 	}
+
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	hn->hn_AcceptIO = TRUE;
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	USBDEBUG( "__myInit (HCD)           : 9" );
 

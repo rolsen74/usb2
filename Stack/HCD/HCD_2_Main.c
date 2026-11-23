@@ -18,8 +18,8 @@
 
 #include "HCD_2_Main_1_Normal.c"
 #include "HCD_2_Main_2_Signal.c"
-#include "HCD_2_Main_3_Stopping.c"
 #include "HCD_2_Main_4_Shutdown.c"
+#include "HCD_2_Main_3_Stopping.c"
 
 // --
 
@@ -53,10 +53,6 @@ struct intern *in;
 	// --
 	// Stopping loop, wait for Resources to be released
 	__Stopping( usbbase, hn, in );
-
-	// --
-	// Start shutdown
-	__Shutdown( usbbase, hn, in );
 
 	// --
 
