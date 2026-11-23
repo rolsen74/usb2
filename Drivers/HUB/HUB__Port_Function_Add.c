@@ -123,6 +123,11 @@ S32 err;
 			retval = TRUE;
 			break;
 		}
+
+		if ( ( ! ( stat.wPortStatus & PORTSTATF_Connection ) ) || ( stat.wPortChange & PORTCHGF_Connection ) )
+		{
+			break;
+		}
 	}
 
 	// --

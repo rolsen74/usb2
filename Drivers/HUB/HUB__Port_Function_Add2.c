@@ -217,7 +217,8 @@ S32 err;
 		usbbase,
 		in,
 		DevSpeed,
-		port
+		port,
+		stat
 	);	
 }
 

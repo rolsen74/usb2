@@ -150,6 +150,7 @@ S32 len;
 U32 slot;
 U32 mask;
 U32 endpoints;
+U32 interfaces;
 U32 owners[32];
 
 	retval	= FALSE;
@@ -360,6 +361,15 @@ U32 owners[32];
 		goto bailout;
 	}
 
+	interfaces = cn->cfg_InterfaceGroups.uh_Nodes;
+
+	if ( interfaces != cn->cfg_Descriptor->NumInterfaces )
+	{
+		USBERROR( "__Parse: Configuration declares %lu interfaces, parsed %lu",
+			(U32) cn->cfg_Descriptor->NumInterfaces, interfaces );
+		goto bailout;
+	}
+
 	for( ig = cn->cfg_InterfaceGroups.uh_Head; ig; ig = Node_Next( ig ) )
 	{
 		ih = ig->ig_Group.uh_Head;
@@ -368,6 +378,18 @@ U32 owners[32];
 		{
 			USBERROR( "__Parse: Interface has no alternate zero" );
 			goto bailout;
+		}
+
+		for( in = ih->ih_AltSettings.uh_Head; in; in = Node_Next( in ) )
+		{
+			endpoints = in->in_EndPoints.uh_Nodes;
+
+			if ( endpoints != in->in_Descriptor->NumEndPoints )
+			{
+				USBERROR( "__Parse: Interface %lu alternate %lu declares %lu endpoints, parsed %lu",
+					(U32) ih->ih_Number, in->in_AltNumber, (U32) in->in_Descriptor->NumEndPoints, endpoints );
+				goto bailout;
+			}
 		}
 	}
 

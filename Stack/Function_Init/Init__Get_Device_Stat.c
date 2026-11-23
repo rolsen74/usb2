@@ -22,8 +22,10 @@ struct USB2_DeviceStatus stat;
 S32 retval;
 U32 max;
 U32 cnt;
+S32 short_reply;
 
 	retval = FALSE;
+	short_reply = FALSE;
 
 	// Now we know the Real EndPoint Size
 	// so get Full Device Descriptor
@@ -39,7 +41,16 @@ U32 cnt;
 		// Check max retries
 		if ( max < cnt++ )
 		{
-			USBERROR( "__Get_Device_Desc : Error Max trys : io_Error %ld", ioreq->io_Error );
+			if ( short_reply )
+			{
+				fn->fkt_SelfPowered = FALSE;
+				retval = TRUE;
+			}
+			else
+			{
+				USBERROR( "__Get_Device_Stat : Error Max trys : io_Error %ld", ioreq->io_Error );
+			}
+
 			goto bailout;
 		}
 
@@ -54,18 +65,23 @@ U32 cnt;
 
 		IO_DO(ioreq);
 
+		if ( InitCancelled( usbbase, fn, ioreq->io_Error ) )
+		{
+			goto bailout;
+		}
+
 		if ( ioreq->io_Error == USB2Err_NoError )
 		{
-			break;
+			if ( ioreq->io_Actual == sizeof( stat ) )
+			{
+				break;
+			}
+
+			short_reply = TRUE;
 		}
 	}
 
-	if ( stat.Stat & USBSTATUS_Device_SelfPowered )
-	{
-		// The SelfPowered bit may not change so we can store the result
-		fn->fkt_SelfPowered = TRUE;
-	}
-
+	fn->fkt_SelfPowered = ( LE_SWAP16( stat.Stat ) & USBSTATUS_Device_SelfPowered ) != 0;
 	retval = TRUE;
 
 bailout:

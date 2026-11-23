@@ -83,7 +83,7 @@ struct intern
 
 /***************************************************************************/
 
-SEC_CODE struct RealFunctionNode *HUB__Port_Function_Add3( struct RealFunctionNode *parent, struct USBBase *usbbase, struct intern *in, U32 speed, U32 port );
+SEC_CODE struct RealFunctionNode *HUB__Port_Function_Add3( struct RealFunctionNode *parent, struct USBBase *usbbase, struct intern *in, U32 speed, U32 port, struct USB2_PortStatus *status );
 
 SEC_CODE void	HUB__HUB_Chg( struct USBBase *usbbase, struct intern *in );
 SEC_CODE S32	HUB__HUB_Feature_Clr( struct USBBase *usbbase, struct intern *in, U32 sel );

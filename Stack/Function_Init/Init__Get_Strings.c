@@ -12,354 +12,296 @@
 
 // --
 
-SEC_CODE static S32 __myAnyStrings( struct USBBase *usbbase, struct RealFunctionNode *fn )
+#define USB_INIT_STRING_BUDGET_US 500000
+#define USB_INIT_STRING_MAX 255
+
+struct InitStringReads
 {
-struct USB2_Descriptor *dsc;
-S32 retval;
+	struct RealFunctionNode *Function;
+	struct USB2_IORequest *Request;
+	struct USB2_SetupData *Setup;
+	U16 *Cache[USB_INIT_STRING_MAX + 1];
+	U8 Tried[USB_INIT_STRING_MAX + 1];
+	U8 *Buffer;
+	U64 Deadline;
+	S32 Cancelled;
+};
 
-	retval = TRUE;
+// --
 
-	if ( fn->fkt_DeviceDescriptor->ManufacturerStrNr )
-	{
-		goto found;
-	}
+SEC_CODE static U64
+InitUptimeUS( struct USBBase *usbbase )
+{
+	struct TimeVal time;
 
-	if ( fn->fkt_DeviceDescriptor->DeviceStrNr )
-	{
-		goto found;
-	}
+	usbbase->usb_ITimer->GetUpTime( & time );
 
-	if ( fn->fkt_DeviceDescriptor->SerialStrNr )
-	{
-		goto found;
-	}
-
-	dsc = fn->fkt_Config_Desc_Buf;
-
-	while( dsc )
-	{
-		switch( dsc->DescriptorType )
-		{
-			case DSCTYPE_Configuration:
-			{
-				if ( ((struct USB2_Config_Desc *)dsc)->ConfigurationStrNr )
-				{
-					goto found;
-				}
-				break;
-			}
-
-			case DSCTYPE_Interface:
-			{
-				if ( ((struct USB2_Interface_Desc *)dsc)->InterfaceStrNr )
-				{
-					goto found;
-				}
-			}
-		}
-
-		dsc = DESC_NEXT_DESC( dsc );
-	}
-
-	retval = FALSE;
-
-found:
-
-	return( retval );
+	return ( (U64) time.Seconds * 1000000 + time.Microseconds );
 }
 
 // --
 
-#define __GETSTRING(x,y,z)		__myGetString(usbbase,fn,ioreq,sd,x,y,z)
-
-static S32 __myGetString(
-	struct USBBase *usbbase,
-	struct RealFunctionNode *fn,
-	struct USB2_IORequest *ioreq,
-	struct USB2_SetupData *sd,
-	U32 id,
-	U16 **StringBuf,
-	S32 *StringLen )
+SEC_CODE static S32
+ReadInitString( struct USBBase *usbbase, struct InitStringReads *reads, U32 id )
 {
-S32 retval;
-U8 *buf;
+	struct USB2_IORequest *ioreq;
+	struct USB2_SetupData *sd;
 
-	retval = FALSE;
+	U64 now;
+	U32 length;
 
-	buf = MEM_ALLOCIOBUFFER( 256, FALSE );
-
-	if ( ! buf )
+	if ( reads->Cancelled )
 	{
-		USBERROR( "__myGetString: Error allocating memory" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	sd->RequestType	= REQTYPE_Read | REQTYPE_Standard | REQTYPE_Device;
-	sd->RequestCode	= REQCODE_Get_Descriptor;
-	sd->Value		= LE_SWAP16( (( DSCTYPE_String << 8 ) | ( id )) );
-	sd->Index		= LE_SWAP16( fn->fkt_LanguageID );
-	sd->Length		= LE_SWAP16( 255 );
+	reads->Cancelled = InitCancelled( usbbase, reads->Function, USB2Err_NoError );
 
-	ioreq->io_Data	= buf;
-	ioreq->io_Length= 255;
+	now = InitUptimeUS( usbbase );
 
-	IO_DO(ioreq);
-
-	USBDEBUG( "io_Error  %ld", ioreq->io_Error );
-	USBDEBUG( "io_Actual %ld", ioreq->io_Actual );
-
-	if ( ioreq->io_Error )
+	if ( ( reads->Cancelled ) || ( now >= reads->Deadline ) )
 	{
-		USBERROR( "__myGetString: io_Error %ld", ioreq->io_Error );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	if ( ioreq->io_Actual < 2 )
+	ioreq = reads->Request;
+	sd = reads->Setup;
+	sd->RequestType = REQTYPE_Read | REQTYPE_Standard | REQTYPE_Device;
+	sd->RequestCode = REQCODE_Get_Descriptor;
+	sd->Value = LE_SWAP16( ( DSCTYPE_String << 8 ) | id );
+	sd->Index = LE_SWAP16( ( id ) ? reads->Function->fkt_LanguageID : 0 );
+	sd->Length = LE_SWAP16( USB_INIT_STRING_MAX );
+	ioreq->io_Command = CMD_READ;
+	ioreq->io_SetupData = sd;
+	ioreq->io_SetupLength = sizeof( *sd );
+	ioreq->io_Data = reads->Buffer;
+	ioreq->io_Length = USB_INIT_STRING_MAX;
+	ioreq->io_TimeOut = (U32) ( reads->Deadline - now );
+
+	IO_DO( ioreq );
+
+	reads->Cancelled = InitCancelled( usbbase, reads->Function, ioreq->io_Error );
+
+	if ( ( reads->Cancelled ) || ( ioreq->io_Error ) || ( ioreq->io_Actual < 2 ) )
 	{
-		USBERROR( "__myGetString: io_Actual (%ld < 2)", ioreq->io_Actual );
-		goto bailout;
+		USBDEBUG( "String descriptor #%lu: error %ld, %lu bytes", id, (S32) ioreq->io_Error, ioreq->io_Actual );
+
+		return ( FALSE );
 	}
 
-	if ( buf[1] != DSCTYPE_String )
-	{
-		USBERROR( "__myGetString: Expected a String Descriptor (%ld != %ld)", buf[1], DSCTYPE_String );
-		goto bailout;
-	}
+	length = reads->Buffer[0];
 
-	if ( ( buf[0] < 2 ) || ( buf[0] & 1 ) || ( buf[0] > ioreq->io_Actual ) )
-	{
-		USBERROR( "__myGetString: Invalid String Descriptor Length %lu", (U32) buf[0] );
-		goto bailout;
-	}
-
-	*StringLen = buf[0];
-	*StringBuf = MEM_ALLOCVEC( buf[0]+1, TRUE );
-
-	if ( ! *StringBuf )
-	{
-		USBERROR( "__myGetString: Error Allocating Memory" );
-		goto bailout;
-	}
-
-	MEM_COPY( buf, *StringBuf, MIN( ioreq->io_Actual, buf[0] ));
-
-	retval = TRUE;
-
-bailout:
-
-	if (( buf ) && ( ioreq->io_Error ))
-	{
-		// todo : Destall
-	}
-
-	MEM_FREEIOBUFFER( buf );
-
-	return( retval );
+	return ( ( reads->Buffer[1] == DSCTYPE_String ) && ( length >= 2 ) &&
+		( ! ( length & 1 ) ) && ( length <= ioreq->io_Actual ) );
 }
 
 // --
 
-SEC_CODE static S32 __Get_Strings( 
-	struct RealFunctionNode *fn,
-	struct USB2_IORequest *ioreq,
-	struct USB2_SetupData *sd,
-	struct USBBase *usbbase )
+SEC_CODE static U16
+ReadInitLanguage( struct USBBase *usbbase, struct InitStringReads *reads )
 {
-struct USB2_InterfaceHeader *ih;
-struct USB2_InterfaceGroup *ig;
-struct USB2_InterfaceNode *in;
-struct USB2_String_Desc *strdsc;
-struct USB2_ConfigNode *cn;
-U16 *LangBuf;
-S32 LangLen;
-S32 retval;
-S32 len;
-S32 cnt;
-U32 id;
+	U16 first;
+	U16 language;
+	U32 offset;
 
-	retval = FALSE;
-
-	ioreq->io_Command		= CMD_READ;
-	ioreq->io_SetupData		= sd;
-	ioreq->io_SetupLength	= sizeof( struct USB2_SetupData );
-
-	USBDEBUG( "Checking for Strings" );
-
-	if ( __myAnyStrings( usbbase, fn ))
+	if ( ! ReadInitString( usbbase, reads, 0 ) )
 	{
-		USBDEBUG( "Have Strings" );
+		return ( 0 );
+	}
 
-		// --
+	first = 0;
 
-		USBDEBUG( "Getting LangID" );
-		if ( ! __GETSTRING( 0, & LangBuf, & LangLen ))
+	for ( offset = 2 ; offset < reads->Buffer[0] ; offset += 2 )
+	{
+		language = reads->Buffer[offset] | ( reads->Buffer[offset + 1] << 8 );
+
+		if ( language == 0x0409 )
 		{
-			USBERROR( "__myGetString: Error Getting Language (%ld)", (S32) ioreq->io_Error );
-			goto bailout;
+			return ( language );
 		}
 
-		// -- Check Lang
-
-		strdsc = (PTR) LangBuf;
-		len = ( strdsc->Length - 2 ) / 2;
-
-		if ( strdsc->Length >= 4 )
+		if ( ! first )
 		{
-			// Try and find 0x0409 (US English)
-
-			for( cnt=0 ; cnt<len ; cnt++ )
-			{
-				if ( strdsc->LangID[cnt] == LE_SWAP16( 0x0409 ))
-				{
-					break;
-				}
-			}
-
-			if ( cnt == len )
-			{
-				// Not found, just use the first LandID returned
-				fn->fkt_LanguageID = LE_SWAP16( strdsc->LangID[0] );
-			}
-			else
-			{
-				// Found using English United States (Normal Default)
-				fn->fkt_LanguageID = 0x0409;
-			}
+			first = language;
 		}
+	}
 
-		MEM_FREEVEC( LangBuf );
+	return ( first );
+}
 
-		if ( ! fn->fkt_LanguageID )
+// --
+
+SEC_CODE static S32
+CacheInitString( struct USBBase *usbbase, struct InitStringReads *reads, U32 id, U16 **result, S32 *length )
+{
+	U16 *copy;
+	U8 *data;
+	U32 size;
+
+	if ( ( ! id ) || ( reads->Cancelled ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( reads->Tried[id] )
+	{
+		data = (PTR) reads->Cache[id];
+
+		if ( ! data )
 		{
-			USBERROR( "__myGetString: Error Obtaining Language Code" );
-			goto bailout;
-		}
-
-		USBINFO( "Using LanguageID: 0x%04lx", fn->fkt_LanguageID );
-
-		/*
-		** Get Manufacturer String
-		*/
-
-		id = fn->fkt_DeviceDescriptor->ManufacturerStrNr;
-		if ( id )
-		{
-			USBINFO( "Getting Manufacturer String (%lu)", id );
-			if ( ! __GETSTRING( id, & fn->fkt_ManufacturerStr, & fn->fkt_ManufacturerStrLen ))
-			{
-				USBERROR( "__myGetString: Error Getting Device String (%ld)", (S32) ioreq->io_Error );
-//				goto bailout;
-			}
-		}
-
-		/*
-		** Get Device String
-		*/
-
-		id = fn->fkt_DeviceDescriptor->DeviceStrNr;
-		if ( id )
-		{
-			USBINFO( "Getting Device String (%lu)", id );
-			if ( ! __GETSTRING( id, & fn->fkt_DeviceStr, & fn->fkt_DeviceStrLen ))
-			{
-				USBERROR( "__myGetString: Error Getting Device String (%ld)", (S32) ioreq->io_Error );
-//				goto bailout;
-			}
-		}
-
-		/*
-		** Get Serial String
-		*/
-
-		id = fn->fkt_DeviceDescriptor->SerialStrNr;
-		if ( id )
-		{
-			USBINFO( "Getting Serial String (%lu)", id );
-			if ( ! __GETSTRING( id, & fn->fkt_SerialStr, & fn->fkt_SerialStrLen ))
-			{
-				USBERROR( "__myGetString: Error Getting Serial String (%ld)", (S32) ioreq->io_Error );
-//				goto bailout;
-			}
-		}
-
-		/*
-		** Check for Config/Interface Strings
-		*/
-
-		cn = fn->fkt_Configs.uh_Head;
-
-		while(cn)
-		{
-			// -- Config
-
-			id = cn->cfg_Descriptor->ConfigurationStrNr;
-
-			if ( id )
-			{
-				USBINFO( "Get Configuration String (%lu)", id );
-
-				if ( ! __GETSTRING( id, & cn->cfg_String, & cn->cfg_StringLen ))
-				{
-					USBERROR( "__myGetString: Error Getting Config String (%ld)", (S32) ioreq->io_Error );
-//					goto bailout;
-				}
-
-				cn->cfg_StringID = MISC_NEWNOTIFYID();
-			}
-
-			// -- Interface
-
-			ig = cn->cfg_InterfaceGroups.uh_Head;
-
-			while( ig )
-			{
-				ih = ig->ig_Group.uh_Head;
-
-				while( ih )
-				{
-					in = ih->ih_AltSettings.uh_Head;
-
-					while( in )
-					{
-						id = in->in_Descriptor->InterfaceStrNr;
-
-						if ( id )
-						{
-							USBINFO( "Get Interface String (%lu)", id );
-
-							if ( ! __GETSTRING( id, & in->in_String, & in->in_StringLen ))
-							{
-								USBERROR( "__myGetString: Error Getting Interface String (%ld)", (S32) ioreq->io_Error );
-//								goto bailout;
-							}
-
-							in->in_StringID = MISC_NEWNOTIFYID();
-						}
-
-						in = Node_Next(in);
-					}
-
-					ih = Node_Next( ih );
-				}
-			
-				ig = Node_Next( ig );
-			}
-
-			// -- 
-
-			cn = Node_Next( cn );
+			return ( FALSE );
 		}
 	}
 	else
 	{
-		USBINFO( "No Strings Found, skipping" );
+		reads->Tried[id] = TRUE;
+
+		if ( ! ReadInitString( usbbase, reads, id ) )
+		{
+			return ( FALSE );
+		}
+
+		data = reads->Buffer;
 	}
 
-	retval = TRUE;
+	size = data[0];
 
-bailout:
+	copy = MEM_ALLOCVEC( size + 1, TRUE );
 
-	return( retval );
+	if ( ! copy )
+	{
+		return ( FALSE );
+	}
+
+	MEM_COPY( data, copy, size );
+
+	// The first destination owns the cached buffer until enumeration ends.
+	if ( ! reads->Cache[id] )
+	{
+		reads->Cache[id] = copy;
+	}
+
+	*result = copy;
+	*length = size;
+
+	return ( TRUE );
+}
+
+// --
+
+SEC_CODE static S32
+InitHasStrings( struct USBBase *usbbase, struct RealFunctionNode *fn )
+{
+	struct USB2_Descriptor *desc;
+
+	if ( ( fn->fkt_DeviceDescriptor->ManufacturerStrNr ) || ( fn->fkt_DeviceDescriptor->DeviceStrNr ) ||
+		( fn->fkt_DeviceDescriptor->SerialStrNr ) )
+	{
+		return ( TRUE );
+	}
+
+	desc = fn->fkt_Config_Desc_Buf;
+
+	while ( desc )
+	{
+		if ( ( ( desc->DescriptorType == DSCTYPE_Configuration ) &&
+			   ( ((struct USB2_Config_Desc *) desc)->ConfigurationStrNr ) ) ||
+			 ( ( desc->DescriptorType == DSCTYPE_Interface ) &&
+			   ( ((struct USB2_Interface_Desc *) desc)->InterfaceStrNr ) ) )
+		{
+			return ( TRUE );
+		}
+
+		desc = DESC_NEXT_DESC( desc );
+	}
+
+	return ( FALSE );
+}
+
+// --
+
+SEC_CODE static S32
+__Get_Strings( struct RealFunctionNode *fn, struct USB2_IORequest *ioreq, struct USB2_SetupData *sd,
+	struct USBBase *usbbase )
+{
+	struct USB2_InterfaceHeader *ih;
+	struct USB2_InterfaceGroup *ig;
+	struct USB2_InterfaceNode *in;
+	struct USB2_ConfigNode *cn;
+	struct InitStringReads reads;
+
+	U32 timeout;
+
+	if ( InitCancelled( usbbase, fn, USB2Err_NoError ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( ! InitHasStrings( usbbase, fn ) )
+	{
+		return ( TRUE );
+	}
+
+	MEM_SET( & reads, 0, sizeof( reads ) );
+
+	reads.Buffer = MEM_ALLOCIOBUFFER( USB_INIT_STRING_MAX + 1, FALSE );
+
+	if ( ! reads.Buffer )
+	{
+		return ( TRUE );
+	}
+
+	timeout = ioreq->io_TimeOut;
+	reads.Function = fn;
+	reads.Request = ioreq;
+	reads.Setup = sd;
+
+	reads.Deadline = InitUptimeUS( usbbase ) + USB_INIT_STRING_BUDGET_US;
+	fn->fkt_LanguageID = ReadInitLanguage( usbbase, & reads );
+
+	if ( fn->fkt_LanguageID )
+	{
+		CacheInitString( usbbase, & reads, fn->fkt_DeviceDescriptor->ManufacturerStrNr,
+			& fn->fkt_ManufacturerStr, & fn->fkt_ManufacturerStrLen );
+
+		CacheInitString( usbbase, & reads, fn->fkt_DeviceDescriptor->DeviceStrNr,
+			& fn->fkt_DeviceStr, & fn->fkt_DeviceStrLen );
+
+		CacheInitString( usbbase, & reads, fn->fkt_DeviceDescriptor->SerialStrNr,
+			& fn->fkt_SerialStr, & fn->fkt_SerialStrLen );
+
+		for ( cn = fn->fkt_Configs.uh_Head ; ( cn ) && ( ! reads.Cancelled ) ; cn = Node_Next( cn ) )
+		{
+			if ( CacheInitString( usbbase, & reads, cn->cfg_Descriptor->ConfigurationStrNr,
+				& cn->cfg_String, & cn->cfg_StringLen ) )
+			{
+				cn->cfg_StringID = MISC_NEWNOTIFYID();
+			}
+
+			for ( ig = cn->cfg_InterfaceGroups.uh_Head ; ( ig ) && ( ! reads.Cancelled ) ; ig = Node_Next( ig ) )
+			{
+				for ( ih = ig->ig_Group.uh_Head ; ( ih ) && ( ! reads.Cancelled ) ; ih = Node_Next( ih ) )
+				{
+					for ( in = ih->ih_AltSettings.uh_Head ; ( in ) && ( ! reads.Cancelled ) ; in = Node_Next( in ) )
+					{
+						if ( CacheInitString( usbbase, & reads, in->in_Descriptor->InterfaceStrNr,
+							& in->in_String, & in->in_StringLen ) )
+						{
+							in->in_StringID = MISC_NEWNOTIFYID();
+						}
+					}
+				}
+			}
+		}
+	}
+
+	ioreq->io_TimeOut = timeout;
+	ioreq->io_Data = NULL;
+	ioreq->io_Length = 0;
+
+	MEM_FREEIOBUFFER( reads.Buffer );
+
+	return ( ! reads.Cancelled );
 }
 
 // --

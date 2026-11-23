@@ -130,6 +130,11 @@ enum FSTAT fstat;
 		in->in_Function = NULL;
 	}
 
+	if ( in->in_String )
+	{
+		MEM_FREEVEC( in->in_String );
+	}
+
 	MEMORY_FREE( MEMID_USBInterfaceNode, in, 0 );
 
 bailout:

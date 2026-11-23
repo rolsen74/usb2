@@ -51,6 +51,12 @@ U32 cnt;
 
 		IO_DO(ioreq);
 
+		if ( InitCancelled( usbbase, fn, ioreq->io_Error ) )
+		{
+			goto bailout;
+		}
+
+
 		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == sizeof( desc ) ) )
 		{
 			break;

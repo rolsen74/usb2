@@ -12,65 +12,104 @@
 
 // --
 
+struct FunctionInit
+{
+	struct RealFunctionNode *fn;
+	S32 Success;
+};
+
+// --
+
+SEC_CODE static S32
+FunctionAttached( struct RealFunctionNode *fn )
+{
+	struct RealFunctionNode *parent;
+
+	parent = fn->fkt_Parent;
+
+	return ( ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) &&
+		( ( ! parent ) || ( ( ! parent->fkt_Detach ) && ( ! parent->fkt_FreeMe ) ) ) );
+}
+
+// --
+
+SEC_CODE static S32
+InitCancelled( struct USBBase *usbbase, struct RealFunctionNode *fn, S32 error )
+{
+	S32 attached;
+
+	if ( ( error == USB2Err_Device_Detached ) || ( error == IOERR_ABORTED ) )
+	{
+		return ( TRUE );
+	}
+
+	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
+
+	attached = FunctionAttached( fn );
+
+	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+
+	return ( ! attached );
+}
+
+// --
+
+// The caller holds the stack lock and has completed initialization.
+SEC_CODE S32
+USB2_Function_Publish( struct USBBase *usbbase, struct RealFunctionNode *fn )
+{
+	if ( ! FunctionAttached( fn ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( ! fn->fkt_Initialized )
+	{
+		fn->fkt_Initialized = TRUE;
+
+		USB2_Notify_Function( usbbase, fn, USBNC_Adding );
+	}
+
+	return ( TRUE );
+}
+
+// --
+
 #include "Init_2_Main.c"
 
 // --
 
-SEC_CODE S32 __Function_Init( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as )
+SEC_CODE S32
+__Function_Init( struct USBBase *usbbase, struct RealFunctionNode *fn, struct USB2_ASync *as )
 {
-//enum TaskReturn stat;
-S32 retval;
+	struct FunctionInit init;
 
-	retval = FALSE;
-
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Init 111 :\n##\n\n" );
-
-	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
-	{
-		USBDEBUG( "Device Init Done 1       : FN    %p : Locks %2ld : Init %ld", fn, (fn)?fn->fkt_Locks:0, (fn)?fn->fkt_Initialized:-1 );
-
-		if ( ! fn->fkt_Initialized )
-		{
-			// Init just retreive USB Data about the Device
-			// it do not need a ASync struct, as it returns when done
-			// hmm but do I need to start another process for that??
-			// or can I run it from kickstart/opendevice(ramlib)??
-//			stat = 
-			TASK_START(
-				USB2_WaitForTermination, TRUE,
-				TASK_Tag_Func_Main, __myMain,
-				TASK_Tag_UserData, fn,
-				TASK_Tag_ASync, as,
-				TASK_Tag_Type, TASK_Type_FKT,
-				TASK_Tag_Name, "Device Init",
-				TAG_END	
-			);
-
-//			usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Init : 000 : Stat $%08lx\n##\n\n", (U32) stat );
-		}
-
-		USBDEBUG( "Device Init Done 2 : FN    %p : Locks %2ld : Init %ld", fn, (fn)?fn->fkt_Locks:0, (fn)?fn->fkt_Initialized:-1 );
-
-		if ( fn->fkt_Initialized )
-		{
-			USBDEBUG( "__Function_Init          : Stat 111 --- Okay" );
-			retval = TRUE;
-		}
-		else
-		{
-			USBERROR( "__Function_Init : Stat 222 --- Failed" );
-		}
-
-		FUNCTION_UNLOCK( fn );
-	}
-	else
+	if ( FUNCTION_LOCK( fn ) != LSTAT_Okay )
 	{
 		USBERROR( "__Function_Init : Function Lock Error" );
+
+		return ( FALSE );
 	}
 
-//	usbbase->usb_IExec->DebugPrintF( "\n##\n## __Function_Init 333 : Retval %ld\n##\n\n", (S32) retval );
+	init.fn = fn;
+	init.Success = fn->fkt_Initialized;
 
-	return( retval );
+	if ( ! init.Success )
+	{
+		TASK_START(
+			USB2_WaitForTermination, TRUE,
+			TASK_Tag_Func_Main, __myMain,
+			TASK_Tag_UserData, & init,
+			TASK_Tag_ASync, as,
+			TASK_Tag_Type, TASK_Type_FKT,
+			TASK_Tag_Name, "Device Init",
+			TAG_END
+		);
+	}
+
+	FUNCTION_UNLOCK( fn );
+
+	return ( init.Success );
 }
 
 // --

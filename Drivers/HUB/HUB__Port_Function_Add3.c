@@ -49,10 +49,13 @@ SEC_CODE struct RealFunctionNode *HUB__Port_Function_Add3(
 	struct USBBase *usbbase, 
 	struct intern *in,
 	U32 speed,
-	U32 port )
+	U32 port,
+	struct USB2_PortStatus *status )
 {
+struct USB2_PortStatus fresh;
 struct RealFunctionNode *fn;
-enum TaskReturn stat;
+
+S32 stat;
 S32 error;
 U32 adr;
 
@@ -107,6 +110,21 @@ U32 adr;
 		goto bailout;
 	}
 
+	stat = HUB__Port_Status_Get( usbbase, in, port, & fresh );
+
+	if ( stat != USB2Err_NoError )
+	{
+		goto bailout;
+	}
+
+	*status = fresh;
+
+	if ( ( ! ( status->wPortStatus & PORTSTATF_Connection ) ) || ( status->wPortChange & PORTCHGF_Connection ) )
+	{
+		USBDEBUG( "HUB__Port_Function_Add : Port changed during initialization" );
+		goto bailout;
+	}
+
 	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
 	{
 		USBDEBUG( "555 OKAY 444 : FN    %p", fn );
@@ -117,9 +135,23 @@ U32 adr;
 		in->PortFunctions[port] = fn;
 		fn->fkt_HUB_Data = in->HUB_ID;
 
+		error = ! USB2_Function_Publish( usbbase, fn );
+
+		if ( error )
+		{
+			fn->fkt_DriverASync = NULL;
+			in->PortFunctions[port] = NULL;
+			fn->fkt_HUB_Data = 0;
+		}
+
 		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
-		error = FALSE;
+		if ( error )
+		{
+			FUNCTION_UNLOCK( fn );
+
+			goto bailout;
+		}
 
 		// Try and Bind Function to a Driver
 		// We don't care if there is a driver for it

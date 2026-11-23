@@ -55,6 +55,12 @@ __Get_EndPoint_Size ( struct USB2_EPResource * epr, struct RealFunctionNode * fn
 
 		IO_DO ( ioreq );
 
+		if ( InitCancelled( usbbase, fn, ioreq->io_Error ) )
+		{
+			goto bailout;
+		}
+
+
 		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == 8 ) )
 		{
 			break;

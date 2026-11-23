@@ -113,6 +113,15 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 
 			// Init Root HUB Device, by reading info via USB IO
 			stat = FUNCTION_INIT ( fn, &hn->hn_HUB_ASync );
+
+			if ( stat )
+			{
+				SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
+				stat = USB2_Function_Publish ( usbbase, fn );
+
+				SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+			}
 			// Init return True/False
 
 			//			usbbase->usb_IExec->DebugPrintF( "Function Init : Stat %lx\n", stat );

@@ -49,6 +49,12 @@ U32 cnt;
 		ioreq->io_Length= fn->fkt_Config_Desc_Size;
 
 		IO_DO(ioreq);
+
+		if ( InitCancelled( usbbase, fn, ioreq->io_Error ) )
+		{
+			goto bailout;
+		}
+
  
 		if ( ( ioreq->io_Error == USB2Err_NoError ) && ( ioreq->io_Actual == fn->fkt_Config_Desc_Size ) )
 		{

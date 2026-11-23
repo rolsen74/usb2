@@ -86,6 +86,8 @@ struct RealFunctionNode
 //	struct USB2_Node				fkt_ResourceTrackingNode;
 };
 
+S32 USB2_Function_Publish( struct USBBase *usbbase, struct RealFunctionNode *fn );
+
 /***************************************************************************/
 
 #endif // INC_PRIVATE_FUNCTION_H

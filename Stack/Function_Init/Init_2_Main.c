@@ -37,9 +37,14 @@ __myMain ( struct USBBase * usbbase, PTR userdata, PTR in UNUSED )
 	struct USB2_SetupData *	  sd;
 	struct RealRegister *	  reg;
 	struct USB2_ConfigNode *  config;
-	U32						  cfgval;
+	struct FunctionInit *	  init;
 
-	fn = userdata;
+	U32						  cfgval;
+	S32						  success;
+
+	init = userdata;
+	fn = init->fn;
+	success = FALSE;
 
 #ifdef DO_INFO
 	{
@@ -63,6 +68,11 @@ __myMain ( struct USBBase * usbbase, PTR userdata, PTR in UNUSED )
 	if ( FUNCTION_VALID ( fn ) != VSTAT_Okay )
 	{
 		USBERROR ( "__myMain (Init)          : Invalid FN (%p)", fn );
+		goto bailout;
+	}
+
+	if ( InitCancelled ( usbbase, fn, USB2Err_NoError ) )
+	{
 		goto bailout;
 	}
 
@@ -208,22 +218,11 @@ __myMain ( struct USBBase * usbbase, PTR userdata, PTR in UNUSED )
 
 	if ( ! __Get_Strings ( fn, ioreq, sd, usbbase ) )
 	{
-		USBERROR ( "Error: Set Config failed" );
+		USBDEBUG ( "Device detached while reading strings" );
 		goto bailout;
 	}
 
-	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
-
-	if ( ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe ) )
-	{
-		fn->fkt_Initialized = TRUE;
-
-		USB2_Notify_Function ( usbbase, fn, USBNC_Adding );
-	}
-
-	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-
-	USBDEBUG ( "__myMain (Init)          : Done" );
+	success = TRUE;
 
 bailout:
 
@@ -232,6 +231,8 @@ bailout:
 	USBDEBUG ( "__myMain (Init)          : Unregister %p", reg );
 
 	REGISTER_UNREGISTER ( reg );
+
+	init->Success = success;
 
 	// -- Exit
 
