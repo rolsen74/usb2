@@ -165,7 +165,7 @@ Run_Wireless( struct Wireless *wireless, U32 channel, U32 maxChannel, S32 open, 
 
 	if ( ( ! wireless->ScanRT2870 ) && ( ! wireless->AP.RatesSupported ) )
 	{
-		fprintf( stderr, "This access point requires rates beyond the current RTL8188EU CCK support.\n" );
+		fprintf( stderr, "This access point requires rates beyond the adapter's current CCK support.\n" );
 
 		return ( RETURN_WARN );
 	}
@@ -412,9 +412,14 @@ main( int argc, char **argv __attribute__((unused)) )
 	{
 		fprintf( stderr, "PASSWORD must contain %u to 63 printable ASCII characters.\n", wireless.UseSAE ? 1U : 8U );
 	}
-	else if ( ( ! rt2870 ) && ( wireless.AdapterType != USB2ETH_ADAPTER_RTL8188 ) )
+	else if ( ( ! rt2870 ) && ( wireless.AdapterType != USB2ETH_ADAPTER_RTL8188 ) &&
+		( wireless.AdapterType != USB2ETH_ADAPTER_RTL8811AU ) )
 	{
-		fprintf( stderr, "No matching RTL8188 or RT2870 adapter on %s unit %ld.\n", WIRELESS_DEVICE, unit );
+		fprintf( stderr, "No supported Wi-Fi adapter on %s unit %ld.\n", WIRELESS_DEVICE, unit );
+	}
+	else if ( ( wireless.AdapterType == USB2ETH_ADAPTER_RTL8811AU ) && ( wireless.UseWPA || wireless.AllowWPA3 ) )
+	{
+		fprintf( stderr, "Use OPEN or WPA2 with the RTL8811AU.\n" );
 	}
 	else if ( ( ( values[6] ) || ( values[7] ) ) &&
 		( ( ! rt2870 ) || ( values[1] ) || ( wireless.AllowWPA2 ) || ( wireless.AllowWPA3 ) || ( ( values[6] ) && ( values[7] ) ) ) )

@@ -9,7 +9,7 @@ all: build_all
 
 .PHONY: all build_all build_dir_tree build_stack build_printer build_video build_sdr_test build_bluetooth_test \
 	build_ptp build_serial build_smartcard build_audio build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer \
-	build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_archive
+	build_rtl8811au build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_archive
 
 ###########################################################################
 
@@ -188,6 +188,15 @@ build_rtl8821cu: | build_dir_tree
 
 ###########################################################################
 
+build_rtl8811au: | build_dir_tree
+	@echo "Building RTL8811AU Wi-Fi Driver"
+	$(MAKE) -C Drivers/Ethernet/RTL8811AU BINDIR=bin clean
+	$(MAKE) -C Drivers/Ethernet/RTL8811AU BINDIR=bin
+	cp Drivers/Ethernet/RTL8811AU/bin/eth_RTL8811AU.Driver Drivers/Ethernet/RTL8811AU/eth_RTL8811AU.Class $(BINDIR)/usb2/Libs/USB2
+	cp Drivers/Ethernet/RTL8811AU/Firmware/rtw8821a_fw.bin Drivers/Ethernet/RTL8811AU/Firmware/rtw8821a_fw.licence $(BINDIR)/usb2/Devs/Firmware
+
+###########################################################################
+
 build_analyzer: | build_dir_tree
 	@echo "Building USB2Analyzer"
 	cd $(ROOTDIR)/Programs/USB2Analyzer && \
@@ -249,7 +258,7 @@ build_wireless_manager: | build_dir_tree
 ###########################################################################
 
 build_archive: build_stack build_printer build_video build_sdr_test build_bluetooth_test build_ptp build_serial build_smartcard build_audio \
-	build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
+	build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_rtl8811au build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
 	@echo "Building Archive"
 	@rm -f usb2.lha
 	cd "$(BINDIR)" && lha a "$(ROOTDIR)/usb2.lha" usb2

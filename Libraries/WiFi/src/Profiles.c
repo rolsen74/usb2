@@ -38,6 +38,7 @@ WiFi_AdapterProtocol( U32 adapter )
 	{
 		case USB2WIFI_RTL8188: return ( USB2ETH_ADAPTER_RTL8188 );
 		case USB2WIFI_RT2870: return ( USB2ETH_ADAPTER_RT2870 );
+		case USB2WIFI_RTL8811AU: return ( USB2ETH_ADAPTER_RTL8811AU );
 	}
 
 	return ( USB2ETH_ADAPTER_UNKNOWN );

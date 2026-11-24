@@ -114,7 +114,8 @@ ConnectProfile( struct AutoWiFi *wifi, const char *device, U32 action, S32 fromP
 	wireless.SSID = wifi->Profile.SSID;
 	wireless.SSIDLength = strlen( wifi->Profile.SSID );
 	wireless.ScanRT2870 = wifi->Adapter == USB2WIFI_RT2870;
-	wireless.AdapterType = wireless.ScanRT2870 ? USB2ETH_ADAPTER_RT2870 : USB2ETH_ADAPTER_RTL8188;
+	wireless.AdapterType = wireless.ScanRT2870 ? USB2ETH_ADAPTER_RT2870 :
+		( wifi->Adapter == USB2WIFI_RTL8811AU ? USB2ETH_ADAPTER_RTL8811AU : USB2ETH_ADAPTER_RTL8188 );
 	wireless.UseWPA = wifi->Profile.Security == USB2WIFI_WPA;
 	wireless.AllowWPA2 = wifi->Profile.Security == USB2WIFI_WPA2;
 	wireless.AllowWPA3 = wifi->Profile.Security == USB2WIFI_WPA3;
@@ -167,11 +168,12 @@ WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected, ULONG registr
 
 	type = Wireless_ResolveAdapter( device, unit, &wifi.Registration );
 
-	if ( ( ( type != USB2ETH_ADAPTER_RT2870 ) && ( type != USB2ETH_ADAPTER_RTL8188 ) ) ||
+	if ( ( ( type != USB2ETH_ADAPTER_RT2870 ) && ( type != USB2ETH_ADAPTER_RTL8188 ) &&
+		   ( type != USB2ETH_ADAPTER_RTL8811AU ) ) ||
 		( ( expected != USB2ETH_ADAPTER_UNKNOWN ) && ( expected != type ) ) ||
 		( ( registration ) && ( registration != wifi.Registration ) ) )
 	{
-		fprintf( stderr, "No matching RTL8188 or RT2870 adapter on %s unit %lu.\n",
+		fprintf( stderr, "No supported Wi-Fi adapter on %s unit %lu.\n",
 			WIRELESS_DEVICE, (unsigned long) unit );
 
 		return ( RETURN_FAIL );
@@ -206,7 +208,8 @@ WiFi_Run( const char *device, U32 unit, S32 setup, ULONG expected, ULONG registr
 
 	retryPicker = base->lib_Version > USB2WIFI_VERSION || base->lib_Revision >= USB2WIFI_RETRY_PICKER_REVISION;
 	autoConnect = base->lib_Version > USB2WIFI_VERSION || base->lib_Revision >= USB2WIFI_EDITOR_REVISION;
-	wifi.Adapter = ( type == USB2ETH_ADAPTER_RT2870 ) ? USB2WIFI_RT2870 : USB2WIFI_RTL8188;
+	wifi.Adapter = ( type == USB2ETH_ADAPTER_RT2870 ) ? USB2WIFI_RT2870 :
+		( type == USB2ETH_ADAPTER_RTL8811AU ? USB2WIFI_RTL8811AU : USB2WIFI_RTL8188 );
 	wifi.Unit = unit;
 
 	if ( base->lib_Revision >= USB2WIFI_REGISTRATION_REVISION )

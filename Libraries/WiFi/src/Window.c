@@ -891,7 +891,8 @@ HandleWindowInput( void *context )
 			{
 				DebugPrintF( "USB2 Wi-Fi: picker accepted %s for %s unit %lu.\n",
 					event == ( WMHI_GADGETUP | WIFI_CONNECT ) ? "Connect button" : "Enter",
-					controls->Adapter == USB2WIFI_RT2870 ? "RT2870" : "RTL8188EU", controls->Unit );
+					controls->Adapter == USB2WIFI_RT2870 ? "RT2870" :
+						( controls->Adapter == USB2WIFI_RTL8811AU ? "RTL8811AU" : "RTL8188EU" ), controls->Unit );
 			}
 
 			return ( FALSE );
@@ -995,7 +996,8 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 
 	ReadAdapterTitle( adapter, unit, adapterTitle );
 
-	adapterLabel = adapterTitle[0] ? adapterTitle : ( adapter == USB2WIFI_RT2870 ? "RT2870" : "RTL8188EU" );
+	adapterLabel = adapterTitle[0] ? adapterTitle : ( adapter == USB2WIFI_RT2870 ? "RT2870" :
+		( adapter == USB2WIFI_RTL8811AU ? "RTL8811AU" : "RTL8188EU" ) );
 
 	if ( ! WiFi_ObtainIntuition() )
 	{

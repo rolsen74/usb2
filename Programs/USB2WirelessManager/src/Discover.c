@@ -87,7 +87,8 @@ WiFi_PickNetwork( U32 adapter, U32 unit, U32 registration, struct WiFiScan *scan
 	wireless.UnitNumber = unit;
 	wireless.Registration = registration;
 	wireless.ScanRT2870 = adapter == USB2WIFI_RT2870;
-	wireless.AdapterType = wireless.ScanRT2870 ? USB2ETH_ADAPTER_RT2870 : USB2ETH_ADAPTER_RTL8188;
+	wireless.AdapterType = wireless.ScanRT2870 ? USB2ETH_ADAPTER_RT2870 :
+		( adapter == USB2WIFI_RTL8811AU ? USB2ETH_ADAPTER_RTL8811AU : USB2ETH_ADAPTER_RTL8188 );
 	wireless.SSID = "";
 	last = wireless.ScanRT2870 ? 13 : WIRELESS_MAX_CHANNEL;
 	result = USB2WIFI_MISSING;
