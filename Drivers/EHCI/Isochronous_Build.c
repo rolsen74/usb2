@@ -57,45 +57,10 @@ BuildSplitPacket ( struct EHCI_ITD * itd, U32 endpoint, U32 in, U32 start, U32 i
 
 // --
 
-static SEC_CODE U32
-SplitInterruptMask ( struct USB2_HCDNode * hn, U32 frame, U32 hub )
-{
-	struct EHCI_QH * qh;
-
-	U32 slot;
-	U32 caps;
-	U32 mask;
-
-	slot = EHCI_Reverse_Bits ( frame, EHCI_IPOLLRATES - 1 );
-	slot = EHCI_IQHIDX ( EHCI_IPOLLRATES, slot );
-	mask = 0;
-
-	for ( qh = hn->hn_HCD.EHCI.FrameList_ISlots[slot]; qh; qh = qh->pqh_virt_next )
-	{
-		caps = LE_SWAP32 ( qh->qh_ep2 );
-
-		if ( EHCI_QH_GET_HUBA ( caps ) == hub )
-		{
-			mask |= EHCI_QH_GET_SMASK ( caps ) | EHCI_QH_GET_CMASK ( caps );
-		}
-	}
-
-	// Conservatively reserve the TT through its last scheduled complete-split.
-	while ( mask & ( mask - 1 ) )
-	{
-		mask &= mask - 1;
-	}
-
-	return ( mask ? ( mask << 1 ) - 1 : 0 );
-}
-
-// --
-
 static SEC_CODE S32
-SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count, U32 step, U32 split, U32 lead, U32 splitStart )
+SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count, U32 step, U32 split, U32 lead )
 {
 	struct EHCI_ITD *	 itd;
-	struct EHCI_ITD *	 queued;
 	struct RealRequest * active;
 
 	U32 start;
@@ -105,17 +70,12 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 	U32 shift;
 	U32 frame;
 	U32 mask;
-	U32 index;
-	U32 usecs[8];
-	U32 overlap;
 	U32 current;
 	U32 distance;
 	U32 horizon;
 	U32 latest;
 	U32 downstream;
 	S32 splitOut;
-	S32 checkInterrupts;
-	S32 fits;
 
 	current	 = PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_FRINDEX );
 	start	 = current + lead;
@@ -129,7 +89,7 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 	{
 		start = ( start + 7 ) & ~7U;
 		step *= 8;
-		phases = splitOut ? 8 : 1;
+		phases = splitOut ? 7 : 1;
 	}
 
 	if ( active )
@@ -139,7 +99,7 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 		if ( ( distance >= EHCI_ISO_MIN_LEAD ) && ( distance < horizon ) )
 		{
 			start  = current + distance;
-			phases = splitOut ? 8 : 1;
+			phases = splitOut ? 7 : 1;
 			latest = horizon - 1 - ( count - 1 ) * step - ( split ? 7 : 0 );
 		}
 		else
@@ -152,9 +112,7 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 	for ( phase = 0; phase < phases; phase++ )
 	{
 		microframe		= split ? start : start + phase;
-		checkInterrupts = splitOut && ( phase < 7 );
-		// Start as early as the TT schedule allows. Keep the legacy phase as the fallback.
-		shift = checkInterrupts ? phase : ( splitOut ? splitStart : 0 );
+		shift = splitOut ? phase : 0;
 
 		if ( ( ( microframe - current ) & EHCI_FRINDEX_MASK ) > latest )
 		{
@@ -165,61 +123,24 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 		{
 			frame = ( microframe >> 3 ) & ( hn->hn_HCD.EHCI.FrameList_Size - 1 );
 			mask  = split ? (U32)itd->Mask << shift : 1U << ( microframe & 7 );
-			fits  = TRUE;
 
 			if ( ( splitOut ) && ( mask & ~0x7fU ) )
 			{
 				break;
 			}
 
-			if ( checkInterrupts )
+			if ( splitOut )
 			{
 				// Allow for worst-case bit stuffing and protocol overhead at full speed.
 				downstream = ( itd->Length * 7 + 8 ) / 9 + 8;
 
-				if ( ( downstream > ( 6 - shift ) * 125 + 30 ) || ( mask & SplitInterruptMask ( hn, frame, itd->Hub ) ) )
+				if ( downstream > ( 7 - shift ) * 125 + 25 )
 				{
 					break;
 				}
 			}
 
-			for ( index = 0; index < 8; index++ )
-			{
-				usecs[index] = itd->Usecs;
-			}
-
-			for ( queued = hn->hn_HCD.EHCI.IsoFrames[frame]; queued; queued = queued->FrameNext )
-			{
-				// Treat a hub as a single TT. Its full-speed transfers share a frame.
-				if ( ( itd->Hub ) && ( queued->Hub == itd->Hub ) )
-				{
-					fits = FALSE;
-					break;
-				}
-
-				overlap = mask & queued->Mask;
-
-				for ( index = 0; overlap; index++, overlap >>= 1 )
-				{
-					if ( overlap & 1 )
-					{
-						usecs[index] += queued->Usecs;
-
-						if ( usecs[index] > EHCI_ISO_USECS )
-						{
-							fits = FALSE;
-							break;
-						}
-					}
-				}
-
-				if ( ! fits )
-				{
-					break;
-				}
-			}
-
-			if ( ! fits )
+			if ( ! EHCI_Periodic_Fits( hn, frame, mask, itd->Usecs, itd->Hub, 0, TRUE ) )
 			{
 				break;
 			}
@@ -314,7 +235,7 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return ( TRUE );
 	}
 
-	if ( ( ! length ) || ( ! req->req_Public.io_Data ) || ( ! packet ) || ( packet > 1024 ) || ( mult > 3 )
+	if ( ( ! length ) || ( ! req->req_Public.io_Data ) || ( ! packet ) || ( packet > 1024 ) || ( ! mult ) || ( mult > 3 )
 		 || ( ! ep->ep_Interval ) || ( ep->ep_Interval > 16 ) || ( hn->hn_HCD.EHCI.FrameList_Size <= 5 )
 		 || ( ( split ) && ( ( mult != 1 ) || ( packet > 1023 ) ) ) )
 	{
@@ -355,11 +276,6 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 			start		= ( splits < 4 ) ? 1 : 0;
 			in_schedule = ( 1U << start ) | ( ( ( 1U << ( splits + 2 ) ) - 1 ) << ( 10 + start ) );
 		}
-		else
-		{
-			// Preserve the original phase if no phase clears the conservative TT checks.
-			start = ( splits < 6 ) ? 1 : 0;
-		}
 
 		// Full-speed intervals count frames. Leave room to align the start.
 		budget = hn->hn_HCD.EHCI.FrameList_Size - EHCI_ISO_RETRY_LEAD / 8 - 1;
@@ -367,7 +283,7 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	}
 
 	// Leave room for the initial scheduling lead and avoid revisiting a frame slot.
-	if ( ( count > EHCI_ISO_MAX_PACKETS ) || ( count > budget / step )
+	if ( ( count > EHCI_ISO_MAX_PACKETS ) || ( ( count - 1 ) > ( budget - 1 ) / step )
 		 || ( ( req->req_Public.io_IsoPacketLengths ) && ( req->req_Public.io_IsoPacketCount != count ) ) )
 	{
 		req->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
@@ -411,7 +327,7 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		itd->Physical = physical;
 		itd->Length	  = size;
 		itd->Usecs	  = usecs;
-		itd->Hub	  = hub;
+		itd->Hub	  = split ? ( hub ? hub : EHCI_ROOT_TT ) : 0;
 
 		if ( split )
 		{
@@ -433,8 +349,8 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		}
 	}
 
-	if ( ( ! SchedulePackets ( hn, req, count, step, split, EHCI_ISO_LEAD, start ) )
-		 && ( ! SchedulePackets ( hn, req, count, step, split, EHCI_ISO_RETRY_LEAD, start ) ) )
+	if ( ( ! SchedulePackets ( hn, req, count, step, split, EHCI_ISO_LEAD ) )
+		 && ( ! SchedulePackets ( hn, req, count, step, split, EHCI_ISO_RETRY_LEAD ) ) )
 	{
 		req->req_Public.io_Error = USB2Err_Host_NoBandWidth;
 

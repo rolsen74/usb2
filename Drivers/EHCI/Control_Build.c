@@ -228,7 +228,8 @@ PTR buf;
 	val  = EHCI_TD_SET_TOGGLE( 1 );
 	val |= EHCI_TD_SET_BYTES( 0 );
 	val |= EHCI_TD_SET_CERR( 3 );
-	val |= EHCI_TD_SET_PID( ioreq->req_Public.io_Command == CMD_READ ? EHCI_TD_PID_OUT : EHCI_TD_PID_IN );
+	val |= EHCI_TD_SET_PID( ( ioreq->req_Public.io_Length && ( ioreq->req_Public.io_Command == CMD_READ ) )
+		? EHCI_TD_PID_OUT : EHCI_TD_PID_IN );
 	val |= EHCI_TD_ACTIVE;
 	val |= EHCI_TD_IOC;
 

@@ -135,6 +135,15 @@ __HCD_Transfer_Check ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struc
 			}
 		}
 
+		if ( ( hn->HCD_Functions.Recover_Request ) && ( hn->HCD_Functions.Recover_Request( hn, ioreq ) ) )
+		{
+			ENDPOINT_UNLOCK( ep );
+
+			TASK_NAME_LEAVE();
+
+			return ( TRUE );
+		}
+
 		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 6" );
 
 		HCD_REPLY ( ioreq );

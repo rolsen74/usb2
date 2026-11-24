@@ -54,8 +54,6 @@ SEC_CODE static S32 __is_QH_Finished( struct USB2_HCDNode *hn UNUSED, struct EHC
 struct EHCI_TD *td;
 S32 retval;
 U32 status;
-U32 len;
-U32 l;
 
 	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
@@ -76,10 +74,11 @@ U32 l;
 			// Still active, nothing to be done
 			retval = FALSE;
 		}
-		else if ( status & EHCI_TD_STATERRS )
+		else if ( status & EHCI_TD_HALTED )
 		{
-			// Error - We are done
-			// Errors handled else were
+			TASK_NAME_LEAVE();
+
+			return ( TRUE );
 		}
 	}
 
@@ -93,8 +92,6 @@ U32 l;
 		{
 			status = LE_SWAP32( td->td_status );
 
-			len = EHCI_TD_GET_BYTES( status );
-
 			if ( status & EHCI_TD_ACTIVE )
 			{
 				// Still active, nothing to be done
@@ -102,23 +99,15 @@ U32 l;
 				break;
 			}
 
-			if ( status & EHCI_TD_STATERRS )
+			if ( status & EHCI_TD_HALTED )
 			{
 				// Error - We are done
 				// Errors handled else were
 				break;
 			}
 
-			if ( ! td->td_buffer[1] )
-			{
-				l = 4*1024;
-			}
-			else
-			{
-				l = 20*1024;
-			}
-
-			if ( ( ! control ) && ( len != l ) && ( len != 0 ) )
+			if ( ( ! control ) && ( EHCI_TD_GET_PID( status ) == EHCI_TD_PID_IN ) &&
+				 ( EHCI_TD_GET_BYTES( status ) ) )
 			{
 				// Short packet - We are done
 				break;
@@ -236,7 +225,7 @@ S32 retval;
 			retval = ! ( LE_SWAP32( itd->Transaction[itd->Microframe] ) & EHCI_ITD_ACTIVE );
 		}
 
-		if ( ( ! retval ) && ( ioreq->req_Public.io_IsoPacketLengths ) )
+		if ( ! retval )
 		{
 			current = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_FRINDEX );
 			elapsed = ( current - ioreq->req_HCD.EHCI.IsoLastFrame ) & EHCI_FRINDEX_MASK;

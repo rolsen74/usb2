@@ -87,14 +87,12 @@ S32 stop;
 	status = LE_SWAP32( qh->qh_status );
 	stop = ( ioreq->req_Public.io_Error != USB2Err_NoError ) && ( ! ( status & EHCI_TD_HALTED ) );
 
-	if ( ( stop ) && ( ! EHCI_Periodic_Stop( hn ) ) )
+	if ( ( stop ) && ( ! EHCI_Set_Schedule( hn, EHCI_CMD_PSE, EHCI_STS_PSS, FALSE ) ) )
 	{
 		USB2_HCD_RequestReset( hn );
 
 		goto bailout;
 	}
-
-	EHCI_Slot_Free( hn, ioreq->req_HCD.EHCI.Start_Slot );
 
 	cur->pqh_virt_next = qh->pqh_virt_next;
 	cur->qh_link = qh->qh_link;
@@ -103,7 +101,12 @@ S32 stop;
 
 	if ( stop )
 	{
-		EHCI_Periodic_Start( hn );
+		if ( ! EHCI_Set_Schedule( hn, EHCI_CMD_PSE, EHCI_STS_PSS, TRUE ) )
+		{
+			USB2_HCD_RequestReset( hn );
+
+			goto bailout;
+		}
 	}
 	else
 	{

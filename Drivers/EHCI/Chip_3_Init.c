@@ -98,6 +98,18 @@ EHCI_Chip_Init ( struct USB2_HCDNode * hn )
 	USBDEBUG ( "EHCI_Chip_Init           : 1 :" );
 	USBDEBUG ( "EHCI_Chip_Init           : 1 : ISlots %p", hn->hn_HCD.EHCI.FrameList_ISlots );
 
+	hn->hn_HCD.EHCI.IsoScheduled = 0;
+
+	MEM_SET( hn->hn_HCD.EHCI.PortResetChange, 0, hn->hn_HUB_NumPorts + 1 );
+
+	// A valid alternate target with Active clear stops an IN queue on a short packet.
+	hn->hn_HCD.EHCI.ShortStop = EHCI_Get_TDBuffer( hn );
+
+	if ( ! hn->hn_HCD.EHCI.ShortStop )
+	{
+		goto bailout;
+	}
+
 	/*
 	 * Allocate the interrupt dummy QHs. These are arranged to give poll
 	 * intervals that are powers of 2 times 1ms.
@@ -115,6 +127,7 @@ EHCI_Chip_Init ( struct USB2_HCDNode * hn )
 			goto bailout;
 		}
 
+		qh->qh_ep2 = LE_SWAP32( EHCI_QH_SET_MULT( 1 ) | EHCI_QH_SET_SMASK( 1 ) );
 		hn->hn_HCD.EHCI.FrameList_ISlots[cnt] = qh;
 	}
 

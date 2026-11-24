@@ -23,6 +23,12 @@ __Stopping( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct intern *in 
 	S32 warned;
 
 	wait = SIGBREAKF_CTRL_D | in->Tick_MsgPort.ump_Signal.sig_Signal_Mask;
+
+	if ( hn->hn_IsEHCI )
+	{
+		wait |= hn->hn_HCD.EHCI.TTClearPort.ump_Signal.sig_Signal_Mask;
+	}
+
 	stopped = FALSE;
 	warned = FALSE;
 
@@ -53,7 +59,13 @@ __Stopping( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct intern *in 
 			}
 		}
 
-		if ( ( stopped ) && ( hn->hn_HUB_ASync.ua_Counter <= 0 ) && ( __Shutdown( usbbase, hn ) ) )
+		if ( ( hn->hn_IsEHCI ) && ( hn->hn_HCD.EHCI.TTClearPending ) )
+		{
+			hn->HCD_Functions.Handler_HCD( hn, 0 );
+		}
+
+		if ( ( stopped ) && ( ( ! hn->hn_IsEHCI ) || ( ! hn->hn_HCD.EHCI.TTClearPending ) ) &&
+			( hn->hn_HUB_ASync.ua_Counter <= 0 ) && ( __Shutdown( usbbase, hn ) ) )
 		{
 			break;
 		}

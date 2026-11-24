@@ -63,7 +63,6 @@ U32 pid;
 U32 val;
 U32 len;
 PTR buf;
-U32 dt;
 U32 l;
 
 	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
@@ -75,7 +74,6 @@ U32 l;
 
 //	fn			= ioreq->req_Function;
 	ep			= ioreq->req_EndPoint;
-	dt 			= ep->ep_DataToggle;
 	len			= ( ioreq->req_Public.io_Length );
 	last		= NULL;
 	handled		= TRUE;
@@ -164,6 +162,11 @@ U32 l;
 			qh->pqh_first_td	= td;
 		}
 
+		if ( pid == EHCI_TD_PID_IN )
+		{
+			td->td_td_alt = LE_SWAP32( hn->hn_HCD.EHCI.ShortStop->ptd_self_phy );
+		}
+
 		l = MIN( 20480, len );
 
 		if ( ! EHCI_Get_20kBuffer( hn, NULL, td, buf, l ))
@@ -177,7 +180,6 @@ U32 l;
 
 		val	 = EHCI_TD_SET_PID( pid );
 		val	|= EHCI_TD_SET_CERR( 3 );
-		val |= EHCI_TD_SET_TOGGLE( dt );
 		val |= EHCI_TD_SET_BYTES( l );
 		val	|= EHCI_TD_ACTIVE;
 
@@ -194,8 +196,6 @@ U32 l;
 
 		len -= l;
 
-		// dt switch pr. Packet not pr. TD
-//		dt = ( dt ) ? 0 : 1 ;
 	}
 	while( len );
 
@@ -224,12 +224,9 @@ U32 l;
 			goto bailout;
 		}
 
-		// dt switch pr. Packet not pr. TD
-//		dt = ( dt ) ? 0 : 1 ;
 
 		val	 = EHCI_TD_SET_PID( pid );
 		val	|= EHCI_TD_SET_CERR( 3 );
-		val	|= EHCI_TD_SET_TOGGLE( dt );
 		val	|= EHCI_TD_SET_BYTES( 0 );
 		val	|= EHCI_TD_ACTIVE;
 

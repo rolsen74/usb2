@@ -49,21 +49,176 @@
 
 // --
 
-SEC_CODE S32 EHCI_Enough_Bandwidth( struct USB2_HCDNode *hn UNUSED, struct RealRequest *ioreq UNUSED )
+SEC_CODE U32
+EHCI_Interrupt_Cost( U32 endpoint, U32 schedule )
 {
-U32 retval;
+	U32 packet;
+	U32 mult;
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
+	if ( EHCI_QH_GET_EPS( endpoint ) != EHCI_QH_SPEED_HIGH )
+	{
+		return ( 8 );
+	}
 
-	TASK_NAME_ENTER( "EHCI : EHCI_Enough_Bandwidth" );
+	packet = EHCI_QH_GET_MPL( endpoint );
+	mult = EHCI_QH_GET_MULT( schedule );
 
-	retval = TRUE;
+	return ( mult * ( ( ( packet * 7 + 5 ) / 6 + 64 + 59 ) / 60 ) );
+}
 
-	TASK_NAME_LEAVE();
+// --
 
-	return( retval );
+SEC_CODE S32
+EHCI_Split_Interrupt_FitsSlot( U32 endpoint, U32 start )
+{
+	U32 packet;
+	U32 stuffed_bits;
+	U32 duration;
+
+	if ( ( ! start ) || ( start & ~0x0fU ) || ( start & ( start - 1 ) ) )
+	{
+		return ( FALSE );
+	}
+
+	packet = EHCI_QH_GET_MPL( endpoint );
+	stuffed_bits = ( packet * 56 + 5 ) / 6;
+
+	switch ( EHCI_QH_GET_EPS( endpoint ) )
+	{
+		case EHCI_QH_SPEED_LOW:
+		{
+			if ( ( ! packet ) || ( packet > 8 ) )
+			{
+				return ( FALSE );
+			}
+
+			// USB 2.0 §5.11.3 low-speed IN bound, including hub setup and host delay.
+			duration = 64060 + 2 * 333 + 1000 + ( 67667 * ( 31 + 10 * stuffed_bits ) + 999 ) / 1000;
+			break;
+		}
+
+		case EHCI_QH_SPEED_FULL:
+		{
+			if ( ( ! packet ) || ( packet > 64 ) )
+			{
+				return ( FALSE );
+			}
+
+			// Full-speed interrupt transaction and host delay.
+			duration = 9107 + 1000 + ( 8354 * ( 31 + 10 * stuffed_bits ) + 999 ) / 1000;
+			break;
+		}
+
+		default:
+		{
+			return ( FALSE );
+		}
+	}
+
+	// Budget the maximum TT think time (32 full-speed bit times) and the SOF token.
+	duration += 2667;
+
+	if ( start == 1 )
+	{
+		duration += 3000;
+	}
+
+	return ( duration <= 125000 );
+}
+
+// --
+
+SEC_CODE static S32
+AddBudget( U32 *usecs, U32 mask, U32 other, U32 cost )
+{
+	U32 index;
+
+	other &= mask;
+
+	for ( index = 0 ; other ; index++, other >>= 1 )
+	{
+		if ( other & 1 )
+		{
+			usecs[index] += cost;
+
+			if ( usecs[index] > EHCI_ISO_USECS )
+			{
+				return ( FALSE );
+			}
+		}
+	}
+
+	return ( TRUE );
+}
+
+// --
+
+SEC_CODE S32
+EHCI_Periodic_Fits( struct USB2_HCDNode *hn, U32 frame, U32 mask, U32 cost, U32 hub, U32 split_start, S32 iso )
+{
+	struct EHCI_ITD *itd;
+	struct EHCI_QH *qh;
+
+	U32 slot;
+	U32 endpoint;
+	U32 schedule;
+	U32 other_start;
+	U32 other;
+	U32 usecs[8];
+	U32 index;
+
+	slot = EHCI_Reverse_Bits( frame, EHCI_IPOLLRATES - 1 );
+	slot = EHCI_IQHIDX( EHCI_IPOLLRATES, slot );
+
+	for ( index = 0 ; index < 8 ; index++ )
+	{
+		usecs[index] = cost;
+	}
+
+	for ( qh = hn->hn_HCD.EHCI.FrameList_ISlots[slot] ; qh ; qh = qh->pqh_virt_next )
+	{
+		if ( qh->pqh_first_td )
+		{
+			endpoint = LE_SWAP32( qh->qh_ep1 );
+			schedule = LE_SWAP32( qh->qh_ep2 );
+			other_start = EHCI_QH_GET_SMASK( schedule );
+			other = other_start | EHCI_QH_GET_CMASK( schedule );
+
+			if ( ( hub ) && ( EHCI_QH_GET_EPS( endpoint ) != EHCI_QH_SPEED_HIGH ) &&
+				( ( EHCI_QH_GET_HUBA( schedule ) ? EHCI_QH_GET_HUBA( schedule ) : EHCI_ROOT_TT ) == hub ) &&
+				( other & mask ) )
+			{
+				// A TT can return results within overlapping C-masks if the
+				// downstream interrupt transactions fit in separate slots.
+				if ( ( ! split_start ) || ( split_start & other_start ) ||
+					( ! EHCI_Split_Interrupt_FitsSlot( endpoint, other_start ) ) )
+				{
+					return ( FALSE );
+				}
+			}
+
+			if ( ! AddBudget( usecs, mask, other, EHCI_Interrupt_Cost( endpoint, schedule ) ) )
+			{
+				return ( FALSE );
+			}
+		}
+	}
+
+	for ( itd = hn->hn_HCD.EHCI.IsoFrames[frame] ; itd ; itd = itd->FrameNext )
+	{
+		// Treat each hub as one TT unless its per-port topology is known.
+		if ( ( hub ) && ( itd->Hub == hub ) && ( ( iso ) || ( itd->Mask & mask ) ) )
+		{
+			return ( FALSE );
+		}
+
+		if ( ! AddBudget( usecs, mask, itd->Mask, itd->Usecs ) )
+		{
+			return ( FALSE );
+		}
+	}
+
+	return ( TRUE );
 }
 
 // --

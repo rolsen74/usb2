@@ -46,6 +46,13 @@
 
 #include "usb2_all.h"
 #include "EHCI.h"
+#include <stddef.h>
+
+// --
+
+_Static_assert( offsetof( struct EHCI_QH, qh_buffer_high ) == 0x30, "EHCI extended buffer offset" );
+_Static_assert( offsetof( struct EHCI_QH, pqh_self_phy ) == 0x44, "EHCI software fields overlap DMA words" );
+_Static_assert( sizeof( struct EHCI_QH ) <= EHCI_QH_ALIGN, "EHCI descriptor pool stride" );
 
 // --
 
@@ -146,7 +153,10 @@ U8 *mem;
 		val1 |= EHCI_QH_SET_MPL( ep->ep_MaxPacketSize );
 
 		// Data Toggle
-		val1 |= EHCI_QH_DTC;
+		if ( ep->ep_Type == EPATT_Type_Control )
+		{
+			val1 |= EHCI_QH_DTC;
+		}
 
 		// Speed 1.5/12/480Mbit
 		val1 |= EHCI_QH_SET_EPS( speed );
@@ -190,19 +200,19 @@ U8 *mem;
 			val2 |= EHCI_QH_SET_PORT( port ) | EHCI_QH_SET_HUBA( hub );
 		}
 
-		// Split Completion Mask
-		// Referes to FrIndex number
-		val2 |= EHCI_QH_SET_CMASK( 0x1c );
-
-		if ( ep->ep_Type == EPATT_Type_Interrupt )
+		if ( ( speed == EHCI_QH_SPEED_HIGH ) && ( ep->ep_Type == EPATT_Type_Interrupt ) )
 		{
-			// Interrupt Schedule Mask
-			val2 |= EHCI_QH_SET_SMASK( 0x01 );
+			val2 = EHCI_QH_SET_MULT( ep->ep_Transactions );
 		}
 
 		// --
 
-		val3 = 0;
+		val3 = EHCI_TD_SET_TOGGLE( ep->ep_DataToggle );
+
+		if ( ( speed == EHCI_QH_SPEED_HIGH ) && ( ep->ep_Type == EPATT_Type_Bulk ) )
+		{
+			val3 |= ep->ep_PingState & EHCI_TD_PINGSTATE;
+		}
 
 		// --
 	}
@@ -238,6 +248,8 @@ U8 *mem;
 	qh->qh_buffer[1]	= 0;
 	qh->qh_buffer[2]	= 0;
 	qh->qh_buffer[3]	= 0;
+	MEM_SET( qh->qh_buffer_high, 0, sizeof( qh->qh_buffer_high ) );
+
 	qh->qh_buffer[4]	= 0;
 	/* Private part */
 	qh->pqh_self_phy	= phy;

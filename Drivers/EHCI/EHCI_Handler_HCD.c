@@ -62,6 +62,11 @@ EHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask UNUSED )
 	TASK_NAME_ENTER ( "EHCI : EHCI_Handler_HCD" );
 	USBDEBUG ( "EHCI_Handler_HCD         : Mask $%08lx", mask );
 
+	if ( hn->hn_HCD.EHCI.TTClearPending )
+	{
+		EHCI_TT_Complete( hn );
+	}
+
 	//	if ( mask & (
 	//		hn->hn_HCD.EHCI.Signal_EI.sig_Signal_Mask | 	// Error Int
 	//		hn->hn_HCD.EHCI.Signal_INT.sig_Signal_Mask | 	// Normal Int

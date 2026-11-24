@@ -75,7 +75,19 @@ U32 adr;
 		val  =  PCI_READLONG( adr );
 		val &= ~EHCI_PS_CLEAR;
 
-		if ( EHCI_PS_IS_LOWSPEED( val ))
+		if ( ! ( val & EHCI_PS_CCS ) )
+		{
+			err = USB2Err_Device_Detached;
+			break;
+		}
+
+		if ( val & EHCI_PS_PO )
+		{
+			err = USB2Err_Device_OwnershipChange;
+			break;
+		}
+
+		if ( ( ! EHCI_Has_Root_TT( hn ) ) && ( EHCI_PS_IS_LOWSPEED( val ) ) )
 		{
 			// Low speed device, give up ownership
 			EHCI_Port_Disown( hn, port );
@@ -95,7 +107,7 @@ U32 adr;
 
 		// Terminate reset sequence
 		val = PCI_READLONG( adr );
-		val &= ~EHCI_PS_PR;
+		val &= ~( EHCI_PS_PR | EHCI_PS_CLEAR );
 		PCI_WRITELONG( adr, val );
 
 		// Wait for HC to complete reset
@@ -114,11 +126,31 @@ U32 adr;
 			break;
 		}
 
+		if ( ! ( val & EHCI_PS_CCS ) )
+		{
+			err = USB2Err_Device_Detached;
+			break;
+		}
+
+		if ( val & EHCI_PS_PO )
+		{
+			err = USB2Err_Device_OwnershipChange;
+			break;
+		}
+
 		if (( val & EHCI_PS_PE ) == 0 )
 		{
-			// Not a high speed device, give up ownership
-			EHCI_Port_Disown( hn, port );
-			err = USB2Err_Device_OwnershipChange;
+			if ( EHCI_Has_Root_TT( hn ) )
+			{
+				err = USB2Err_Host_HostError;
+			}
+			else
+			{
+				EHCI_Port_Disown( hn, port );
+
+				err = USB2Err_Device_OwnershipChange;
+			}
+
 			break;
 		}
 

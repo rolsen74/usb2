@@ -62,7 +62,6 @@ U32 err;
 U32 len;
 U32 pid;
 U32 val;
-U32 dt;
 U32 l;
 U8 *buf;
 
@@ -74,10 +73,15 @@ U8 *buf;
 
 //	fn			= ioreq->req_Function;
 	ep			= ioreq->req_EndPoint;
-	dt 			= ep->ep_DataToggle;
 	len			= ( ioreq->req_Public.io_Length );
 	last		= NULL;
 	handled		= TRUE;
+
+	if ( ( ! ep->ep_MaxPacketSize ) || ( ! ep->ep_Transactions ) || ( ep->ep_Transactions > 3 ) )
+	{
+		err = USB2Err_Stack_InvalidStructure;
+		goto bailout;
+	}
 
 	// --
 
@@ -128,14 +132,6 @@ U8 *buf;
 	#endif
 	#endif
 
-	// Check for bandwidth
-	if ( ! EHCI_Enough_Bandwidth( hn, ioreq ))
-	{
-		USBDEBUG( "EHCI_Interrupt_Build : Error there is not Enough band width left for this request" );
-		err = USB2Err_Host_NoBandWidth;
-		goto bailout;
-	}
-
 	/* -- Header -- */
 
 	qh = EHCI_Get_QHBuffer( hn, ioreq );
@@ -171,7 +167,17 @@ U8 *buf;
 			qh->pqh_first_td	= td;
 		}
 
+		if ( pid == EHCI_TD_PID_IN )
+		{
+			td->td_td_alt = LE_SWAP32( hn->hn_HCD.EHCI.ShortStop->ptd_self_phy );
+		}
+
 		l = MIN( 20480, len );
+
+		if ( l < len )
+		{
+			l -= l % ep->ep_MaxPacketSize;
+		}
 
 		if ( ! EHCI_Get_20kBuffer( hn, NULL, td, buf, l ))
 		{
@@ -184,7 +190,6 @@ U8 *buf;
 
 		val	 = EHCI_TD_SET_PID( pid );
 		val	|= EHCI_TD_SET_CERR( 3 );
-		val |= EHCI_TD_SET_TOGGLE( dt );
 		val |= EHCI_TD_SET_BYTES( l );
 		val	|= EHCI_TD_ACTIVE;
 
@@ -201,8 +206,6 @@ U8 *buf;
 
 		len -= l;
 
-		// dt switch pr. Packet not pr. TD
-//		dt = ( dt ) ? 0 : 1 ;
 	}
 	while( len );
 
@@ -231,12 +234,9 @@ U8 *buf;
 			goto bailout;
 		}
 
-		// dt switch pr. Packet not pr. TD
-//		dt = ( dt ) ? 0 : 1 ;
 
 		val	 = EHCI_TD_SET_PID( pid );
 		val	|= EHCI_TD_SET_CERR( 3 );
-		val	|= EHCI_TD_SET_TOGGLE( dt );
 		val	|= EHCI_TD_SET_BYTES( 0 );
 		val	|= EHCI_TD_ACTIVE;
 
@@ -265,6 +265,12 @@ U8 *buf;
 //		HCD_WAIT_MS( hn, 5 * 1000000 );
 	}
 	#endif
+
+	if ( ! EHCI_Slot_Find( hn, ioreq ) )
+	{
+		err = USB2Err_Host_NoBandWidth;
+		goto bailout;
+	}
 
 	err = USB2Err_NoError;
 

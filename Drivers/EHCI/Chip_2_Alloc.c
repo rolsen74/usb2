@@ -88,6 +88,11 @@ S32 retval;
 		goto bailout;
 	}
 
+	if ( ! MSGPORT_INIT( & hn->hn_HCD.EHCI.TTClearPort ) )
+	{
+		goto bailout;
+	}
+
 	// --
 
 	USBDEBUG( "EHCI_Chip_Alloc          : 4 : Alloc 4k FrameList" );
@@ -138,7 +143,8 @@ S32 retval;
 	hn->HCD_Mask =
 		hn->hn_HCD.EHCI.Signal_EI.sig_Signal_Mask	|
 		hn->hn_HCD.EHCI.Signal_INT.sig_Signal_Mask	|
-		hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask	;
+		hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask |
+		hn->hn_HCD.EHCI.TTClearPort.ump_Signal.sig_Signal_Mask;
 
 	// --
 

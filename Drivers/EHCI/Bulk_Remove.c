@@ -55,9 +55,11 @@ SEC_CODE void EHCI_Bulk_Remove( struct USB2_HCDNode *hn, struct RealRequest *ior
 struct USB2_Device_Desc *desc;
 #endif
 struct USB2_EndPointNode *epn;
+struct EHCI_QH *head;
 struct EHCI_QH *last;
 struct EHCI_QH *qh;
 U32 status;
+S32 stopped;
 
 	TASK_NAME_ENTER( "EHCI : EHCI_Bulk_Remove" );
 //	USBERROR( "EHCI_Bulk_Remove" );
@@ -73,34 +75,31 @@ U32 status;
 	// Find the QH before our QH
 	// so we can unlink it
 
-	qh		= ioreq->req_HCD.EHCI.QH_Header;
-	last	= hn->hn_HCD.EHCI.ASync_Head;
+	qh = ioreq->req_HCD.EHCI.QH_Header;
+	head = hn->hn_HCD.EHCI.ASync_Head;
+	last = head;
 
-	while( last )
+	if ( ( ! qh ) || ( ! head ) || ( qh == head ) )
 	{
-		if ( last->pqh_virt_next == qh )
+		goto reset;
+	}
+
+	while ( last->pqh_virt_next != qh )
+	{
+		last = last->pqh_virt_next;
+
+		if ( ( ! last ) || ( last == head ) )
 		{
-			break;
-		}
-		else
-		{
-			last = last->pqh_virt_next;
+			goto reset;
 		}
 	}
 
-	// Should never happen
+	stopped = ( ioreq->req_Public.io_Error != USB2Err_NoError ) &&
+		( ! ( LE_SWAP32( qh->qh_status ) & EHCI_TD_HALTED ) );
 
-	if ( ! last )
+	if ( ( stopped ) && ( ! EHCI_Set_Schedule( hn, EHCI_CMD_ASE, EHCI_STS_ASS, FALSE ) ) )
 	{
-		#ifdef DO_DEBUG
-		hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Bulk_Remove : Yikes NULL Pointer\n" );
-		#endif
-
-		USB2_HCD_RequestReset( hn );
-
-		TASK_NAME_LEAVE();
-
-		return;
+		goto reset;
 	}
 
 	// --
@@ -108,19 +107,24 @@ U32 status;
 	last->pqh_virt_next	= qh->pqh_virt_next;
 	last->qh_link = qh->qh_link;
 
-	// --
-	// Tell HW to Flush async prefetch pointers
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	if ( ! EHCI_Door_Bell_Wait( hn, __FILE__ ) )
-	#else
-	if ( ! EHCI_Door_Bell_Wait( hn ) )
-	#endif
+	if ( stopped )
 	{
-		USB2_HCD_RequestReset( hn );
-
-		TASK_NAME_LEAVE();
-
-		return;
+		if ( ! EHCI_Set_Schedule( hn, EHCI_CMD_ASE, EHCI_STS_ASS, TRUE ) )
+		{
+			goto reset;
+		}
+	}
+	else
+	{
+		// A running schedule can still hold the removed QH in its cache.
+		#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+		if ( ! EHCI_Door_Bell_Wait( hn, __FILE__ ) )
+		#else
+		if ( ! EHCI_Door_Bell_Wait( hn ) )
+		#endif
+		{
+			goto reset;
+		}
 	}
 
 	// - Save DataToggle and Ping state
@@ -167,6 +171,14 @@ U32 status;
 	#if 0
 	EHCI_DUMP_QH( hn, qh, TRUE );
 	#endif
+
+	TASK_NAME_LEAVE();
+
+	return;
+
+reset:
+
+	USB2_HCD_RequestReset( hn );
 
 	TASK_NAME_LEAVE();
 }

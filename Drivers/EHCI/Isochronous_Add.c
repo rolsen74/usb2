@@ -60,6 +60,7 @@ EHCI_Isochronous_Add ( struct USB2_HCDNode *hn, struct RealRequest *req )
 		__asm__ volatile ( "sync" ::: "memory" );
 
 		*hardware = LE_SWAP32( itd->Physical | type );
+		hn->hn_HCD.EHCI.IsoScheduled++;
 	}
 }
 

@@ -49,78 +49,111 @@
 
 // --
 
-SEC_CODE S32 EHCI_Slot_Find( struct USB2_HCDNode *hn, U32 interval )
+SEC_CODE S32
+EHCI_Slot_Find( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
-U32 lowestslot;
-U32 lowestbw;
-U32 offset;
-U32 slots;
-U32 lev;
-U32 cnt;
-U32 pos;
-U32 bw;
-U32 l;
+	struct EHCI_QH *qh;
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
+	U32 endpoint;
+	U32 schedule;
+	U32 interval;
+	U32 microframes;
+	U32 frames;
+	U32 level;
+	U32 frame;
+	U32 phase;
+	U32 start;
+	U32 mask;
+	U32 complete;
+	U32 split_start;
+	U32 phases;
+	U32 hub;
+	U32 cost;
+	U32 limit;
+	U32 index;
+	S32 split;
 
-	TASK_NAME_ENTER( "EHCI : EHCI_Slot_Find" );
+	qh = ioreq->req_HCD.EHCI.QH_Header;
+	endpoint = LE_SWAP32( qh->qh_ep1 );
+	schedule = LE_SWAP32( qh->qh_ep2 );
+	interval = ioreq->req_EndPoint->ep_Interval;
+	split = EHCI_QH_GET_EPS( endpoint ) != EHCI_QH_SPEED_HIGH;
 
-	// -- Find Level
-
-	for( lev=7 ; lev ; lev-- )
+	if ( ( ! interval ) || ( ( ! split ) && ( interval > 16 ) ) )
 	{
-		if (( 1UL << lev ) <= interval )
+		return ( FALSE );
+	}
+
+	hub = EHCI_QH_GET_HUBA( schedule );
+
+	if ( split )
+	{
+		hub = hub ? hub : EHCI_ROOT_TT;
+		microframes = 8;
+		frames = interval;
+		phases = 4;
+	}
+	else
+	{
+		microframes = 1U << ( interval - 1 );
+		frames = MAX( microframes / 8, 1 );
+		phases = MIN( microframes, 8 );
+	}
+
+	// The existing periodic tree repeats every 128 frames.
+	for ( level = EHCI_IPOLLRATES - 1 ; ( 1U << level ) > frames ; level-- )
+	{
+	}
+
+	frames = 1U << level;
+	cost = EHCI_Interrupt_Cost( endpoint, schedule );
+	limit = hn->hn_HCD.EHCI.IsoScheduled ? hn->hn_HCD.EHCI.FrameList_Size : ( 1U << ( EHCI_IPOLLRATES - 1 ) );
+
+	for ( frame = 0 ; frame < frames ; frame++ )
+	{
+		for ( phase = 0 ; phase < phases ; phase++ )
 		{
-			break;
+			mask = 1U << phase;
+			complete = 0;
+			split_start = 0;
+
+			if ( split )
+			{
+				complete = 0x1cU << phase;
+
+				if ( EHCI_Split_Interrupt_FitsSlot( endpoint, mask ) )
+				{
+					split_start = mask;
+				}
+			}
+			else
+			{
+				for ( start = phase + microframes ; start < 8 ; start += microframes )
+				{
+					mask |= 1U << start;
+				}
+			}
+
+			for ( index = frame ; index < limit ; index += frames )
+			{
+				if ( ! EHCI_Periodic_Fits( hn, index, mask | complete, cost, hub, split_start, FALSE ) )
+				{
+					break;
+				}
+			}
+
+			if ( index >= limit )
+			{
+				ioreq->req_HCD.EHCI.Start_Slot = EHCI_IQHIDX( level + 1, EHCI_Reverse_Bits( frame, level ) );
+
+				qh->qh_ep2 = LE_SWAP32( schedule | EHCI_QH_SET_SMASK( mask ) | EHCI_QH_SET_CMASK( complete ) );
+
+				return ( TRUE );
+			}
 		}
 	}
 
-	// -- Find Slot
-
-	slots		= 1UL << lev;
-	lowestbw	= -1UL;
-	lowestslot	= 0;
-	offset		= ( 1UL << lev ) - 1;
-
-	for( cnt=0 ; cnt<slots ; cnt++ )
-	{
-		bw = 0;
-
-		pos = offset + cnt;
-
-		for( l=0 ; l<=lev ; l++ )
-		{
-			bw += hn->hn_HCD.EHCI.BandWidth[ pos ];
-
-			pos = ((( pos + 1 ) / 2 ) - 1 );
-		}
-
-		if ( bw < lowestbw )
-		{
-			lowestbw	= bw;
-			lowestslot	= offset + cnt;
-
-		}
-	}
-
-	// -- Adjust Slots
-
-	pos = lowestslot;
-
-	for( l=0 ; l<=lev ; l++ )
-	{
-		hn->hn_HCD.EHCI.BandWidth[ pos ]++;
-
-		pos = ((( pos + 1 ) / 2 ) - 1 );
-	}
-
-	// --
-
-	TASK_NAME_LEAVE();
-
-	return( lowestslot );
+	return ( FALSE );
 }
 
 // --

@@ -40,15 +40,6 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 	fn	= ioreq->req_Function;
 	ep	= ioreq->req_EndPoint;
 
-	if ( ( hn->hn_IsEHCI ) && ( ep->ep_Type == EPATT_Type_Interrupt ) && ( ep->ep_Transactions > 1 ) )
-	{
-		ioreq->req_Public.io_Error = USB2Err_Host_NoBandWidth;
-
-		TASK_NAME_LEAVE ();
-
-		return ( TRUE );
-	}
-
 	// --
 	// Endpoint Stall Info:
 	// - Control (Setup Stage)	--> Never stalls
@@ -241,15 +232,13 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 			// --
 			// Start Timer : if requested --
 
-			if ( ioreq->req_Public.io_TimeOut )
+			if ( ( ioreq->req_Public.io_TimeOut ) || ( ( hn->hn_IsEHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous ) ) )
 			{
 				timeout = ioreq->req_Public.io_TimeOut;
 
-				if ( ( hn->hn_IsEHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous )
-					 && ( fn->fkt_Speed == USBSPEED_Full ) && ( ioreq->req_Public.io_Command == CMD_WRITE )
-					 && ( ioreq->req_Public.io_IsoPacketLengths ) )
+				if ( ( hn->hn_IsEHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous ) )
 				{
-					current	  = PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_FRINDEX );
+					current = PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_FRINDEX );
 					remaining = ( ioreq->req_HCD.EHCI.IsoLastFrame - current ) & EHCI_FRINDEX_MASK;
 
 					if ( remaining > EHCI_FRINDEX_MASK / 2 )
@@ -257,8 +246,9 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 						remaining = 0;
 					}
 
-					// A missed final split may never raise its completion interrupt.
-					timeout = MIN ( timeout, ( remaining + EHCI_ISO_COMPLETE_GRACE + 8 ) * 125 );
+					// Retire a missed slot even if the client has no timeout or per-packet array.
+					remaining = ( remaining + EHCI_ISO_COMPLETE_GRACE + 8 ) * 125;
+					timeout = timeout ? MIN ( timeout, remaining ) : remaining;
 				}
 
 #ifdef DO_DEBUG

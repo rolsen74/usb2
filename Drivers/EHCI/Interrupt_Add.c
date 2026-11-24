@@ -51,7 +51,6 @@
 
 SEC_CODE void EHCI_Interrupt_Add( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
-struct USB2_EndPointNode *epn;
 struct EHCI_QH *sqh;
 struct EHCI_QH *new;
 U32 slot;
@@ -64,16 +63,13 @@ U32 slot;
 
 //	hn->hn_USBBase->usb_IExec->DebugPrintF( "EHCI_Interrupt_Add\n" );
 
-	epn	 = ioreq->req_EndPoint;
-
-	slot = EHCI_Slot_Find( hn, epn->ep_Interval );
+	slot = ioreq->req_HCD.EHCI.Start_Slot;
 
 	sqh	 = hn->hn_HCD.EHCI.FrameList_ISlots[ slot ];
 
 	// --
 
 	ioreq->req_HCD.EHCI.Start_Header = sqh;
-	ioreq->req_HCD.EHCI.Start_Slot = slot;
 
 	// -- Init new
 

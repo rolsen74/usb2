@@ -53,6 +53,8 @@ struct HCDFunctions
 	S32 ( *Retire_Detached ) ( struct USB2_HCDNode * );
 	S32 ( *Function_Retired ) ( struct USB2_HCDNode *, USB2_ID );
 
+	S32 ( *Recover_Request ) ( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
+
 	// -- Root HUB Functions --
 
 	S32 ( *Port_Clr_Enable ) ( struct USB2_HCDNode * hn, U32 port );
@@ -129,6 +131,7 @@ struct USB2_HCDNode
 	U32		hn_HCDType;
 	U32		hn_IsEHCI;
 	U32		hn_AcceptIO;
+	U32		hn_EHCIRecovering;
 	U32		hn_DMAActive;
 	U32		hn_Generation;
 	U32		hn_HCDIndex;

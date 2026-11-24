@@ -82,39 +82,47 @@ U32 retval;
 	}
 	#endif
 
-	if ( status & 0x00002000 ) // Port Owner
+	if ( status & EHCI_PS_PO ) // Port Owner
 	{
 		// We don't own the port
 		retval = HUBF_Status_Power;
 	}
 	else
 	{
-		retval = ( HUBF_Status_High_Speed
-					//	Connect Status Change
-		|	(( status & 0x00000002 ) ? HUBF_Chg_Connection : 0 )
-					//	Port Enable/Disable Change
-		|	(( status & 0x00000008 ) ? HUBF_Chg_Enable : 0 )
-					//  Over-current Change
-		|	(( status & 0x00000020 ) ? HUBF_Chg_Over_Current : 0 )
-					// Port Reset Change
-		|	(( hn->hn_HCD.EHCI.PortResetChange[port] ) ? HUBF_Chg_Reset : 0 )
+		retval =
+			( ( status & EHCI_PS_CSC ) ? HUBF_Chg_Connection : 0 ) |
+			( ( status & EHCI_PS_PEC ) ? HUBF_Chg_Enable : 0 ) |
+			( ( status & EHCI_PS_OCC ) ? HUBF_Chg_Over_Current : 0 ) |
+			( hn->hn_HCD.EHCI.PortResetChange[port] ? HUBF_Chg_Reset : 0 ) |
+			( ( status & EHCI_PS_CCS ) ? HUBF_Status_Connection : 0 ) |
+			( ( status & EHCI_PS_PE ) ? HUBF_Status_Enable : 0 ) |
+			( ( status & 0x00000010 ) ? HUBF_Status_Over_Current : 0 ) |
+			( ( status & 0x00000080 ) ? HUBF_Status_Suspend : 0 ) |
+			( ( status & EHCI_PS_PR ) ? HUBF_Status_Reset : 0 ) |
+			( ( status & EHCI_PS_PP ) ? HUBF_Status_Power : 0 );
 
+		if ( EHCI_Has_Root_TT( hn ) )
+		{
+			// Freescale PORTSC encodes full, low, and high speed as 0, 1, and 2.
+			switch ( ( status >> 26 ) & 3 )
+			{
+				case 1:
+					retval |= HUBF_Status_Low_Speed;
+					break;
 
-					// Current Connect Status
-		|	(( status & 0x00000001 ) ? HUBF_Status_Connection : 0 )
-					// Port Enable/Disable Status
-		|	(( status & 0x00000004 ) ? HUBF_Status_Enable : 0 )
-					// Over Current Status
-		|	(( status & 0x00000010 ) ? HUBF_Status_Over_Current : 0 )
-					// Port Suspend Status
-		|	(( status & 0x00000080 ) ? HUBF_Status_Suspend : 0 )
-					// Port Reset Status
-		|	(( status & 0x00000100 ) ? HUBF_Status_Reset : 0 )
-					// Port Power Status
-		|	(( status & 0x00001000 ) ? HUBF_Status_Power : 0 )
-					// Port LowSpeed Status
-		|	(( EHCI_PS_IS_LOWSPEED( status )) ? HUBF_Status_Low_Speed : 0 )
-		);
+				case 2:
+					retval |= HUBF_Status_High_Speed;
+					break;
+			}
+		}
+		else if ( EHCI_PS_IS_LOWSPEED( status ) )
+		{
+			retval |= HUBF_Status_Low_Speed;
+		}
+		else
+		{
+			retval |= HUBF_Status_High_Speed;
+		}
 
 		// Check for Software controlled LED Indicators
 		if ( EHCI_HCS_P_INDICATOR( PCI_READLONG( EHCI_HCSPARAMS )))

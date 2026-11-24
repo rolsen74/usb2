@@ -46,6 +46,13 @@
 
 #include "usb2_all.h"
 #include "EHCI.h"
+#include <stddef.h>
+
+// --
+
+_Static_assert( offsetof( struct EHCI_TD, td_buffer_high ) == 0x20, "EHCI extended buffer offset" );
+_Static_assert( offsetof( struct EHCI_TD, ptd_self_phy ) == 0x34, "EHCI software fields overlap DMA words" );
+_Static_assert( sizeof( struct EHCI_TD ) <= EHCI_TD_ALIGN, "EHCI descriptor pool stride" );
 
 // --
 
@@ -81,6 +88,8 @@ U8 *mem;
 	td->td_buffer[1]		= 0;
 	td->td_buffer[2]		= 0;
 	td->td_buffer[3]		= 0;
+	MEM_SET( td->td_buffer_high, 0, sizeof( td->td_buffer_high ) );
+
 	td->td_buffer[4]		= 0;
 	// Private - Software
 	td->ptd_self_phy		= phy;

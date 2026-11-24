@@ -259,7 +259,7 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			{
 				request->io_Error = USB2Err_Stack_InvalidStructure;
 			}
-			else if ( ( ! hn->hn_AcceptIO ) ||
+			else if ( ( ( ! hn->hn_AcceptIO ) && ( ( fn->fkt_Tier ) || ( ! hn->hn_EHCIRecovering ) ) ) ||
 				 ( ( fn->fkt_Tier ) && ( fn->fkt_HCDGeneration != hn->hn_Generation ) ) )
 			{
 				request->io_Error = USB2Err_Device_Detached;

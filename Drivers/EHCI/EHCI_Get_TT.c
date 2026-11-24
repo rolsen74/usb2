@@ -14,6 +14,14 @@
 // --
 
 SEC_CODE S32
+EHCI_Has_Root_TT( const struct USB2_HCDNode *hn )
+{
+	return ( ( hn->hn_HCDType == HCDTYPE_P5020 ) || ( hn->hn_HCDType == HCDTYPE_P5040 ) );
+}
+
+// --
+
+SEC_CODE S32
 EHCI_Get_TT ( struct RealFunctionNode *fn, U32 *hub, U32 *port )
 {
 	struct RealFunctionNode *parent;
@@ -32,6 +40,14 @@ EHCI_Get_TT ( struct RealFunctionNode *fn, U32 *hub, U32 *port )
 
 		fn = parent;
 		parent = parent->fkt_Parent;
+	}
+
+	if ( ( parent ) && ( fn->fkt_PortNr ) && ( EHCI_Has_Root_TT( fn->fkt_HCD ) ) )
+	{
+		*hub = 0;
+		*port = fn->fkt_PortNr;
+
+		return ( TRUE );
 	}
 
 	return ( FALSE );

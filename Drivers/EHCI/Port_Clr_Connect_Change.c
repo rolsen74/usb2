@@ -49,38 +49,48 @@
 
 // --
 
-SEC_CODE S32 EHCI_Port_Clr_Connect_Chg( struct USB2_HCDNode *hn, U32 port )
+SEC_CODE static S32
+ClearPortChange( struct USB2_HCDNode *hn, U32 port, U32 change )
 {
-U32 val;
-U32 adr;
-S32 err;
+	U32 address;
+	U32 value;
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
-
-	USBDEBUG( "EHCI_Port_Clr_Connect_Chg( Port #%lu )", port );
-
-	if (( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ))
+	if ( ( ! port ) || ( port > hn->hn_HUB_NumPorts ) )
 	{
-		USBDEBUG( "Invalid Port Number #%lu", port );
-
-		err = USB2Err_Host_HostError;
-	}
-	else
-	{
-		adr  =  hn->hn_HCD.EHCI.CapLength;
-		adr +=  EHCI_PORTSC( port );
-
-		val  =  PCI_READLONG( adr );
-		val &= ~EHCI_PS_CLEAR;
-		val |=  EHCI_PS_CSC;		// CSC = Connect Ststus Change
-		PCI_WRITELONG( adr, val );
-
-		err = USB2Err_NoError;
+		return ( USB2Err_Host_HostError );
 	}
 
-	return( err );
+	address = hn->hn_HCD.EHCI.CapLength + EHCI_PORTSC( port );
+
+	value = PCI_READLONG( address );
+
+	PCI_WRITELONG( address, ( value & ~EHCI_PS_CLEAR ) | change );
+
+	return ( USB2Err_NoError );
+}
+
+// --
+
+SEC_CODE S32
+EHCI_Port_Clr_Connect_Chg( struct USB2_HCDNode *hn, U32 port )
+{
+	return ( ClearPortChange( hn, port, EHCI_PS_CSC ) );
+}
+
+// --
+
+SEC_CODE S32
+EHCI_Port_Clr_Enable_Chg( struct USB2_HCDNode *hn, U32 port )
+{
+	return ( ClearPortChange( hn, port, EHCI_PS_PEC ) );
+}
+
+// --
+
+SEC_CODE S32
+EHCI_Port_Clr_OverCurrent_Chg( struct USB2_HCDNode *hn, U32 port )
+{
+	return ( ClearPortChange( hn, port, EHCI_PS_OCC ) );
 }
 
 // --

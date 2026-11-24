@@ -81,9 +81,13 @@ __myHandle_Reset( struct USBBase *usbbase, struct USB2_HCDNode *hn )
 {
 	U32 port;
 
-	HCD_CloseSubmissions( usbbase, hn );
+	HCD_CloseSubmissions( usbbase, hn, TRUE );
 
-	__myHandle_Begin( usbbase, hn );
+	// Leave pending root-hub reads queued until EHCI can service them again.
+	if ( ! hn->hn_IsEHCI )
+	{
+		__myHandle_Begin( usbbase, hn );
+	}
 
 	if ( ! HCD_StopDMA( hn ) )
 	{
@@ -125,9 +129,22 @@ __myHandle_Reset( struct USBBase *usbbase, struct USB2_HCDNode *hn )
 		}
 	}
 
+	if ( hn->hn_IsEHCI )
+	{
+		for ( port = 1 ; port <= hn->hn_HUB_NumPorts ; port++ )
+		{
+			if ( hn->HCD_Functions.Port_Set_Power( hn, port ) != USB2Err_NoError )
+			{
+				return ( FALSE );
+			}
+		}
+
+		HCD_WAIT_MS( hn, 20 );
+	}
+
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
-	if ( hn->hn_HCDType == HCDTYPE_XHCI )
+	if ( ( hn->hn_IsEHCI ) || ( hn->hn_HCDType == HCDTYPE_XHCI ) )
 	{
 		hn->hn_Generation++;
 
@@ -138,10 +155,16 @@ __myHandle_Reset( struct USBBase *usbbase, struct USB2_HCDNode *hn )
 	}
 
 	hn->hn_AcceptIO = TRUE;
+	hn->hn_EHCIRecovering = FALSE;
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	ROOTHUB_HANDLE_CHANGE( hn );
+
+	if ( hn->hn_IsEHCI )
+	{
+		__myHandle_Begin( usbbase, hn );
+	}
 
 	return ( TRUE );
 }

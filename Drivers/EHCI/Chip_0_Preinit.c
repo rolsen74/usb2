@@ -49,6 +49,74 @@
 
 // --
 
+#define EHCI_PCI_LEGACY_CAP 1U
+#define EHCI_PCI_BIOS_OWNED 0x00010000U
+#define EHCI_PCI_OS_OWNED 0x01000000U
+
+SEC_CODE static S32
+PCIHandoff( struct USB2_HCDNode *hn, U32 offset )
+{
+	struct PCIDevice *pcidev;
+	struct USBBase *usbbase;
+
+	U32 capability;
+	U32 count;
+	U32 steps;
+
+	pcidev = hn->hn_PCIDevice;
+	usbbase = hn->hn_USBBase;
+
+	for ( steps = 0 ; ( offset ) && ( steps < 48 ) ; steps++ )
+	{
+		if ( ( offset < 0x40 ) || ( offset & 3 ) || ( offset > 0xfc ) )
+		{
+			break;
+		}
+
+		capability = pcidev->ReadConfigLong( offset );
+
+		if ( ( capability & 0xff ) == EHCI_PCI_LEGACY_CAP )
+		{
+			if ( offset > 0xf8 )
+			{
+				break;
+			}
+
+			// The ownership semaphores occupy separate bytes.
+			pcidev->WriteConfigByte( offset + 3, 1 );
+
+			for ( count = 0 ; count < 100 ; count++ )
+			{
+				capability = pcidev->ReadConfigLong( offset );
+
+				if ( ( capability & ( EHCI_PCI_BIOS_OWNED | EHCI_PCI_OS_OWNED ) ) == EHCI_PCI_OS_OWNED )
+				{
+					pcidev->WriteConfigLong( offset + 4, 0 );
+
+					return ( TRUE );
+				}
+
+				HCD_WAIT_MS( hn, 10 );
+			}
+
+			break;
+		}
+
+		offset = ( capability >> 8 ) & 0xff;
+	}
+
+	if ( offset )
+	{
+		hn->hn_USBBase->usb_IExec->DebugPrintF( "USB2: EHCI HCD %lu PCI firmware handoff failed\n", hn->hn_HCDIndex );
+
+		return ( FALSE );
+	}
+
+	return ( TRUE );
+}
+
+// --
+
 SEC_CODE S32 EHCI_Chip_Preinit( struct USB2_HCDNode *hn )
 {
 //struct USBBase *usbbase;
@@ -84,7 +152,15 @@ U32 val;
 		goto bailout;
 	}
 
-	// --
+	if ( hn->hn_PCIDevice )
+	{
+		val = PCI_READLONG( EHCI_HCCPARAMS );
+
+		if ( ! PCIHandoff( hn, ( val >> 8 ) & 0xff ) )
+		{
+			goto bailout;
+		}
+	}
 
 	retval = TRUE;
 

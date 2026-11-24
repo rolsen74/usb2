@@ -40,6 +40,9 @@ SEC_CODE void EHCI_Isochronous_Add( struct USB2_HCDNode *hn, struct RealRequest 
 SEC_CODE void EHCI_Isochronous_Remove( struct USB2_HCDNode *hn, struct RealRequest *req );
 SEC_CODE U32 EHCI_Isochronous_Length( struct USB2_HCDNode *hn, struct RealRequest *req );
 SEC_CODE void EHCI_Isochronous_Reap( struct USB2_HCDNode *hn, S32 halted );
+SEC_CODE S32 EHCI_Clear_TT( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
+SEC_CODE void EHCI_TT_Complete( struct USB2_HCDNode *hn );
+SEC_CODE S32 EHCI_Has_Root_TT( const struct USB2_HCDNode *hn );
 SEC_CODE S32 EHCI_Get_TT( struct RealFunctionNode *fn, U32 *hub, U32 *port );
 SEC_CODE U32 EHCI_Reverse_Bits( U32 c, U32 nbits );
 
@@ -78,6 +81,9 @@ SEC_CODE void	EHCI_Chip_Deinit( struct USB2_HCDNode *hn );
 SEC_CODE void	EHCI_Chip_Dealloc( struct USB2_HCDNode *hn );
 
 SEC_CODE S32	EHCI_Port_Clr_Connect_Chg( struct USB2_HCDNode *hn, U32 port );
+SEC_CODE S32	EHCI_Port_Clr_Enable( struct USB2_HCDNode *hn, U32 port );
+SEC_CODE S32	EHCI_Port_Clr_Enable_Chg( struct USB2_HCDNode *hn, U32 port );
+SEC_CODE S32	EHCI_Port_Clr_OverCurrent_Chg( struct USB2_HCDNode *hn, U32 port );
 SEC_CODE S32	EHCI_Port_Clr_Reset_Chg( struct USB2_HCDNode *hn, U32 port );
 SEC_CODE void	EHCI_Port_Disown( struct USB2_HCDNode *hn, U32 port );
 SEC_CODE U32	EHCI_Port_Get_Status( struct USB2_HCDNode *hn, U32 port );
@@ -88,14 +94,14 @@ SEC_CODE S32	EHCI_Get_20kBuffer( struct USB2_HCDNode *hn, struct EHCI_ITD *itd, 
 SEC_CODE struct EHCI_QH *EHCI_Get_QHBuffer( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE struct EHCI_TD *EHCI_Get_TDBuffer( struct USB2_HCDNode *hn );
 
-SEC_CODE S32	EHCI_Enough_Bandwidth( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-SEC_CODE S32	EHCI_Slot_Find( struct USB2_HCDNode *hn, U32 interval );
-SEC_CODE void	EHCI_Slot_Free( struct USB2_HCDNode *hn, U32 slot );
+SEC_CODE U32	EHCI_Interrupt_Cost( U32 endpoint, U32 schedule );
+SEC_CODE S32	EHCI_Split_Interrupt_FitsSlot( U32 endpoint, U32 start );
+SEC_CODE S32	EHCI_Periodic_Fits( struct USB2_HCDNode *hn, U32 frame, U32 mask, U32 cost, U32 hub, U32 split_start, S32 iso );
+SEC_CODE S32	EHCI_Slot_Find( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	EHCI_Handler_HCD( struct USB2_HCDNode *hn, U32 mask );
 SEC_CODE U32	EHCI_Handler_Interrupt( struct ExceptionContext *Context, struct ExecBase *SysBase, PTR userData );
 SEC_CODE U32	EHCI_Handler_Reset( struct ExceptionContext *Context, struct ExecBase *SysBase, PTR userData );
-SEC_CODE void	EHCI_Periodic_Start( struct USB2_HCDNode *hn );
-SEC_CODE S32	EHCI_Periodic_Stop( struct USB2_HCDNode *hn );
+SEC_CODE S32	EHCI_Set_Schedule( struct USB2_HCDNode *hn, U32 command_mask, U32 status_mask, S32 enabled );
 SEC_CODE S32	EHCI_Transfer_Check( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	EHCI_Transfer_Free( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 

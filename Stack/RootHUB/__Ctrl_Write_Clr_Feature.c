@@ -48,13 +48,17 @@ S32 err;
 
 		switch( wValue )
 		{
-			#if 0
 			case PORT_ENABLE:
 			{
-				err = PORT_CLEAR_ENABLE( port );
+				if ( hn->HCD_Functions.Port_Clr_Enable )
+				{
+					err = hn->HCD_Functions.Port_Clr_Enable( hn, port );
+				}
+
 				break;
 			}
 
+			#if 0
 			case PORT_SUSPEND:
 			{
 				err = PORT_CLEAR_SUSPEND( port );

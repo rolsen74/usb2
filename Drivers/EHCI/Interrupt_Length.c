@@ -161,6 +161,11 @@ S32 err;
 		// Check for short Packet
 		if ( bytes )
 		{
+			if ( ( ioreq->req_Public.io_Command == CMD_READ ) && ( ! ioreq->req_Public.io_AllowShortPackets ) )
+			{
+				ioreq->req_Public.io_Error = USB2Err_Host_RuntPacket;
+			}
+
 			break;
 		}
 

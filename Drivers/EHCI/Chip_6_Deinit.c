@@ -71,6 +71,13 @@ U32 cnt;
 		hn->hn_HCD.EHCI.ASync_Head = NULL;
 	}
 
+	if ( hn->hn_HCD.EHCI.ShortStop )
+	{
+		MEMORY_FREE( MEMID_EHCI_TD, hn->hn_HCD.EHCI.ShortStop, hn->hn_HCD.EHCI.ShortStop->ptd_self_phy );
+
+		hn->hn_HCD.EHCI.ShortStop = NULL;
+	}
+
 	// -- Frame List
 
 	USBDEBUG( "EHCI_Chip_Deinit : 2 : Free FrameList_ISlots" );

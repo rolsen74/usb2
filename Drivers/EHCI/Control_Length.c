@@ -83,7 +83,7 @@ EHCI_Control_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 	{
 		status = LE_SWAP32( td->td_status );
 
-		if ( status & EHCI_TD_STATERRS )
+		if ( status & EHCI_TD_HALTED )
 		{
 			if ( status & EHCI_TD_BABBLE )
 			{

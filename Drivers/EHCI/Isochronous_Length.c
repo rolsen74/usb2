@@ -101,6 +101,11 @@ EHCI_Isochronous_Length ( struct USB2_HCDNode *hn, struct RealRequest *req )
 		else
 		{
 			offset += actual;
+
+			if ( failed )
+			{
+				req->req_Public.io_Error = USB2Err_Host_HostError;
+			}
 		}
 
 		total += actual;

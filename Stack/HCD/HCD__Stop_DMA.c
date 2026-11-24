@@ -13,11 +13,12 @@
 // --
 
 SEC_CODE static void
-HCD_CloseSubmissions( struct USBBase *usbbase, struct USB2_HCDNode *hn )
+HCD_CloseSubmissions( struct USBBase *usbbase, struct USB2_HCDNode *hn, S32 recovering )
 {
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
 	hn->hn_AcceptIO = FALSE;
+	hn->hn_EHCIRecovering = recovering && hn->hn_IsEHCI;
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 }
@@ -49,7 +50,7 @@ USB2_HCD_RequestReset( struct USB2_HCDNode *hn )
 
 	usbbase = hn->hn_USBBase;
 
-	HCD_CloseSubmissions( usbbase, hn );
+	HCD_CloseSubmissions( usbbase, hn, TRUE );
 
 	TASK_SIGNAL( hn->hn_Task->tn_TaskAdr, hn->HCD_Restart_Chip.sig_Signal_Mask );
 }

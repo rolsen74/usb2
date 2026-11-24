@@ -73,11 +73,15 @@ SEC_RODATA const struct HCDFunctions EHCIFunctions =
 
 	.Transfer_Check			= EHCI_Transfer_Check,
 	.Transfer_Free			= EHCI_Transfer_Free,
+	.Recover_Request		= EHCI_Clear_TT,
 
 	// -- Port Functions
 
 	.Port_Clr_Connection_Chg = EHCI_Port_Clr_Connect_Chg,
 	.Port_Clr_Reset_Chg		= EHCI_Port_Clr_Reset_Chg,
+	.Port_Clr_Enable		= EHCI_Port_Clr_Enable,
+	.Port_Clr_Enable_Chg	= EHCI_Port_Clr_Enable_Chg,
+	.Port_Clr_OverCurrent_Chg = EHCI_Port_Clr_OverCurrent_Chg,
 
 	.Port_Get_Status		= EHCI_Port_Get_Status,
 

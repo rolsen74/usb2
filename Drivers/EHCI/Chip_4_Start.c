@@ -98,7 +98,7 @@ U32 cnt;
 			break;
 		}
 
-		case 3:
+		default:
 		{
 			USBERROR( "EHCI_Chip_Start          : Error illegal FrameList size $%08lx", val );
 			goto bailout;
@@ -108,6 +108,13 @@ U32 cnt;
 	USBDEBUG( "EHCI_Chip_Start          : Frame List Size: %lu", hn->hn_HCD.EHCI.FrameList_Size );
 
 	// --
+	// The descriptor pools and payload buffers use the low DMA segment.
+
+	if ( PCI_READLONG( EHCI_HCCPARAMS ) & EHCI_HCC_64BIT )
+	{
+		PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_CTRLDSSEGMENT, 0 );
+	}
+
 	// Point to async list
 
 	PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_ASYNC, hn->hn_HCD.EHCI.ASync_Head->pqh_self_phy );

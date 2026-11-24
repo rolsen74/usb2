@@ -22,7 +22,7 @@ struct RealFunctionNode *fn;
 	USBINFO( "__myMain (HCD)           : __Signal (2) ::" );
 	TASK_NAME_ENTER( "HCD Main : __Signal" );
 
-	HCD_CloseSubmissions( usbbase, hn );
+	HCD_CloseSubmissions( usbbase, hn, FALSE );
 
 	fn = hn->hn_Function_Array[0];
 

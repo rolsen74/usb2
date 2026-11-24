@@ -96,6 +96,8 @@
 #define EHCI_USBINTR				0x08U			// RW : USB Interrupt Enable
 #define EHCI_FRINDEX				0x0CU			// RW : USB Frame Index
 #define EHCI_FRINDEX_MASK			0x3fffU
+#define EHCI_CTRLDSSEGMENT			0x10U
+#define EHCI_HCC_64BIT				1U
 #define EHCI_PERIOD					0x14U			// RW : Frame List Base Address
 #define EHCI_ASYNC					0x18U			// RW : Next Asynchronous List Address
 #define EHCI_CONFIGFLAG				0x40U			// RW : Configured Flag Register
@@ -148,6 +150,7 @@
 #define	EHCI_CONF_CF				0x00000001UL	// RW : Configure flag
 
 // -- PORTSC
+#define EHCI_PS_CCS					0x00000001UL
 #define EHCI_PS_CSC					0x00000002UL	// RWC : Connect status change
 #define EHCI_PS_PE					0x00000004UL	// RW  : Port enable
 #define EHCI_PS_PEC					0x00000008UL	// RWC : Port enable change
@@ -192,13 +195,14 @@ struct EHCI_QH
 /* 14 */ U32				qh_td_alt;				// Physical addresse
 /* 18 */ U32				qh_status;				// Flags - Status / Control info
 /* 1C */ U32				qh_buffer[5];			// Physical addresses
-/* 30    Private - Software */
+/* 30 */ U32				qh_buffer_high[5];
+/* 44    Private - Software */
 	U32						pqh_self_phy;			// Physical addresse
 	struct EHCI_QH *		pqh_virt_next;			// Virtual address
 	struct EHCI_TD *		pqh_first_td;			// Virtual address
 };
 
-#define EHCI_QH_ALIGN			32						// Struct min alignment
+#define EHCI_QH_ALIGN			128						// Keep each descriptor within a DMA page
 //#define EHCI_QH_SIZE			(( sizeof( struct EHCI_QH ) + EHCI_QH_ALIGN - 1 ) / EHCI_QH_ALIGN** EHCI_QH_ALIGN )
 //#define EHCI_QH_CHUNK			( EHCI_PAGE_SIZE / EHCI_QH_SIZE )
 #define EHCI_QH_GET_ADDR(x)		(((x) >>  0) & 0x7f)	// endpoint addr
@@ -246,6 +250,7 @@ struct EHCI_TD
 	U32						td_td_alt;				// Physical addresses
 	U32						td_status;				// Flags - Status / Control info
 	U32						td_buffer[5];			// Physical addresses
+	U32						td_buffer_high[5];
 	// Private - Software
 	U32						ptd_self_phy;			// Physical addresse
 	struct EHCI_TD *		ptd_virt_next;			// Virtual address
@@ -268,7 +273,7 @@ struct EHCI_TD
 #define EHCI_TD_PID_SETUP		0x02U
 #define EHCI_TD_IOC				0x00008000UL
 //#define EHCI_TD_TOGGLE_MASK		0x80000000UL
-#define EHCI_TD_ALIGN			32					// Struct min alignment
+#define EHCI_TD_ALIGN			128						// Keep each descriptor within a DMA page
 //#define EHCI_TD_SIZE			(( sizeof( struct EHCI_TD ) + EHCI_TD_ALIGN - 1 ) / EHCI_TD_ALIGN** EHCI_TD_ALIGN )
 //#define EHCI_TD_CHUNK			( EHCI_PAGE_SIZE / EHCI_TD_SIZE )
 #define EHCI_TD_GET_STATUS(x)	(((x) >>  0) & 0xff)
@@ -322,6 +327,7 @@ struct EHCI_ITD
 };
 
 #define EHCI_FRAME_COUNT	1024
+#define EHCI_ROOT_TT		128U
 #define EHCI_ISO_USECS		80
 #define EHCI_ISO_MAX_PACKETS	256U
 #define EHCI_ISO_RETRY_LEAD	32U
@@ -352,6 +358,9 @@ struct _EHCI
 	#endif
 
 	struct EHCI_QH *				ASync_Head;
+	struct EHCI_TD *				ShortStop;
+	struct USB2_MsgPort				TTClearPort;
+	U32								TTClearPending;
 
 	U8 *							PortResetChange;
 
@@ -363,7 +372,7 @@ struct _EHCI
 	struct EHCI_ITD **				IsoFrames;
 	struct EHCI_ITD *				IsoRetired;
 	U32								IsoOutReports;
-	S32								BandWidth[ 256 ];		// hmm alloc mem instead? like ISlots
+	U32								IsoScheduled;
 
 	#if 0
 //	U32								FrameList_LevelCounter[ 8 ];

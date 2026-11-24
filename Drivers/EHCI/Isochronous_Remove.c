@@ -39,7 +39,7 @@ EHCI_Isochronous_Remove ( struct USB2_HCDNode *hn, struct RealRequest *req )
 	{
 		paused = TRUE;
 
-		if ( ! EHCI_Periodic_Stop( hn ) )
+		if ( ! EHCI_Set_Schedule( hn, EHCI_CMD_PSE, EHCI_STS_PSS, FALSE ) )
 		{
 			USB2_HCD_RequestReset( hn );
 
@@ -62,6 +62,7 @@ EHCI_Isochronous_Remove ( struct USB2_HCDNode *hn, struct RealRequest *req )
 		{
 			*link = itd->FrameNext;
 			*hardware = itd->Link;
+			hn->hn_HCD.EHCI.IsoScheduled--;
 		}
 	}
 
@@ -81,9 +82,9 @@ EHCI_Isochronous_Remove ( struct USB2_HCDNode *hn, struct RealRequest *req )
 			req->req_HCD.EHCI.IsoRetire = TRUE;
 		}
 	}
-	else
+	else if ( ! EHCI_Set_Schedule( hn, EHCI_CMD_PSE, EHCI_STS_PSS, TRUE ) )
 	{
-		EHCI_Periodic_Start( hn );
+		USB2_HCD_RequestReset( hn );
 	}
 }
 
