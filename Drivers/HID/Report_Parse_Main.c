@@ -13,343 +13,169 @@
 
 // --
 
-SEC_CODE S32 Report_Parse_Main( struct USBBase *usbbase, struct HIDData *hd, struct pintern *pi )
+SEC_CODE static S32
+AddField( struct USBBase *usbbase, struct HIDData *hd, struct pintern *pi, enum HID_ReportType type )
 {
-struct HID_ReportNode *rn;
-S32 error;
-HID_DEBUG( char spcbuf[64]; )
+	struct HID_ReportNode *rn;
+	struct HID_ReportLayout *layout;
+	struct HID_BitNode *bn;
+	struct HID_UsageNode *un;
+
+	U64 size;
+	U32 id;
+	U32 offset;
 
 	rn = pi->rn;
+	id = pi->gn->ReportID;
+	size = (U64) pi->gn->ReportCount * pi->gn->ReportSize;
 
-	error = TRUE;
-
-	switch( pi->bTag )
+	if ( ( ! rn ) || ( ! size ) || ( size > HID_MAX_REPORT_BYTES * 8 ) )
 	{
-		case 8:  // Input
-		case 9:  // Output
-		case 11: // Feature
-		{
-			if ( ! rn )
-			{
-				goto bailout;
-			}
+		return ( TRUE );
+	}
 
-HID_DEBUG( 
+	layout = hd->Layouts[id];
+
+	if ( ! layout )
+	{
+		layout = MEM_ALLOCVEC( sizeof( *layout ), TRUE );
+
+		if ( ! layout )
+		{
+			hd->AllocationFailed = TRUE;
+
+			return ( TRUE );
+		}
+
+		hd->Layouts[id] = layout;
+	}
+
+	offset = layout->Bits[type];
+
+	if ( ! offset )
+	{
+		offset = id ? 8 : 0;
+		layout->Owner[type] = rn;
+	}
+
+	if ( ( layout->Owner[type] != rn ) || ( offset + size > HID_MAX_REPORT_BYTES * 8 ) )
+	{
+		return ( TRUE );
+	}
+
+	layout->Bits[type] = offset + size;
+
+	// Retain decoded fields while counting the space used by padding.
+	if ( ( type == HID_Report_Feature ) || ( pi->uval & 0x101 ) || ( ! pi->usages.uh_Head ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( pi->gn->ReportSize > 32 )
+	{
+		return ( TRUE );
+	}
+
+	bn = Node_Bit_Alloc( usbbase );
+
+	if ( ! bn )
+	{
+		hd->AllocationFailed = TRUE;
+
+		return ( TRUE );
+	}
+
+	bn->BitOffset = offset;
+	bn->BitCount = pi->gn->ReportCount;
+	bn->BitSize = pi->gn->ReportSize;
+	bn->ReportID = id;
+	bn->Flags = pi->uval;
+	bn->MinLogical = pi->gn->MinLogical;
+	bn->MaxLogical = pi->gn->MaxLogical;
+
+	while ( ( un = NODE_REMHEAD( &pi->usages ) ) )
+	{
+		NODE_ADDTAIL( &bn->UsageHeader, un );
+	}
+
+	NODE_ADDTAIL( ( type == HID_Report_Input ) ? &rn->BitHeader : &rn->OutputHeader, bn );
+
+	return ( FALSE );
+}
+
+// --
+
+SEC_CODE S32
+Report_Parse_Main( struct USBBase *usbbase, struct HIDData *hd, struct pintern *pi )
 {
-U32 uu;
+	struct HID_UsageNode *un;
 
-	for( uu=0 ; uu<pi->level*2 ; uu++ )
-	{
-		spcbuf[uu] = '.';
-	}
-	spcbuf[uu++] = ':';
-	spcbuf[uu++] = ' ';
-	spcbuf[uu++] = ' ';
-	spcbuf[uu++] = ' ';
-	spcbuf[uu] = 0;
-})
-
-			// For a pen collection, bind to its first input report. Other
-			// IDs in the collection have independent offsets.
-			if ( ( pi->bTag == 8 ) && ( ( rn->UsageID == HID_USAGE_PEN ) || ( rn->UsageID == HID_USAGE_DIGITIZER ) ) )
-			{
-				if ( ! rn->Offset_In )
-				{
-					rn->ReportID = pi->gn->ReportID;
-				}
-
-				if ( rn->ReportID != pi->gn->ReportID )
-				{
-					goto clear_usages;
-				}
-			}
-
-			/**/ if ( pi->bTag == 8 ) // Input
-			{
-				// kind = 8 input
-				// flags = dval
-
-				HID_DEBUG( 
-					usbbase->usb_IExec->DebugPrintF( "Main - Input\n" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x001 ) ? "Constant" : "Data" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x002 ) ? "Variable" : "Array" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x004 ) ? "Relative" : "Absolute" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x008 ) ? "Wrap" : "No Wrap" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x010 ) ? "Non Linear" : "Linear" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x020 ) ? "No Preferred" : "Preferred State" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x040 ) ? "Null State" : "No Null State" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x100 ) ? "Buffered Bytes" : "Bit Field" );
-				)
-
-				if (( rn->ReportID ) && ( ! rn->Offset_In ))
-				{
-					rn->Offset_In += 8;
-				}
-
-				// --
-
-				pi->bn = Node_Bit_Alloc( usbbase );
-
-				if ( ! pi->bn )
-				{
-					goto bailout;
-				}
-
-				pi->bn->BitOffset	= rn->Offset_In;
-				pi->bn->BitCount	= pi->gn->ReportCount;
-				pi->bn->BitSize		= pi->gn->ReportSize;
-				pi->bn->ReportID	= pi->gn->ReportID;
-				pi->bn->Flags		= pi->uval;
-				pi->bn->MinLogical	= pi->gn->MinLogical;
-				pi->bn->MaxLogical	= pi->gn->MaxLogical;
-
-				while( TRUE )
-				{
-					pi->un = NODE_REMHEAD( & rn->UsageHeader );
-
-					if ( ! pi->un )
-					{
-						break;
-					}
-
-					NODE_ADDTAIL( & pi->bn->UsageHeader, pi->un );
-				}
-
-				NODE_ADDTAIL( & rn->BitHeader, pi->bn );
-
-				// --
-
-				rn->Offset_Temp	+= pi->gn->ReportCount * pi->gn->ReportSize ;
-				rn->Offset_In	+= rn->Offset_Temp;
-			}
-			else if ( pi->bTag == 9 ) // Output
-			{
-				// kind = 9 output
-				// flags = dval
-
-				HID_DEBUG( 
-					usbbase->usb_IExec->DebugPrintF( "Main - Output\n" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x001 ) ? "Constant" : "Data" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x002 ) ? "Variable" : "Array" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x004 ) ? "Relative" : "Absolute" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x008 ) ? "Wrap" : "No Wrap" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x010 ) ? "Non Linear" : "Linear" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x020 ) ? "No Preferred" : "Preferred State" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x040 ) ? "Null State" : "No Null State" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x080 ) ? "Volatile" : "Non Volatile" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x100 ) ? "Buffered Bytes" : "Bit Field" );
-				)
-
-				if (( rn->ReportID ) && ( ! rn->Offset_Out ))
-				{
-					rn->Offset_Out += 8;
-				}
-
-				rn->Offset_Temp += pi->gn->ReportCount * pi->gn->ReportSize ;
-				rn->Offset_Out  += rn->Offset_Temp;
-			}
-			else if ( pi->bTag == 11 ) // Feature
-			{
-				HID_DEBUG(
-					usbbase->usb_IExec->DebugPrintF( "Main - Feature\n" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x001 ) ? "Constant" : "Data" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x002 ) ? "Variable" : "Array" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x004 ) ? "Relative" : "Absolute" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x008 ) ? "Wrap" : "No Wrap" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x010 ) ? "Non Linear" : "Linear" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x020 ) ? "No Preferred" : "Preferred State" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x040 ) ? "Null State" : "No Null State" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x080 ) ? "Volatile" : "Non Volatile" );
-					usbbase->usb_IExec->DebugPrintF( "%s - %s\n", spcbuf, ( pi->uval & 0x100 ) ? "Buffered Bytes" : "Bit Field" );
-				)
-
-				if (( rn->ReportID ) && ( ! rn->Offset_Feat ))
-				{
-					rn->Offset_Feat += 8;
-				}
-
-				rn->Offset_Temp += pi->gn->ReportCount * pi->gn->ReportSize ;
-				rn->Offset_Feat += rn->Offset_Temp;
-			}
-
-clear_usages:
-			rn->Offset_Temp = 0;
-
-			while( TRUE )
-			{
-				pi->un = NODE_REMHEAD( & rn->UsageHeader );
-
-				if ( ! pi->un )
-				{
-					break;
-				}
-
-				Node_Usage_Free( usbbase, pi->un );
-			}
-			break;
-		}
-
-		case 10: // Start Collection
-		{
-			HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Main - Start Collection - " ); )
-
-			switch( pi->uval & pi->mask )
-			{
-				case 0x00: // Physical
-				{
-					HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Physical\n" ); )
-					break;
-				}
-
-				case 0x01: // Application
-				{
-					HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Application\n" ); )
-					break;
-				}
-
-				case 0x02: // Logical
-				{
-					HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Logical\n" ); )
-					break;
-				}
-
-				case 0x03: // Report
-				{
-					HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Report\n" ); )
-					break;
-				}
-
-				case 0x04: // Named Array
-				{
-					HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Named Array\n" ); )
-					break;
-				}
-
-				case 0x05: // Usage Switch
-				{
-					HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Usage Switch\n" ); )
-					break;
-				}
-
-				case 0x06: // Usage Modifier
-				{
-					HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Usage Modifier\n" ); )
-					break;
-				}
-
-				default:
-				{
-					HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "\n" ); )
-					break;
-				}
-			}
-
-			// --
-
-			if ( pi->level == 0 )
-			{
-				if ( pi->rn )
-				{
-//			usbbase->usb_IExec->DebugPrintF( "hmmm uuu11 not null\n" );
-					goto bailout;
-				}
-
-				pi->rn = rn = Node_Report_Alloc( usbbase, hd );
-
-				if ( ! pi->rn )
-				{
-//			usbbase->usb_IExec->DebugPrintF( "Report_Parse() out of mem\n" );
-					goto bailout;
-				}
-
-				NODE_ADDTAIL( & pi->reports, pi->rn );
-
-//				rn->ReportID = pi->gn->ReportID;
-
-				// --
-
-				while( TRUE )
-				{
-					PTR n = NODE_REMHEAD( & pi->usages );
-
-					if ( ! n )
-					{
-						break;
-					}
-
-					NODE_ADDTAIL( & rn->UsageHeader, n );
-				}
-			}
-
-			pi->level++;
-
-			// --
-
-			pi->un = NODE_REMTAIL( & rn->UsageHeader );
-
-			if ( ! pi->un )
-			{
-//				usbbase->usb_IExec->DebugPrintF( "NULL Pointer\n" );
-				goto bailout;
-			}
-
-			if ( rn->UsageID == 0 )
-			{
-				 rn->UsageID = pi->un->Min;
-			}
-
-			Node_Usage_Free( usbbase, pi->un );
-
-			break;
-		}
-
-		case 12: // End Collection
-		{
-			HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Main - End Collection\n" ); )
-
-//--		if ( cn == NULL )
-//--		{
-//--			usbbase->usb_IExec->DebugPrintF( "NULL Pointer\n" );
-//--			goto bailout;
-//--		}
-//--
-//--		NODE_ADDTAIL( rn->Collections, NULL, cn );
-//--
-//--		cn->Report = pi->rn;
-
-			// ---
-
-			if ( ! pi->level )
-			{
-//	usbbase->usb_IExec->DebugPrintF( "ooooo 123\n" );
-				goto bailout;
-			}
-
-			pi->level--;
-
-			if ( ! pi->level )
-			{
-				pi->rn = rn = NULL;
-			}
-
-			// ---
-
-//--		cn = cn->Parent;
-			break;
-		}
-
-		default:
-		{
-//			usbbase->usb_IExec->DebugPrintF( "Unsupported Main Tag Type (%lu)", pi->bTag );
-			break;
-		}
-	}
+	S32 error;
 
 	error = FALSE;
 
-bailout:
+	switch ( pi->bTag )
+	{
+		case 8: // Input
+			error = AddField( usbbase, hd, pi, HID_Report_Input );
+			break;
 
-	return( error );
+		case 9: // Output
+			error = AddField( usbbase, hd, pi, HID_Report_Output );
+			break;
+
+		case 11: // Feature
+			error = AddField( usbbase, hd, pi, HID_Report_Feature );
+			break;
+
+		case 10: // Collection
+			if ( ! pi->level )
+			{
+				un = Header_Head( &pi->usages );
+
+				if ( ! un )
+				{
+					return ( TRUE );
+				}
+
+				pi->rn = Node_Report_Alloc( usbbase, hd );
+
+				if ( ! pi->rn )
+				{
+					hd->AllocationFailed = TRUE;
+
+					return ( TRUE );
+				}
+
+				pi->rn->UsageID = un->Min;
+
+				NODE_ADDTAIL( &pi->reports, pi->rn );
+			}
+
+			pi->level++;
+			break;
+
+		case 12: // End Collection
+			if ( ! pi->level )
+			{
+				return ( TRUE );
+			}
+
+			if ( ! --pi->level )
+			{
+				pi->rn = NULL;
+			}
+			break;
+	}
+
+	while ( ( un = NODE_REMHEAD( &pi->usages ) ) )
+	{
+		Node_Usage_Free( usbbase, un );
+	}
+
+	pi->usageflag = 0;
+
+	return ( error );
 }
 
 // --

@@ -13,51 +13,95 @@
 
 // --
 
-SEC_CODE void HID_Free( struct USBBase *usbbase, struct HIDData *hd )
+SEC_CODE static void
+StopWorkers( struct USBBase *usbbase, struct HIDData *hd )
 {
-struct HID_ReportNode *rn;
+	struct HID_ReportNode *rn;
+	struct ExecIFace *IExec;
 
-	USBDEBUG( "HID : HID_Free" );
-	TASK_NAME_ENTER( "HID_Free" );
+	IExec = usbbase->usb_IExec;
 
-	// --
+	IExec->Disable();
 
-	// A failed worker may still have a task-node reference held by Master.
-	ASYNC_WAIT( &hd->ASync_Drivers );
-
-	if ( hd->Register )
+	for ( rn = Header_Head( &hd->Reports ); rn; rn = Node_Next( rn ) )
 	{
-		USBDEBUG( "HID_Free              : Unregister" );
-		REGISTER_UNREGISTER( hd->Register );
-		hd->Register = NULL;
+		if ( rn->TaskAdr )
+		{
+			rn->Running = FALSE;
+
+			TASK_SIGNAL( rn->TaskAdr, SIGBREAKF_CTRL_D );
+		}
 	}
 
-	// --
+	IExec->Enable();
 
-	MSGPORT_FREE( & hd->Timer_MsgPort );
-	ASYNC_FREE( & hd->ASync_Drivers );
+	ASYNC_WAIT( &hd->ASync_Drivers );
 
-	while( TRUE )
+	if ( hd->Return_MsgPort.ump_StructID == ID_USB2_MP )
 	{
-		rn = NODE_REMHEAD( & hd->Reports );
-
-		if ( ! rn )
+		while ( MSGPORT_GETMSG( &hd->Return_MsgPort ) )
 		{
-			break;
+			// The endpoint resource still owns each returned request.
 		}
+	}
+}
 
+// --
+
+SEC_CODE void
+Report_Free( struct USBBase *usbbase, struct HIDData *hd )
+{
+	struct HID_ReportNode *rn;
+
+	U32 id;
+
+	while ( ( rn = NODE_REMHEAD( &hd->Reports ) ) )
+	{
 		Node_Report_Free( usbbase, rn );
+	}
+
+	for ( id = 0; id < 256; id++ )
+	{
+		if ( hd->Layouts[id] )
+		{
+			MEM_FREEVEC( hd->Layouts[id] );
+
+			hd->Layouts[id] = NULL;
+		}
 	}
 
 	if ( hd->ReportBuffer )
 	{
 		MEM_FREEVEC( hd->ReportBuffer );
+
 		hd->ReportBuffer = NULL;
 	}
 
-	// --
+	hd->InputBufferSize = 0;
+	hd->NumberedInput = FALSE;
+}
 
-	TASK_NAME_LEAVE();
+// --
+
+SEC_CODE void
+HID_Free( struct USBBase *usbbase, struct HIDData *hd )
+{
+	StopWorkers( usbbase, hd );
+
+	if ( hd->Register )
+	{
+		REGISTER_UNREGISTER( hd->Register );
+
+		hd->Register = NULL;
+	}
+
+	MSGPORT_FREE( &hd->Return_MsgPort );
+
+	MSGPORT_FREE( &hd->Timer_MsgPort );
+
+	ASYNC_FREE( &hd->ASync_Drivers );
+
+	Report_Free( usbbase, hd );
 }
 
 // --

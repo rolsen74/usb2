@@ -13,19 +13,6 @@
 
 // --
 
-SEC_RODATA const struct KeyboardMask KeyboardData[] =
-{
-{	USBHID_BOOTKBD_MODF_LSHIFT,		IEQUALIFIER_LSHIFT,		0x60,	0 },
-{	USBHID_BOOTKBD_MODF_RSHIFT,		IEQUALIFIER_RSHIFT,		0x61,	0 },
-{	USBHID_BOOTKBD_MODF_LCTRL |
-	USBHID_BOOTKBD_MODF_RCTRL,		IEQUALIFIER_CONTROL,	0x63, 	0 },
-{	USBHID_BOOTKBD_MODF_LALT,		IEQUALIFIER_LALT,		0x64,	0 },
-{	USBHID_BOOTKBD_MODF_RALT,		IEQUALIFIER_RALT,		0x65,	0 },
-{	USBHID_BOOTKBD_MODF_LCOMMAND,	IEQUALIFIER_LCOMMAND,	0x66,	0 },
-{	USBHID_BOOTKBD_MODF_RCOMMAND,	IEQUALIFIER_RCOMMAND,	0x67,	0 },
-{	0,								0,						0,		0 },
-};
-
 #define USB2_KEYMAP_STORAGE SEC_RODATA
 #include "KeyboardMap.h"
 #undef USB2_KEYMAP_STORAGE
@@ -34,7 +21,6 @@ SEC_RODATA const struct KeyboardMask KeyboardData[] =
 
 SEC_CODE U32 HID_Entry( struct USBBase *usbbase, struct USB2_DriverMessage *msg )
 {
-struct USB2_IORequest *ioreq;
 struct HIDData *hd;
 U32 retval;
 
@@ -77,32 +63,7 @@ U32 retval;
 
 		if ( HID_Init( usbbase, hd ))
 		{
-			// --
-			// Just start to Read from Interrupts
-
-			for( int cnt=0 ; cnt<HID_IOReqCount ; cnt++ )
-			{
-				ioreq = hd->Res_Interrupt->IORequests[cnt];
-//				ioreq->io_Data		= hd->Res_Interrupt->Buffers[cnt];
-//				ioreq->io_Length	= hd->Res_Interrupt->BufferSize;
-//				ioreq->io_Command	= CMD_READ;
-				IO_SEND( ioreq );
-			}
-
-			// --
-
-			/**/ if ( hd->Driver_Mode == HID_DMode_Boot )
-			{
-				HID_Main_Boot( usbbase, hd );
-			}
-			else if ( hd->Driver_Mode == HID_DMode_Report )
-			{
-				HID_Main_Report( usbbase, hd );
-			}
-			else
-			{
-				USBDEBUG( "HID_Entry : Invalid Mode %ld", hd->Driver_Mode );
-			}
+			retval = HID_Main( usbbase, hd );
 		}
 		else
 		{

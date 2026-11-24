@@ -13,7 +13,7 @@
 
 // --
 
-SEC_CODE S32 Report_Add_Usage( struct USBBase *usbbase, struct HIDData *hd UNUSED, struct USB2_Header *list, U32 minusage, U32 maxusage )
+SEC_CODE S32 Report_Add_Usage( struct USBBase *usbbase, struct HIDData *hd, struct USB2_Header *list, U32 minusage, U32 maxusage )
 {
 struct HID_UsageNode *un;
 S32 error;
@@ -31,7 +31,9 @@ S32 error;
 
 	if ( ! un )
 	{
-		USBERROR( "Error allocting memory" );
+		hd->AllocationFailed = TRUE;
+
+		USBERROR( "Error allocating memory" );
 		goto bailout;
 	}
 

@@ -13,14 +13,11 @@
 
 // --
 
-SEC_CODE S32 Report_Parse_Global( struct USBBase *usbbase, struct HIDData *hd UNUSED, struct pintern *pi )
+SEC_CODE S32 Report_Parse_Global( struct USBBase *usbbase, struct HIDData *hd, struct pintern *pi )
 {
 struct HID_GlobalNode *new;
 struct HID_GlobalNode *cur;
-struct HID_ReportNode *rn;
 S32 error;
-
-	rn = pi->rn;
 
 	cur = pi->gn;
 
@@ -129,19 +126,12 @@ S32 error;
 		{
 			HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Global - Report ID (%lu)\n", pi->uval ); )
 
-			cur->ReportID = pi->uval;
-
-			if ( rn )
+			if ( ( ! pi->uval ) || ( pi->uval > 255 ) )
 			{
-				/**/ if ( rn->ReportID == 0 )
-				{
-					rn->ReportID = pi->uval;
-				}
-				else if ( rn->ReportID != pi->uval )
-				{
-					HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "ReportID already set : Old %lu, New %lu\n", rn->ReportID, pi->uval ); )
-				}
+				goto bailout;
 			}
+
+			cur->ReportID = pi->uval;
 			break;
 		}
 
@@ -162,6 +152,7 @@ S32 error;
 			if ( ! new )
 			{
 //				usbbase->usb_IExec->DebugPrintF( "Error allocating memory\n" );
+				hd->AllocationFailed = TRUE;
 				goto bailout;
 			}
 

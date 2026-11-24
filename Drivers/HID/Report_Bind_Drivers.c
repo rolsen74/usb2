@@ -13,9 +13,8 @@
 
 // --
 
-SEC_CODE S32 Report_Bind_Drivers( struct USBBase *usbbase, struct HIDData *hd UNUSED )
+SEC_CODE S32 Report_Bind_Drivers( struct USBBase *usbbase, struct HIDData *hd )
 {
-struct HID_ReportNode *next;
 struct HID_ReportNode *rn;
 enum TaskReturn stat;
 S32 error;
@@ -34,7 +33,6 @@ STR name;
 
 	while( rn )
 	{
-		next = Node_Next( rn );
 		// --
 
 		main = NULL;
@@ -92,17 +90,15 @@ STR name;
 
 		rn->TaskName = name;
 
-		if ( main )
+		if ( ( main ) && ( rn->BitHeader.uh_Head ) )
 		{
-			HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Bind ReportID : %ld\n", rn->ReportID ); )
-
 			stat = TASK_START(
 				TASK_Tag_Func_Init, init,
 				TASK_Tag_Func_Main, main,
 				TASK_Tag_Func_Free, free,
 				TASK_Tag_UserData, rn,
 				TASK_Tag_Prioity, hd->TaskAdr->tc_Node.ln_Pri,
-				TASK_Tag_ASync, & hd->ASync_Drivers,
+				TASK_Tag_ASync, &hd->ASync_Drivers,
 				TASK_Tag_Type, TASK_Type_HID,
 				TASK_Tag_Name, name,
 				TAG_END
@@ -114,20 +110,16 @@ STR name;
 			}
 			else
 			{
-				NODE_REMNODE( & hd->Reports, rn );
-				Node_Report_Free( usbbase, rn );
+				rn->Running = FALSE;
+				hd->AllocationFailed = TRUE;
 			}
 		}
 		else
 		{
-			HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Discard ReportID : %ld\n", rn->ReportID ); )
-
-			NODE_REMNODE( & hd->Reports, rn );
-			Node_Report_Free( usbbase, rn );
+			rn->Running = FALSE;
 		}
 
-		// --
-		rn = next;
+		rn = Node_Next( rn );
 	}
 
 	error = ( started == 0 );

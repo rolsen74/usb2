@@ -13,7 +13,7 @@
 
 // --
 
-SEC_CODE S32 Report_Read_Report( struct USBBase *usbbase, struct HIDData *hd UNUSED, U32 ifcnr )
+SEC_CODE S32 Report_Read_Report( struct USBBase *usbbase, struct HIDData *hd, U32 ifcnr )
 {
 struct USB2_IORequest *ioreq;
 struct USB2_SetupData *sd;
@@ -70,7 +70,7 @@ S32 max;
 		goto bailout;
 	}
 
-	if ( ( hiddsc->Length < 9 ) || ( hiddsc->Length > ioreq->io_Actual ) ||
+	if ( ( hiddsc->DescriptorType != DSCTYPE_HID ) || ( hiddsc->Length < 9 ) || ( hiddsc->Length > ioreq->io_Actual ) ||
 		( hiddsc->NumDescriptors > ( ( hiddsc->Length - 6 ) / 3 ) ) )
 	{
 		goto bailout;
@@ -111,6 +111,7 @@ S32 max;
 
 	if ( ! hd->ReportBuffer )
 	{
+		hd->AllocationFailed = TRUE;
 //		usbbase->usb_IExec->DebugPrintF( "Error allocating memory (Size %ld)\n", hd->ReportSize );
 		goto bailout;
 	}
@@ -160,6 +161,9 @@ S32 max;
 	error = TRUE;
 
 bailout:
+	ioreq->io_Data = NULL;
+	ioreq->io_Length = 0;
+
 	if ( ( ! error ) && ( hd->ReportBuffer ) )
 	{
 		MEM_FREEVEC( hd->ReportBuffer );

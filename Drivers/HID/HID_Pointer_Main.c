@@ -13,61 +13,48 @@
 
 // --
 
-SEC_CODE void HID_Pointer_Main( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
+SEC_CODE void
+HID_Pointer_Main( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
 {
-struct HID_ReportNode *rn;
-struct RealRequest *ioreq;
-//struct HIDData *hd;
-U32 mask;
-U32 wait;
+	struct HID_ReportNode *rn;
+	struct RealRequest *ioreq;
 
-	TASK_NAME_ENTER( "HID_Pointer_Main" );
+	U32 index;
+	U32 wait;
 
 	rn = userdata;
-//	hd = rn->HIDData;
+	wait = SIGBREAKF_CTRL_D | rn->IOReq_MsgPort.ump_Signal.sig_Signal_Mask;
 
-	wait = SIGBREAKF_CTRL_D;
-
-	wait |= rn->IOReq_MsgPort.ump_Signal.sig_Signal_Mask;
-
-	rn->Running = TRUE;
-
-	while( rn->Running )
+	while ( TRUE )
 	{
-		mask = TASK_WAIT( wait );
-
-		if ( mask &	rn->IOReq_MsgPort.ump_Signal.sig_Signal_Mask )
+		while ( ( ioreq = MSGPORT_GETMSG( &rn->IOReq_MsgPort ) ) )
 		{
-			while( TRUE )
+			if ( rn->Running )
 			{
-				ioreq = MSGPORT_GETMSG( & rn->IOReq_MsgPort );
-
-				if ( ! ioreq )
+				if ( ( rn->HIDData->Driver_Mode != HID_DMode_Boot ) ||
+					( ioreq->req_Public.io_Actual >= sizeof( struct USB2_BootMouse ) ) )
 				{
-					break;
+					rn->Pointer_Data( usbbase, rn, ioreq );
 				}
-
-				rn->Pointer_Data( usbbase, rn, ioreq );
-
-				IO_SEND( ioreq );
 			}
+
+			MSGPORT_PUTMSG( &rn->HIDData->Return_MsgPort, ioreq );
 		}
 
-		if ( mask & SIGBREAKF_CTRL_D )
+		if ( ! rn->Running )
 		{
-			// Used to break out of Wait so we can check ua_Counter
+			break;
 		}
+
+		TASK_WAIT( wait );
 	}
 
-	if ( rn->Tablet_Buttons )
+	for ( index = 0; index < 5; index++ )
 	{
-		Tablet_Buttons ( usbbase, rn, 0 );
+		HID_Mouse_Button( usbbase, rn, index, FALSE );
 	}
 
-	rn->Running = FALSE;
 	rn->TaskAdr = NULL;
-
-	TASK_NAME_LEAVE();
 }
 
 // --

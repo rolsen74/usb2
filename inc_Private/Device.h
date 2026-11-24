@@ -66,6 +66,8 @@ struct USBBase
 	U32 usb_CPU_Type;
 	U32 usb_MachineType;
 
+	struct USB2_Semaphore usb_HID_Semaphore;
+	U32 usb_HID_Held[128 + 5];
 	U32 usb_HID_Qualifiers;
 	S16 usb_HID_Prev_Code[2];
 	U16 usb_HID_Prev_Qual[2];

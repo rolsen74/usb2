@@ -15,20 +15,18 @@
 
 SEC_CODE S32 Report_Parse_Local( struct USBBase *usbbase, struct HIDData *hd, struct pintern *pi )
 {
-struct HID_ReportNode *rn;
 struct USB2_Header *list;
 S32 error;
 
 	error	= TRUE;
 
-	rn		= pi->rn;
-	list	= ( rn ) ? & rn->UsageHeader : & pi->usages ;
+	list = &pi->usages;
 
 	switch( pi->bTag )
 	{
 		case 0: // Usage
 		{
-			pi->uval = (( pi->gn->UsagePage ) | ( pi->uval & pi->mask ));
+			pi->uval = ( pi->len == 4 ) ? pi->uval : ( pi->gn->UsagePage | pi->uval );
 
 			HID_DEBUG( usbbase->usb_IExec->DebugPrintF( "Local - Usage (%08lx) - ", pi->uval ); )
 
@@ -273,7 +271,7 @@ S32 error;
 		case 1: // Usage Minimum
 		case 2: // Usage Maximum
 		{
-			pi->uval = (( pi->gn->UsagePage ) | ( pi->uval & pi->mask ));
+			pi->uval = ( pi->len == 4 ) ? pi->uval : ( pi->gn->UsagePage | pi->uval );
 
 			if ( pi->bTag == 1 )
 			{

@@ -277,6 +277,8 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 
 	SEMAPHORE_INIT ( &usbbase->usb_LockSemaphore );
 
+	SEMAPHORE_INIT ( &usbbase->usb_HID_Semaphore );
+
 	SEMAPHORE_INIT ( &usbbase->usb_Fkt_Semaphore );
 
 	SEMAPHORE_INIT ( &usbbase->usb_Notify_Semaphore );

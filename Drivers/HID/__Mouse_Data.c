@@ -13,113 +13,98 @@
 
 // --
 
-SEC_CODE static void __Mouse_Data_Array(
-	struct USBBase *usbbase UNUSED, 
-	struct HID_ReportNode *rn UNUSED,
-	struct RealRequest *ioreq UNUSED,
-	struct HID_BitNode *bn )
+SEC_CODE void
+__Mouse_Data( struct USBBase *usbbase, struct HID_ReportNode *rn, struct RealRequest *ioreq )
 {
-struct HID_UsageNode *un;
+	struct HID_BitNode *bn;
 
-	un = bn->UsageHeader.uh_Head;
+	U8 *data;
+	U32 id;
+	U32 index;
+	U32 usage;
+	U32 absolute;
+	U32 buttons;
+	U32 bit;
+	S32 dx;
+	S32 dy;
+	S32 value;
 
-	while( un )
+	data = ioreq->req_Public.io_Data;
+	id = ( rn->HIDData->NumberedInput ) ? data[0] : 0;
+	absolute = FALSE;
+	buttons = rn->Buttons;
+	dx = 0;
+	dy = 0;
+
+	for ( bn = Header_Head( &rn->BitHeader ); bn; bn = Node_Next( bn ) )
 	{
-		switch( un->Min )
+		if ( ( bn->ReportID != id ) || ( ! ( bn->Flags & 2 ) ) )
 		{
-			// add usage to handle here
+			continue;
+		}
 
-			default:
+		for ( index = 0; index < bn->BitCount; index++ )
+		{
+			usage = Report_Get_Usage( bn, index, TRUE );
+
+			switch ( usage )
 			{
-//				usbbase->usb_IExec->DebugPrintF( "Unsupported Mouse Array Usage : $%08lx\n", un->Min );
-				break;
+				case 0x00010030:
+				case 0x00010031:
+					if ( bn->Flags & 4 )
+					{
+						value = Report_Read_Value( usbbase, ioreq, bn, index, bn->MinLogical < 0 );
+
+						if ( usage == 0x00010030 )
+						{
+							dx = value;
+						}
+						else
+						{
+							dy = value;
+						}
+					}
+					else if ( usage == 0x00010030 )
+					{
+						rn->Pointer_X = Report_Read_Axis( usbbase, ioreq, bn, index, &rn->Pointer_RangeX );
+						absolute = TRUE;
+					}
+					else
+					{
+						rn->Pointer_Y = Report_Read_Axis( usbbase, ioreq, bn, index, &rn->Pointer_RangeY );
+						absolute = TRUE;
+					}
+					break;
+
+				case 0x00010038:
+					__Mouse_Scroll( usbbase, rn, ioreq, bn, index, usage );
+					break;
+
+				case 0x00090001:
+				case 0x00090002:
+				case 0x00090003:
+				case 0x00090004:
+				case 0x00090005:
+					value = Report_Read_Value( usbbase, ioreq, bn, index, FALSE );
+
+					bit = 1U << ( usage - 0x00090001 );
+					buttons = ( value ) ? ( buttons | bit ) : ( buttons & ~bit );
+					break;
 			}
 		}
-
-		un = Node_Next( un );
 	}
-}
 
-// --
-
-SEC_CODE static void __Mouse_Data_Variable(
-	struct USBBase *usbbase, 
-	struct HID_ReportNode *rn,
-	struct RealRequest *ioreq,
-	struct HID_BitNode *bn )
-{
-struct HID_UsageNode *un;
-U32 idx;
-U32 id;
-
-	un = bn->UsageHeader.uh_Head;
-
-	idx = 0;	// Index is pr. BitNode
-
-	while( un )
+	if ( absolute )
 	{
-		for( id = un->Min ; ( id <= un->Max ) && ( idx < bn->BitCount ) ; idx++, id++ )
-		{
-			switch( id )
-			{
-				case 0x00010030:	// Mouse Move X
-				case 0x00010031:	// Mouse Move Y
-				{
-					__Mouse_Move( usbbase, rn, ioreq, bn, idx, id );
-					break;
-				}
-
-				case 0x00010038:	// Mouse Scroll Wheel
-				{
-					__Mouse_Scroll( usbbase, rn, ioreq, bn, idx, id );
-					break;
-				}
-
-				case 0x00090001:	// Left Mouse Button
-				case 0x00090002:	// Middle Mouse Button
-				case 0x00090003:	// Right Mouse Button
-				case 0x00090004:	// 4th Mouse Button
-				case 0x00090005:	// 5th Mouse Button
-				{
-					__Mouse_Button( usbbase, rn, ioreq, bn, idx, id );
-					break;
-				}
-
-				default:
-				{
-//					usbbase->usb_IExec->DebugPrintF( "Unsupported Mouse Variable Usage : $%08lx\n", id );
-					break;
-				}
-			}
-		}
-
-		un = Node_Next( un );
+		Input_Pointer_Position( usbbase, rn, FALSE, buttons );
 	}
-}
 
-// --
-
-SEC_CODE void __Mouse_Data( struct USBBase *usbbase, struct HID_ReportNode *rn, struct RealRequest *ioreq )
-{
-struct HID_BitNode *bn;
-
-	bn = rn->BitHeader.uh_Head;
-
-	while( bn )
+	for ( index = 0; index < 5; index++ )
 	{
-		if ( bn->Flags & 2 )
-		{
-			// Variable
-			__Mouse_Data_Variable( usbbase, rn, ioreq, bn );
-		}
-		else
-		{
-			// Array
-			__Mouse_Data_Array( usbbase, rn, ioreq, bn );
-		}
-
-		bn = Node_Next( bn );
+		HID_Mouse_Button( usbbase, rn, index, buttons & ( 1U << index ) );
 	}
+
+	Input_Mouse_Move( usbbase, rn, dx, dy );
 }
 
 // --

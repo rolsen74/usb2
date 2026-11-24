@@ -16,9 +16,11 @@
 SEC_CODE S32 Report_Parse( struct USBBase *usbbase, struct HIDData *hd )
 {
 struct HID_ReportNode *rn;
+struct HID_ReportLayout *layout;
 struct HID_GlobalNode gstack;
 struct pintern pi;
 U32 max_bits;
+U32 id;
 S32 error;
 U8 prefix;
 
@@ -144,33 +146,31 @@ HID_DEBUG(
 
 	// --
 
-	max_bits = 0;
-
-	rn = pi.reports.uh_Head;
-
-	while( rn )
+	if ( ( pi.level ) || ( pi.gn != &gstack ) )
 	{
-// usbbase->usb_IExec->DebugPrintF( "ReportID %2ld, In Offset %2ld, Out Offset %2ld, Feat Offset %2ld\n", rn->ReportID, rn->Offset_In, rn->Offset_Out, rn->Offset_Feat );
-
-		if ( rn->Offset_In > max_bits )
-		{
-			max_bits = rn->Offset_In;
-		}
-
-		rn = Node_Next( rn );
-	}
-
-	hd->InputBufferSize = ( max_bits + 7 ) / 8 ;
-
-// usbbase->usb_IExec->DebugPrintF( "Input Buffer : Bits %ld, Bytes %ld\n", max_bits, hd->InputBufferSize );
-
-	// --
-
-	if ( hd->InputBufferSize == 0 )
-	{
-// usbbase->usb_IExec->DebugPrintF( "Report_Parse() zero buffer size\n" );
 		goto bailout;
 	}
+
+	max_bits = 0;
+
+	for ( id = 0; id < 256; id++ )
+	{
+		layout = hd->Layouts[id];
+
+		if ( ( layout ) && ( layout->Bits[HID_Report_Input] ) )
+		{
+			max_bits = MAX( max_bits, layout->Bits[HID_Report_Input] );
+			hd->NumberedInput |= ( id != 0 );
+		}
+	}
+
+	if ( ( ! max_bits ) || ( ( hd->NumberedInput ) && ( hd->Layouts[0] ) &&
+		( hd->Layouts[0]->Bits[HID_Report_Input] ) ) )
+	{
+		goto bailout;
+	}
+
+	hd->InputBufferSize = ( max_bits + 7 ) / 8;
 
 	// --
 	error = FALSE;

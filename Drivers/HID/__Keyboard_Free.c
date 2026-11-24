@@ -21,6 +21,7 @@ struct HID_ReportNode *rn;
 	TASK_NAME_ENTER( "__Keyboard_Free" );
 
 	rn = userdata;
+	rn->TaskAdr = NULL;
 //	hd = rn->HIDData;
 
 	// --

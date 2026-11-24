@@ -23,7 +23,7 @@ SEC_CODE void __Mouse_Scroll(
 {
 S32 val;
 
-	val = Report_Read_Value( usbbase, ioreq, bn, idx, TRUE );
+	val = Report_Read_Value( usbbase, ioreq, bn, idx, bn->MinLogical < 0 );
 
 	Input_Mouse_Scroll( usbbase, rn, val );
 }

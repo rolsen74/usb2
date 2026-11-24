@@ -24,7 +24,7 @@ PTR n;
 
 	while( TRUE )
 	{
-		n = NODE_REMHEAD( & node->UsageHeader );
+		n = NODE_REMHEAD( & node->OutputHeader );
 
 		if ( ! n )
 		{
@@ -45,8 +45,6 @@ PTR n;
 
 		Node_Bit_Free( usbbase, n );
 	}
-
-	// Stop Driver in here? if running
 
 	MEM_FREEVEC( node );
 

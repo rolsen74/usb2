@@ -13,61 +13,64 @@
 
 // --
 
-SEC_CODE void __Keyboard_Main( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
+SEC_CODE void
+__Keyboard_Main( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
 {
-struct HID_ReportNode *rn;
-struct RealRequest *ioreq;
-// struct HIDData *hd;
-U32 mask;
-U32 wait;
+	struct HID_ReportNode *rn;
+	struct RealRequest *ioreq;
 
-	TASK_NAME_ENTER( "__Keyboard_Main" );
+	U8 released[32];
+	U32 wait;
 
 	rn = userdata;
-//	hd = rn->HIDData;
+	wait = SIGBREAKF_CTRL_D | rn->IOReq_MsgPort.ump_Signal.sig_Signal_Mask |
+		rn->Timer_MsgPort.ump_Signal.sig_Signal_Mask;
 
-	wait = SIGBREAKF_CTRL_D;
-	wait |= rn->IOReq_MsgPort.ump_Signal.sig_Signal_Mask;
-	wait |= rn->Timer_MsgPort.ump_Signal.sig_Signal_Mask;
-
-	rn->Running = TRUE;
-
-	while( rn->Running )
+	while ( TRUE )
 	{
-		mask = TASK_WAIT( wait );
-
-		if ( mask &	rn->IOReq_MsgPort.ump_Signal.sig_Signal_Mask )
+		while ( ( ioreq = MSGPORT_GETMSG( &rn->IOReq_MsgPort ) ) )
 		{
-			while( TRUE )
+			if ( rn->Running )
 			{
-				ioreq = MSGPORT_GETMSG( & rn->IOReq_MsgPort );
-
-				if ( ! ioreq )
+				if ( rn->HIDData->Driver_Mode == HID_DMode_Boot )
 				{
-					break;
+					if ( ioreq->req_Public.io_Actual >= sizeof( struct USB2_BootKeyboard ) )
+					{
+						__Boot_Keyboard_Data( usbbase, rn, ioreq );
+					}
 				}
+				else
+				{
+					__Keyboard_Data( usbbase, rn, ioreq );
+				}
+			}
 
-				__Keyboard_Data( usbbase, rn, ioreq );
+			MSGPORT_PUTMSG( &rn->HIDData->Return_MsgPort, ioreq );
+		}
 
-				IO_SEND( ioreq );
+		if ( ! rn->Running )
+		{
+			break;
+		}
+
+		if ( MSGPORT_GETMSG( &rn->Timer_MsgPort ) )
+		{
+			rn->Timer_Added = FALSE;
+
+			if ( ! rn->Timer_IOReq.Request.io_Error )
+			{
+				__Keyboard_Timer( usbbase, rn );
 			}
 		}
 
-		if ( mask & rn->Timer_MsgPort.ump_Signal.sig_Signal_Mask )
-		{
-			__Keyboard_Timer( usbbase, rn );
-		}
-
-		if ( mask & SIGBREAKF_CTRL_D )
-		{
-			// Used to break out of Wait so we can check ua_Counter
-		}
+		TASK_WAIT( wait );
 	}
 
-	rn->Running = FALSE;
-	rn->TaskAdr = NULL;
+	MEM_SET( released, 0, sizeof( released ) );
 
-	TASK_NAME_LEAVE();
+	__Keyboard_Keys( usbbase, rn, released );
+
+	rn->TaskAdr = NULL;
 }
 
 // --
