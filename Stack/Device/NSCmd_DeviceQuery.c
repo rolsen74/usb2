@@ -66,28 +66,10 @@ static const U16 _DevNSDCmds[] =
 	0
 };
 
-static void NSCmd_DeviceQuery( struct USBBase *usbbase UNUSED, struct IOStdReq *ioreq )
+static void
+NSCmd_DeviceQuery( struct IOStdReq *ioreq )
 {
-struct NSDeviceQueryResult *nsd;
-
-	nsd = ioreq->io_Data;
-
-	// The size check is only valid because the current NSDDeviceQueryResult
-	// structure is defined as the minimum version of that struct!
-	if (( nsd ) && ( ioreq->io_Length >= sizeof( struct NSDeviceQueryResult )))
-	{
-		nsd->DevQueryFormat		= 0;
-		nsd->SizeAvailable		= sizeof( struct NSDeviceQueryResult );
-		nsd->DeviceType			= NSDEVTYPE_UNKNOWN;
-		nsd->DeviceSubType		= 0;
-		nsd->SupportedCommands 	= (PTR) _DevNSDCmds;
-
-		ioreq->io_Actual		= sizeof( struct NSDeviceQueryResult );
-		ioreq->io_Error			= 0;
-	}
-	else
-	{
-		USBDEBUG( "Supplied Query buffer is to small" );
-		ioreq->io_Error			= IOERR_BADLENGTH;
-	}
+	USB2_DeviceQuery( ioreq, NSDEVTYPE_USB, _DevNSDCmds );
 }
+
+// --

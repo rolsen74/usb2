@@ -213,16 +213,7 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 
 	if ( request->io_Command == NSCMD_DEVICEQUERY )
 	{
-		if ( request->io_Message.mn_Length >= sizeof ( struct IOStdReq ) )
-		{
-			( (struct IOStdReq *)request )->io_Actual = 0;
-
-			NSCmd_DeviceQuery ( usbbase, (PTR)request );
-		}
-		else
-		{
-			request->io_Error = IOERR_BADLENGTH;
-		}
+		NSCmd_DeviceQuery ( (PTR)request );
 	}
 	else
 	{
