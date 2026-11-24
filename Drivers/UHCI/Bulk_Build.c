@@ -108,14 +108,14 @@ UHCI_Bulk_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		}
 
 		td = UHCI_TD_Init ( hn, pid, len, toggle, fn->fkt_Speed, fn->fkt_Address, ep->ep_Number, left <= len && ! add_zero,
-							is_read && req->req_Public.io_AllowShortPackets );
+							is_read );
 
 		if ( ! td )
 		{
 			goto failed;
 		}
 
-		UHCI_TD_Append ( qh, &tail, td );
+		UHCI_TD_Append ( qh, &tail, td, TRUE );
 
 		if ( len )
 		{
@@ -160,7 +160,7 @@ UHCI_Bulk_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 			goto failed;
 		}
 
-		UHCI_TD_Append ( qh, &tail, td );
+		UHCI_TD_Append ( qh, &tail, td, TRUE );
 		td->ptd_is_data = TRUE;
 	}
 

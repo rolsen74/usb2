@@ -44,13 +44,31 @@
 // --
 
 SEC_CODE void
-UHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask UNUSED )
+UHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask )
 {
 	struct USBBase *	 usbbase;
 	struct RealRequest * req;
 	struct RealRequest * next;
 
+	U32 port;
+	U32 status;
+
 	usbbase = hn->hn_USBBase;
+
+	if ( hn->hn_HCD.UHCI.FatalStatus )
+	{
+		USBERROR( "UHCI controller fault, status %08lx", hn->hn_HCD.UHCI.FatalStatus );
+
+		USB2_HCD_RequestReset( hn );
+
+		return;
+	}
+
+	if ( ! hn->hn_AcceptIO )
+	{
+		return;
+	}
+
 	req		= hn->hn_Active_Transfer_List.uh_Head;
 
 	while ( req )
@@ -68,12 +86,29 @@ UHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask UNUSED )
 
 			FUNCTION_UNLOCK ( fn );
 		}
+		if ( ! hn->hn_AcceptIO )
+		{
+			return;
+		}
+
 		req = next;
 	}
 	/* UHCI has no dedicated port-change interrupt. Poll on the HCD tick. */
 	if ( mask == (U32)-1 )
 	{
-		ROOTHUB_HANDLE_CHANGE ( hn );
+		for( port = 1; port <= hn->hn_HUB_NumPorts; port++ )
+		{
+			status = PCI_READWORD( UHCI_PORTSC( port ) );
+
+			if ( ( status != 0xffff ) &&
+				( ( status & ( UHCI_PORTSC_RD | UHCI_PORTSC_SUSP | UHCI_PORTSC_PE ) ) ==
+				( UHCI_PORTSC_RD | UHCI_PORTSC_SUSP | UHCI_PORTSC_PE ) ) )
+			{
+				UHCI_Port_Clr_Suspend( hn, port );
+			}
+		}
+
+		ROOTHUB_HANDLE_CHANGE( hn );
 	}
 }
 

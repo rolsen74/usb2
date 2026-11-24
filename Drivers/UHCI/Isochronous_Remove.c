@@ -44,58 +44,83 @@
 // --
 
 SEC_CODE void
-UHCI_Isochronous_Remove ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
+UHCI_Isochronous_Unlink_TD( struct USB2_HCDNode *hn, struct UHCI_TD *td )
 {
-	struct UHCI_QH * qh;
-	struct UHCI_TD * td;
-	struct UHCI_TD * prev;
+	struct UHCI_TD *prev;
 
 	U32 frame;
 
-	qh = ioreq->req_HCD.UHCI.QH_Header;
+	if ( ! td->ptd_frame_linked )
+	{
+		return;
+	}
+
+	frame = td->ptd_frame & UHCI_FRAMELIST_MASK;
+	prev = hn->hn_HCD.UHCI.FrameTD[frame];
+
+	if ( prev == td )
+	{
+		hn->hn_HCD.UHCI.FrameTD[frame] = td->ptd_frame_next;
+		hn->hn_HCD.UHCI.FrameList[frame] = td->td_link;
+	}
+	else
+	{
+		while( ( prev ) && ( prev->ptd_frame_next != td ) )
+		{
+			prev = prev->ptd_frame_next;
+		}
+
+		if ( ! prev )
+		{
+			USB2_HCD_RequestReset( hn );
+
+			return;
+		}
+
+		prev->ptd_frame_next = td->ptd_frame_next;
+		prev->td_link = td->td_link;
+	}
+
+	td->ptd_frame_linked = FALSE;
+}
+
+// --
+
+SEC_CODE void
+UHCI_Isochronous_Remove( struct USB2_HCDNode *hn, struct RealRequest *req )
+{
+	struct UHCI_QH *qh;
+	struct UHCI_TD *td;
+
+	qh = req->req_HCD.UHCI.QH_Header;
 
 	if ( ( ! qh ) || ( ! qh->pqh_linked ) )
 	{
 		return;
 	}
 
-	if ( ! UHCI_Chip_Stop ( hn ) )
+	if ( ! UHCI_Chip_Stop( hn ) )
 	{
-		USB2_HCD_RequestReset ( hn );
+		USB2_HCD_RequestReset( hn );
 
 		return;
 	}
 
-	for ( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
+	for( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
 	{
-		frame = td->ptd_frame;
-		prev  = hn->hn_HCD.UHCI.FrameTD[frame];
+		UHCI_Isochronous_Unlink_TD( hn, td );
 
-		if ( prev == td )
+		if ( ! hn->hn_AcceptIO )
 		{
-			hn->hn_HCD.UHCI.FrameList[frame] = td->td_link;
-			hn->hn_HCD.UHCI.FrameTD[frame]	 = td->ptd_frame_next;
-		}
-		else
-		{
-			while ( ( prev ) && ( prev->ptd_frame_next != td ) )
-			{
-				prev = prev->ptd_frame_next;
-			}
-
-			if ( prev )
-			{
-				prev->td_link		 = td->td_link;
-				prev->ptd_frame_next = td->ptd_frame_next;
-			}
+			return;
 		}
 	}
 
 	qh->pqh_linked = FALSE;
 
-	if ( ! UHCI_Chip_Start ( hn ) )
+	if ( ! UHCI_Chip_Start( hn ) )
 	{
-		USB2_HCD_RequestReset ( hn );
+		USB2_HCD_RequestReset( hn );
 	}
 }
 

@@ -106,7 +106,7 @@ UHCI_Control_Build_Low ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		goto failed;
 	}
 
-	UHCI_TD_Append( qh, &tail, td );
+	UHCI_TD_Append( qh, &tail, td, TRUE );
 
 	if ( ! UHCI_Get_4kBuffer( hn, td, req->req_Public.io_SetupData, 8 ) )
 	{
@@ -127,14 +127,14 @@ UHCI_Control_Build_Low ( struct USB2_HCDNode * hn, struct RealRequest * req )
 
 		td = UHCI_TD_Init( hn, pid, len, toggle, fn->fkt_Speed,
 			fn->fkt_Address, ep->ep_Number, 0,
-			is_read && req->req_Public.io_AllowShortPackets );
+			is_read );
 
 		if ( ! td )
 		{
 			goto failed;
 		}
 
-		UHCI_TD_Append( qh, &tail, td );
+		UHCI_TD_Append( qh, &tail, td, TRUE );
 
 		if ( ! chunk )
 		{
@@ -167,7 +167,7 @@ UHCI_Control_Build_Low ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	}
 
 	/* The status transaction has the opposite direction and DATA1. */
-	td = UHCI_TD_Init( hn, is_read ? UHCI_TD_PID_OUT : UHCI_TD_PID_IN,
+	td = UHCI_TD_Init( hn, ( is_read && req->req_Public.io_Length ) ? UHCI_TD_PID_OUT : UHCI_TD_PID_IN,
 		0, 1, fn->fkt_Speed, fn->fkt_Address, ep->ep_Number, 1, 0 );
 
 	if ( ! td )
@@ -175,7 +175,7 @@ UHCI_Control_Build_Low ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		goto failed;
 	}
 
-	UHCI_TD_Append( qh, &tail, td );
+	UHCI_TD_Append( qh, &tail, td, TRUE );
 
 	return ( FALSE );
 

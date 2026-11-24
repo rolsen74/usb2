@@ -50,6 +50,7 @@ UHCI_Chip_Stop ( struct USB2_HCDNode * hn )
 
 	U32 cmd;
 	U32 count;
+	U32 status;
 
 	usbbase = hn->hn_USBBase;
 	cmd = PCI_READWORD ( UHCI_CMD );
@@ -58,7 +59,9 @@ UHCI_Chip_Stop ( struct USB2_HCDNode * hn )
 
 	for ( count = 0 ; count < 50 ; count++ )
 	{
-		if ( PCI_READWORD ( UHCI_STS ) & UHCI_STS_HCH )
+		status = PCI_READWORD( UHCI_STS );
+
+		if ( ( status != 0xffff ) && ( status & UHCI_STS_HCH ) )
 		{
 			return ( TRUE );
 		}

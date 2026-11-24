@@ -62,17 +62,17 @@ SEC_RODATA const struct HCDFunctions UHCIFunctions = {
 
 	.Control_Add = UHCI_Control_Add,
 	.Control_Build = UHCI_Control_Build,
-	.Control_Length = UHCI_Control_Length,
+	.Control_Length = UHCI_Data_Length,
 	.Control_Remove = UHCI_Control_Remove,
 
 	.Interrupt_Add = UHCI_Interrupt_Add,
 	.Interrupt_Build = UHCI_Interrupt_Build,
-	.Interrupt_Length = UHCI_Interrupt_Length,
+	.Interrupt_Length = UHCI_Data_Length,
 	.Interrupt_Remove = UHCI_Interrupt_Remove,
 
 	.Bulk_Add = UHCI_Bulk_Add,
 	.Bulk_Build = UHCI_Bulk_Build,
-	.Bulk_Length = UHCI_Bulk_Length,
+	.Bulk_Length = UHCI_Data_Length,
 	.Bulk_Remove = UHCI_Bulk_Remove,
 
 	.Isochronous_Build = UHCI_Isochronous_Build,

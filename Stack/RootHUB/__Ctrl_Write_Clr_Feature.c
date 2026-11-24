@@ -63,7 +63,7 @@ S32 err;
 
 			case PORT_SUSPEND:
 			{
-				if ( ( hn->hn_IsOHCI ) && ( hn->HCD_Functions.Port_Clr_Suspend ) )
+				if ( ( ( hn->hn_IsOHCI ) || ( hn->hn_HCDType == HCDTYPE_UHCI ) ) && ( hn->HCD_Functions.Port_Clr_Suspend ) )
 				{
 					err = hn->HCD_Functions.Port_Clr_Suspend( hn, port );
 				}

@@ -44,27 +44,26 @@
 // --
 
 SEC_CODE void
-UHCI_Control_Add ( struct USB2_HCDNode * hn, struct RealRequest * req )
+UHCI_Control_Add( struct USB2_HCDNode *hn, struct RealRequest *req )
 {
-	struct UHCI_QH * qh;
-	struct UHCI_QH * tail;
+	struct UHCI_QH *qh;
 
 	qh = req->req_HCD.UHCI.QH_Header;
-	tail = hn->hn_HCD.UHCI.Last_End;
 
-	if ( ( ! qh ) || ( ! tail ) )
+	if ( ( hn->hn_HCD.UHCI.FatalStatus ) || ( ! UHCI_Chip_Stop( hn ) ) ||
+		( hn->hn_HCD.UHCI.FatalStatus ) )
 	{
+		USB2_HCD_RequestReset( hn );
+
 		return;
 	}
 
-	UHCI_Chip_Stop ( hn );
+	UHCI_Link_QH( hn->hn_HCD.UHCI.ControlAnchor, qh );
 
-	tail->qh_hlink			 = LE_SWAP32 ( qh->pqh_self_phy | UHCI_PTR_QH );
-	tail->pqh_virt_next		 = qh;
-	hn->hn_HCD.UHCI.Last_End = qh;
-	qh->pqh_linked			 = TRUE;
-
-	UHCI_Chip_Start ( hn );
+	if ( ! UHCI_Chip_Start( hn ) )
+	{
+		USB2_HCD_RequestReset( hn );
+	}
 }
 
 // --

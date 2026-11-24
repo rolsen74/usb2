@@ -94,8 +94,9 @@ lengths = ( ioreq->req_Public.io_Command == CMD_WRITE ) ? ioreq->req_Public.io_I
 	count = 1 + ( left - 1 ) / ep->ep_MaxPacketSize;
 	step = 1U << ( ep->ep_Interval - 1 );
 
-	if ( ( count > 1 + ( UHCI_FRAMELIST_COUNT - 3 ) / step ) ||
-		( ( ioreq->req_Public.io_IsoPacketLengths ) && ( ioreq->req_Public.io_IsoPacketCount != count ) ) )
+	if ( ( count > 1 + ( UHCI_ISO_MAX_SPAN - UHCI_ISO_LEAD ) / step ) ||
+		( ( ioreq->req_Public.io_IsoPacketLengths ) && ( ioreq->req_Public.io_IsoPacketCount != count ) ) ||
+		( ( lengths ) && ( left % ep->ep_MaxPacketSize ) ) )
 	{
 		err = USB2Err_Stack_InvalidStructure;
 
@@ -142,7 +143,7 @@ lengths = ( ioreq->req_Public.io_Command == CMD_WRITE ) ? ioreq->req_Public.io_I
 			goto failed;
 		}
 
-		UHCI_TD_Append( qh, &last, td );
+		UHCI_TD_Append( qh, &last, td, FALSE );
 		/* Isochronous TDs are scheduled directly in frame list entries. */
 		td->td_status = LE_SWAP32( UHCI_TD_ACTIVE | UHCI_TD_IOS |
 			(( ! left ) ? UHCI_TD_IOC : 0) );
@@ -173,6 +174,13 @@ lengths = ( ioreq->req_Public.io_Command == CMD_WRITE ) ? ioreq->req_Public.io_I
 
 		chunk_used += len;
 		offset += lengths ? ep->ep_MaxPacketSize : len;
+	}
+
+	if ( ! UHCI_Periodic_Reserve( hn, ioreq ) )
+	{
+		err = USB2Err_Host_NoBandWidth;
+
+		goto failed;
 	}
 
 	return ( FALSE );

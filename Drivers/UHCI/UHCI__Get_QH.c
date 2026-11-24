@@ -84,7 +84,14 @@ UHCI_Get_QHBuffer ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	qh->pqh_self_phy  = phy;
 	qh->pqh_first_td  = NULL;
 	qh->pqh_virt_next = NULL;
-	qh->pqh_pos		  = 0;
+	qh->pqh_anchor = NULL;
+	qh->pqh_last_td = NULL;
+	qh->pqh_period = 0;
+	qh->pqh_phase = 0;
+	qh->pqh_cost = 0;
+	qh->pqh_last_frame = 0;
+	qh->pqh_runt = FALSE;
+	qh->pqh_isoc = FALSE;
 	qh->pqh_linked = FALSE;
 	qh->pqh_short_advanced = FALSE;
 

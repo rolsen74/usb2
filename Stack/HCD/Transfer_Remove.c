@@ -163,7 +163,8 @@ __HCD_Transfer_Remove ( struct USBBase * usbbase, struct USB2_HCDNode * hn, stru
 
 	actual = 0;
 
-	if ( ioreq->req_Public.io_Error == USB2Err_NoError )
+	if ( ( ioreq->req_Public.io_Error == USB2Err_NoError ) ||
+		( ( hn->hn_HCDType == HCDTYPE_UHCI ) && ( active ) ) )
 	{
 		switch ( ep->ep_Type )
 		{

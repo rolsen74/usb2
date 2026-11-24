@@ -44,22 +44,56 @@
 // --
 
 SEC_CODE S32
-UHCI_Chip_Start ( struct USB2_HCDNode * hn )
+UHCI_Chip_Start( struct USB2_HCDNode *hn )
 {
-	U32 cmd;
+	struct USBBase *usbbase;
 
-	if ( ! hn->hn_HCD.UHCI.FrameList_PhyAddr )
+	U32 command;
+	U32 status;
+	U32 attempt;
+
+	usbbase = hn->hn_USBBase;
+	status = PCI_READWORD( UHCI_STS );
+
+	if ( ( ! hn->hn_HCD.UHCI.FrameList_PhyAddr ) || ( hn->hn_HCD.UHCI.FatalStatus ) || ( status == 0xffff ) ||
+		( ! ( status & UHCI_STS_HCH ) ) || ( status & ( UHCI_STS_HSE | UHCI_STS_HCPE ) ) )
 	{
 		return ( FALSE );
 	}
 
-	PCI_WRITELONG ( UHCI_FLBASEADDR, hn->hn_HCD.UHCI.FrameList_PhyAddr );
-	PCI_WRITEWORD ( UHCI_INTR, UHCI_INTR_TOCRCIE | UHCI_INTR_RIE | UHCI_INTR_IOCE | UHCI_INTR_SPIE );
-	PCI_WRITEWORD ( UHCI_STS, UHCI_STS_ALLINTRS );
-	cmd = PCI_READWORD ( UHCI_CMD );
-	PCI_WRITEWORD ( UHCI_CMD, cmd | UHCI_CMD_RS | UHCI_CMD_CF | UHCI_CMD_MAXP );
+	if ( hn->hn_HCD.UHCI.LegacySupport )
+	{
+		hn->hn_PCIDevice->WriteConfigWord( UHCI_LEGSUP, UHCI_LEGSUP_PIRQ | UHCI_LEGSUP_RWC );
+	}
 
-	return ( TRUE );
+	__asm__ volatile( "sync" ::: "memory" );
+
+	PCI_WRITELONG( UHCI_FLBASEADDR, hn->hn_HCD.UHCI.FrameList_PhyAddr );
+
+	PCI_WRITEWORD( UHCI_INTR, UHCI_INTR_TOCRCIE | UHCI_INTR_RIE | UHCI_INTR_IOCE | UHCI_INTR_SPIE );
+
+	command = UHCI_CMD_RS | UHCI_CMD_CF | UHCI_CMD_MAXP;
+
+	PCI_WRITEWORD( UHCI_CMD, command );
+
+	for( attempt = 0; attempt < 5; attempt++ )
+	{
+		status = PCI_READWORD( UHCI_STS );
+
+		if ( ( hn->hn_HCD.UHCI.FatalStatus ) || ( status == 0xffff ) || ( status & ( UHCI_STS_HSE | UHCI_STS_HCPE ) ) )
+		{
+			return ( FALSE );
+		}
+
+		if ( ! ( status & UHCI_STS_HCH ) )
+		{
+			return ( TRUE );
+		}
+
+		HCD_WAIT_MS( hn, 1 );
+	}
+
+	return ( FALSE );
 }
 
 // --

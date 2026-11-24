@@ -44,39 +44,50 @@
 // --
 
 SEC_CODE void
-UHCI_Isochronous_Add ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
+UHCI_Isochronous_Add( struct USB2_HCDNode *hn, struct RealRequest *req )
 {
-	struct UHCI_QH * qh;
-	struct UHCI_TD * td;
+	struct UHCI_QH *qh;
+	struct UHCI_TD *td;
 
 	U32 frame;
-	U32 step;
+	U32 now;
+	U32 status;
 
-	qh = ioreq->req_HCD.UHCI.QH_Header;
+	status = PCI_READWORD( UHCI_STS );
 
-	if ( ( ! qh ) || ( ! hn->hn_HCD.UHCI.FrameTD ) )
+	if ( ( hn->hn_HCD.UHCI.FatalStatus ) || ( status == 0xffff ) || ( status & ( UHCI_STS_HCH | UHCI_STS_HSE | UHCI_STS_HCPE ) ) )
 	{
+		USB2_HCD_RequestReset( hn );
+
 		return;
 	}
 
-	UHCI_Chip_Stop ( hn );
+	qh = req->req_HCD.UHCI.QH_Header;
 
-	frame = ( PCI_READWORD ( UHCI_FRNUM ) + 2 ) & ( UHCI_FRAMELIST_COUNT - 1 );
-	step = 1U << ( ioreq->req_EndPoint->ep_Interval - 1 );
-
-	for ( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
+	for( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
 	{
-		td->ptd_frame					 = frame;
-		td->ptd_frame_next				 = hn->hn_HCD.UHCI.FrameTD[frame];
-		td->td_link						 = hn->hn_HCD.UHCI.FrameList[frame];
-		hn->hn_HCD.UHCI.FrameTD[frame]	 = td;
-		hn->hn_HCD.UHCI.FrameList[frame] = LE_SWAP32 ( td->ptd_self_phy );
-		frame							 = ( frame + step ) & ( UHCI_FRAMELIST_COUNT - 1 );
+		now = PCI_READWORD( UHCI_FRNUM );
+
+		// Leave at least one full frame before hardware can see the new TD.
+		if ( ( ( td->ptd_frame - now ) & UHCI_FRAME_MASK ) <= 1 ||
+			( ( now - td->ptd_frame ) & UHCI_FRAME_MASK ) <= UHCI_FRAMELIST_MASK )
+		{
+			td->ptd_missed = TRUE;
+
+			continue;
+		}
+
+		frame = td->ptd_frame & UHCI_FRAMELIST_MASK;
+		td->ptd_frame_next = hn->hn_HCD.UHCI.FrameTD[frame];
+		td->td_link = hn->hn_HCD.UHCI.FrameList[frame];
+		hn->hn_HCD.UHCI.FrameTD[frame] = td;
+		td->ptd_frame_linked = TRUE;
+		qh->pqh_linked = TRUE;
+
+		__asm__ volatile( "sync" ::: "memory" );
+
+		hn->hn_HCD.UHCI.FrameList[frame] = LE_SWAP32( td->ptd_self_phy );
 	}
-
-	qh->pqh_linked = TRUE;
-
-	UHCI_Chip_Start ( hn );
 }
 
 // --

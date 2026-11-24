@@ -44,11 +44,11 @@
 // --
 
 SEC_CODE U32
-UHCI_Interrupt_Length ( struct USB2_HCDNode * hn UNUSED, struct RealRequest * req )
+UHCI_Data_Length( struct USB2_HCDNode *hn, struct RealRequest *req )
 {
-	struct USBBase * usbbase;
-	struct UHCI_QH * qh;
-	struct UHCI_TD * td;
+	struct USBBase *usbbase;
+	struct UHCI_QH *qh;
+	struct UHCI_TD *td;
 
 	U32 actual;
 	U32 got;
@@ -65,30 +65,25 @@ UHCI_Interrupt_Length ( struct USB2_HCDNode * hn UNUSED, struct RealRequest * re
 		return ( 0 );
 	}
 
-	for ( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
+	for( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
 	{
+		status = LE_SWAP32( *(volatile U32 *)&td->td_status );
+
+		if ( status & ( UHCI_TD_ACTIVE | UHCI_TD_ERRORS ) )
+		{
+			break;
+		}
+
 		if ( ! td->ptd_is_data )
 		{
 			continue;
 		}
 
-		status = LE_SWAP32 ( td->td_status );
-
-		if ( status & UHCI_TD_ACTIVE )
-		{
-			break;
-		}
-
-		got = ( status + 1 ) & 0x7ff;
-
-		if ( got > td->ptd_buffer_size )
-		{
-			got = td->ptd_buffer_size;
-		}
+		got = MIN( ( status + 1 ) & 0x7ff, td->ptd_buffer_size );
 
 		if ( ( req->req_Public.io_Command == CMD_READ ) && ( got ) )
 		{
-			MEM_COPY ( td->ptd_copy_virt, (U8 *)req->req_Public.io_Data + actual, got );
+			MEM_COPY( td->ptd_copy_virt, (U8 *)req->req_Public.io_Data + actual, got );
 		}
 
 		actual += got;
@@ -100,7 +95,10 @@ UHCI_Interrupt_Length ( struct USB2_HCDNode * hn UNUSED, struct RealRequest * re
 		}
 	}
 
-	req->req_EndPoint->ep_DataToggle ^= packets & 1;
+	if ( req->req_EndPoint->ep_Type != EPATT_Type_Control )
+	{
+		req->req_EndPoint->ep_DataToggle ^= packets & 1;
+	}
 
 	return ( actual );
 }

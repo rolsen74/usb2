@@ -63,6 +63,9 @@ UHCI_Port_Set_Reset ( struct USB2_HCDNode * hn, U32 port )
 	}
 	else
 	{
+		hn->hn_HCD.UHCI.PortResetChange[port] = 0;
+		hn->hn_HCD.UHCI.PortSuspendChange[port] = 0;
+
 		/* Start reset sequence. */
 
 		val = PCI_READWORD ( UHCI_PORTSC ( port ) ) & 0xfff5;
@@ -91,10 +94,22 @@ UHCI_Port_Set_Reset ( struct USB2_HCDNode * hn, U32 port )
 
 		HCD_WAIT_MS ( hn, 10 ); // Wait 10ms
 
-		// Leave connection changes latched for the hub's post-reset status read.
-		hn->hn_HCD.UHCI.PortResetChange[port] = 1;
+		val = PCI_READWORD( UHCI_PORTSC( port ) );
 
-		err = USB2Err_NoError;
+		// Leave connection changes latched for the hub's post-reset status read.
+		if ( ( val == 0xffff ) || ( ! ( val & UHCI_PORTSC_CCS ) ) )
+		{
+			err = USB2Err_Device_Detached;
+		}
+		else if ( ( val & ( UHCI_PORTSC_PE | UHCI_PORTSC_PR ) ) != UHCI_PORTSC_PE )
+		{
+			err = USB2Err_Host_Timeout;
+		}
+		else
+		{
+			hn->hn_HCD.UHCI.PortResetChange[port] = TRUE;
+			err = USB2Err_NoError;
+		}
 	}
 
 	return ( err );

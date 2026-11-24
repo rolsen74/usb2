@@ -44,27 +44,16 @@
 // --
 
 SEC_CODE S32
-UHCI_Port_Clr_Suspend_Chg ( struct USB2_HCDNode * hn UNUSED, U32 port UNUSED )
+UHCI_Port_Clr_Suspend_Chg( struct USB2_HCDNode *hn, U32 port )
 {
-	S32 err;
-
-#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase * usbbase;
-	usbbase = hn->hn_USBBase;
-#endif
-
-	USBDEBUG ( "UHCI_Port_Clr_Suspend_Chg( Port #%lu )", port );
-
-	if ( ( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ) )
+	if ( ( ! port ) || ( port > hn->hn_HUB_NumPorts ) )
 	{
-		USBDEBUG ( "Invalid Port Number #%lu", port );
-
-		err = USB2Err_Host_HostError;
-	}
-	else
-	{
-		err = USB2Err_NoError;
+		return ( USB2Err_Host_HostError );
 	}
 
-	return ( err );
+	hn->hn_HCD.UHCI.PortSuspendChange[port] = 0;
+
+	return ( USB2Err_NoError );
 }
+
+// --

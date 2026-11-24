@@ -44,23 +44,22 @@
 // --
 
 SEC_CODE void
-UHCI_Transfer_Free ( struct USB2_HCDNode * hn, struct RealRequest * req )
+UHCI_Free_QH( struct USB2_HCDNode *hn, struct UHCI_QH *qh )
 {
-	struct USBBase * usbbase;
-	struct UHCI_QH * qh;
-	struct UHCI_TD * td;
-	struct UHCI_TD * next;
+	struct USBBase *usbbase;
+	struct UHCI_TD *td;
+	struct UHCI_TD *next;
 
 	usbbase = hn->hn_USBBase;
-	qh = req->req_HCD.UHCI.QH_Header;
 
 	if ( ! qh )
 	{
 		return;
 	}
 
-	req->req_HCD.UHCI.QH_Header = NULL;
-	td							= qh->pqh_first_td;
+	UHCI_Periodic_Release( hn, qh );
+
+	td = qh->pqh_first_td;
 
 	while( td )
 	{
@@ -68,14 +67,25 @@ UHCI_Transfer_Free ( struct USB2_HCDNode * hn, struct RealRequest * req )
 
 		if ( td->ptd_buffer_virt )
 		{
-			MEMORY_FREE ( MEMID_HCD_4k, td->ptd_buffer_virt, td->ptd_buffer_phy );
+			MEMORY_FREE( MEMID_HCD_4k, td->ptd_buffer_virt, td->ptd_buffer_phy );
 		}
 
-		MEMORY_FREE ( MEMID_UHCI_TD, td, td->ptd_self_phy );
+		MEMORY_FREE( MEMID_UHCI_TD, td, td->ptd_self_phy );
+
 		td = next;
 	}
 
-	MEMORY_FREE ( MEMID_UHCI_QH, qh, qh->pqh_self_phy );
+	MEMORY_FREE( MEMID_UHCI_QH, qh, qh->pqh_self_phy );
+}
+
+// --
+
+SEC_CODE void
+UHCI_Transfer_Free( struct USB2_HCDNode *hn, struct RealRequest *req )
+{
+	UHCI_Free_QH( hn, req->req_HCD.UHCI.QH_Header );
+
+	req->req_HCD.UHCI.QH_Header = NULL;
 }
 
 // --

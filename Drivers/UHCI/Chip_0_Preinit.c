@@ -46,13 +46,25 @@
 SEC_CODE S32
 UHCI_Chip_Preinit ( struct USB2_HCDNode * hn )
 {
+	struct PCIDevice *pcidev;
+
 	S32 retval;
 
 	TASK_NAME_ENTER ( "UHCI : UHCI_Chip_Preinit" );
 
 	// --
 
+	pcidev = hn->hn_PCIDevice;
 	hn->hn_HUB_NumPorts = 2;
+
+	// Intel UHCI controllers implement the documented LEGSUP register.
+	if ( ( pcidev ) && ( pcidev->ReadConfigWord( 0 ) == 0x8086 ) &&
+		( pcidev->ReadConfigWord( UHCI_LEGSUP ) != 0xffff ) )
+	{
+		hn->hn_HCD.UHCI.LegacySupport = TRUE;
+
+		pcidev->WriteConfigWord( UHCI_LEGSUP, UHCI_LEGSUP_RWC );
+	}
 
 	// --
 

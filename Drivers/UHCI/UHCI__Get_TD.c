@@ -92,6 +92,8 @@ UHCI_Get_TDBuffer ( struct USB2_HCDNode * hn )
 	td->ptd_is_data = FALSE;
 	td->ptd_frame = 0;
 	td->ptd_frame_next = NULL;
+	td->ptd_frame_linked = FALSE;
+	td->ptd_missed = FALSE;
 
 bailout:
 

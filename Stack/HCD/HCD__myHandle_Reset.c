@@ -147,7 +147,7 @@ __myHandle_Reset( struct USBBase *usbbase, struct USB2_HCDNode *hn )
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
-	if ( ( hn->hn_IsEHCI ) || ( hn->hn_HCDType == HCDTYPE_XHCI ) || ( hn->hn_IsOHCI ) )
+	if ( ( hn->hn_IsEHCI ) || ( hn->hn_HCDType == HCDTYPE_XHCI ) || ( hn->hn_IsOHCI ) || ( hn->hn_HCDType == HCDTYPE_UHCI ) )
 	{
 		hn->hn_Generation++;
 

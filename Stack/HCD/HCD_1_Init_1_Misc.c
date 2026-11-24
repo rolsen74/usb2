@@ -127,6 +127,15 @@ struct Task *self;
 	in->Tick_TimeRequest.Request.io_Command = TR_ADDREQUEST;
 	in->Tick_TimeRequest.Time.Microseconds = 0;
 	in->Tick_TimeRequest.Time.Seconds = 2;
+#ifdef DRV_UHCI
+
+	if ( hn->hn_HCDType == HCDTYPE_UHCI )
+	{
+		in->Tick_TimeRequest.Time.Seconds = 0;
+		in->Tick_TimeRequest.Time.Microseconds = UHCI_TICK_US;
+	}
+
+#endif
 
 	retval = TRUE;
 

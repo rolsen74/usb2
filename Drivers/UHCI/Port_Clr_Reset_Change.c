@@ -44,38 +44,16 @@
 // --
 
 SEC_CODE S32
-UHCI_Port_Clr_Reset_Chg ( struct USB2_HCDNode * hn, U32 port )
+UHCI_Port_Clr_Reset_Chg( struct USB2_HCDNode *hn, U32 port )
 {
-	S32 err;
-
-#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase * usbbase;
-	usbbase = hn->hn_USBBase;
-#endif
-
-	USBDEBUG ( "UHCI_Port_Clr_Reset_Chg( Port #%lu )", port );
-
-	if ( ( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ) )
+	if ( ( ! port ) || ( port > hn->hn_HUB_NumPorts ) )
 	{
-		USBDEBUG ( "Invalid Port Number #%lu", port );
-
-		err = USB2Err_Host_HostError;
-	}
-	else
-	{
-		if ( hn->hn_HCD.UHCI.PortResetChange[port] == 0 )
-		{
-			USBDEBUG ( "UHCI: Port %ld not in reset state", port );
-
-			err = USB2Err_Host_Stall;
-		}
-		else
-		{
-			hn->hn_HCD.UHCI.PortResetChange[port] = 0;
-
-			err = USB2Err_NoError;
-		}
+		return ( USB2Err_Host_HostError );
 	}
 
-	return ( err );
+	hn->hn_HCD.UHCI.PortResetChange[port] = 0;
+
+	return ( USB2Err_NoError );
 }
+
+// --

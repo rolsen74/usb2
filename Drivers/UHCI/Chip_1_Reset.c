@@ -60,10 +60,12 @@ UHCI_Chip_Reset ( struct USB2_HCDNode * hn )
 
 	TASK_NAME_ENTER ( "UHCI : UHCI_Chip_Reset" );
 
+	PCI_WRITEWORD( UHCI_INTR, 0 );
+
 	/* port resets */
 
-	PCI_WRITEWORD ( UHCI_PORTSC ( 1 ), UHCI_PORTSC_PR | UHCI_PORTSC_PE );
-	PCI_WRITEWORD ( UHCI_PORTSC ( 2 ), UHCI_PORTSC_PR | UHCI_PORTSC_PE );
+	PCI_WRITEWORD ( UHCI_PORTSC ( 1 ), UHCI_PORTSC_PR );
+	PCI_WRITEWORD ( UHCI_PORTSC ( 2 ), UHCI_PORTSC_PR );
 
 	/* global reset */
 
@@ -105,6 +107,14 @@ UHCI_Chip_Reset ( struct USB2_HCDNode * hn )
 	/* Wait another 10 ms */
 
 	HCD_WAIT_MS ( hn, 10 ); // wait 10ms
+
+	PCI_WRITEWORD( UHCI_STS, UHCI_STS_ALLINTRS );
+
+	hn->hn_HCD.UHCI.FatalStatus = 0;
+
+	MEM_SET( hn->hn_HCD.UHCI.PortResetChange, 0, sizeof( hn->hn_HCD.UHCI.PortResetChange ) );
+
+	MEM_SET( hn->hn_HCD.UHCI.PortSuspendChange, 0, sizeof( hn->hn_HCD.UHCI.PortSuspendChange ) );
 
 	retval = TRUE;
 

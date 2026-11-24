@@ -58,7 +58,7 @@ __myHandle_WatchDog ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 		// The timer message was already taken from its reply port.
 		ioreq->req_TimerAdded = FALSE;
 
-		if ( ( hn->hn_IsEHCI ) && ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous )
+		if ( ( ( hn->hn_IsEHCI ) || ( hn->hn_HCDType == HCDTYPE_UHCI ) ) && ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous )
 			 && ( HCD_TRANSFER_CHECK ( hn, ioreq, FALSE ) ) )
 		{
 			SEMAPHORE_RELEASE ( &fn->fkt_Semaphore );

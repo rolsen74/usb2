@@ -232,7 +232,10 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 			// --
 			// Start Timer : if requested --
 
-			if ( ( ioreq->req_Public.io_TimeOut ) || ( ( hn->hn_IsEHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous ) ) )
+			if ( ( hn->hn_AcceptIO ) &&
+				( ( ioreq->req_Public.io_TimeOut ) ||
+				( ( ( hn->hn_IsEHCI ) || ( hn->hn_HCDType == HCDTYPE_UHCI ) ) &&
+					( ep->ep_Type == EPATT_Type_Isochronous ) ) ) )
 			{
 				timeout = ioreq->req_Public.io_TimeOut;
 
@@ -250,6 +253,22 @@ myAdd_Request ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealR
 					remaining = ( remaining + EHCI_ISO_COMPLETE_GRACE + 8 ) * 125;
 					timeout = timeout ? MIN ( timeout, remaining ) : remaining;
 				}
+
+#ifdef DRV_UHCI
+				if ( ( hn->hn_HCDType == HCDTYPE_UHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous ) )
+				{
+					current = PCI_READWORD( UHCI_FRNUM );
+					remaining = ( ioreq->req_HCD.UHCI.QH_Header->pqh_last_frame - current ) & UHCI_FRAME_MASK;
+
+					if ( remaining > UHCI_FRAME_MASK / 2 )
+					{
+						remaining = 0;
+					}
+
+					remaining = ( remaining + 4 ) * 1000;
+					timeout = timeout ? MIN( timeout, remaining ) : remaining;
+				}
+#endif
 
 #ifdef DO_DEBUG
 
@@ -333,6 +352,19 @@ __HCD_Request_CanStart ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	{
 		return ( FALSE );
 	}
+
+#ifdef DRV_UHCI
+	if ( hn->hn_HCDType == HCDTYPE_UHCI )
+	{
+		step = 1U << ( ep->ep_Interval - 1 );
+		count = ioreq->req_Public.io_IsoPacketCount;
+
+		budget = ( UHCI_ISO_MAX_SPAN - UHCI_ISO_LEAD ) / step;
+
+		return ( ( speed == USBSPEED_Full ) && ( count ) && ( count <= budget ) &&
+			( active->req_Public.io_IsoPacketCount <= budget - count ) );
+	}
+#endif
 
 	if ( ! hn->hn_IsEHCI )
 	{

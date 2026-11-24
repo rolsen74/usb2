@@ -44,102 +44,109 @@
 // --
 
 SEC_CODE S32
-UHCI_Chip_Init ( struct USB2_HCDNode * hn )
+UHCI_Chip_Init( struct USB2_HCDNode *hn )
 {
-	struct UHCI_QH * qh;
-	struct UHCI_TD * td;
-	struct USBBase * usbbase;
+	struct USBBase *usbbase;
+	struct UHCI_QH *qh;
+	struct UHCI_QH *next;
+	struct UHCI_TD *td;
 
-	S32 retval;
-	U32 cnt;
+	U32 period;
+	U32 phase;
+	U32 frame;
+	U32 slot;
 
 	usbbase = hn->hn_USBBase;
-	retval = FALSE;
 
-	TASK_NAME_ENTER ( "UHCI : UHCI_Chip_Init" );
+	TASK_NAME_ENTER( "UHCI : UHCI_Chip_Init" );
 
-	// --
-
-	/*******************************************************************************
-	 Initialize the frame array like seen at the following picture.
-
-	 Frame List
-
-	 .-----.
-	 |  0  |  ---->  TD  ---->  QH                    BandWidth Reclaimation
-	 |-----|                       \                .------------------------.
-	 |  1  |  ---->  TD  ---->  QH                  |                        |
-	 |-----|                         \              v                        ^
-	 |  2  |  ---->  TD  ---->  QH    ---> QH  ---> QH ---> QH ---> QH ---> NULL
-	 |-----|                         /                               |
-	 | ... |  ---->  TD  ---->  QH                                  TD
-	 |-----|                       /
-	 | 1023|  ---->  TD  ---->  QH
-	 '-----'
-
-					 ISO        INTR       CTRL     CTRL    BULK    LAST
-										   Low      Full
-
-	*******************************************************************************/
-
-	// -- Frame List
-
-	hn->hn_HCD.UHCI.FrameList = MEMORY_ALLOC ( MEMID_HCD_4k, FALSE );
+	hn->hn_HCD.UHCI.FrameList = MEMORY_ALLOC( MEMID_HCD_4k, FALSE );
 
 	if ( ! hn->hn_HCD.UHCI.FrameList )
 	{
-		goto bailout;
+		goto failed;
 	}
 
-	hn->hn_HCD.UHCI.FrameList_PhyAddr = ( (struct Mem_FreeNode *)hn->hn_HCD.UHCI.FrameList )->mfn_Addr;
+	hn->hn_HCD.UHCI.FrameList_PhyAddr = ( (struct Mem_FreeNode *) hn->hn_HCD.UHCI.FrameList )->mfn_Addr;
+
 	hn->hn_HCD.UHCI.FrameTD = MEM_ALLOCVEC( UHCI_FRAMELIST_COUNT * sizeof( struct UHCI_TD * ), TRUE );
 
-	if ( ! hn->hn_HCD.UHCI.FrameTD )
+	hn->hn_HCD.UHCI.FrameLoad = MEM_ALLOCVEC( UHCI_FRAMELIST_COUNT * sizeof( U16 ), TRUE );
+
+	hn->hn_HCD.UHCI.Periodic = MEM_ALLOCVEC( UHCI_PERIODIC_ANCHORS * sizeof( struct UHCI_QH * ), TRUE );
+
+	if ( ( ! hn->hn_HCD.UHCI.FrameTD ) || ( ! hn->hn_HCD.UHCI.FrameLoad ) || ( ! hn->hn_HCD.UHCI.Periodic ) )
 	{
-		goto bailout;
+		goto failed;
 	}
 
-	// -- Init List
+	hn->hn_HCD.UHCI.BulkAnchor = UHCI_Get_QHBuffer( hn, NULL );
 
-	qh = UHCI_Get_QHBuffer ( hn, NULL );
+	hn->hn_HCD.UHCI.ControlAnchor = UHCI_Get_QHBuffer( hn, NULL );
 
-	if ( ! qh )
+	if ( ( ! hn->hn_HCD.UHCI.BulkAnchor ) || ( ! hn->hn_HCD.UHCI.ControlAnchor ) )
 	{
-		goto bailout;
+		goto failed;
 	}
-	/* Keep an inactive TD on the anchor QH for PIIX controllers. */
+
+	// Keep an inactive terminating TD for controllers that require one.
 	td = UHCI_Get_TDBuffer( hn );
 
 	if ( ! td )
 	{
-		MEMORY_FREE( MEMID_UHCI_QH, qh, qh->pqh_self_phy );
-		goto bailout;
+		goto failed;
 	}
 
+	qh = hn->hn_HCD.UHCI.BulkAnchor;
 	qh->qh_elink = LE_SWAP32( td->ptd_self_phy );
 	qh->pqh_first_td = td;
+	hn->hn_HCD.UHCI.ControlAnchor->qh_hlink = LE_SWAP32( qh->pqh_self_phy | UHCI_PTR_QH );
 
-	hn->hn_HCD.UHCI.Last_Start = qh;
-	hn->hn_HCD.UHCI.Last_End   = qh;
-	for ( cnt = 0; cnt < UHCI_FRAMELIST_COUNT; cnt++ )
+	// A frame traverses its phase at each period, then control and bulk.
+	for( period = 1; period <= UHCI_VFRAMELIST_COUNT; period <<= 1 )
 	{
-		hn->hn_HCD.UHCI.FrameList[cnt] = LE_SWAP32( qh->pqh_self_phy | UHCI_PTR_QH );
+		for( phase = 0; phase < period; phase++ )
+		{
+			slot = period - 1 + phase;
+			qh = UHCI_Get_QHBuffer( hn, NULL );
+
+			if ( ! qh )
+			{
+				goto failed;
+			}
+
+			hn->hn_HCD.UHCI.Periodic[slot] = qh;
+
+			if ( period == 1 )
+			{
+				next = hn->hn_HCD.UHCI.ControlAnchor;
+			}
+			else
+			{
+				next = hn->hn_HCD.UHCI.Periodic[period / 2 - 1 + phase % ( period / 2 )];
+			}
+
+			qh->qh_hlink = LE_SWAP32( next->pqh_self_phy | UHCI_PTR_QH );
+		}
 	}
 
-	// --
-
-	retval = TRUE;
-
-bailout:
-
-	if ( ! retval )
+	for( frame = 0; frame < UHCI_FRAMELIST_COUNT; frame++ )
 	{
-		UHCI_Chip_Deinit( hn );
+		slot = UHCI_VFRAMELIST_COUNT - 1 + frame % UHCI_VFRAMELIST_COUNT;
+		qh = hn->hn_HCD.UHCI.Periodic[slot];
+		hn->hn_HCD.UHCI.FrameList[frame] = LE_SWAP32( qh->pqh_self_phy | UHCI_PTR_QH );
 	}
 
-	TASK_NAME_LEAVE ();
+	TASK_NAME_LEAVE();
 
-	return ( retval );
+	return ( TRUE );
+
+failed:
+	UHCI_Chip_Deinit( hn );
+
+	TASK_NAME_LEAVE();
+
+	return ( FALSE );
 }
 
 // --

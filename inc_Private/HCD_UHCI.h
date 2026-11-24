@@ -52,8 +52,9 @@
 // #define PCI_USBREV_1_0		  0x10
 // #define PCI_USBREV_1_1		  0x11
 
-// #define PCI_LEGSUP			  0xc0	 /* Legacy Support register */
-// #define PCI_LEGSUP_USBPIRQDEN 0x2000 /* USB PIRQ D Enable */
+#define UHCI_LEGSUP               0xc0
+#define UHCI_LEGSUP_RWC           0x8f00
+#define UHCI_LEGSUP_PIRQ          0x2000
 
 // #define PCI_CBIO			  0x20 /* configuration base IO */
 
@@ -78,7 +79,7 @@
 #define UHCI_STS_HSE	  0x0008
 #define UHCI_STS_HCPE	  0x0010
 #define UHCI_STS_HCH	  0x0020
-#define UHCI_STS_ALLINTRS 0x003f
+#define UHCI_STS_ALLINTRS 0x001f
 
 #define UHCI_INTR 0x04
 #define UHCI_INTR_TOCRCIE 0x0001
@@ -87,7 +88,10 @@
 #define UHCI_INTR_SPIE 0x0008
 
 #define UHCI_FRNUM		  0x06
-// #define UHCI_FRNUM_MASK		  0x03ff
+#define UHCI_FRAME_MASK           0x07ff
+#define UHCI_TICK_US              16000
+#define UHCI_ISO_LEAD             4
+#define UHCI_ISO_MAX_SPAN         960
 
 #define UHCI_FLBASEADDR	  0x08
 
@@ -97,13 +101,13 @@
 #define UHCI_PORTSC( x )  ( 0x00e + x * 2 )
 // #define UHCI_PORTSC1		  0x010
 // #define UHCI_PORTSC2		  0x012
-// #define UHCI_PORTSC_CCS		  0x0001
+#define UHCI_PORTSC_CCS		  0x0001
 #define UHCI_PORTSC_CSC	  0x0002
 #define UHCI_PORTSC_PE	  0x0004
 #define UHCI_PORTSC_POEDC 0x0008
 // #define UHCI_PORTSC_LS		  0x0030
 // #define UHCI_PORTSC_LS_SHIFT  4
-// #define UHCI_PORTSC_RD		  0x0040
+#define UHCI_PORTSC_RD		  0x0040
 // #define UHCI_PORTSC_LSDA	  0x0100
 #define UHCI_PORTSC_PR	  0x0200
 #define UHCI_PORTSC_SUSP  0x1000
@@ -155,6 +159,8 @@ struct UHCI_TD
 	struct UHCI_TD * ptd_virt_next;	  // Virtual address
 	PTR ptd_copy_virt;             // Packet address inside DMA buffer
 	U8 ptd_is_data;
+	U8 ptd_frame_linked;
+	U8 ptd_missed;
 	U16 ptd_frame;
 	struct UHCI_TD *ptd_frame_next;
 
@@ -226,9 +232,16 @@ struct UHCI_QH
 	U32				 pqh_self_phy;	// Physical addresse
 	struct UHCI_QH * pqh_virt_next; // Virtual address
 	struct UHCI_TD * pqh_first_td;	// Virtual address
-	U32				 pqh_pos;		// Used for Interrupts
+	struct UHCI_QH * pqh_anchor;
+	struct UHCI_TD * pqh_last_td;
+	U32 pqh_period;
+	U32 pqh_phase;
+	U32 pqh_cost;
+	U16 pqh_last_frame;
 	U8               pqh_linked;
 	U8               pqh_short_advanced;
+	U8               pqh_runt;
+	U8               pqh_isoc;
 };
 
 // U32						ptd_self_phy;			// Physical addresse
@@ -249,9 +262,14 @@ struct _UHCI
 	struct USB2_Signal Signal_HCH;
 
 	U8 PortResetChange[4];
+	U8 PortSuspendChange[4];
+	U8 LegacySupport;
+	volatile U32 FatalStatus;
 
-	struct UHCI_QH * Last_Start;
-	struct UHCI_QH * Last_End;
+	struct UHCI_QH * BulkAnchor;
+	struct UHCI_QH * ControlAnchor;
+	struct UHCI_QH **Periodic;
+	U16 *FrameLoad;
 
 	U32 * FrameList;
 	U32	  FrameList_PhyAddr;

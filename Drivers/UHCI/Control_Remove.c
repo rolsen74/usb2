@@ -44,10 +44,9 @@
 // --
 
 SEC_CODE void
-UHCI_Control_Remove ( struct USB2_HCDNode * hn, struct RealRequest * req )
+UHCI_Control_Remove( struct USB2_HCDNode *hn, struct RealRequest *req )
 {
-	struct UHCI_QH * qh;
-	struct UHCI_QH * prev;
+	struct UHCI_QH *qh;
 
 	qh = req->req_HCD.UHCI.QH_Header;
 
@@ -56,40 +55,10 @@ UHCI_Control_Remove ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return;
 	}
 
-	if ( ! UHCI_Chip_Stop ( hn ) )
+	if ( ( ! UHCI_Chip_Stop( hn ) ) || ( ! UHCI_Unlink_QH( qh ) ) ||
+		( ! UHCI_Chip_Start( hn ) ) )
 	{
-		USB2_HCD_RequestReset ( hn );
-
-		return;
-	}
-
-	prev = hn->hn_HCD.UHCI.Last_Start;
-
-	while( ( prev ) && ( prev->pqh_virt_next != qh ) )
-	{
-		prev = prev->pqh_virt_next;
-	}
-
-	if ( ! prev )
-	{
-		USB2_HCD_RequestReset ( hn );
-
-		return;
-	}
-
-	prev->qh_hlink = qh->qh_hlink;
-	prev->pqh_virt_next = qh->pqh_virt_next;
-
-	if ( hn->hn_HCD.UHCI.Last_End == qh )
-	{
-		hn->hn_HCD.UHCI.Last_End = prev;
-	}
-
-	qh->pqh_linked = FALSE;
-
-	if ( ! UHCI_Chip_Start ( hn ) )
-	{
-		USB2_HCD_RequestReset ( hn );
+		USB2_HCD_RequestReset( hn );
 	}
 }
 

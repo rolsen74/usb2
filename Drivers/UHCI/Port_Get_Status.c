@@ -65,6 +65,11 @@ UHCI_Port_Get_Status ( struct USB2_HCDNode * hn, U32 port )
 
 	status = PCI_READWORD ( UHCI_PORTSC ( port ) );
 
+	if ( status == 0xffff )
+	{
+		return ( 0 );
+	}
+
 	retval = ( 0
 			   // Connect Status Change
 			   | ( ( status & 0x0002 ) ? HUBF_Chg_Connection : 0 )
@@ -73,6 +78,7 @@ UHCI_Port_Get_Status ( struct USB2_HCDNode * hn, U32 port )
 			   // Port Reset Change
 			   | ( ( status & 0x0200 ) ? HUBF_Status_Reset : 0 )
 			   | ( hn->hn_HCD.UHCI.PortResetChange[port] ? HUBF_Chg_Reset : 0 )
+				   | ( hn->hn_HCD.UHCI.PortSuspendChange[port] ? HUBF_Chg_Suspend : 0 )
 
 			   // Current Connect Status
 			   | ( ( status & 0x0001 ) ? HUBF_Status_Connection : 0 )

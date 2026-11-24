@@ -55,6 +55,7 @@ UHCI_Isochronous_Length ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	U32 got;
 	U32 status;
 	U32 index;
+	S32 failed;
 	U16 *lengths;
 
 	usbbase = hn->hn_USBBase;
@@ -73,12 +74,14 @@ UHCI_Isochronous_Length ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	{
 		status = LE_SWAP32 ( td->td_status );
 
-		if ( status & UHCI_TD_ACTIVE )
+		failed = ( td->ptd_missed ) || ( status & ( UHCI_TD_ACTIVE | UHCI_TD_ERRORS ) );
+		got = failed ? 0 : ( ( status + 1 ) & 0x7ff );
+
+		if ( ( ! failed ) && ( ioreq->req_Public.io_Command == CMD_WRITE ) )
 		{
-			break;
+			got = td->ptd_buffer_size;
 		}
 
-		got = ( status & UHCI_TD_ERRORS ) ? 0 : ( status + 1 ) & 0x7ff;
 		got = MIN ( got, td->ptd_buffer_size );
 
 		if ( ( ioreq->req_Public.io_Command == CMD_READ ) && ( got ) )
@@ -90,7 +93,7 @@ UHCI_Isochronous_Length ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 
 		if ( lengths )
 		{
-			lengths[index++] = ( status & UHCI_TD_ERRORS ) ? USB2_ISO_PACKET_ERROR : got;
+			lengths[index++] = failed ? USB2_ISO_PACKET_ERROR : got;
 			offset += td->ptd_buffer_size;
 		}
 		else

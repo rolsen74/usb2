@@ -80,7 +80,7 @@ UHCI_Interrupt_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	err = USB2Err_Stack_NoMemory;
 
 	if ( ( ( fn->fkt_Speed != USBSPEED_Low ) && ( fn->fkt_Speed != USBSPEED_Full ) ) ||
-		( ! ep->ep_MaxPacketSize ) ||
+		( ! ep->ep_Interval ) || ( ! ep->ep_MaxPacketSize ) ||
 		( ep->ep_MaxPacketSize > 64 ) ||
 		( ( fn->fkt_Speed == USBSPEED_Low ) && ( ep->ep_MaxPacketSize > 8 ) ) ||
 		( ( left ) && ( ! user ) ) )
@@ -113,14 +113,14 @@ UHCI_Interrupt_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 
 		td = UHCI_TD_Init( hn, pid, len, toggle, fn->fkt_Speed,
 			fn->fkt_Address, ep->ep_Number, left <= len && ! add_zero,
-			is_read && req->req_Public.io_AllowShortPackets );
+			is_read );
 
 		if ( ! td )
 		{
 			goto failed;
 		}
 
-		UHCI_TD_Append( qh, &tail, td );
+		UHCI_TD_Append( qh, &tail, td, FALSE );
 
 		if ( len )
 		{
@@ -166,8 +166,15 @@ UHCI_Interrupt_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 			goto failed;
 		}
 
-		UHCI_TD_Append( qh, &tail, td );
+		UHCI_TD_Append( qh, &tail, td, FALSE );
 		td->ptd_is_data = TRUE;
+	}
+
+	if ( ! UHCI_Periodic_Reserve( hn, req ) )
+	{
+		err = USB2Err_Host_NoBandWidth;
+
+		goto failed;
 	}
 
 	return ( FALSE );

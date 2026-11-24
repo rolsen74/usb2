@@ -43,38 +43,84 @@
 
 // --
 
-SEC_CODE S32
-UHCI_Transfer_Check ( struct USB2_HCDNode * hn UNUSED, struct RealRequest * req )
+SEC_CODE static S32
+CheckIsochronous( struct USB2_HCDNode *hn, struct UHCI_QH *qh )
 {
-	struct UHCI_QH * qh;
-	struct UHCI_TD * td;
-	struct UHCI_TD * last;
+	struct UHCI_TD *td;
 
-	U32				 status;
-	U32				 wanted;
-	U32				 actual;
+	U32 now;
+	U32 elapsed;
+	U32 status;
+	S32 complete;
 
-	qh	 = req->req_HCD.UHCI.QH_Header;
-	last = NULL;
+	now = PCI_READWORD( UHCI_FRNUM ) & UHCI_FRAME_MASK;
+	complete = TRUE;
+
+	__asm__ volatile( "sync" ::: "memory" );
+
+	for( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
+	{
+		status = LE_SWAP32( *(volatile U32 *)&td->td_status );
+
+		if ( ( td->ptd_missed ) || ( ! ( status & UHCI_TD_ACTIVE ) ) )
+		{
+			continue;
+		}
+
+		elapsed = ( now - td->ptd_frame ) & UHCI_FRAME_MASK;
+
+		if ( ( elapsed > 1 ) && ( elapsed <= UHCI_FRAMELIST_MASK ) )
+		{
+			UHCI_Isochronous_Unlink_TD( hn, td );
+
+			if ( ! hn->hn_AcceptIO )
+			{
+				return ( FALSE );
+			}
+
+			td->ptd_missed = TRUE;
+		}
+		else
+		{
+			complete = FALSE;
+		}
+	}
+
+	return ( complete );
+}
+
+// --
+
+SEC_CODE S32
+UHCI_Transfer_Check( struct USB2_HCDNode *hn, struct RealRequest *req )
+{
+	struct UHCI_QH *qh;
+	struct UHCI_TD *td;
+
+	U32 status;
+	U32 actual;
+	U32 pid;
+
+	qh = req->req_HCD.UHCI.QH_Header;
 
 	if ( ! qh )
 	{
 		return ( TRUE );
 	}
 
-	for ( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
+	if ( qh->pqh_isoc )
 	{
-		last = td;
+		return ( CheckIsochronous( hn, qh ) );
 	}
 
-	for ( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
+	for( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
 	{
 		if ( ( qh->pqh_short_advanced ) && ( td->ptd_is_data ) )
 		{
 			continue;
 		}
 
-		status = LE_SWAP32 ( td->td_status );
+		status = LE_SWAP32( *(volatile U32 *)&td->td_status );
 
 		if ( status & UHCI_TD_ACTIVE )
 		{
@@ -83,36 +129,54 @@ UHCI_Transfer_Check ( struct USB2_HCDNode * hn UNUSED, struct RealRequest * req 
 
 		if ( status & UHCI_TD_ERRORS )
 		{
-			req->req_Public.io_Error = ( status & UHCI_TD_STALLED ) ? USB2Err_Host_Stall : USB2Err_Host_HostError;
+			pid = LE_SWAP32( td->td_token ) & 0xff;
+
+			if ( status & UHCI_TD_BABBLE )
+			{
+				req->req_Public.io_Error = USB2Err_Host_Overflow;
+			}
+			else if ( ( status & UHCI_TD_ERRORS ) == UHCI_TD_STALLED )
+			{
+				req->req_Public.io_Error = USB2Err_Host_Stall;
+			}
+			else if ( ( status & UHCI_TD_CRCTO ) && ( pid != UHCI_TD_PID_SETUP ) )
+			{
+				req->req_Public.io_Error = ( pid == UHCI_TD_PID_IN ) ? USB2Err_Host_CRCError : USB2Err_Host_Timeout;
+			}
+			else
+			{
+				req->req_Public.io_Error = USB2Err_Host_HostError;
+			}
 
 			return ( TRUE );
 		}
 
-		if ( ( req->req_EndPoint->ep_Type != EPATT_Type_Isochronous ) && ( td->ptd_is_data )
-			 && ( req->req_Public.io_Command == CMD_READ ) )
+		actual = ( status + 1 ) & 0x7ff;
+
+		if ( ( td->ptd_is_data ) && ( req->req_Public.io_Command == CMD_READ ) &&
+			( actual < td->ptd_buffer_size ) )
 		{
-			wanted = td->ptd_buffer_size;
-			actual = ( status + 1 ) & 0x7ff;
+			qh->pqh_runt = ! req->req_Public.io_AllowShortPackets;
 
-			if ( actual < wanted )
+			if ( req->req_EndPoint->ep_Type == EPATT_Type_Control )
 			{
-				if ( ! req->req_Public.io_AllowShortPackets )
-				{
-					req->req_Public.io_Error = USB2Err_Host_RuntPacket;
-				}
+				// SPD leaves the hardware queue at the short descriptor.
+				qh->pqh_short_advanced = TRUE;
 
-				if ( ( req->req_EndPoint->ep_Type == EPATT_Type_Control ) && ( last != td ) && ( ! qh->pqh_short_advanced )
-					 && ( ! req->req_Public.io_Error ) )
-				{
-					qh->pqh_short_advanced = TRUE;
-					qh->qh_elink		   = LE_SWAP32 ( last->ptd_self_phy );
+				__asm__ volatile( "sync" ::: "memory" );
 
-					return ( FALSE );
-				}
+				qh->qh_elink = LE_SWAP32( qh->pqh_last_td->ptd_self_phy );
 
-				return ( TRUE );
+				return ( FALSE );
 			}
+
+			break;
 		}
+	}
+
+	if ( qh->pqh_runt )
+	{
+		req->req_Public.io_Error = USB2Err_Host_RuntPacket;
 	}
 
 	return ( TRUE );

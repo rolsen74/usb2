@@ -44,39 +44,52 @@
 // --
 
 SEC_CODE void
-UHCI_Chip_Deinit ( struct USB2_HCDNode * hn )
+UHCI_Chip_Deinit( struct USB2_HCDNode *hn )
 {
-	struct USBBase * usbbase;
-	struct UHCI_QH * qh;
+	struct USBBase *usbbase;
+
+	U32 slot;
 
 	usbbase = hn->hn_USBBase;
-	qh = hn->hn_HCD.UHCI.Last_Start;
 
-	if ( ( qh ) && ( qh->pqh_first_td ) )
+	UHCI_Free_QH( hn, hn->hn_HCD.UHCI.ControlAnchor );
+
+	UHCI_Free_QH( hn, hn->hn_HCD.UHCI.BulkAnchor );
+
+	hn->hn_HCD.UHCI.ControlAnchor = NULL;
+	hn->hn_HCD.UHCI.BulkAnchor = NULL;
+
+	if ( hn->hn_HCD.UHCI.Periodic )
 	{
-		MEMORY_FREE ( MEMID_UHCI_TD, qh->pqh_first_td, qh->pqh_first_td->ptd_self_phy );
+		for( slot = 0; slot < UHCI_PERIODIC_ANCHORS; slot++ )
+		{
+			UHCI_Free_QH( hn, hn->hn_HCD.UHCI.Periodic[slot] );
+		}
+
+		MEM_FREEVEC( hn->hn_HCD.UHCI.Periodic );
+
+		hn->hn_HCD.UHCI.Periodic = NULL;
 	}
 
-	PCI_WRITEWORD ( UHCI_INTR, 0 );
-
-	if ( qh )
+	if ( hn->hn_HCD.UHCI.FrameLoad )
 	{
-		MEMORY_FREE ( MEMID_UHCI_QH, qh, qh->pqh_self_phy );
-	}
+		MEM_FREEVEC( hn->hn_HCD.UHCI.FrameLoad );
 
-	hn->hn_HCD.UHCI.Last_Start = NULL;
-	hn->hn_HCD.UHCI.Last_End   = NULL;
+		hn->hn_HCD.UHCI.FrameLoad = NULL;
+	}
 
 	if ( hn->hn_HCD.UHCI.FrameTD )
 	{
 		MEM_FREEVEC( hn->hn_HCD.UHCI.FrameTD );
+
 		hn->hn_HCD.UHCI.FrameTD = NULL;
 	}
 
 	if ( hn->hn_HCD.UHCI.FrameList )
 	{
-		MEMORY_FREE ( MEMID_HCD_4k, hn->hn_HCD.UHCI.FrameList, hn->hn_HCD.UHCI.FrameList_PhyAddr );
-		hn->hn_HCD.UHCI.FrameList		  = NULL;
+		MEMORY_FREE( MEMID_HCD_4k, hn->hn_HCD.UHCI.FrameList, hn->hn_HCD.UHCI.FrameList_PhyAddr );
+
+		hn->hn_HCD.UHCI.FrameList = NULL;
 		hn->hn_HCD.UHCI.FrameList_PhyAddr = 0;
 	}
 }

@@ -44,11 +44,11 @@
 // --
 
 SEC_CODE void
-UHCI_TD_Append ( struct UHCI_QH * qh, struct UHCI_TD ** tail, struct UHCI_TD * td )
+UHCI_TD_Append ( struct UHCI_QH * qh, struct UHCI_TD ** tail, struct UHCI_TD * td, S32 depth )
 {
 	if ( *tail )
 	{
-		( *tail )->td_link		 = LE_SWAP32 ( td->ptd_self_phy | UHCI_PTR_VF );
+		( *tail )->td_link		 = LE_SWAP32 ( td->ptd_self_phy | ( depth ? UHCI_PTR_VF : 0 ) );
 		( *tail )->ptd_virt_next = td;
 	}
 	else
@@ -58,6 +58,7 @@ UHCI_TD_Append ( struct UHCI_QH * qh, struct UHCI_TD ** tail, struct UHCI_TD * t
 	}
 
 	*tail = td;
+	qh->pqh_last_td = td;
 }
 
 // --

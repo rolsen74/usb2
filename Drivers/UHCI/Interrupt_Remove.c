@@ -44,77 +44,21 @@
 // --
 
 SEC_CODE void
-UHCI_Interrupt_Remove ( struct USB2_HCDNode * hn, struct RealRequest * req )
+UHCI_Interrupt_Remove( struct USB2_HCDNode *hn, struct RealRequest *req )
 {
-	struct UHCI_QH * qh;
-	struct UHCI_QH * prev;
-	struct UHCI_TD * td;
-
-	U32 packets;
-	U32 status;
+	struct UHCI_QH *qh;
 
 	qh = req->req_HCD.UHCI.QH_Header;
-	packets = 0;
 
 	if ( ( ! qh ) || ( ! qh->pqh_linked ) )
 	{
 		return;
 	}
 
-	if ( ! UHCI_Chip_Stop ( hn ) )
+	if ( ( ! UHCI_Chip_Stop( hn ) ) || ( ! UHCI_Unlink_QH( qh ) ) ||
+		( ! UHCI_Chip_Start( hn ) ) )
 	{
-		USB2_HCD_RequestReset ( hn );
-
-		return;
-	}
-
-	if ( req->req_Public.io_Error )
-	{
-		for ( td = qh->pqh_first_td; td; td = td->ptd_virt_next )
-		{
-			status = LE_SWAP32 ( td->td_status );
-
-			if ( status & ( UHCI_TD_ACTIVE | UHCI_TD_ERRORS ) )
-			{
-				break;
-			}
-
-			if ( td->ptd_is_data )
-			{
-				packets++;
-			}
-		}
-
-		req->req_EndPoint->ep_DataToggle ^= packets & 1;
-	}
-
-	prev = hn->hn_HCD.UHCI.Last_Start;
-
-	while( ( prev ) && ( prev->pqh_virt_next != qh ) )
-	{
-		prev = prev->pqh_virt_next;
-	}
-
-	if ( ! prev )
-	{
-		USB2_HCD_RequestReset ( hn );
-
-		return;
-	}
-
-	prev->qh_hlink = qh->qh_hlink;
-	prev->pqh_virt_next = qh->pqh_virt_next;
-
-	if ( hn->hn_HCD.UHCI.Last_End == qh )
-	{
-		hn->hn_HCD.UHCI.Last_End = prev;
-	}
-
-	qh->pqh_linked = FALSE;
-
-	if ( ! UHCI_Chip_Start ( hn ) )
-	{
-		USB2_HCD_RequestReset ( hn );
+		USB2_HCD_RequestReset( hn );
 	}
 }
 

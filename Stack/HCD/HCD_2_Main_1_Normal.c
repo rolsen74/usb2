@@ -102,6 +102,16 @@ __Normal ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * i
 			{
 				in->Tick_TimeRequest.Time.Seconds	   = 1;
 				in->Tick_TimeRequest.Time.Microseconds = 0;
+#ifdef DRV_UHCI
+
+				if ( hn->hn_HCDType == HCDTYPE_UHCI )
+				{
+					in->Tick_TimeRequest.Time.Seconds = 0;
+					in->Tick_TimeRequest.Time.Microseconds = UHCI_TICK_US;
+				}
+
+#endif
+
 				IO_SEND ( &in->Tick_TimeRequest );
 			}
 

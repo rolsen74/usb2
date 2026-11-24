@@ -54,17 +54,32 @@ UHCI_Handler_Interrupt ( struct ExceptionContext * context UNUSED, struct ExecBa
 
 	hn = data;
 	usbbase = hn->hn_USBBase;
-	status = PCI_READWORD ( UHCI_STS ) & UHCI_STS_ALLINTRS;
+	status = PCI_READWORD( UHCI_STS );
 	mask = 0;
 
-	if ( ! status )
+	if ( ( status == 0xffff ) || ( ! ( status & UHCI_STS_ALLINTRS ) ) )
 	{
 		return ( FALSE );
 	}
 
-	PCI_WRITEWORD ( UHCI_STS, status );
+	if ( status & ( UHCI_STS_HSE | UHCI_STS_HCPE ) )
+	{
+		hn->hn_HCD.UHCI.FatalStatus |= status & ( UHCI_STS_HSE | UHCI_STS_HCPE );
+	}
 
-	if ( status & ( UHCI_STS_USBINT | UHCI_STS_USBEI | UHCI_STS_HSE | UHCI_STS_HCPE ) )
+	PCI_WRITEWORD( UHCI_STS, status & UHCI_STS_ALLINTRS );
+
+	if ( status & UHCI_STS_HSE )
+	{
+		mask |= hn->hn_HCD.UHCI.Signal_HSE.sig_Signal_Mask;
+	}
+
+	if ( status & UHCI_STS_HCPE )
+	{
+		mask |= hn->hn_HCD.UHCI.Signal_HCPE.sig_Signal_Mask;
+	}
+
+	if ( status & ( UHCI_STS_USBINT | UHCI_STS_USBEI ) )
 	{
 		mask |= hn->hn_HCD.UHCI.Signal_INT.sig_Signal_Mask;
 	}

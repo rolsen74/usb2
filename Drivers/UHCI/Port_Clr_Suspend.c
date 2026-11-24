@@ -44,34 +44,95 @@
 // --
 
 SEC_CODE S32
-UHCI_Port_Clr_Suspend ( struct USB2_HCDNode * hn, U32 port )
+UHCI_Port_Clr_Suspend( struct USB2_HCDNode *hn, U32 port )
 {
-	S32 err;
-	U32 val;
+	struct USBBase *usbbase;
 
-#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase * usbbase;
+	U32 status;
+	U32 poll;
+
 	usbbase = hn->hn_USBBase;
-#endif
 
-	USBDEBUG ( "UHCI_Port_Clr_Suspend( Port #%lu )", port );
+	USBDEBUG( "UHCI_Port_Clr_Suspend( Port #%lu )", port );
 
-	if ( ( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ) )
+	if ( ( ! port ) || ( port > hn->hn_HUB_NumPorts ) )
 	{
-		USBDEBUG ( "Invalid Port Number #%lu", port );
-
-		err = USB2Err_Host_HostError;
-	}
-	else
-	{
-		val = PCI_READWORD ( UHCI_PORTSC ( port ) ) & 0xfff5;
-
-		val &= ~UHCI_PORTSC_SUSP;
-
-		PCI_WRITEWORD ( UHCI_PORTSC ( port ), val );
-
-		err = USB2Err_NoError;
+		return ( USB2Err_Host_HostError );
 	}
 
-	return ( err );
+	status = PCI_READWORD( UHCI_PORTSC( port ) );
+
+	if ( status == 0xffff )
+	{
+		return ( USB2Err_Device_Detached );
+	}
+
+	if ( ! ( status & UHCI_PORTSC_SUSP ) )
+	{
+		return ( USB2Err_NoError );
+	}
+
+	if ( ( status & ( UHCI_PORTSC_CCS | UHCI_PORTSC_PE ) ) != ( UHCI_PORTSC_CCS | UHCI_PORTSC_PE ) )
+	{
+		return ( USB2Err_Device_Detached );
+	}
+
+	PCI_WRITEWORD( UHCI_PORTSC( port ), UHCI_PORTSC_PE | UHCI_PORTSC_SUSP | UHCI_PORTSC_RD );
+
+	HCD_WAIT_MS( hn, 20 );
+
+	status = PCI_READWORD( UHCI_PORTSC( port ) );
+
+	if ( ( status == 0xffff ) || ( ( status & ( UHCI_PORTSC_CCS | UHCI_PORTSC_CSC ) ) != UHCI_PORTSC_CCS ) )
+	{
+		PCI_WRITEWORD( UHCI_PORTSC( port ), 0 );
+
+		return ( USB2Err_Device_Detached );
+	}
+
+	if ( ( status & ( UHCI_PORTSC_PE | UHCI_PORTSC_RD | UHCI_PORTSC_SUSP ) ) !=
+		( UHCI_PORTSC_PE | UHCI_PORTSC_RD | UHCI_PORTSC_SUSP ) )
+	{
+		return ( USB2Err_Host_Timeout );
+	}
+
+	// Clear resume and suspend together to generate the low-speed EOP.
+	PCI_WRITEWORD( UHCI_PORTSC( port ), UHCI_PORTSC_PE );
+
+	for( poll = 0; poll <= 2; poll++ )
+	{
+		status = PCI_READWORD( UHCI_PORTSC( port ) );
+
+		if ( ! ( status & ( UHCI_PORTSC_SUSP | UHCI_PORTSC_RD ) ) )
+		{
+			break;
+		}
+
+		if ( poll < 2 )
+		{
+			HCD_WAIT_MS( hn, 1 );
+		}
+	}
+
+	if ( status & ( UHCI_PORTSC_SUSP | UHCI_PORTSC_RD ) )
+	{
+		return ( USB2Err_Host_Timeout );
+	}
+
+	HCD_WAIT_MS( hn, 10 );
+
+	status = PCI_READWORD( UHCI_PORTSC( port ) );
+
+	if ( ( status & ( UHCI_PORTSC_CCS | UHCI_PORTSC_CSC | UHCI_PORTSC_PE ) ) != ( UHCI_PORTSC_CCS | UHCI_PORTSC_PE ) )
+	{
+		return ( USB2Err_Device_Detached );
+	}
+
+	hn->hn_HCD.UHCI.PortSuspendChange[port] = TRUE;
+
+	TASK_SIGNAL( hn->hn_Task->tn_TaskAdr, hn->hn_HUB_Signal.sig_Signal_Mask );
+
+	return ( USB2Err_NoError );
 }
+
+// --
