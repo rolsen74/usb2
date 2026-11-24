@@ -18,12 +18,15 @@ CC := ppc-amigaos-gcc
 MKDIR := mkdir -p
 endif
 
-CFLAGS := -O2 -Wall -Wextra -ffreestanding -MMD -MP -D__USE_INLINE__ -I../../../inc_Public -I../Common -Isrc
-LDFLAGS := -nostdlib -Wl,-e,_start
+CFLAGS := -O2 -Wall -Wextra -mcrt=newlib -MMD -MP -D__USE_INLINE__ -I../../../inc_Public -I../Common -Isrc
+LDFLAGS := -nostartfiles -mcrt=newlib -Wl,-e,_start
 SOURCES := $(sort $(wildcard src/*.c))
 OBJECTS := $(patsubst src/%.c,$(OBJDIR)/%.o,$(SOURCES))
 
 OBJECTS += $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(wildcard ../Common/Sana2_*.c ../Common/EthClass_*.c))
+
+OBJECTS += $(addprefix $(OBJDIR)/common/,Wireless_AESBlock.o Wireless_AESExpand.o Wireless_AESSubstitute.o Wireless_CCMP.o)
+OBJECTS += $(addprefix $(OBJDIR)/common/,Wireless_StartAuto.o Wireless_StartPassword.o)
 
 .PHONY: all clean
 

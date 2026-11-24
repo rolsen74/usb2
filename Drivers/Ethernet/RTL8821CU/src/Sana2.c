@@ -10,15 +10,18 @@
 
 #include "All.h"
 #include "Commands.h"
+#include "Radio.h"
 
 // --
 
 S32
 Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *sana )
 {
+	static const U8 crypt_types[] = { S2ENC_CCMP };
+
 	struct BufferManagement *opener;
 
-	if ( sana->ios2_Req.io_Command != S2_ONEVENT )
+	if ( ( sana->ios2_Req.io_Command != S2_ONEVENT ) && ( sana->ios2_Req.io_Command != S2_SETKEY ) )
 	{
 		sana->ios2_WireError = 0;
 	}
@@ -45,7 +48,7 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *sana )
 			return ( Cmd_Write( unit, opener, sana ) );
 
 		case CMD_FLUSH:
-			Cmd_Flush( unit, IOERR_ABORTED, 0 );
+			Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
 			break;
 
 		case S2_DEVICEQUERY:
@@ -79,83 +82,62 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *sana )
 
 		case S2_GETGLOBALSTATS:
 			Sana2_GetPacketStats( sana, unit->unit_PacketsRx, unit->unit_PacketsTx, unit->unit_BadPackets,
-				unit->unit_UnknownPackets, NULL );
+				unit->unit_UnknownPackets, & unit->unit_LastStart );
 			break;
 
 		case S2_GETEXTENDEDGLOBALSTATS:
 			Sana2_GetExtendedPacketStats( sana, unit->unit_PacketsRx, unit->unit_PacketsTx, unit->unit_BadPackets,
-				unit->unit_UnknownPackets, TRUE, NULL );
+				unit->unit_UnknownPackets, FALSE, & unit->unit_LastStart );
 			break;
 
 		case S2_ONEVENT:
+			return ( Sana2_QueueEvent( & unit->unit_Pending, sana,
+				unit->unit_Online ? S2EVENT_ONLINE : S2EVENT_OFFLINE, SANA2_COMMON_EVENTS ) );
+
 		case S2_SAMPLE_THROUGHPUT:
-			if ( unit->unit_Detached )
-			{
-				ReportUnitOffline( unit, sana );
-
-				break;
-			}
-
-			if ( sana->ios2_Req.io_Command == S2_ONEVENT )
-			{
-				if ( Sana2_QueueEvent( & unit->unit_Pending, sana,
-				unit->unit_Online ? S2EVENT_ONLINE : S2EVENT_OFFLINE, ( SANA2_COMMON_EVENTS & ~S2EVENT_ONLINE ) ) )
-			{
-				sana->ios2_Req.io_Flags &= ~IOF_QUICK;
-
-				return ( TRUE );
-			}
-
-			break;
-			}
-
-			if ( Sana2_QueueThroughput( & unit->unit_Pending, sana, NULL, TRUE ) )
-			{
-				sana->ios2_Req.io_Flags &= ~IOF_QUICK;
-
-				return ( TRUE );
-			}
-
-			break;
+			return ( Sana2_QueueThroughput( & unit->unit_Pending, sana, NULL, FALSE ) );
 
 		case S2_SANA2HOOK:
 			Sana2_SetCopyHook( sana, & opener->bm_CopyHook, FALSE );
 			break;
 
 		case S2_GETCRYPTTYPES:
-			Sana2_GetCryptTypes( sana, NULL, 0 );
+			Sana2_GetCryptTypes( sana, crypt_types, sizeof( crypt_types ) );
 			break;
 
 		case S2_OFFLINE:
-			if ( unit->unit_Online )
-			{
-				unit->unit_Online = FALSE;
+			unit->unit_ManualOffline = TRUE;
 
-				Cmd_Flush( unit, S2ERR_OUTOFSERVICE, S2WERR_UNIT_OFFLINE );
+			RTL8821CU_SetOnline( unit, FALSE );
 
-				Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_OFFLINE );
-			}
+			Sana2_AbortPackets( & unit->unit_Pending, S2ERR_OUTOFSERVICE, S2WERR_UNIT_OFFLINE );
 
 			break;
 
 		case S2_ONLINE:
-			if ( ! unit->unit_Online )
-			{
-				ReportUnitOffline( unit, sana );
-			}
+			Cmd_Online( unit, sana );
 
 			break;
 
-		case S2_GETSIGNALQUALITY:
-		case S2_GETNETWORKS:
 		case S2_SETOPTIONS:
 		case S2_SETKEY:
-		case S2_GETNETWORKINFO:
-		case S2_READMGMT:
-		case S2_WRITEMGMT:
-		case S2_GETRADIOBANDS:
 		case USB2WIRELESS_CMD_PROMPT:
-			ReportUnitOffline( unit, sana );
+			AddTail( & unit->unit_Pending, (PTR) sana );
+
+			return ( TRUE );
+
+		case S2_READMGMT:
+			return ( Cmd_ReadMgmt( unit, sana ) );
+
+		case S2_WRITEMGMT:
+			return ( Cmd_WriteMgmt( unit, sana ) );
+
+		case S2_GETSIGNALQUALITY:
+		case S2_GETNETWORKS:
+		case S2_GETNETWORKINFO:
+		case S2_GETRADIOBANDS:
+			sana->ios2_Req.io_Error = S2ERR_NOT_SUPPORTED;
+
 			break;
 
 		case S2_GETPEERADDRESS:

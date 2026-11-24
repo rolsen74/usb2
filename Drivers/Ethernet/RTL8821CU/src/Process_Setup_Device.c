@@ -9,6 +9,7 @@
 // --
 
 #include "All.h"
+#include "Radio.h"
 
 // --
 
@@ -74,7 +75,7 @@ Process_Setup_Device( struct EthernetUnit *unit, struct USB2_DriverMessage *msg 
 		return ( FALSE );
 	}
 
-	if ( ! RTL8821CU_Probe( unit->unit_USB_Register->Res_Control ) )
+	if ( ! RTL8821CU_Probe( unit ) )
 	{
 		return ( FALSE );
 	}
@@ -82,6 +83,12 @@ Process_Setup_Device( struct EthernetUnit *unit, struct USB2_DriverMessage *msg 
 	unit->unit_FirmwareRunning = RTL8821CU_LoadFirmware( unit );
 
 	unit->unit_AddressValid = RTL8821CU_ReadStationAddress( unit );
+
+	if ( ( unit->unit_FirmwareRunning ) && ( unit->unit_AddressValid ) )
+	{
+		unit->unit_RadioInitialized = RTL8821CU_StartRadio( unit );
+		unit->unit_RadioReady = unit->unit_RadioInitialized;
+	}
 
 	return ( TRUE );
 }

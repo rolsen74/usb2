@@ -19,7 +19,6 @@
 #define EFUSE_ADDRESS_SHIFT 8
 #define EFUSE_WIFI_BANK_MASK 0x0300
 #define EFUSE_WRITE_VOLTAGE 0x80
-#define EFUSE_MAC_START 0x107
 
 // --
 
@@ -45,14 +44,12 @@ ReadEFuseByte( struct USB2_EPResource *control, U32 *offset, U8 *byte )
 // --
 
 S32
-RTL8821CU_ReadEFuseAddress( struct USB2_EPResource *control, U8 *address )
+RTL8821CU_ReadEFuse( struct USB2_EPResource *control, U8 *map, U32 size )
 {
 	U32 offset;
 	U32 section;
 	U32 word;
 	U32 index;
-	U32 found;
-	U8 data[RTL8821CU_ADDR_SIZE];
 	U8 header;
 	U8 low;
 	U8 high;
@@ -63,7 +60,8 @@ RTL8821CU_ReadEFuseAddress( struct USB2_EPResource *control, U8 *address )
 		return ( FALSE );
 	}
 
-	found = 0;
+	memset( map, 0xff, size );
+
 	offset = 0;
 
 	while( offset < EFUSE_WIFI_LIMIT )
@@ -109,28 +107,19 @@ RTL8821CU_ReadEFuseAddress( struct USB2_EPResource *control, U8 *address )
 
 			index = section * 8 + word * 2;
 
-			if ( ( index >= EFUSE_MAC_START ) && ( index < EFUSE_MAC_START + RTL8821CU_ADDR_SIZE ) )
+			if ( ( index < size ) )
 			{
-				data[index - EFUSE_MAC_START] = low;
-				found |= 1U << ( index - EFUSE_MAC_START );
+				map[index] = low;
 			}
 
 			index++;
 
-			if ( ( index >= EFUSE_MAC_START ) && ( index < EFUSE_MAC_START + RTL8821CU_ADDR_SIZE ) )
+			if ( ( index < size ) )
 			{
-				data[index - EFUSE_MAC_START] = high;
-				found |= 1U << ( index - EFUSE_MAC_START );
+				map[index] = high;
 			}
 		}
 	}
-
-	if ( ( found != ( 1U << RTL8821CU_ADDR_SIZE ) - 1 ) || ( ! ValidStationAddress( data ) ) )
-	{
-		return ( FALSE );
-	}
-
-	CopyMem( data, address, RTL8821CU_ADDR_SIZE );
 
 	return ( TRUE );
 }

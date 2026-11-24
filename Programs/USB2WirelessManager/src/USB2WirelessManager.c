@@ -413,13 +413,14 @@ main( int argc, char **argv __attribute__((unused)) )
 		fprintf( stderr, "PASSWORD must contain %u to 63 printable ASCII characters.\n", wireless.UseSAE ? 1U : 8U );
 	}
 	else if ( ( ! rt2870 ) && ( wireless.AdapterType != USB2ETH_ADAPTER_RTL8188 ) &&
-		( wireless.AdapterType != USB2ETH_ADAPTER_RTL8811AU ) )
+		( wireless.AdapterType != USB2ETH_ADAPTER_RTL8811AU ) && ( wireless.AdapterType != USB2ETH_ADAPTER_RTL8821CU ) )
 	{
 		fprintf( stderr, "No supported Wi-Fi adapter on %s unit %ld.\n", WIRELESS_DEVICE, unit );
 	}
-	else if ( ( wireless.AdapterType == USB2ETH_ADAPTER_RTL8811AU ) && ( wireless.UseWPA || wireless.AllowWPA3 ) )
+	else if ( ( ( wireless.AdapterType == USB2ETH_ADAPTER_RTL8811AU ) ||
+		( wireless.AdapterType == USB2ETH_ADAPTER_RTL8821CU ) ) && ( wireless.UseWPA || wireless.AllowWPA3 ) )
 	{
-		fprintf( stderr, "Use OPEN or WPA2 with the RTL8811AU.\n" );
+		fprintf( stderr, "Use OPEN or WPA2 with this adapter.\n" );
 	}
 	else if ( ( ( values[6] ) || ( values[7] ) ) &&
 		( ( ! rt2870 ) || ( values[1] ) || ( wireless.AllowWPA2 ) || ( wireless.AllowWPA3 ) || ( ( values[6] ) && ( values[7] ) ) ) )

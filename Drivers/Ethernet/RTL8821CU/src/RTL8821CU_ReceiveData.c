@@ -9,6 +9,7 @@
 // --
 
 #include "All.h"
+#include "Radio.h"
 
 // --
 
@@ -74,7 +75,7 @@ CompleteRead( struct EthernetUnit *unit, struct IOSana2Req *ioreq, const U8 *fra
 // --
 
 void
-RTL8821CU_ReceiveData( struct EthernetUnit *unit, const U8 *frame, U32 length )
+RTL8821CU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 {
 	struct BufferManagement *opener;
 	struct IOSana2Req *ioreq;
@@ -88,14 +89,17 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, const U8 *frame, U32 length )
 	U8 flags;
 	S32 delivered;
 	S32 copied;
+	S32 protected;
+	S32 eapol_only;
 
 	header = RTL8821CU_WLAN_HEADER;
 	flags = 0;
 	orphan = NULL;
 	delivered = FALSE;
 
-	if ( ( length < header + RTL8821CU_LLC_HEADER ) || ( ( frame[0] & 0x7f ) != 0x08 ) ||
-		( ( frame[1] & 0x47 ) != 0x02 ) || ( frame[22] & 0x0f ) ||
+	if ( ( ! unit->unit_AssocID ) || ( unit->unit_ManualOffline ) ||
+		( length < header + RTL8821CU_LLC_HEADER ) || ( ( frame[0] & 0x7f ) != 0x08 ) ||
+		( ( frame[1] & 7 ) != 2 ) || ( frame[22] & 0x0f ) ||
 		( ! RTL8821CU_SameAddress( frame + 10, unit->unit_BSSID ) ) )
 	{
 		return;
@@ -109,6 +113,13 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, const U8 *frame, U32 length )
 		}
 
 		header += ( frame[1] & 0x80 ) ? 6 : 2;
+	}
+
+	protected = ( frame[1] & 0x40 ) != 0;
+
+	if ( ( protected ) && ( ! RTL8821CU_UnprotectData( unit, frame, & length, header ) ) )
+	{
+		return;
 	}
 
 	if ( ( length < header + RTL8821CU_LLC_HEADER ) || ( length - header - RTL8821CU_LLC_HEADER > RTL8821CU_MTU ) )
@@ -143,6 +154,13 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, const U8 *frame, U32 length )
 		return;
 	}
 
+	eapol_only = ( ! unit->unit_Online ) || ( ( unit->unit_Encryption == S2ENC_CCMP ) && ( ! protected ) );
+
+	if ( ( eapol_only ) && ( ( type != RTL8821CU_EAPOL ) || ( flags ) ) )
+	{
+		return;
+	}
+
 	length -= header + RTL8821CU_LLC_HEADER;
 	unit->unit_PacketsRx++;
 
@@ -162,7 +180,7 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, const U8 *frame, U32 length )
 				break;
 			}
 
-			if ( ( ! orphan ) && ( ioreq->ios2_Req.io_Command == S2_READORPHAN ) )
+			if ( ( ! eapol_only ) && ( ! orphan ) && ( ioreq->ios2_Req.io_Command == S2_READORPHAN ) )
 			{
 				orphan = ioreq;
 			}

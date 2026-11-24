@@ -10,6 +10,9 @@
 
 #include "All.h"
 #include "EthClass.h"
+#include "Radio.h"
+#include "WiFiCommand.h"
+#include <usb2wifi.h>
 
 // --
 
@@ -33,6 +36,7 @@ Process_Main ( struct EthernetUnit * unit, struct USB2IFace * usb2 )
 
 	S32 detached;
 	U32 wait_ticks;
+	S32 start;
 
 	reg		 = unit->unit_USB_Register;
 	detached = FALSE;
@@ -55,7 +59,9 @@ Process_Main ( struct EthernetUnit * unit, struct USB2IFace * usb2 )
 			ObtainSemaphore ( &unit->unit_CommandLock );
 
 			unit->unit_Detached = TRUE;
-			unit->unit_Online	= FALSE;
+			RTL8821CU_SetOnline( unit, FALSE );
+
+			memset( unit->unit_Keys, 0, sizeof( unit->unit_Keys ) );
 
 			Sana2_SignalEvent ( &unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE );
 
@@ -70,9 +76,16 @@ Process_Main ( struct EthernetUnit * unit, struct USB2IFace * usb2 )
 
 		Process_PacketIO ( unit, usb2 );
 
-		wait_ticks = unit->unit_Online ? 1 : 10;
+		wait_ticks = unit->unit_RadioInitialized ? 1 : 10;
+		start = unit->unit_StartAuto && unit->unit_TxReady && ! unit->unit_AssocID;
+		unit->unit_StartAuto = FALSE;
 
 		ReleaseSemaphore ( &unit->unit_CommandLock );
+
+		if ( start )
+		{
+			Wireless_StartAuto( USB2WIFI_RTL8821CU, unit->unit_UnitNr );
+		}
 
 		Delay ( wait_ticks );
 	}

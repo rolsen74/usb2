@@ -203,7 +203,7 @@ NetworkSecurityModes( const struct Wireless *wireless, const struct AccessPoint 
 		modes = 1U << USB2WIFI_OPEN;
 	}
 
-	if ( wireless->AdapterType == USB2ETH_ADAPTER_RTL8811AU )
+	if ( ( wireless->AdapterType == USB2ETH_ADAPTER_RTL8811AU ) || ( wireless->AdapterType == USB2ETH_ADAPTER_RTL8821CU ) )
 	{
 		modes &= ( 1U << USB2WIFI_OPEN ) | ( 1U << USB2WIFI_WPA2 );
 	}

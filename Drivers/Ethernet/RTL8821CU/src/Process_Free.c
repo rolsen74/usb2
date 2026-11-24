@@ -24,6 +24,8 @@ Process_Free( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 	unit->unit_Detached = TRUE;
 	unit->unit_Online = FALSE;
 
+	memset( unit->unit_Keys, 0, sizeof( unit->unit_Keys ) );
+
 	Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
 
 	ReleaseSemaphore( & unit->unit_CommandLock );

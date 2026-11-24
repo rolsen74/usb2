@@ -9,6 +9,9 @@
 // --
 
 #include "All.h"
+#include "Radio.h"
+#include "WiFiCommand.h"
+#include <usb2wifi.h>
 
 // --
 
@@ -36,20 +39,41 @@ PollReceive( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 
 		if ( ( ! error ) && ( ioreq->io_Actual <= resource->BufferSize ) )
 		{
+			unit->unit_RxStalled = FALSE;
+
 			RTL8821CU_DecodeRX( unit, resource->Buffers[0], ioreq->io_Actual );
 		}
-		else if ( error != USB2Err_Device_Detached )
-		{
-			if ( error == USB2Err_Host_Stall )
-			{
-				usb2->USB2_EPRes_Destall( resource );
-			}
-
-			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
-		}
-		else
+		else if ( error == USB2Err_Device_Detached )
 		{
 			return;
+		}
+		else if ( error == USB2Err_Host_Stall )
+		{
+			if ( ( unit->unit_RxStalled ) || ( ! usb2->USB2_EPRes_Destall( resource ) ) )
+			{
+				unit->unit_RxStalled = TRUE;
+				unit->unit_RadioReady = FALSE;
+				unit->unit_TxReady = FALSE;
+				unit->unit_Operational = FALSE;
+
+				RTL8821CU_SetOnline( unit, FALSE );
+
+				DebugPrintF( "RTL8821CU: bulk receive stalled, radio offline\n" );
+
+				Sana2_AbortPackets( & unit->unit_Pending, S2ERR_OUTOFSERVICE, S2WERR_UNIT_OFFLINE );
+
+				Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
+
+				return;
+			}
+
+			unit->unit_RxStalled = TRUE;
+
+			DebugPrintF( "RTL8821CU: bulk receive stall cleared\n" );
+		}
+		else if ( error != USB2Err_Host_Timeout )
+		{
+			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
 		}
 	}
 
@@ -73,15 +97,26 @@ Transmit( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana2Req *
 
 	U8 *buffer;
 	U32 length;
-	U32 frame_offset;
-	U16 type;
+	U32 payload;
+	U32 type;
+	S32 management;
 	S32 error;
 
-	resource = unit->unit_Bulk_Out[RTL8821CU_TX_BEST_EFFORT];
+	management = sana->ios2_Req.io_Command == S2_WRITEMGMT;
+
+	if ( ( ! unit->unit_TxReady ) || ( ! unit->unit_RadioReady ) ||
+		( ( ! management ) && ( ! RTL8821CU_DataAllowed( unit, sana ) ) ) )
+	{
+		ReportUnitOffline( unit, sana );
+
+		return;
+	}
+
+	resource = unit->unit_Bulk_Out[management ? RTL8821CU_TX_MANAGEMENT : RTL8821CU_TX_BEST_EFFORT];
 	ioreq = resource->IORequests[0];
 	buffer = resource->Buffers[0];
 
-	length = RTL8821CU_BuildTX( unit, sana, buffer );
+	length = RTL8821CU_BuildTX( unit, sana, buffer, & type, & payload );
 
 	if ( ! length )
 	{
@@ -117,15 +152,18 @@ Transmit( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana2Req *
 		return;
 	}
 
+	if ( management )
+	{
+		return;
+	}
+
 	unit->unit_PacketsTx++;
-	frame_offset = RTL8821CU_TX_DESC_SIZE + RTL8821CU_WLAN_HEADER + RTL8821CU_LLC_HEADER;
-	type = ( (U16) buffer[frame_offset - 2] << 8 ) | buffer[frame_offset - 1];
 
 	opener = sana->ios2_BufferManagement;
 
-	Sana2_AccountType( & opener->bm_TrackedTypes, type, length - frame_offset, FALSE, FALSE );
+	Sana2_AccountType( & opener->bm_TrackedTypes, type, payload, FALSE, FALSE );
 
-	Sana2_UpdateThroughput( & unit->unit_Pending, length - frame_offset + RTL8821CU_ETH_HEADER, 0 );
+	Sana2_UpdateThroughput( & unit->unit_Pending, payload + RTL8821CU_ETH_HEADER, 0 );
 }
 
 // --
@@ -135,19 +173,52 @@ Process_PacketIO( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 {
 	struct IOSana2Req *sana;
 
-	if ( ! unit->unit_Online )
+	if ( unit->unit_RadioReady )
 	{
-		RTL8821CU_StopRX( unit );
-
-		return;
+		PollReceive( unit, usb2 );
 	}
-
-	PollReceive( unit, usb2 );
 
 	for( sana = (PTR) GetHead( & unit->unit_Pending ); sana; sana = (PTR) GetSucc( (PTR) sana ) )
 	{
 		switch( sana->ios2_Req.io_Command )
 		{
+			case S2_SETOPTIONS:
+				Remove( (PTR) sana );
+
+				Cmd_SetOptions( unit, usb2, sana );
+
+				if ( ( unit->unit_RadioReady ) && ( ! unit->unit_RxPending ) )
+				{
+					PollReceive( unit, usb2 );
+				}
+
+				ReplyMsg( (PTR) sana );
+
+				return;
+
+			case S2_SETKEY:
+				Remove( (PTR) sana );
+
+				Cmd_SetKey( unit, sana );
+
+				ReplyMsg( (PTR) sana );
+
+				return;
+
+			case USB2WIRELESS_CMD_PROMPT:
+				Remove( (PTR) sana );
+
+				ReleaseSemaphore( & unit->unit_CommandLock );
+
+				Wireless_StartPassword( sana, USB2WIFI_RTL8821CU, unit->unit_UnitNr );
+
+				ReplyMsg( (PTR) sana );
+
+				ObtainSemaphore( & unit->unit_CommandLock );
+
+				return;
+
+			case S2_WRITEMGMT:
 			case CMD_WRITE:
 			case S2_MULTICAST:
 			case S2_BROADCAST:

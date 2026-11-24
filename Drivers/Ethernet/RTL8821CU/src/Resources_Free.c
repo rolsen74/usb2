@@ -12,6 +12,11 @@
 
 // --
 
+extern struct Library *NewlibBase;
+extern struct Interface *INewlib;
+
+// --
+
 void
 Resources_Free( void )
 {
@@ -41,6 +46,20 @@ Resources_Free( void )
 		CloseLibrary( DOSBase );
 
 		DOSBase = NULL;
+	}
+
+	if ( INewlib )
+	{
+		DropInterface( INewlib );
+
+		INewlib = NULL;
+	}
+
+	if ( NewlibBase )
+	{
+		CloseLibrary( NewlibBase );
+
+		NewlibBase = NULL;
 	}
 }
 

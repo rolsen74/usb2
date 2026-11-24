@@ -10,13 +10,14 @@
 
 #include "All.h"
 #include "Commands.h"
+#include "Radio.h"
 
 // --
 
 S32
 Cmd_Read( struct EthernetUnit *unit, struct BufferManagement *opener, struct IOSana2Req *ioreq )
 {
-	if ( ( ! unit->unit_Online ) || ( unit->unit_Detached ) )
+	if ( ! RTL8821CU_DataAllowed( unit, ioreq ) )
 	{
 		ReportUnitOffline( unit, ioreq );
 

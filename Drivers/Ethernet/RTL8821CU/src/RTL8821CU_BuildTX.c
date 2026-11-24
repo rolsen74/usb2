@@ -9,18 +9,21 @@
 // --
 
 #include "All.h"
+#include "Radio.h"
 
 // --
 
 #define TX_LAST_SEGMENT 0x04
 #define TX_USE_RATE 0x01
-#define TX_RATE_OFDM_6MBPS 4
+#define TX_RATE_CCK_1MBPS 0
+#define TX_QUEUE_MANAGEMENT 0x12
+#define TX_NO_RATE_FALLBACK 0x04
 #define TX_HW_SEQUENCE 0x80
 
 // --
 
 U32
-RTL8821CU_BuildTX( struct EthernetUnit *unit, struct IOSana2Req *ioreq, U8 *buffer )
+RTL8821CU_BuildTX( struct EthernetUnit *unit, struct IOSana2Req *ioreq, U8 *buffer, U32 *packet_type, U32 *payload_size )
 {
 	static const U8 empty[RTL8821CU_TX_DESC_SIZE + RTL8821CU_WLAN_HEADER] = { 0 };
 	static const U8 snap[] = { 0xaa, 0xaa, 0x03, 0, 0, 0 };
@@ -31,12 +34,27 @@ RTL8821CU_BuildTX( struct EthernetUnit *unit, struct IOSana2Req *ioreq, U8 *buff
 	U8 *payload;
 	U32 length;
 	U32 type;
+	S32 management;
 
 	frame = buffer + RTL8821CU_TX_DESC_SIZE;
 	payload = frame + RTL8821CU_WLAN_HEADER + RTL8821CU_LLC_HEADER;
 	length = ioreq->ios2_DataLength;
 	type = ioreq->ios2_PacketType;
 	destination = ioreq->ios2_DstAddr;
+	management = ioreq->ios2_Req.io_Command == S2_WRITEMGMT;
+	*packet_type = 0;
+	*payload_size = 0;
+
+	if ( management )
+	{
+		CopyMem( ioreq->ios2_Data, frame, length );
+
+		CopyMem( (PTR) empty, buffer, RTL8821CU_TX_DESC_SIZE );
+
+		buffer[5] = TX_QUEUE_MANAGEMENT;
+
+		goto descriptor;
+	}
 
 	if ( ioreq->ios2_Req.io_Flags & SANA2IOF_RAW )
 	{
@@ -87,15 +105,26 @@ RTL8821CU_BuildTX( struct EthernetUnit *unit, struct IOSana2Req *ioreq, U8 *buff
 
 	frame[30] = type >> 8;
 	frame[31] = type;
+	*packet_type = type;
+	*payload_size = length;
 	length += RTL8821CU_WLAN_HEADER + RTL8821CU_LLC_HEADER;
 
-	// The initial data path uses best-effort and the legacy OFDM basic rate.
+	if ( ! RTL8821CU_ProtectData( unit, frame, & length, type ) )
+	{
+		ioreq->ios2_Req.io_Error = S2ERR_TX_FAILURE;
+
+		return ( 0 );
+	}
+
+descriptor:
+
+	// TX gain is programmed for the legacy 1 Mbps CCK rate.
 	buffer[0] = length;
 	buffer[1] = length >> 8;
 	buffer[2] = RTL8821CU_TX_DESC_SIZE;
-	buffer[3] = TX_LAST_SEGMENT;
-	buffer[13] = TX_USE_RATE;
-	buffer[16] = TX_RATE_OFDM_6MBPS;
+	buffer[3] = TX_LAST_SEGMENT | ( frame[4] & 1 );
+	buffer[13] = TX_USE_RATE | TX_NO_RATE_FALLBACK;
+	buffer[16] = TX_RATE_CCK_1MBPS;
 	buffer[33] = TX_HW_SEQUENCE;
 
 	RTL8821CU_ChecksumTX( buffer );

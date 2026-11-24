@@ -132,6 +132,7 @@ Begin_Adapter( APTR adapter, struct IOSana2Req *request )
 
 		if ( pending )
 		{
+			request->ios2_Req.io_Flags &= ~IOF_QUICK;
 			request->ios2_Req.io_Message.mn_Node.ln_Type = NT_MESSAGE;
 		}
 	}

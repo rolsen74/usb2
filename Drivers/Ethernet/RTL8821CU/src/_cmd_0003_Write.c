@@ -10,6 +10,7 @@
 
 #include "All.h"
 #include "Commands.h"
+#include "Radio.h"
 
 // --
 
@@ -22,7 +23,7 @@ Cmd_Write( struct EthernetUnit *unit, struct BufferManagement *opener, struct IO
 {
 	U32 header;
 
-	if ( ( ! unit->unit_Online ) || ( unit->unit_Detached ) )
+	if ( ! RTL8821CU_DataAllowed( unit, ioreq ) )
 	{
 		ReportUnitOffline( unit, ioreq );
 

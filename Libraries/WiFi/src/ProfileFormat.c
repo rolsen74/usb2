@@ -82,7 +82,7 @@ WiFi_ValidProfile( const struct USB2WiFiProfile *profile, U32 adapter )
 	if ( ( ! profile->SSID[0] ) || ( ! memchr( profile->SSID, 0, sizeof( profile->SSID ) ) ) ||
 		( profile->Security > USB2WIFI_WPA3 ) || ( profile->Options & ~( USB2WIFI_PROFILE_AUTO | USB2WIFI_PROFILE_HIDDEN ) ) ||
 		( ( adapter == USB2WIFI_RTL8188 ) && ( profile->Channel > 11 ) ) ||
-		( ( adapter == USB2WIFI_RTL8811AU ) && ( ( profile->Channel > 11 ) ||
+		( ( ( adapter == USB2WIFI_RTL8811AU ) || ( adapter == USB2WIFI_RTL8821CU ) ) && ( ( profile->Channel > 11 ) ||
 		  ( ( profile->Security != USB2WIFI_OPEN ) && ( profile->Security != USB2WIFI_WPA2 ) ) ) ) ||
 		( ( adapter == USB2WIFI_RT2870 ) && ( ( profile->Channel > 13 ) || ( profile->Security == USB2WIFI_OPEN ) ) ) ||
 		( ( profile->Security == USB2WIFI_OPEN ) && ( profile->Password[0] ) ) )
@@ -459,6 +459,7 @@ WiFi_LegacyProfileName( U32 adapter )
 		case USB2WIFI_RTL8188: return ( "usb2rtl8188.device" );
 		case USB2WIFI_RT2870: return ( "usb2rt2870.device" );
 		case USB2WIFI_RTL8811AU: return ( "usb2rtl8811au.device" );
+		case USB2WIFI_RTL8821CU: return ( "usb2rtl8821cu.device" );
 	}
 
 	return ( NULL );

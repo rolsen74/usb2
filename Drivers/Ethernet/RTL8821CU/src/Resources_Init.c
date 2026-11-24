@@ -18,12 +18,26 @@ struct DOSIFace *IDOS;
 struct Library *DOSBase;
 struct UtilityIFace *IUtility;
 struct Library *UtilityBase;
+struct Library *NewlibBase;
+struct Interface *INewlib;
 
 // --
 
 S32
 Resources_Init( void )
 {
+	NewlibBase = OpenLibrary( "newlib.library", 50 );
+
+	if ( NewlibBase )
+	{
+		INewlib = GetInterface( NewlibBase, "main", 1, NULL );
+	}
+
+	if ( ! INewlib )
+	{
+		return ( FALSE );
+	}
+
 	DOSBase = OpenLibrary( "dos.library", 52 );
 
 	if ( DOSBase )

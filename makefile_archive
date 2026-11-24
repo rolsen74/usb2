@@ -185,6 +185,7 @@ build_rtl8821cu: | build_dir_tree
 	$(MAKE) -C Drivers/Ethernet/RTL8821CU BINDIR=bin clean
 	$(MAKE) -C Drivers/Ethernet/RTL8821CU BINDIR=bin
 	cp Drivers/Ethernet/RTL8821CU/bin/eth_RTL8821.Driver Drivers/Ethernet/RTL8821CU/eth_RTL8821.Class $(BINDIR)/usb2/Libs/USB2
+	cp Drivers/Ethernet/RTL8821CU/Firmware/rtw8821c_fw.bin Drivers/Ethernet/RTL8821CU/Firmware/rtw8821c_fw.licence $(BINDIR)/usb2/Devs/Firmware
 
 ###########################################################################
 

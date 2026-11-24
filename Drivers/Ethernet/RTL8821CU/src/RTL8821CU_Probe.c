@@ -18,11 +18,11 @@
 // --
 
 S32
-RTL8821CU_Probe( struct USB2_EPResource *control )
+RTL8821CU_Probe( struct EthernetUnit *unit )
 {
 	U32 config;
 
-	if ( ! RTL8821CU_RegisterIO( control, CMD_READ, RTL8821CU_SYS_CFG1, & config, sizeof( config ) ) )
+	if ( ! RTL8821CU_RegisterIO( unit->unit_USB_Register->Res_Control, CMD_READ, RTL8821CU_SYS_CFG1, & config, sizeof( config ) ) )
 	{
 		return ( FALSE );
 	}
@@ -35,6 +35,8 @@ RTL8821CU_Probe( struct USB2_EPResource *control )
 
 		return ( FALSE );
 	}
+
+	unit->unit_Cut = RTL8821CU_CHIP_CUT( config );
 
 	DebugPrintF( "RTL8821CU: Wi-Fi interface 2, SYS_CFG1 $%08lx, chip cut %lu\n",
 		config, (U32) RTL8821CU_CHIP_CUT( config ) );
