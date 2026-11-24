@@ -12,70 +12,97 @@
 
 // --
 
-S32 Resources_Init( struct PTPBase *libBase UNUSED )
+S32
+_fs_Start( S32 restart )
 {
-struct TaskStartMsg msg;
-struct Task *task;
-S32 retval;
-U32 mask;
-U32 ver;
+	struct TaskStartMsg *msg;
+	struct MsgPort *reply;
+	struct Process *process;
 
-	MYDEBUG( "PTP : Resources_Init" );
+	S32 retval;
 
 	retval = FALSE;
+	msg = NULL;
+	reply = NULL;
 
-	// --
-	// Open Resources first
-	//
-	if ( ! myOpenResources( INT_MAX ))
+	reply = AllocSysObjectTags( ASOT_PORT, TAG_END );
+
+	msg = AllocVecTags( sizeof( *msg ), AVT_Type, MEMF_SHARED, AVT_Clear, 0, TAG_END );
+
+	if ( ( ! reply ) || ( ! msg ) )
 	{
-		MYERROR( "PTP : myOpenResources() failed" );
 		goto bailout;
 	}
 
-	// --
-	// File Handler need DOS 53.95+
+	msg->Restart = restart;
+	msg->Message.mn_ReplyPort = reply;
+	msg->Message.mn_Length = sizeof( *msg );
 
-	ver = (( DOSBase->lib_Version  << 16 ) | ( DOSBase->lib_Revision << 0 ));
+	process = CreateNewProcTags(
+		NP_Name, "PTP Master",
+		NP_Child, FALSE,
+		NP_Priority, 5,
+		NP_StackSize, 1024 * 32,
+		NP_Entry, Master_Entry,
+		NP_UserData, msg,
+		NP_ExitCode, Master_Exit,
+		NP_ExitData, msg,
+		TAG_END );
 
-	if ( ver < (( 53 << 16 ) | (( 95 << 0 ))))
+	if ( process )
 	{
-		MYERROR( "PTP : Need DOS v53.95+" );
-		goto bailout;
-	}
-
-	// --
-
-	msg.Parent	= FindTask( NULL );
-	msg.Result	= FALSE;
-	msg.Mask	= SIGBREAKF_CTRL_E;
-
-	task = (PTR) CreateNewProcTags( 
-		NP_Name,		"PTP Master",
-		NP_Child,		FALSE,
-		NP_Priority,	5,
-		NP_StackSize,	1024 * 32,
-		NP_Entry,		Master_Entry,
-		NP_UserData,	& msg,
-		TAG_END
-	);
-
-	while( task )
-	{
-		mask = Wait( msg.Mask );
-
-		if (( mask & msg.Mask ) == msg.Mask )
+		do
 		{
-			retval = msg.Result;
-			break;
+			WaitPort( reply );
 		}
-	}
+		while ( GetMsg( reply ) != &msg->Message );
 
-	// --
+		retval = msg->Result;
+	}
 
 bailout:
 
-	return( retval );
+	FreeVec( msg );
+
+	if ( reply )
+	{
+		FreeSysObject( ASOT_PORT, reply );
+	}
+
+	return ( retval );
+}
+
+// --
+
+S32
+Resources_Init( struct PTPBase *libBase UNUSED )
+{
+	U32 version;
+	S32 ready;
+
+	InitSemaphore( &FS_PortGate );
+
+	_fs_Init_Acquire();
+
+	if ( ! myOpenResources( INT_MAX ) )
+	{
+		return ( FALSE );
+	}
+
+	version = ( DOSBase->lib_Version << 16 ) | DOSBase->lib_Revision;
+
+	if ( version < ( ( 53 << 16 ) | 95 ) )
+	{
+		return ( FALSE );
+	}
+
+	FS_Users = 1;
+
+	ready = _fs_Start( FALSE );
+
+	_fs_Release();
+
+	return ( ready );
 }
 
 // --

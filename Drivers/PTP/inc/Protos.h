@@ -17,8 +17,15 @@
 
 // --
 // Extern
-extern struct MsgPort *Master_MsgPort;
 extern struct MsgPort *FS_CmdMsgPort;
+extern struct SignalSemaphore FS_PortGate;
+extern U32 FS_Users;
+extern S32 FS_Closing;
+
+void _fs_Init_Acquire( void );
+S32 _fs_Acquire( void );
+void _fs_Release( void );
+S32 _fs_Start( S32 restart );
 
 // --
 // Manager Interface
@@ -42,6 +49,7 @@ U32					_fs_Handler(					void );
 S32					_fs_Handler_Init(				struct FS_Struct *fs );
 void				_fs_Handler_Free(				struct FS_Struct *fs );
 void				_fs_Handler_Loop(				struct FS_Struct *fs );
+S32 _fs_Handler_Shutdown( struct FS_Struct *fs );
 void				_fs_Handler__FSVector(			struct FS_Struct *fs );
 void				_fs_Handler__Commands(			struct FS_Struct *fs );
 
@@ -86,9 +94,7 @@ LONG				_fs__FSVolumeInfoData(			struct FSVP *vp, LONG *res2, struct InfoData *i
 // --
 // Master
 void	Master_Entry(		void );
-S32		Master_Init(		struct M_Struct *ms );
-void	Master_Free(		struct M_Struct *ms );
-void	Master_Loop(		struct M_Struct *ms );
+void Master_Exit( int32 result, int32 data );
 
 // --
 // USB
@@ -105,9 +111,16 @@ S32 _usb_Read_Events( struct USB_Struct *us, struct USB2_IORequest *io );
 void _usb_Query_Device_Info( struct USB_Struct *us );
 S32 _usb_MTP_Interface( struct USB_Struct *us );
 S32 _usb_SendData( struct USB_Struct *us, struct CommandMessage *request, U32 transaction );
+S32 _usb_Recover( struct USB_Struct *us );
 S32 _usb_WriteBulk( struct USB_Struct *us, U32 length, S32 final );
 void _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request );
+void _usb_Service_Events( struct USB_Struct *us );
+S32 _usb_Check_Fence( struct USB_Struct *us, struct CommandMessage *request );
+void _usb_Invalidate_Storage( struct USB_Struct *us, S32 event_loss );
+S32 _fs_Camera_Request_Node( struct FS_ObjNode *node, struct CommandMessage *request );
+S32 _fs_Camera_Fence( struct FS_ObjNode *node );
 S32 _fs_Camera_Request( struct CameraInfoNode *camera, struct CommandMessage *request );
+S32 _fs_Store_Removed( U32 storage, const U32 *removals, U32 count );
 S32 _fs_Storage_Load( struct FS_Struct *fs, struct FS_ObjNode *node );
 S32 _fs_Node_Online( struct FS_ObjNode *node );
 STR _fs_Camera_Name( struct FS_Struct *fs, struct CameraInfoNode *camera );

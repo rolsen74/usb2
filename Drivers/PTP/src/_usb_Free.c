@@ -17,10 +17,11 @@ _usb_Free( struct USB_Struct *us )
 {
 	struct CommandMessage request;
 
-	if ( ( us->us_Session ) && ( us->us_Running ) && ( ! us->us_Detached ) )
+	if ( ( us->us_Session ) && ( ! us->us_TransportFailed ) && ( ! us->us_Detached ) )
 	{
 		memset( & request, 0, sizeof( request ) );
 
+		us->us_Running = TRUE;
 		request.cm_Operation = PTP_Close_Session;
 
 		_usb_Transaction( us, & request );

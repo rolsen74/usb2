@@ -59,7 +59,6 @@ S32
 _fs_File_Upload( struct FS_Struct *fs, struct FS_ObjLock *lock )
 {
 	struct FS_ObjNode *node;
-	struct CameraInfoNode *camera;
 	struct CommandMessage request;
 
 	U8 info[52 + 1 + 2 * 255 + 3];
@@ -77,7 +76,6 @@ _fs_File_Upload( struct FS_Struct *fs, struct FS_ObjLock *lock )
 	}
 
 	node = lock->Node;
-	camera = node->on_CameraRoot->on_Camera;
 
 	if ( ! _fs_Node_Online( node ) )
 	{
@@ -147,7 +145,7 @@ _fs_File_Upload( struct FS_Struct *fs, struct FS_ObjLock *lock )
 	request.cm_Data = info;
 	request.cm_Limit = 53 + 2 * ( node->on_NameLen + 1 ) + 3;
 
-	error = _fs_Camera_Request( camera, & request );
+	error = _fs_Camera_Request_Node( node, &request );
 
 	if ( error )
 	{
@@ -170,7 +168,7 @@ _fs_File_Upload( struct FS_Struct *fs, struct FS_ObjLock *lock )
 	request.cm_Input = lock->Cache;
 	request.cm_Limit = size;
 
-	error = _fs_Camera_Request( camera, & request );
+	error = _fs_Camera_Request_Node( node, &request );
 
 	if ( ! error )
 	{

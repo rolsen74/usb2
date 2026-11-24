@@ -86,7 +86,7 @@ _fs__FSRead( struct FSVP *vp, LONG *res2, struct FileHandle *file, STR buffer, L
 		request.cm_Data = (PTR) buffer;
 		request.cm_Limit = count;
 
-		error = _fs_Camera_Request( camera, & request );
+		error = _fs_Camera_Request_Node( node, &request );
 
 		if ( ! error )
 		{
@@ -138,7 +138,15 @@ _fs__FSRead( struct FSVP *vp, LONG *res2, struct FileHandle *file, STR buffer, L
 
 	if ( ( ! error ) && ( result >= 0 ) )
 	{
-		lock->Position += result;
+		if ( lock->Cache )
+		{
+			error = _fs_Camera_Fence( node );
+		}
+
+		if ( ! error )
+		{
+			lock->Position += result;
+		}
 	}
 
 done:

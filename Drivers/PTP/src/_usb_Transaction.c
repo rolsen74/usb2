@@ -33,12 +33,14 @@ ReadBulk( struct USB_Struct *us, U32 *actual )
 
 		DoIO( (PTR) io );
 
+		_usb_Service_Events( us );
+
 		if ( io->io_Error == USB2Err_Device_Detached )
 		{
 			us->us_Detached = TRUE;
 		}
 
-		if ( ( io->io_Error ) || ( io->io_Actual > input->BufferSize ) )
+		if ( ( us->us_Detached ) || ( io->io_Error ) || ( io->io_Actual > input->BufferSize ) )
 		{
 			return ( FALSE );
 		}
@@ -77,7 +79,7 @@ _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request )
 	request->cm_Actual = 0;
 	request->cm_ReplyCount = 0;
 
-	if ( ( ! us->us_Running ) || ( us->us_Detached ) )
+	if ( ( ! us->us_Running ) || ( us->us_Detached ) || ( us->us_TransportFailed ) )
 	{
 		return;
 	}
@@ -111,12 +113,15 @@ _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request )
 		container->Parms[index] = LE_SWAP32( request->cm_Parameters[index] );
 	}
 
-	if ( ! _usb_WriteBulk( us, length, FALSE ) )
+	if ( ! _usb_WriteBulk( us, length, TRUE ) )
 	{
 		goto broken;
 	}
 
-	if ( ( request->cm_SendData ) && ( ! _usb_SendData( us, request, transaction ) ) )
+	_usb_Service_Events( us );
+
+	if ( ( request->cm_SendData ) && ( ( ! _usb_Check_Fence( us, request ) ) ||
+		( ! _usb_SendData( us, request, transaction ) ) ) )
 	{
 		goto broken;
 	}
@@ -151,6 +156,12 @@ _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request )
 
 		got_data = TRUE;
 		remaining = length - 12;
+
+		if ( ( request->cm_Operation == PTP_Get_Device_Info ) && ( remaining ) )
+		{
+			us->us_SplitHeader = available == 12;
+		}
+
 		buffer += 12;
 		available -= 12;
 
@@ -177,6 +188,11 @@ _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request )
 			}
 
 			count = MIN( available, remaining );
+
+			if ( ! _usb_Check_Fence( us, request ) )
+			{
+				data_error = ERROR_DEVICE_NOT_MOUNTED;
+			}
 
 			if ( ! data_error )
 			{
@@ -290,7 +306,7 @@ _usb_Transaction( struct USB_Struct *us, struct CommandMessage *request )
 broken:
 
 	// A failed or malformed USB transaction leaves the session out of sync.
-	us->us_Running = FALSE;
+	us->us_TransportFailed = TRUE;
 }
 
 // --

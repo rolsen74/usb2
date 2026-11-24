@@ -28,12 +28,17 @@ S32 error;
 
 	ObtainSemaphore( & fs->fs_Semaphore );
 
-	obj = _fs_Node_Locate_Rel( fs, & error, rel, (STR) name );
 	retval = NULL;
+	error = ERROR_DEVICE_NOT_MOUNTED;
 
-	if ( obj )
+	if ( fs->fs_Running )
 	{
-		retval = _fs_Lock_New_From_Node( fs, obj, & error, mode );
+		obj = _fs_Node_Locate_Rel( fs, &error, rel, (STR)name );
+
+		if ( obj )
+		{
+			retval = _fs_Lock_New_From_Node( fs, obj, &error, mode );
+		}
 	}
 
 	if ( res2 )

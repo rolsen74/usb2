@@ -17,12 +17,14 @@ U32 _fs_Handler( void )
 struct FS_Struct *fs;
 struct DosPacket *startup_dp;
 struct Message *startup_msg;
+struct Message *shutdown_msg;
 struct Process *self;
 U32 retval;
 
 	// Setup Debug Values
 
 	fs = NULL;
+	shutdown_msg = NULL;
 
 	retval = RETURN_FAIL;
 
@@ -91,6 +93,7 @@ U32 retval;
 
 		_fs_Handler_Loop( fs );
 
+		shutdown_msg = fs->fs_ShutdownMsg;
 		retval = RETURN_OK;
 	}
 
@@ -112,7 +115,22 @@ bailout:
 		FreeVec( fs );
 	}
 
-	Forbid();
+	if ( shutdown_msg )
+	{
+		ObtainSemaphore( &FS_PortGate );
+
+		FS_Closing = FALSE;
+
+		Forbid();
+
+		ReleaseSemaphore( &FS_PortGate );
+
+		ReplyMsg( shutdown_msg );
+	}
+	else
+	{
+		Forbid();
+	}
 
 	return( retval );
 };

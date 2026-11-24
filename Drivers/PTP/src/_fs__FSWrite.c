@@ -58,7 +58,7 @@ _fs__FSWrite( struct FSVP *vp, LONG *res2, struct FileHandle *file, STR buffer, 
 	if ( (U64) count > PTP_MAX_UPLOAD - lock->Position )
 	{
 		error = ERROR_OBJECT_TOO_LARGE;
-		goto failed;
+		goto done;
 	}
 
 	if ( ! count )

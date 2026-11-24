@@ -108,7 +108,7 @@ _fs_File_Create( struct FS_Struct *fs, S32 *res2, struct FS_ObjLock *rel, STR na
 	request.cm_WantData = TRUE;
 	request.cm_Limit = PTP_METADATA_LIMIT;
 
-	*res2 = _fs_Camera_Request( camera, & request );
+	*res2 = _fs_Camera_Request_Node( parent, &request );
 
 	if ( ! *res2 )
 	{

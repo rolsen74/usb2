@@ -21,8 +21,6 @@ struct PTPBase
 {
 	struct Library		lib_Base;
 	PTR					lib_SegList;
-	struct MsgPort *	lib_FSMsgPort;
-	struct MsgPort *	lib_MasterMsgPort;
 };
 
 // --
@@ -36,9 +34,9 @@ struct PTPBase
 
 struct TaskStartMsg
 {
-	U32					Result;
-	struct Task *		Parent;
-	U32					Mask;
+	struct Message Message;
+	S32 Result;
+	S32 Restart;
 };
 
 // --

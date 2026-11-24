@@ -99,17 +99,17 @@ char name[32];
 
 	// --
 
-	FS_CmdMsgPort = AllocSysObjectTags( ASOT_PORT,
+	fs->fs_CmdMsgPort = AllocSysObjectTags( ASOT_PORT,
 		TAG_END
 	);
 
-	if ( ! FS_CmdMsgPort )
+	if ( ! fs->fs_CmdMsgPort )
 	{
 		MYERROR( "PTP-FS : Error Allocating MsgPort" );
 		goto bailout;
 	}
 
-	fs->fs_CmdMsgPortBit = 1UL << FS_CmdMsgPort->mp_SigBit;
+	fs->fs_CmdMsgPortBit = 1UL << fs->fs_CmdMsgPort->mp_SigBit;
 
 	// --
 
@@ -147,8 +147,6 @@ char name[32];
 	** The instant we reply to the ACTION_STARTUP packet, we will be accessed.
 	*/
 
-	fs->fs_DeviceNode->dn_Port = & fs->fs_FSVector_Port->MP;
-
 	/*
 	** Allocate volume node.
 	*/
@@ -175,6 +173,21 @@ char name[32];
 	}
 
 	fs->fs_VolumeAdded = TRUE;
+
+	ObtainSemaphore( &FS_PortGate );
+
+	if ( ( FS_CmdMsgPort ) || ( FS_Closing ) )
+	{
+		ReleaseSemaphore( &FS_PortGate );
+
+		goto bailout;
+	}
+
+	FS_CmdMsgPort = fs->fs_CmdMsgPort;
+	fs->fs_Running = TRUE;
+	fs->fs_DeviceNode->dn_Port = &fs->fs_FSVector_Port->MP;
+
+	ReleaseSemaphore( &FS_PortGate );
 
 	NonBlockingModifyDosEntry( 0, NBM_DISKINSERTED,  0, 0 );
 

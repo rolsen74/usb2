@@ -39,15 +39,22 @@ List PTP:iPhone/Storage-00010001
 Copy PTP:iPhone/Storage-00010001/DCIM/IMG_0001.JPG RAM:
 ```
 
-Directory listings are cached while the camera is attached. Reconnect it to
-refresh the listings. Characters that cannot be represented in an Amiga
-filename are replaced with underscores.
+Directory listings are cached for each mounted store. Removing media
+invalidates the old directory tree and its open handles, even if the same
+storage ID returns. If USB event monitoring is unavailable, storage IDs
+are checked on access at most once every two seconds. Reconnect to refresh
+object changes within the same store or a same-ID swap missed by polling.
+Characters that cannot be represented in an Amiga filename are replaced
+with underscores.
 
 The driver reads requested ranges when the camera supports PTP partial reads.
 For other cameras it downloads the whole object into a temporary file under
 `T:` on the first read and removes the file when the object is closed. Make
 sure `T:` has room for the full object on those cameras. Objects whose size
 cannot be represented in the standard PTP object record cannot be copied.
+
+Dismount `PTP:` after closing its files and disconnecting its cameras.
+The next camera attach can start the volume again.
 
 ## Upload files
 

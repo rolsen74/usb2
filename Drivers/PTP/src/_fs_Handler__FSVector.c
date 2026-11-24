@@ -32,7 +32,23 @@ struct Message *msg;
 		{
 			msg->mn_ReplyPort = dp->dp_Port;
 
-			if ( fs->fs_FSVector_Port->FSV.DOSEmulatePacket )
+			if ( ! fs->fs_Running )
+			{
+				dp->dp_Res1 = DOSFALSE;
+				dp->dp_Res2 = ERROR_DEVICE_NOT_MOUNTED;
+			}
+			else if ( dp->dp_Action == ACTION_SHUTDOWN )
+			{
+				dp->dp_Res2 = _fs_Handler_Shutdown( fs );
+				dp->dp_Res1 = dp->dp_Res2 ? DOSFALSE : DOSTRUE;
+
+				if ( ! dp->dp_Res2 )
+				{
+					fs->fs_ShutdownMsg = msg;
+					continue;
+				}
+			}
+			else if ( fs->fs_FSVector_Port->FSV.DOSEmulatePacket )
 			{
 				fs->fs_FSVector_Port->FSV.DOSEmulatePacket( fs->fs_FSVector_Port, dp );
 			}

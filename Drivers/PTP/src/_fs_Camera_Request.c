@@ -31,13 +31,17 @@ _fs_Camera_Request( struct CameraInfoNode *camera, struct CommandMessage *reques
 		return ( ERROR_NO_FREE_STORE );
 	}
 
-	request->cm_Command = CMD_Camera_Transaction;
+	if ( request->cm_Command != CMD_Camera_Fence )
+	{
+		request->cm_Command = CMD_Camera_Transaction;
+	}
 	request->cm_Message.mn_ReplyPort = reply;
 	request->cm_Message.mn_Length = sizeof( *request );
 
 	ObtainSemaphore( & camera->cin_Gate );
 
-	queued = camera->cin_Online;
+	queued = ( camera->cin_Online ) &&
+		( ( ! request->cm_Fenced ) || ( request->cm_Generation == camera->cin_StorageGeneration ) );
 
 	if ( queued )
 	{
@@ -55,11 +59,45 @@ _fs_Camera_Request( struct CameraInfoNode *camera, struct CommandMessage *reques
 		WaitPort( reply );
 
 		GetMsg( reply );
+
+		ObtainSemaphore( &camera->cin_Gate );
+
+		if ( ( request->cm_Fenced ) && ( request->cm_Generation != camera->cin_StorageGeneration ) )
+		{
+			request->cm_Error = ERROR_DEVICE_NOT_MOUNTED;
+		}
+
+		ReleaseSemaphore( &camera->cin_Gate );
 	}
 
 	FreeSysObject( ASOT_PORT, reply );
 
 	return ( request->cm_Error );
+}
+
+// --
+
+S32
+_fs_Camera_Request_Node( struct FS_ObjNode *node, struct CommandMessage *request )
+{
+	request->cm_Fenced = TRUE;
+	request->cm_Generation = node->on_CameraRoot->on_StorageGeneration;
+
+	return ( _fs_Camera_Request( node->on_CameraRoot->on_Camera, request ) );
+}
+
+// --
+
+S32
+_fs_Camera_Fence( struct FS_ObjNode *node )
+{
+	struct CommandMessage request;
+
+	memset( &request, 0, sizeof( request ) );
+
+	request.cm_Command = CMD_Camera_Fence;
+
+	return ( _fs_Camera_Request_Node( node, &request ) );
 }
 
 // --

@@ -12,73 +12,65 @@
 
 // --
 
-struct MsgPort *	Master_MsgPort		= NULL;
-struct MsgPort *	FS_CmdMsgPort			= NULL;
+struct MsgPort *FS_CmdMsgPort = NULL;
+struct SignalSemaphore FS_PortGate;
+U32 FS_Users;
+S32 FS_Closing;
 
 // --
 
-void Master_Entry( void )
+void
+Master_Entry( void )
 {
-struct TaskStartMsg *msg;
-struct Task *parent;
-struct Task *self;
-struct M_Struct in;
-U32 mask;
-S32 stat;
+	struct TaskStartMsg *msg;
+	struct DevProc *device;
 
-	self	= FindTask( NULL );
-	msg		= (PTR) self->tc_UserData;
-	parent	= msg->Parent;
-	mask	= msg->Mask;
+	PTR window;
 
-	// --
+	msg = (PTR)FindTask( NULL )->tc_UserData;
 
-	MYERROR( "PTP : Master_Entry : Enter" );
+	msg->Result = MountDeviceTags( "PTP:", MDT_Handler,
+		MD_Handler, MDT_FileSystem,
+		MD_Entry, _fs_Handler,
+		MD_Activate, TRUE,
+		TAG_END );
 
-	in.Task_State = TASK_State_Starting;
-
-	stat = Master_Init( & in );
-
-	if ( stat )
+	if ( ( ! msg->Result ) && ( msg->Restart ) )
 	{
-		in.Task_Adr = self;
+		// A soft dismount can leave a DOS device entry ready to restart.
+		window = SetProcWindow( (PTR)-1 );
 
-		msg->Result = TRUE;
-		Signal( parent, mask );
+		device = GetDeviceProc( "PTP:", NULL );
 
-		// --
+		if ( device )
+		{
+			FreeDeviceProc( device );
+		}
 
-		in.Task_State = TASK_State_Running;
-
-		Master_Loop( & in );
-
-		in.Task_State = TASK_State_Stopping;
-
-		// --
-
-		parent	= in.Exit_Parent;
-		mask	= in.Exit_Mask;
-
-		in.Task_Adr = NULL;
+		SetProcWindow( window );
 	}
 
-	Master_Free( & in );
+	ObtainSemaphore( &FS_PortGate );
 
-	// --
+	msg->Result = ( FS_CmdMsgPort != NULL ) && ( ! FS_Closing );
 
-	Disable();
+	ReleaseSemaphore( &FS_PortGate );
+}
 
-	in.Task_State = TASK_State_Stopped;
+// --
 
-	MYERROR( "PTP : Master_Entry : Leave" );
+void
+Master_Exit( int32 result UNUSED, int32 data )
+{
+	struct TaskStartMsg *msg;
 
-	// --
-	// Parent can be NULL
+	msg = (PTR)data;
 
-	if ( parent )
-	{
-		Signal( parent, mask );
-	}
+	// Keep the parent from rolling back the library until this callback exits.
+	Forbid();
+
+	PutMsg( msg->Message.mn_ReplyPort, &msg->Message );
+
 }
 
 // --

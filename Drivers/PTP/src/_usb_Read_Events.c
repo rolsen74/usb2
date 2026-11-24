@@ -24,12 +24,10 @@ _usb_Read_Events( struct USB_Struct *us, struct USB2_IORequest *io )
 	U32 storage;
 	U16 type;
 	U16 code;
-	S32 changed;
 
 	camera = & us->us_CameraNode;
 	data = io->io_Data;
 	remaining = io->io_Actual;
-	changed = FALSE;
 
 	if ( io->io_Error == USB2Err_Device_Detached )
 	{
@@ -68,6 +66,9 @@ _usb_Read_Events( struct USB_Struct *us, struct USB2_IORequest *io )
 		if ( ( length < 12 ) || ( length > sizeof( us->us_EventData ) ) || ( length & 3 ) )
 		{
 			us->us_EventUsed = 0;
+
+			_usb_Invalidate_Storage( us, FALSE );
+
 			break;
 		}
 
@@ -88,25 +89,56 @@ _usb_Read_Events( struct USB_Struct *us, struct USB2_IORequest *io )
 			if ( ( type == CTYPE_Event ) && ( length >= 16 ) &&
 				( ( code == PTP_Event_StoreAdded ) || ( code == PTP_Event_StoreRemoved ) ) )
 			{
-				memcpy( & storage, us->us_EventData + 12, sizeof( storage ) );
+				memcpy( &storage, us->us_EventData + 12, sizeof( storage ) );
 
-				MYINFO( "PTP-USB : Storage event $%04lx for $%08lx", (U32) code, LE_SWAP32( storage ) );
+				storage = LE_SWAP32( storage );
 
-				changed = TRUE;
+				ObtainSemaphore( &camera->cin_Gate );
+
+				camera->cin_StorageGeneration++;
+
+				if ( code == PTP_Event_StoreRemoved )
+				{
+					if ( camera->cin_RemovalCount == PTP_MAX_REMOVALS )
+					{
+						camera->cin_InvalidateStores = TRUE;
+						camera->cin_RemovalCount = 0;
+					}
+					else
+					{
+						camera->cin_Removals[camera->cin_RemovalCount++] = storage;
+					}
+				}
+
+				ReleaseSemaphore( &camera->cin_Gate );
 			}
 		}
 	}
 
-	if ( changed )
+	return ( TRUE );
+}
+
+// --
+
+void
+_usb_Invalidate_Storage( struct USB_Struct *us, S32 event_loss )
+{
+	struct CameraInfoNode *camera;
+
+	camera = &us->us_CameraNode;
+
+	ObtainSemaphore( &camera->cin_Gate );
+
+	camera->cin_StorageGeneration++;
+	camera->cin_InvalidateStores = TRUE;
+	camera->cin_RemovalCount = 0;
+
+	if ( event_loss )
 	{
-		ObtainSemaphore( & camera->cin_Gate );
-
-		camera->cin_StorageGeneration++;
-
-		ReleaseSemaphore( & camera->cin_Gate );
+		camera->cin_EventsReliable = FALSE;
 	}
 
-	return ( TRUE );
+	ReleaseSemaphore( &camera->cin_Gate );
 }
 
 // --

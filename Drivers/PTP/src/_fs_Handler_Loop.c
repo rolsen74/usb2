@@ -17,8 +17,6 @@ void _fs_Handler_Loop( struct FS_Struct *fs )
 U32 mask;
 U32 wait;
 
-	fs->fs_Running = TRUE;
-
 	while( fs->fs_Running )
 	{
 		wait = 0;
@@ -36,7 +34,7 @@ U32 wait;
 			_fs_Handler__FSVector( fs );
 		}
 
-		if ( mask & fs->fs_CmdMsgPortBit )
+		if ( ( fs->fs_Running ) && ( mask & fs->fs_CmdMsgPortBit ) )
 		{
 			_fs_Handler__Commands( fs );
 		}

@@ -17,6 +17,8 @@
 
 // --
 
+#define PTP_MAX_REMOVALS 16
+
 struct CameraInfoNode
 {
 	struct MsgPort *		cin_MsgPort;
@@ -24,6 +26,10 @@ struct CameraInfoNode
 	struct FS_ObjNode *		cin_DirNode;
 	USB2_ID					cin_ID;
 	U32						cin_StorageGeneration;
+	U32						cin_Removals[PTP_MAX_REMOVALS];
+	U32						cin_RemovalCount;
+	S32						cin_InvalidateStores;
+	S32						cin_EventsReliable;
 	S32						cin_Apple;
 	S32						cin_MTP;
 	S32						cin_Online;
@@ -38,6 +44,7 @@ enum
 	CMD_Camera_Added,
 	CMD_Camera_Removed,
 	CMD_Camera_Transaction,
+	CMD_Camera_Fence,
 };
 
 struct CommandMessage
@@ -45,6 +52,8 @@ struct CommandMessage
 	struct Message			cm_Message;
 	struct CameraInfoNode *	cm_InfoNode;
 	U32						cm_Command;
+	U32						cm_Generation;
+	S32						cm_Fenced;
 	U16						cm_Operation;
 	U16						cm_Response;
 	U32						cm_ParameterCount;

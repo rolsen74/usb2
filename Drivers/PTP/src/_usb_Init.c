@@ -104,7 +104,7 @@ _usb_Init( struct USB_Struct *us )
 
 	_usb_Query_Device_Info( us );
 
-	if ( ! us->us_Running )
+	if ( us->us_TransportFailed )
 	{
 		return ( FALSE );
 	}

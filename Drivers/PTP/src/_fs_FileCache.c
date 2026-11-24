@@ -38,7 +38,7 @@ _fs_FileCache( struct FS_ObjLock *lock )
 	request.cm_Limit = node->on_File_Size;
 	request.cm_Output = lock->Cache;
 
-	error = _fs_Camera_Request( node->on_CameraRoot->on_Camera, & request );
+	error = _fs_Camera_Request_Node( node, &request );
 
 	if ( ( ! error ) && ( request.cm_Actual != node->on_File_Size ) )
 	{

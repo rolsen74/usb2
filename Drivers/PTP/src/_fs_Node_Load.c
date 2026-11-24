@@ -20,8 +20,74 @@ Read32( const U8 *data )
 
 // --
 
+// This index exists only while a directory is being loaded under fs_Semaphore.
+struct NameIndex
+{
+	struct FS_ObjNode **Buckets;
+	U32 Mask;
+};
+
+// --
+
+static U32
+NameBucket( const struct NameIndex *names, STR name, U32 length )
+{
+	U32 hash;
+	U32 index;
+
+	hash = 2166136261U;
+
+	for ( index = 0 ; index < length ; index++ )
+	{
+		hash = ( hash ^ (U8)ToUpper( (U8)name[index] ) ) * 16777619U;
+	}
+
+	return ( hash & names->Mask );
+}
+
+// --
+
+static void
+IndexName( struct NameIndex *names, struct FS_ObjNode *child )
+{
+	U32 bucket;
+
+	if ( names->Buckets )
+	{
+		bucket = NameBucket( names, child->on_Name, child->on_NameLen );
+
+		child->on_NameIndexNext = names->Buckets[bucket];
+		names->Buckets[bucket] = child;
+	}
+}
+
+// --
+
+static struct FS_ObjNode *
+FindIndexedName( struct NameIndex *names, struct FS_ObjNode *parent, STR name, U32 length )
+{
+	struct FS_ObjNode *child;
+
+	if ( ! names->Buckets )
+	{
+		return ( _fs_Node_Find( parent, name, length ) );
+	}
+
+	for ( child = names->Buckets[NameBucket( names, name, length )] ; child ; child = child->on_NameIndexNext )
+	{
+		if ( ( child->on_NameLen == length ) && ( ! Strnicmp( child->on_Name, name, length ) ) )
+		{
+			return ( child );
+		}
+	}
+
+	return ( NULL );
+}
+
+// --
+
 static S32
-AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, U32 id )
+AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, struct NameIndex *names, U32 id )
 {
 	struct FS_ObjNode *node;
 	struct FS_ObjNode *ancestor;
@@ -55,7 +121,7 @@ AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, U32 id )
 	request.cm_WantData = TRUE;
 	request.cm_Limit = PTP_METADATA_LIMIT;
 
-	error = _fs_Camera_Request( parent->on_CameraRoot->on_Camera, & request );
+	error = _fs_Camera_Request_Node( parent, &request );
 
 	if ( error )
 	{
@@ -96,7 +162,7 @@ AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, U32 id )
 	FreeVec( data );
 
 	unique = NULL;
-	node = index ? _fs_Node_Find( parent, name, index ) : NULL;
+	node = index ? FindIndexedName( names, parent, name, index ) : NULL;
 
 	if ( ( node ) && ( node->on_Handle == id ) )
 	{
@@ -125,7 +191,7 @@ AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, U32 id )
 				return ( ERROR_NO_FREE_STORE );
 			}
 
-			node = _fs_Node_Find( parent, unique, strlen( unique ) );
+			node = FindIndexedName( names, parent, unique, strlen( unique ) );
 
 			if ( ! node )
 			{
@@ -165,7 +231,9 @@ AddObject( struct FS_Struct *fs, struct FS_ObjNode *parent, U32 id )
 		node->on_File_Size = size;
 	}
 
-	AddTail( & parent->on_Content_List, & node->on_Node );
+	AddTail( &parent->on_Content_List, &node->on_Node );
+
+	IndexName( names, node );
 
 	return ( 0 );
 }
@@ -177,11 +245,15 @@ _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 {
 	struct FS_ObjNode *child;
 	struct CommandMessage request;
+	struct NameIndex names;
 
 	U32 count;
 	U32 index;
 	U32 id;
+	U32 buckets;
 	S32 error;
+
+	memset( &names, 0, sizeof( names ) );
 
 	if ( ! node->on_CameraRoot )
 	{
@@ -219,7 +291,7 @@ _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 	request.cm_Parameters[0] = node->on_Storage;
 	request.cm_Parameters[2] = node->on_Handle ? node->on_Handle : 0xffffffffU;
 
-	error = _fs_Camera_Request( node->on_CameraRoot->on_Camera, & request );
+	error = _fs_Camera_Request_Node( node, &request );
 
 	if ( error )
 	{
@@ -240,7 +312,23 @@ _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 		goto done;
 	}
 
-	for( index = 0; index < count; index++ )
+	if ( count > 16 )
+	{
+		for ( buckets = 16 ; ( buckets < count ) && ( buckets < 4096 ) ; buckets <<= 1 )
+		{
+		}
+
+		names.Mask = buckets - 1;
+
+		names.Buckets = AllocVecTags( buckets * sizeof( names.Buckets[0] ), AVT_Clear, 0, TAG_END );
+
+		for ( child = (PTR)GetHead( &node->on_Content_List ) ; child ; child = (PTR)GetSucc( &child->on_Node ) )
+		{
+			IndexName( &names, child );
+		}
+	}
+
+	for ( index = 0 ; index < count ; index++ )
 	{
 		id = Read32( request.cm_Data + 4 + index * 4 );
 
@@ -249,7 +337,7 @@ _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 			continue;
 		}
 
-		error = AddObject( fs, node, id );
+		error = AddObject( fs, node, &names, id );
 
 		if ( error )
 		{
@@ -270,6 +358,8 @@ _fs_Node_Load( struct FS_Struct *fs, struct FS_ObjNode *node )
 	}
 
 done:
+
+	FreeVec( names.Buckets );
 
 	FreeVec( request.cm_Data );
 

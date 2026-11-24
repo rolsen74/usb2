@@ -33,8 +33,27 @@ _usb_SendData( struct USB_Struct *us, struct CommandMessage *request, U32 transa
 	header = 12;
 	remaining = request->cm_Limit;
 
+	if ( ( remaining ) && ( us->us_SplitHeader ) )
+	{
+		if ( ! _usb_WriteBulk( us, header, TRUE ) )
+		{
+			return ( FALSE );
+		}
+
+		header = 0;
+	}
+
 	do
 	{
+		_usb_Service_Events( us );
+
+		if ( ! _usb_Check_Fence( us, request ) )
+		{
+			request->cm_Error = ERROR_DEVICE_NOT_MOUNTED;
+
+			return ( FALSE );
+		}
+
 		buffer = (U8 *) container + header;
 		count = MIN( remaining, output->BufferSize - header );
 

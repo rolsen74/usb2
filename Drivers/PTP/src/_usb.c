@@ -37,6 +37,11 @@ _usb_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg 
 		return ( FALSE );
 	}
 
+	if ( ! _fs_Acquire() )
+	{
+		return ( FALSE );
+	}
+
 	memset( & us, 0, sizeof( us ) );
 
 	us.us_StartMsg = msg;
@@ -50,7 +55,9 @@ _usb_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *msg 
 
 	_usb_Free( & us );
 
-	return ( stat );
+	_fs_Release();
+
+	return ( stat && us.us_Published );
 }
 
 // --

@@ -23,7 +23,7 @@ _fs_Handler__Commands( struct FS_Struct *fs )
 
 	ObtainSemaphore( & fs->fs_Semaphore );
 
-	while(( msg = (PTR) GetMsg( FS_CmdMsgPort ) ))
+	while(( msg = (PTR) GetMsg( fs->fs_CmdMsgPort ) ))
 	{
 		camera = msg->cm_InfoNode;
 		msg->cm_Error = 0;

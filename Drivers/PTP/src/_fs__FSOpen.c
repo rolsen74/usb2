@@ -27,29 +27,33 @@ _fs__FSOpen( struct FSVP *vp, LONG *res2, struct FileHandle *file, struct Lock *
 	lock = NULL;
 	error = 0;
 
-	if ( ! file )
+	ObtainSemaphore( &fs->fs_Semaphore );
+
+	if ( ! fs->fs_Running )
+	{
+		error = ERROR_DEVICE_NOT_MOUNTED;
+	}
+	else if ( ! file )
 	{
 		error = ERROR_REQUIRED_ARG_MISSING;
 	}
-	else if ( mode == MODE_NEWFILE || mode == MODE_READWRITE )
+	else if ( mode == MODE_NEWFILE )
 	{
-		ObtainSemaphore( & fs->fs_Semaphore );
-
 		lock = _fs_File_Create( fs, & error, (PTR) rel, name );
-
-		ReleaseSemaphore( & fs->fs_Semaphore );
 	}
-	else if ( mode != MODE_OLDFILE )
+	else if ( ( mode != MODE_OLDFILE ) && ( mode != MODE_READWRITE ) )
 	{
 		error = ERROR_DISK_WRITE_PROTECTED;
 	}
 	else
 	{
-		ObtainSemaphore( & fs->fs_Semaphore );
+		node = _fs_Node_Locate_Rel( fs, &error, (PTR)rel, name );
 
-		node = _fs_Node_Locate_Rel( fs, & error, (PTR) rel, name );
-
-		if ( node )
+		if ( ( ! node ) && ( mode == MODE_READWRITE ) && ( error == ERROR_OBJECT_NOT_FOUND ) )
+		{
+			lock = _fs_File_Create( fs, &error, (PTR)rel, name );
+		}
+		else if ( node )
 		{
 			if ( node->on_Type == FSO_TYPE_FILE )
 			{
@@ -60,8 +64,6 @@ _fs__FSOpen( struct FSVP *vp, LONG *res2, struct FileHandle *file, struct Lock *
 				error = ERROR_OBJECT_WRONG_TYPE;
 			}
 		}
-
-		ReleaseSemaphore( & fs->fs_Semaphore );
 	}
 
 	if ( lock )
@@ -69,6 +71,8 @@ _fs__FSOpen( struct FSVP *vp, LONG *res2, struct FileHandle *file, struct Lock *
 		file->fh_Arg1 = MKBADDR( lock );
 		file->fh_Arg2 = lock;
 	}
+
+	ReleaseSemaphore( &fs->fs_Semaphore );
 
 	if ( res2 )
 	{
