@@ -450,6 +450,13 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 
 	IExec->AddDevice ( (PTR)usbbase );
 
+#ifdef DRV_MSD
+	if ( ! MSD_CreateDevice ( usbbase ) )
+	{
+		IExec->DebugPrintF ( "USB2: could not register usb2disk.device\n" );
+	}
+#endif
+
 	USB2_Bind_Enumerated ( usbbase );
 
 	//	USBERROR( "Rock'n Roll" );

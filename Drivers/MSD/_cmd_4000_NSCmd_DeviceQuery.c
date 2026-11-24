@@ -77,40 +77,10 @@ SEC_RODATA static const U16 _DevNSDCmds[] =
 	0
 };
 
-SEC_CODE S32 MSD_Cmd_4000_NSCmd_DeviceQuery( struct USBBase *usbbase UNUSED, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE void
+MSD_Cmd_4000_NSCmd_DeviceQuery( struct IOStdReq *ioreq )
 {
-struct NSDeviceQueryResult *nsd;
-S32 reply;
-
-	TASK_NAME_ENTER( "MSD : NSCmd_DeviceQuery" );
-	USBERROR( "MSD : _cmd_4000_NSCmd_DeviceQuery" );
-
-	nsd = ioreq->io_Data;
-
-	// The size check is only valid because the current NSDDeviceQueryResult
-	// structure is defined as the minimum version of that struct!
-	if (( nsd ) && ( ioreq->io_Length >= sizeof( struct NSDeviceQueryResult )))
-	{
-		nsd->DevQueryFormat		= 0;
-		nsd->SizeAvailable		= sizeof( struct NSDeviceQueryResult );
-		nsd->DeviceType			= NSDEVTYPE_TRACKDISK;
-		nsd->DeviceSubType		= 0;
-		nsd->SupportedCommands 	= (PTR) _DevNSDCmds;
-
-		ioreq->io_Actual		= sizeof( struct NSDeviceQueryResult );
-		ioreq->io_Error			= 0;
-	}
-	else
-	{
-		USBERROR( "MSD : NSCmd_DeviceQuery : Supplied Query buffer is to small" );
-		ioreq->io_Error			= IOERR_BADLENGTH;
-		ioreq->io_Actual		= 0;
-	}
-
-	reply = TRUE;
-
-	TASK_NAME_LEAVE();
-	return( reply );
+	USB2_DeviceQuery( ioreq, NSDEVTYPE_TRACKDISK, _DevNSDCmds );
 }
 
 #endif

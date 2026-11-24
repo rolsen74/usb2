@@ -329,8 +329,7 @@ S32	 MSD_Cmd_0018_TD_Read64 ( struct USBBase * usbbase, struct MSDDevice * msdde
 S32	 MSD_Cmd_0019_TD_Write64 ( struct USBBase * usbbase, struct MSDDevice * msddev, struct IOStdReq * ioreq );
 S32	 MSD_Cmd_001A_TD_Seek64 ( struct USBBase * usbbase UNUSED, struct MSDDevice * msddev, struct IOStdReq * ioreq );
 S32	 MSD_Cmd_001B_TD_Format64 ( struct USBBase * usbbase, struct MSDDevice * msddev, struct IOStdReq * ioreq );
-S32	 MSD_Cmd_4000_NSCmd_DeviceQuery ( struct USBBase * usbbase UNUSED, struct MSDDevice * msddev UNUSED,
-									  struct IOStdReq * ioreq );
+SEC_CODE void MSD_Cmd_4000_NSCmd_DeviceQuery( struct IOStdReq *ioreq );
 S32	 MSD_Cmd_A004_NSCmd_GetGeometry64 ( struct USBBase * usbbase, struct MSDDevice * msddev UNUSED, struct IOStdReq * ioreq );
 S32	 MSD_Cmd_A005_NSCmd_ChangeUnit ( struct USBBase * usbbase, struct MSDDevice * msddev UNUSED, struct IOStdReq * ioreq );
 S32	 MSD_Cmd_A006_NSCmd_AddStatCallBack ( struct USBBase * usbbase, struct IOStdReq * ioreq );
@@ -384,8 +383,6 @@ void MSD_Main_2_Stopping ( struct USBBase * usbbase, struct MSDDevice * msddev )
 SEC_CODE struct IOStdReq *MSD_Queue_Remove( struct USBBase *usbbase, struct MSDDisk *msddisk, struct IOStdReq *wanted );
 void MSD_Main__myHandle_Begin ( struct USBBase * usbbase, struct MSDDevice * msddev );
 void MSD_Main__myHandle_Stack ( struct USBBase * usbbase UNUSED, struct MSDDevice * msddev UNUSED );
-
-S32 MSD_CreateDevice ( struct USBBase * usbbase );
 
 struct MSDDevice * MSD_Device_Alloc ( struct USBBase * usbbase, struct USB2_DriverMessage * msg );
 void			   MSD_Device_Free ( struct USBBase * usbbase, struct MSDDevice * msddev );

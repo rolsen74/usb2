@@ -17,6 +17,7 @@
 SEC_CODE U32 MSD_Entry( struct USBBase *usbbase, struct USB2_DriverMessage *msg )
 {
 struct MSDDevice *msddev;
+S32 mounter;
 U32 retval;
 
 	// --
@@ -46,7 +47,30 @@ U32 retval;
 	// --
 	if ( ! MSD_CreateDevice( usbbase ) )
 	{
-		USBERROR( "MSD : Could not initialize mounter or usb2disk.device" );
+		USBERROR( "MSD : Could not initialize usb2disk.device" );
+		goto bailout;
+	}
+
+	SEMAPHORE_OBTAIN( &usbbase->usb_MSDSemaphore );
+
+	if ( ! usbbase->usb_MounterBase )
+	{
+		usbbase->usb_MounterBase = usbbase->usb_IExec->OpenLibrary( "mounter.library", 0 );
+	}
+
+	if ( ( usbbase->usb_MounterBase ) && ( ! usbbase->usb_IMounter ) )
+	{
+		usbbase->usb_IMounter = (PTR) usbbase->usb_IExec->GetInterface( usbbase->usb_MounterBase, "main", 1, NULL );
+	}
+
+	mounter = usbbase->usb_IMounter != NULL;
+
+	SEMAPHORE_RELEASE( &usbbase->usb_MSDSemaphore );
+
+	if ( ! mounter )
+	{
+		USBERROR( "MSD : Could not initialize mounter" );
+
 		goto bailout;
 	}
 

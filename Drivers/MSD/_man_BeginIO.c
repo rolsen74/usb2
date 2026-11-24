@@ -28,6 +28,20 @@ S32 queued;
 	usbbase = MSDBase->msdbase_usbbase;
 	msddisk	= (PTR) ioreq->io_Unit;
 
+	if ( ioreq->io_Command == NSCMD_DEVICEQUERY )
+	{
+		MSD_Cmd_4000_NSCmd_DeviceQuery( ioreq );
+
+		if ( ! ( ioreq->io_Flags & IOF_QUICK ) )
+		{
+			MSGPORT_REPLYMSG( ioreq );
+		}
+
+		TASK_NAME_LEAVE();
+
+		return;
+	}
+
 	// TD_REMCHANGEINT reuses the request held by TD_ADDCHANGEINT.
 	if ( ioreq->io_Command == TD_REMCHANGEINT )
 	{
@@ -110,7 +124,6 @@ S32 queued;
 		case /* 001A */ TD_SEEK64:
 		case /* 001B */ TD_FORMAT64:
 		case /* 001C */ HD_SCSICMD:
-		case /* 4000 */ NSCMD_DEVICEQUERY:
 		case /* A004 */ NSCMD_TD_GETGEOMETRY64:			// Mounter.lib
 		case /* A005 */	NSCMD_TD_CHANGEUNIT:			// Mounter.lib
 		case /* C000 */ NSCMD_TD_READ64:
@@ -132,11 +145,7 @@ S32 queued;
 
 			if ( ! queued )
 			{
-				if ( ioreq->io_Command == NSCMD_DEVICEQUERY )
-				{
-					MSD_Cmd_4000_NSCmd_DeviceQuery( usbbase, NULL, ioreq );
-				}
-				else if ( ( msddisk ) && ( ioreq->io_Command == TD_CHANGESTATE ) )
+				if ( ( msddisk ) && ( ioreq->io_Command == TD_CHANGESTATE ) )
 				{
 					ioreq->io_Actual = 1;
 					ioreq->io_Error = 0;

@@ -63,17 +63,7 @@ MSD_CreateDevice( struct USBBase *usbbase )
 
 	SEMAPHORE_OBTAIN( &usbbase->usb_MSDSemaphore );
 
-	if ( ! usbbase->usb_MounterBase )
-	{
-		usbbase->usb_MounterBase = usbbase->usb_IExec->OpenLibrary( "mounter.library", 0 );
-	}
-
-	if ( ( usbbase->usb_MounterBase ) && ( ! usbbase->usb_IMounter ) )
-	{
-		usbbase->usb_IMounter = (PTR) usbbase->usb_IExec->GetInterface( usbbase->usb_MounterBase, "main", 1, NULL );
-	}
-
-	if ( ( usbbase->usb_IMounter ) && ( ! usbbase->usb_MSDDevice ) )
+	if ( ! usbbase->usb_MSDDevice )
 	{
 		msdbase = MISC_CREATELIBRARY( (PTR) devCreateTags );
 

@@ -36,10 +36,17 @@ S32 free_dev;
 
 	// Adjust msd/unit open count
 	msddisk = (PTR) ioreq->io_Unit;
-	msddev = msddisk->msddisk_MSDDev;
-	msddisk->msddisk_OpenCnt--;
-	free_disk = ( msddisk->msddisk_Released ) && ( ! msddisk->msddisk_OpenCnt );
-	free_dev = --msddev->msddev_References == 0;
+	msddev = NULL;
+	free_disk = FALSE;
+	free_dev = FALSE;
+
+	if ( msddisk )
+	{
+		msddev = msddisk->msddisk_MSDDev;
+		msddisk->msddisk_OpenCnt--;
+		free_disk = ( msddisk->msddisk_Released ) && ( ! msddisk->msddisk_OpenCnt );
+		free_dev = --msddev->msddev_References == 0;
+	}
 
 	// Make sure IOReq will not be used again
 	ioreq->io_Unit	 = NULL;

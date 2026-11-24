@@ -64,7 +64,6 @@ S32 reply;
 			case /* 001A */ TD_SEEK64:					reply = MSD_Cmd_001A_TD_Seek64( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 001B */ TD_FORMAT64:				reply = MSD_Cmd_001B_TD_Format64( usbbase, msddev, (PTR) ioreq ); break;
 			case /* 001C */ HD_SCSICMD:					reply = MSD_Cmd_001C_HD_SCSICmd( usbbase, msddev, (PTR) ioreq ); break;
-			case /* 4000 */ NSCMD_DEVICEQUERY:			reply = MSD_Cmd_4000_NSCmd_DeviceQuery( usbbase, msddev, (PTR) ioreq ); break;
 			case /* A004 */ NSCMD_TD_GETGEOMETRY64:		reply = MSD_Cmd_A004_NSCmd_GetGeometry64( usbbase, msddev, (PTR) ioreq ); break;
 			case /* A005 */ NSCMD_TD_CHANGEUNIT:		reply = MSD_Cmd_A005_NSCmd_ChangeUnit( usbbase, msddev, (PTR) ioreq ); break;
 			case /* C000 */ NSCMD_TD_READ64:			reply = MSD_Cmd_C000_NSCmd_Read64( usbbase, msddev, (PTR) ioreq ); break;

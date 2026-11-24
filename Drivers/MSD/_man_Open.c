@@ -40,10 +40,15 @@ struct MSDDisk *msddisk;
 		msddisk = NULL;
 	}
 
-	if (( msddisk )
-	&&	( ! msddisk->msddisk_MSDDev->msddev_Detached )
-	&&	( ioreq->io_Message.mn_Length ) 
-	&&	( ioreq->io_Message.mn_Length >= sizeof( struct IOStdReq )))
+	if ( ( msddisk ) && ( msddisk->msddisk_MSDDev->msddev_Detached ) )
+	{
+		msddisk = NULL;
+	}
+
+	ioreq->io_Unit = NULL;
+
+	if ( ( ( msddisk ) || ( unit_number == 0 ) ) &&
+		( ioreq->io_Message.mn_Length >= sizeof( struct IOStdReq ) ) )
 	{
 		// okay
 
@@ -54,8 +59,11 @@ struct MSDDisk *msddisk;
 		ioreq->io_Unit = (PTR) msddisk;
 		ioreq->io_Error = 0;
 
-		msddisk->msddisk_OpenCnt++;
-		msddisk->msddisk_MSDDev->msddev_References++;
+		if ( msddisk )
+		{
+			msddisk->msddisk_OpenCnt++;
+			msddisk->msddisk_MSDDev->msddev_References++;
+		}
 	}
 	else
 	{
