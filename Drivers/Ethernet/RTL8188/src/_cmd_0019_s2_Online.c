@@ -30,11 +30,9 @@ Cmd_Online( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 	}
 	else if ( ! unit->unit_Online )
 	{
-		unit->unit_Online = TRUE;
+		RTL8188EU_SetOnline( unit, TRUE );
 
 		RTL8188EU_SubmitRX( unit );
-
-		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ONLINE, TRUE );
 	}
 
 	USBINFO( "RTL8188EU: S2_ONLINE error %ld, wire error %lu, configured %lu, TX %lu, AID %lu, online %lu",

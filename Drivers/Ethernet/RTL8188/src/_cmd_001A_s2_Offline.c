@@ -20,7 +20,7 @@ Cmd_Offline( struct EthernetUnit *unit, struct IOSana2Req *ioreq UNUSED )
 {
 	USBINFO( "RTL8188EU: S2_OFFLINE, AID %lu, online %lu", (U32) unit->unit_AssocID, (U32) unit->unit_Online );
 
-	if ( unit->unit_Online )
+	if ( ( unit->unit_Online ) || ( unit->unit_AssocID ) )
 	{
 		RTL8188EU_DropLink( unit );
 	}

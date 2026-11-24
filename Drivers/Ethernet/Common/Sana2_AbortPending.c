@@ -9,6 +9,7 @@
 // --
 
 #include <interfaces/exec.h>
+#include "WirelessSana2.h"
 #include "Sana2Commands.h"
 
 // --
@@ -17,9 +18,29 @@ extern struct ExecIFace *IExec;
 
 // --
 
-int32
-Sana2_AbortPendingWithReply( struct List *list, struct IORequest *request, APTR opener, int32 error,
-	uint32 wire, Sana2Reply reply, APTR context )
+static int
+PacketCommand( uint16 command )
+{
+	switch( command )
+	{
+		case CMD_READ:
+		case CMD_WRITE:
+		case S2_READORPHAN:
+		case S2_BROADCAST:
+		case S2_MULTICAST:
+		case S2_READMGMT:
+		case S2_WRITEMGMT:
+			return ( TRUE );
+	}
+
+	return ( FALSE );
+}
+
+// --
+
+static int32
+AbortPending( struct List *list, struct IORequest *request, APTR opener, int32 error,
+	uint32 wire, Sana2Reply reply, APTR context, int packets_only )
 {
 	struct IOSana2Req *ioreq;
 	struct IOSana2Req *next;
@@ -35,7 +56,8 @@ Sana2_AbortPendingWithReply( struct List *list, struct IORequest *request, APTR 
 		next = (APTR) IExec->GetSucc( (APTR) ioreq );
 
 		if ( ( ( ! request ) || ( & ioreq->ios2_Req == request ) ) &&
-			( ( ! opener ) || ( ioreq->ios2_BufferManagement == opener ) ) )
+			( ( ! opener ) || ( ioreq->ios2_BufferManagement == opener ) ) &&
+			( ( ! packets_only ) || ( PacketCommand( ioreq->ios2_Req.io_Command ) ) ) )
 		{
 			IExec->Remove( (APTR) ioreq );
 
@@ -63,6 +85,23 @@ Sana2_AbortPendingWithReply( struct List *list, struct IORequest *request, APTR 
 	}
 
 	return ( aborted );
+}
+
+// --
+
+int32
+Sana2_AbortPendingWithReply( struct List *list, struct IORequest *request, APTR opener, int32 error,
+	uint32 wire, Sana2Reply reply, APTR context )
+{
+	return ( AbortPending( list, request, opener, error, wire, reply, context, FALSE ) );
+}
+
+// --
+
+void
+Sana2_AbortPackets( struct List *list, int32 error, uint32 wire )
+{
+	AbortPending( list, NULL, NULL, error, wire, NULL, NULL, TRUE );
 }
 
 // --

@@ -40,11 +40,9 @@ Cmd_ConfigInterface( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 
 		if ( ( unit->unit_AssocID ) && ( unit->unit_TxReady ) && ( ! RTL8188EU_DeferredLink( unit ) || unit->unit_Operational ) )
 		{
-			unit->unit_Online = TRUE;
+			RTL8188EU_SetOnline( unit, TRUE );
 
 			RTL8188EU_SubmitRX( unit );
-
-			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ONLINE, TRUE );
 		}
 	}
 

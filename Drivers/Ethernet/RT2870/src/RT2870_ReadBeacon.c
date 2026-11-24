@@ -171,6 +171,18 @@ RT2870_StartReceive( struct EthernetUnit *unit )
 		return ( USB2Err_Stack_EndPointNotFound );
 	}
 
+	if ( unit->unit_RxHalted )
+	{
+		if ( ! USB2_EPRes_Destall( bulk ) )
+		{
+			USB2_EPRes_Release( bulk );
+
+			return ( USB2Err_Host_Stall );
+		}
+
+		unit->unit_RxHalted = FALSE;
+	}
+
 	unit->unit_BeaconResource = bulk;
 	unit->unit_BeaconReads = 0;
 	unit->unit_BeaconBytes = 0;
@@ -249,6 +261,11 @@ RT2870_ReadBeacon( struct EthernetUnit *unit )
 		error = WaitIO( (PTR) request );
 
 		unit->unit_ReceivePending = FALSE;
+
+		if ( error == USB2Err_Host_Stall )
+		{
+			unit->unit_RxHalted = ! USB2_EPRes_Destall( bulk );
+		}
 	}
 
 	if ( error == USB2Err_Host_Timeout )

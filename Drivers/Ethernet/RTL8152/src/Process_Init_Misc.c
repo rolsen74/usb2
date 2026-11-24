@@ -51,7 +51,7 @@ int retval;
 
 	// --
 
-    retval = TRUE;
+	retval = RTL8152_OpenLinkTimer( unit );
 
 bailout:
     return(	    retval );

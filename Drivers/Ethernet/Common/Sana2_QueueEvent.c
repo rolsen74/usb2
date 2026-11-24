@@ -34,7 +34,7 @@ Sana2_QueueEvent( struct List *list, struct IOSana2Req *ioreq, uint32 current, u
 
 	if ( events & current )
 	{
-		ioreq->ios2_WireError = current;
+		ioreq->ios2_WireError = events & current;
 
 		return ( FALSE );
 	}

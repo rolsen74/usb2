@@ -45,7 +45,7 @@ PollReceive( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 				usb2->USB2_EPRes_Destall( resource );
 			}
 
-			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE, TRUE );
+			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
 		}
 		else
 		{
@@ -112,7 +112,7 @@ Transmit( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana2Req *
 			usb2->USB2_EPRes_Destall( resource );
 		}
 
-		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE, TRUE );
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE );
 
 		return;
 	}

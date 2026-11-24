@@ -18,7 +18,7 @@
 void
 Cmd_Flush( struct EthernetUnit *unit, struct IOSana2Req *ioreq UNUSED )
 {
-	RTL8188EU_AbortData( unit, IOERR_ABORTED, S2WERR_GENERIC_ERROR );
+	Sana2_AbortPackets( & unit->unit_Pending, IOERR_ABORTED, S2WERR_GENERIC_ERROR );
 }
 
 // --

@@ -63,7 +63,7 @@ CompleteRead( struct EthernetUnit *unit, struct IOSana2Req *ioreq, const U8 *fra
 		ioreq->ios2_WireError = S2WERR_BUFF_ERROR;
 		ioreq->ios2_DataLength = 0;
 
-		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF, TRUE );
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF );
 	}
 
 	ReplyMsg( (PTR) ioreq );

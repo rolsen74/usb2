@@ -23,6 +23,7 @@ struct MulticastRange
 	uint64 mr_First;
 	uint64 mr_Last;
 	uint32 mr_UseCount;
+	int mr_Range;
 };
 
 // --
@@ -52,6 +53,11 @@ Sana2_MulticastMatch( struct List *list, const uint8 *address )
 
 	uint64 value;
 
+	if ( ! Sana2_ValidMulticastAddress( address ) )
+	{
+		return ( FALSE );
+	}
+
 	value = AddressValue( address );
 
 	for( entry = (APTR) IExec->GetHead( list ); entry; entry = (APTR) IExec->GetSucc( & entry->mr_Node ) )
@@ -75,6 +81,7 @@ SetMulticast( struct List *list, struct IOSana2Req *ioreq, uint32 full_error )
 	uint64 first;
 	uint64 last;
 	uint16 command;
+	int range;
 
 	command = ioreq->ios2_Req.io_Command;
 	ioreq->ios2_WireError = 0;
@@ -83,13 +90,15 @@ SetMulticast( struct List *list, struct IOSana2Req *ioreq, uint32 full_error )
 
 	last = first;
 
-	if ( ( command == S2_ADDMULTICASTADDRESSES ) || ( command == S2_DELMULTICASTADDRESSES ) )
+	range = ( command == S2_ADDMULTICASTADDRESSES ) || ( command == S2_DELMULTICASTADDRESSES );
+
+	if ( range )
 	{
 		last = AddressValue( ioreq->ios2_DstAddr );
 	}
 
-	if ( ( ! ( ioreq->ios2_SrcAddr[0] & 1 ) ) || ( first > last ) ||
-		( ( first >> 40 ) != ( last >> 40 ) ) || ( last == 0xffffffffffffULL ) )
+	if ( ( ! Sana2_ValidMulticastAddress( ioreq->ios2_SrcAddr ) ) || ( first > last ) ||
+		( ( range ) && ( ! Sana2_ValidMulticastAddress( ioreq->ios2_DstAddr ) ) ) )
 	{
 		ioreq->ios2_Req.io_Error = S2ERR_BAD_ADDRESS;
 		ioreq->ios2_WireError = S2WERR_BAD_MULTICAST;
@@ -99,7 +108,7 @@ SetMulticast( struct List *list, struct IOSana2Req *ioreq, uint32 full_error )
 
 	for( entry = (APTR) IExec->GetHead( list ); entry; entry = (APTR) IExec->GetSucc( & entry->mr_Node ) )
 	{
-		if ( ( entry->mr_First == first ) && ( entry->mr_Last == last ) )
+		if ( ( entry->mr_First == first ) && ( entry->mr_Last == last ) && ( entry->mr_Range == range ) )
 		{
 			break;
 		}
@@ -130,6 +139,7 @@ SetMulticast( struct List *list, struct IOSana2Req *ioreq, uint32 full_error )
 		{
 			entry->mr_First = first;
 			entry->mr_Last = last;
+			entry->mr_Range = range;
 
 			IExec->AddTail( list, & entry->mr_Node );
 		}

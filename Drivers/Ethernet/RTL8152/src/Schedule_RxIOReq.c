@@ -18,7 +18,7 @@ Schedule_RxIOReq( struct devUnit *unit )
 struct USB2_IORequest *usbio;
 struct IONode *node;
 
-	if ( ( ! unit->unit_Running ) || ( ! unit->unit_Online ) )
+	if ( ( ! unit->unit_Running ) || ( ! unit->unit_Online ) || ( ! unit->unit_LinkUp ) || ( unit->unit_RxHalted ) )
 	{
 		goto bailout;
 	}

@@ -14,9 +14,9 @@
 // --
 
 void
-SignalSanaEvent( struct devUnit *unit, U32 events, int return_all )
+SignalSanaEvent( struct devUnit *unit, U32 events )
 {
-	Sana2_SignalEventWithReply( & unit->unit_EventsList, events, return_all, ReplySanaRequest, unit );
+	Sana2_SignalEventWithReply( & unit->unit_EventsList, events, ReplySanaRequest, unit );
 }
 
 // --

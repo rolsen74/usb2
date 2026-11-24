@@ -25,15 +25,16 @@ void Sana2_GetSpecialStats( struct IOSana2Req *ioreq, const struct Sana2SpecialS
 void Sana2_GetGlobalStats( struct IOSana2Req *ioreq, const struct Sana2DeviceStats *sample );
 void Sana2_GetExtendedGlobalStats( struct IOSana2Req *ioreq, const struct Sana2ExtDeviceStats *sample, uint32 available );
 void Sana2_GetPacketStats( struct IOSana2Req *ioreq, uint64 received, uint64 sent,
-	uint64 bad, uint64 unknown );
+	uint64 bad, uint64 unknown, const struct TimeVal *last_start );
 void Sana2_GetExtendedPacketStats( struct IOSana2Req *ioreq, uint64 received, uint64 sent,
-	uint64 bad, uint64 unknown, int partial );
+	uint64 bad, uint64 unknown, int partial, const struct TimeVal *last_start );
 int Sana2_SetCopyHook( struct IOSana2Req *ioreq, struct Hook **slot, int replace );
 int Sana2_CopyPacket( struct IOSana2Req *ioreq, struct Hook *hook, APTR callback,
 	ULONG method, APTR to, APTR from, uint32 length );
 void Sana2_GetCryptTypes( struct IOSana2Req *ioreq, const uint8 *types, uint32 count );
 
 struct TimerIFace;
+void Sana2_GetTime( struct TimeVal *time );
 int Sana2_QueueThroughput( struct List *list, struct IOSana2Req *ioreq, struct TimerIFace *timer,
 	int copy_partial );
 void Sana2_AccountThroughput( struct Sana2ThroughputStats *stats, const struct TimeVal *time,
@@ -44,11 +45,22 @@ void Sana2_UpdateThroughput( struct List *list, uint32 sent, uint32 received );
 	S2EVENT_HARDWARE | S2EVENT_RX | S2EVENT_TX | S2EVENT_BUFF )
 
 typedef void (*Sana2Reply)( APTR context, struct IOSana2Req *request );
+typedef int (*Sana2ReceiveCopy)( APTR context, struct IOSana2Req *request, const uint8 *data );
+typedef int (*Sana2ReceiveFilter)( struct IOSana2Req *request, const uint8 *data );
+
+#define SANA2_RX_TYPED 1U
+#define SANA2_RX_COPIED 2U
+#define SANA2_RX_COPY_FAILED 4U
+
+uint32 Sana2_DeliverReads( struct List *list, const uint8 *frame, uint32 bytes, uint32 type,
+	uint8 flags, int allow_orphan, int length_types, Sana2ReceiveFilter filter,
+	Sana2ReceiveCopy copy, Sana2Reply reply, APTR context );
 int32 Sana2_AbortPendingWithReply( struct List *list, struct IORequest *request, APTR opener,
 	int32 error, uint32 wire, Sana2Reply reply, APTR context );
-void Sana2_SignalEventWithReply( struct List *list, uint32 events, int return_all, Sana2Reply reply, APTR context );
+void Sana2_SignalEventWithReply( struct List *list, uint32 events, Sana2Reply reply, APTR context );
 int32 Sana2_AbortPending( struct List *list, struct IORequest *request, APTR opener, int32 error, uint32 wire );
+void Sana2_AbortPackets( struct List *list, int32 error, uint32 wire );
 int Sana2_QueueEvent( struct List *list, struct IOSana2Req *ioreq, uint32 current, uint32 supported );
-void Sana2_SignalEvent( struct List *list, uint32 events, int return_all );
+void Sana2_SignalEvent( struct List *list, uint32 events );
 
 #endif

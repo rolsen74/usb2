@@ -40,7 +40,8 @@ S32 RTL8188EU_SetAssociation( struct EthernetUnit *unit, U8 *bssid, U16 aid );
 void RTL8188EU_QueueControl( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 void RTL8188EU_Transmit( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 void RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length );
-void RTL8188EU_AbortData( struct EthernetUnit *unit, S32 error, U32 wire );
+void RTL8188EU_AbortData( struct EthernetUnit *unit, S32 error, U32 wire, S32 keep_eapol );
+void RTL8188EU_SetOnline( struct EthernetUnit *unit, S32 online );
 void RTL8188EU_DropLink( struct EthernetUnit *unit );
 S32 RTL8188EU_CopyPacket( struct EthernetUnit *unit, struct IOSana2Req *ioreq,
 	PTR to, PTR from, U32 length, S32 rx );

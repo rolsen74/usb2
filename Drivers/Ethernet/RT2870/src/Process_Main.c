@@ -47,8 +47,11 @@ Process_Main( struct EthernetUnit *unit )
 				ObtainSemaphore( & unit->unit_CommandLock );
 
 				unit->unit_Detached = TRUE;
+				unit->unit_Operational = FALSE;
 
-				Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE, FALSE );
+				RT2870_SetOnline( unit, FALSE );
+
+				Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE );
 
 				Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
 

@@ -221,6 +221,16 @@ RT2870_TransmitFrame( struct EthernetUnit *unit, const U8 *frame, U32 frameLengt
 	pid = ( unit->unit_ManagementPID % 3 + 1 ) * 4;
 	unit->unit_ManagementPID = pid >> 2;
 
+	if ( unit->unit_TxHalted )
+	{
+		if ( ! USB2_EPRes_Destall( bulk ) )
+		{
+			return ( USB2Err_Host_Stall );
+		}
+
+		unit->unit_TxHalted = FALSE;
+	}
+
 	error = RT2870_StartReceive( unit );
 
 	if ( ( ! error ) && ( ( ! unit->unit_TransmitEnabled ) || ( ! data ) ) )
@@ -260,6 +270,11 @@ RT2870_TransmitFrame( struct EthernetUnit *unit, const U8 *frame, U32 frameLengt
 		error = DoIO( (PTR) request );
 
 		actual = request->io_Actual;
+
+		if ( error == USB2Err_Host_Stall )
+		{
+			unit->unit_TxHalted = ! USB2_EPRes_Destall( bulk );
+		}
 
 		if ( ( ! error ) && ( actual != transferLength ) )
 		{

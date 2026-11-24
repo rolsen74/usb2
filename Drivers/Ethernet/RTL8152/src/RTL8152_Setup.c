@@ -28,7 +28,10 @@ Driver_Setup( struct devUnit *unit )
 
 	RTL8152_Init( unit );
 
-	RTL8152_Up( unit );
+	if ( ! RTL8152_Up( unit ) )
+	{
+		return ( FALSE );
+	}
 
 	if ( ! RTL8152_SetMacAddress( unit, unit->unit_CurrentAddress ) )
 	{

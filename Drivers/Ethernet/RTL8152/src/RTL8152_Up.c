@@ -13,16 +13,18 @@
 
 // --
 
-void
+S32
 RTL8152_Up( struct devUnit *unit )
 {
+	S32 ready;
 
-    RTL8152_Disable_ALDPS( unit );
+	RTL8152_Disable_ALDPS( unit );
 
-    RTL8152_Exit_OOB( unit );
+	ready = RTL8152_Exit_OOB( unit );
 
-    RTL8152_Enable_ALDPS( unit );
+	RTL8152_Enable_ALDPS( unit );
 
+	return ( ready && ! unit->unit_USBControlError );
 }
 
 // --

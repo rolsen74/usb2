@@ -31,6 +31,14 @@ s2_Online( struct devUnit *unit, struct IOSana2Req *ioreq )
 		goto bailout;
 	}
 
+	if ( unit->unit_ControlNeedsSetup )
+	{
+		ioreq->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
+		ioreq->ios2_WireError = S2WERR_GENERIC_ERROR;
+
+		goto bailout;
+	}
+
 	if ( unit->unit_Online )
 	{
 		ioreq->ios2_Req.io_Error= S2ERR_BAD_STATE;
@@ -51,9 +59,14 @@ s2_Online( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	ITimer->GetSysTime( &unit->unit_LastStart );
 
+	unit->unit_RxRecovery = 0;
+	unit->unit_TxRecovery = 0;
+
+	RTL8152_UpdateLink( unit );
+
 	Schedule_RxIOReq( unit );
 
-	SignalSanaEvent( unit, S2EVENT_ONLINE | S2EVENT_CONFIGCHANGED, TRUE );
+	SignalSanaEvent( unit, S2EVENT_ONLINE | S2EVENT_CONFIGCHANGED );
 
 bailout:
 

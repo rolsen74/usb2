@@ -18,6 +18,7 @@ struct IONode
 	U32			    BufferSize;
 	int				Active;
 	int				AbortError;
+	U32 AbortWire;
 
 	struct IOSana2Req * Sana2IOReq;
 
@@ -70,6 +71,15 @@ struct devUnit
 	struct USB2_Register *unit_USBRegister;
 	struct USB2_IORequest *unit_USBControlIOReq;
 	S32 unit_USBControlError;
+	struct MsgPort *unit_LinkPort;
+	struct TimeRequest *unit_LinkTimer;
+	U8 unit_LinkTimerPending;
+	U8 unit_LinkUp;
+	U8 unit_RxHalted;
+	U8 unit_TxHalted;
+	U8 unit_RxRecovery;
+	U8 unit_TxRecovery;
+	U8 unit_ControlNeedsSetup;
 	struct USB2_EPResource *unit_USBBulkIn;
 	struct USB2_EPResource *unit_USBBulkOut;
 	struct List unit_USBBulkInActiveList;
@@ -93,6 +103,10 @@ struct devUnit
 /**************************************************************************/
 
 void UpdateThroughput( struct devUnit *unit, U32 sent, U32 received );
+S32 RTL8152_OpenLinkTimer( struct devUnit *unit );
+void RTL8152_CloseLinkTimer( struct devUnit *unit );
+void RTL8152_ArmLinkTimer( struct devUnit *unit );
+void RTL8152_UpdateLink( struct devUnit *unit );
 
 S32 RTL8152_SetMacAddress( struct devUnit *unit, const U8 *address );
 
@@ -111,13 +125,13 @@ void Handle_BeginIOMessages( struct devUnit *unit );
 void Handle_AbortIOMessages( struct devUnit *unit );
 struct SanaRequest *FindSanaRequest( struct devUnit *unit, const struct IOSana2Req *request );
 void ReplySanaRequest( APTR adapter, struct IOSana2Req *request );
-void SignalSanaEvent( struct devUnit *unit, U32 events, int return_all );
+void SignalSanaEvent( struct devUnit *unit, U32 events );
 void Handle_USBFunction( struct devUnit *unit );
 void Handle_BulkInMessages( struct devUnit *unit );
 void Handle_BulkOutMessages( struct devUnit *unit );
 struct IONode *AllocIONode( struct USB2_EPResource *resource, U32 index );
 void FreeIONode( struct devUnit *unit, struct IONode *node );
-void AbortPacketIO( struct devUnit *unit );
+void AbortPacketIO( struct devUnit *unit, U32 wire );
 void Schedule_RxIOReq( struct devUnit *unit );
 void Schedule_TxIOReq( struct devUnit *unit );
 S32 AbortReqOnList( struct devUnit *unit, struct List *list, struct IOSana2Req *abort_ioreq, U32 wire_error );

@@ -16,16 +16,26 @@
 S32
 RTL8152_SetMacAddress( struct devUnit *unit, const U8 *address )
 {
-	// is this only for URE_CHIP_VER_4C00 ??
+	S32 error;
+	S32 restore;
 
-	myWrite1( unit, URE_PLA_CRWECR, URE_MCU_TYPE_PLA, URE_CRWECR_CONFIG );
-	
-	myWrite6( unit, URE_PLA_IDR,	URE_MCU_TYPE_PLA, address );
+	unit->unit_USBControlError = 0;
 
-	myWrite1( unit, URE_PLA_CRWECR, URE_MCU_TYPE_PLA, URE_CRWECR_NORAML );
+	error = myWrite1( unit, URE_PLA_CRWECR, URE_MCU_TYPE_PLA, URE_CRWECR_CONFIG );
 
-	return ( ! unit->unit_USBControlError );
+	if ( ! error )
+	{
+		error = myWrite6( unit, URE_PLA_IDR, URE_MCU_TYPE_PLA, address );
+	}
 
+	// Leave configuration mode even when the address write fails.
+	unit->unit_USBControlError = 0;
+
+	restore = myWrite1( unit, URE_PLA_CRWECR, URE_MCU_TYPE_PLA, URE_CRWECR_NORAML );
+
+	unit->unit_ControlNeedsSetup = restore != 0;
+
+	return ( ! error && ! restore );
 }
 
 // --

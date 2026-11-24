@@ -17,6 +17,8 @@ unit_Process_FreeMisc( struct devUnit *unit )
 {
 	struct IORequest *request;
 
+	RTL8152_CloseLinkTimer( unit );
+
 	AbortReqOnList( unit, & unit->unit_RxList, NULL, S2WERR_UNIT_OFFLINE );
 
 	AbortReqOnList( unit, & unit->unit_TxList, NULL, S2WERR_UNIT_OFFLINE );

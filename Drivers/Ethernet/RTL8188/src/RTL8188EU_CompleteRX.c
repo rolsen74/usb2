@@ -51,7 +51,7 @@ RTL8188EU_CompleteRX( struct EthernetUnit *unit )
 
 			RTL8188EU_DropLink( unit );
 
-			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE, TRUE );
+			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE );
 
 			Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
 		}

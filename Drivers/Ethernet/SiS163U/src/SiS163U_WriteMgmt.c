@@ -90,7 +90,7 @@ SiS163U_WriteMgmt( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 			USB2_EPRes_Destall( bulk );
 		}
 
-		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE, FALSE );
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE );
 	}
 }
 

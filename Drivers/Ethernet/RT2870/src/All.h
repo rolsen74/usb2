@@ -75,6 +75,9 @@ struct EthernetUnit
 	struct List unit_Pending;
 	struct List unit_MulticastRanges;
 	struct List unit_TrackedTypes;
+	struct TimeVal unit_LastStart;
+	U8 unit_RxHalted;
+	U8 unit_TxHalted;
 	U64 unit_PacketsRx;
 	U64 unit_PacketsTx;
 	U64 unit_UnknownPackets;

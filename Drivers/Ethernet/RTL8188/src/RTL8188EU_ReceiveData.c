@@ -15,20 +15,24 @@
 
 // --
 
+static int
+CopyRead( PTR context, struct IOSana2Req *ioreq, const U8 *data )
+{
+	return ( RTL8188EU_CopyPacket( context, ioreq, ioreq->ios2_Data, (PTR) data, ioreq->ios2_DataLength, TRUE ) );
+}
+
+// --
+
 void
 RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 {
 	static const U8 broadcast[6] = { 255, 255, 255, 255, 255, 255 };
 	static const U8 snap[6] = { 0xaa, 0xaa, 3, 0, 0, 0 };
-	struct IOSana2Req *ioreq;
-	struct IOSana2Req *orphan;
 
 	U8 ethernet[RTL8188EU_MTU + 14];
-	U8 *payload;
 	U32 header;
 	U32 type;
-	U32 payload_length;
-	S32 typed;
+	U32 result;
 	U8 flags;
 	S32 eapol_only;
 
@@ -96,90 +100,33 @@ RTL8188EU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 		return;
 	}
 
-	payload = frame + header + 8;
 	length -= header + 8;
-	payload_length = length;
+
+	memcpy( ethernet, frame + 4, 6 );
+
+	memcpy( ethernet + 6, frame + 16, 6 );
+
+	memcpy( ethernet + 12, frame + header + 6, length + 2 );
+
 	unit->unit_PacketsRx++;
 
 	Sana2_UpdateThroughput( & unit->unit_Pending, 0, length + 14 );
-	orphan = NULL;
 
-	ioreq = (PTR) GetHead( & unit->unit_Pending );
+	result = Sana2_DeliverReads( & unit->unit_Pending, ethernet, length + 14, type, flags,
+		! eapol_only, FALSE, NULL, CopyRead, NULL, unit );
 
-	while( ioreq )
-	{
-		if ( ( ioreq->ios2_Req.io_Command == CMD_READ ) && ( ioreq->ios2_PacketType == type ) )
-		{
-			break;
-		}
-
-		if ( ( ! eapol_only ) && ( ! orphan ) && ( ioreq->ios2_Req.io_Command == S2_READORPHAN ) )
-		{
-			orphan = ioreq;
-		}
-
-		ioreq = (PTR) GetSucc( (PTR) ioreq );
-	}
-
-	typed = ioreq != NULL;
-
-	if ( ! typed )
+	if ( ! ( result & SANA2_RX_TYPED ) )
 	{
 		unit->unit_UnknownPackets++;
-
-		Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, TRUE );
-		ioreq = orphan;
-
-		if ( ! ioreq )
-		{
-			return;
-		}
 	}
 
-	if ( ioreq->ios2_Req.io_Flags & SANA2IOF_RAW )
+	if ( result & SANA2_RX_COPY_FAILED )
 	{
-		memcpy( ethernet, frame + 4, 6 );
-		memcpy( ethernet + 6, frame + 16, 6 );
-		memcpy( ethernet + 12, frame + header + 6, 2 );
-		memcpy( ethernet + 14, payload, length );
-
-		payload = ethernet;
-		length += 14;
-	}
-	else if ( ioreq->ios2_Req.io_Command == S2_READORPHAN )
-	{
-		payload -= 2;
-		length += 2;
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF );
 	}
 
-	Remove( (PTR) ioreq );
-
-	memcpy( ioreq->ios2_DstAddr, frame + 4, 6 );
-	memcpy( ioreq->ios2_SrcAddr, frame + 16, 6 );
-
-	ioreq->ios2_PacketType = type;
-	ioreq->ios2_Req.io_Flags = ( ioreq->ios2_Req.io_Flags & ~( SANA2IOF_MCAST | SANA2IOF_BCAST ) ) | flags;
-	ioreq->ios2_DataLength = length;
-
-	if ( ! RTL8188EU_CopyPacket( unit, ioreq, ioreq->ios2_Data, payload, length, TRUE ) )
-	{
-		ioreq->ios2_Req.io_Error = S2ERR_NO_RESOURCES;
-		ioreq->ios2_WireError = S2WERR_BUFF_ERROR;
-		ioreq->ios2_DataLength = 0;
-
-		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF, TRUE );
-
-		if ( typed )
-		{
-			Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, TRUE );
-		}
-	}
-	else if ( typed )
-	{
-		Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, FALSE );
-	}
-
-	ReplyMsg( (PTR) ioreq );
+	Sana2_AccountType( & unit->unit_TrackedTypes, type, length, TRUE,
+		( result & ( SANA2_RX_TYPED | SANA2_RX_COPIED ) ) != ( SANA2_RX_TYPED | SANA2_RX_COPIED ) );
 }
 
 // --

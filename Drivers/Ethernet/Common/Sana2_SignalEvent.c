@@ -18,7 +18,7 @@ extern struct ExecIFace *IExec;
 // --
 
 void
-Sana2_SignalEventWithReply( struct List *list, uint32 events, int return_all, Sana2Reply reply, APTR context )
+Sana2_SignalEventWithReply( struct List *list, uint32 events, Sana2Reply reply, APTR context )
 {
 	struct IOSana2Req *ioreq;
 	struct IOSana2Req *next;
@@ -33,7 +33,7 @@ Sana2_SignalEventWithReply( struct List *list, uint32 events, int return_all, Sa
 		{
 			IExec->Remove( (APTR) ioreq );
 
-			ioreq->ios2_WireError = return_all ? events : ioreq->ios2_WireError & events;
+			ioreq->ios2_WireError = events;
 
 			if ( reply )
 			{
@@ -52,9 +52,9 @@ Sana2_SignalEventWithReply( struct List *list, uint32 events, int return_all, Sa
 // --
 
 void
-Sana2_SignalEvent( struct List *list, uint32 events, int return_all )
+Sana2_SignalEvent( struct List *list, uint32 events )
 {
-	Sana2_SignalEventWithReply( list, events, return_all, NULL, NULL );
+	Sana2_SignalEventWithReply( list, events, NULL, NULL );
 }
 
 // --

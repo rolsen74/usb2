@@ -13,7 +13,7 @@
 // --
 
 void
-AbortPacketIO( struct devUnit *unit )
+AbortPacketIO( struct devUnit *unit, U32 wire )
 {
 	struct List *lists[2];
 	struct IONode *node;
@@ -32,6 +32,7 @@ AbortPacketIO( struct devUnit *unit )
 			if ( ! node->AbortError )
 			{
 				node->AbortError = S2ERR_OUTOFSERVICE;
+				node->AbortWire = wire;
 
 				IExec->AbortIO( (PTR) node->USBRequest );
 			}

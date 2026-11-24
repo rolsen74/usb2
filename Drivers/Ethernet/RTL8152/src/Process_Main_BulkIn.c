@@ -37,9 +37,9 @@ Handle_BulkInMessages( struct devUnit *unit )
 		{
 			unit->unit_Running = FALSE;
 
-			SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE, TRUE );
+			SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
 		}
-		else if ( ( ! node->AbortError ) && ( unit->unit_Online ) &&
+		else if ( ( ! node->AbortError ) && ( unit->unit_Online ) && ( unit->unit_LinkUp ) &&
 			( usbio->io_Error == USB2Err_NoError ) && ( usbio->io_Actual <= node->BufferSize ) )
 		{
 			buffer = node->Buffer;
@@ -54,7 +54,7 @@ Handle_BulkInMessages( struct devUnit *unit )
 				{
 					unit->unit_BadData++;
 
-					SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE, TRUE );
+					SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
 
 					break;
 				}
@@ -71,11 +71,11 @@ Handle_BulkInMessages( struct devUnit *unit )
 		}
 		else if ( ( ! node->AbortError ) && ( unit->unit_Online ) )
 		{
-			SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE, TRUE );
+			SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
 
-			if ( usbio->io_Error == USB2Err_Host_Stall )
+			if ( ( usbio->io_Error == USB2Err_Host_Stall ) && ( ! unit->unit_RxHalted ) )
 			{
-				IUSB2->USB2_EPRes_Destall( unit->unit_USBBulkIn );
+				unit->unit_RxHalted = ! IUSB2->USB2_EPRes_Destall( unit->unit_USBBulkIn );
 			}
 		}
 

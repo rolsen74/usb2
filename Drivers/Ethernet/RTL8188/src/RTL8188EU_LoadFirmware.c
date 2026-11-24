@@ -99,6 +99,8 @@ RTL8188EU_LoadFirmware( struct EthernetUnit *unit )
 		goto done;
 	}
 
+	unit->unit_BringupStarted = TRUE;
+
 	if ( ! RTL8188EU_PowerOn( control ) )
 	{
 		USBERROR( "RTL8188EU: chip power-on failed" );

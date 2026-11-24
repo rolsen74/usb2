@@ -44,7 +44,9 @@ Handle_BeginIOMessages( struct devUnit *unit )
 {
 struct IOSana2Req *ioreq;
 
-	while(( ioreq = (APTR) IExec->GetMsg( unit->unit_BeginIOMsgPort )))
+U32 count;
+
+	for( count = 0; ( count < 16 ) && ( ( ioreq = (APTR) IExec->GetMsg( unit->unit_BeginIOMsgPort ) ) ); count++ )
 	{
 		if ( ! StartSanaRequest( unit, ioreq ) )
 		{
@@ -235,6 +237,11 @@ struct IOSana2Req *ioreq;
 				break;
 			}
 		}
+	}
+
+	if ( count == 16 )
+	{
+		IExec->Signal( unit->unit_BeginIOMsgPort->mp_SigTask, unit->unit_BeginIOMsgPortBit );
 	}
 
 }

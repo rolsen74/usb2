@@ -79,12 +79,12 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *sana )
 
 		case S2_GETGLOBALSTATS:
 			Sana2_GetPacketStats( sana, unit->unit_PacketsRx, unit->unit_PacketsTx, unit->unit_BadPackets,
-				unit->unit_UnknownPackets );
+				unit->unit_UnknownPackets, NULL );
 			break;
 
 		case S2_GETEXTENDEDGLOBALSTATS:
 			Sana2_GetExtendedPacketStats( sana, unit->unit_PacketsRx, unit->unit_PacketsTx, unit->unit_BadPackets,
-				unit->unit_UnknownPackets, TRUE );
+				unit->unit_UnknownPackets, TRUE, NULL );
 			break;
 
 		case S2_ONEVENT:
@@ -99,7 +99,7 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *sana )
 			if ( sana->ios2_Req.io_Command == S2_ONEVENT )
 			{
 				if ( Sana2_QueueEvent( & unit->unit_Pending, sana,
-				unit->unit_Online ? S2EVENT_ONLINE : S2EVENT_OFFLINE, SANA2_COMMON_EVENTS ) )
+				unit->unit_Online ? S2EVENT_ONLINE : S2EVENT_OFFLINE, ( SANA2_COMMON_EVENTS & ~S2EVENT_ONLINE ) ) )
 			{
 				sana->ios2_Req.io_Flags &= ~IOF_QUICK;
 
@@ -133,7 +133,7 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *sana )
 
 				Cmd_Flush( unit, S2ERR_OUTOFSERVICE, S2WERR_UNIT_OFFLINE );
 
-				Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_OFFLINE, TRUE );
+				Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_OFFLINE );
 			}
 
 			break;

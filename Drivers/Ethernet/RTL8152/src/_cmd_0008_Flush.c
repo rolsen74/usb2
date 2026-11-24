@@ -16,22 +16,12 @@
 void
 Cmd_Flush( struct devUnit *unit, struct IOSana2Req *ioreq )
 {
-	ioreq->ios2_WireError = S2WERR_GENERIC_ERROR;
+	AbortAll( unit, NULL, S2WERR_GENERIC_ERROR );
 
-	// Flush queued reads and writes belonging to this opener.
-	if ( ioreq->ios2_BufferManagement )
-    {
-		AbortAll( unit, (APTR) ioreq->ios2_BufferManagement, S2WERR_GENERIC_ERROR );
-
-		ioreq->ios2_Req.io_Error = S2ERR_NO_ERROR;
-	}
-	else
-	{
-		ioreq->ios2_Req.io_Error = S2ERR_BAD_ARGUMENT;
-	}
+	ioreq->ios2_WireError = 0;
+	ioreq->ios2_Req.io_Error = S2ERR_NO_ERROR;
 
 	ReplySanaRequest( unit, (PTR) ioreq );
-
 }
 
 // --

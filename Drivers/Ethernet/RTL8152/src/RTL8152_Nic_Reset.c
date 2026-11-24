@@ -13,6 +13,8 @@
 
 // --
 
+#define RTL8152_RESET_POLLS 50U
+
 int
 RTL8152_Nic_Reset( struct devUnit *unit )
 {
@@ -28,7 +30,7 @@ int retval;
 		goto bailout;
 	}
 
-	for( cnt=0 ; cnt<URE_TIMEOUT ; cnt++ )
+	for( cnt=0 ; cnt<RTL8152_RESET_POLLS ; cnt++ )
 	{
 		if ( myRead1( unit, URE_PLA_CR, URE_MCU_TYPE_PLA, & val ))
 		{
@@ -42,13 +44,13 @@ int retval;
 		}
 		else
 		{
-			IDOS->Delay( 5 );
+			IDOS->Delay( 1 );
 		}
 	}
 
-	if ( cnt == URE_TIMEOUT )
+	if ( cnt == RTL8152_RESET_POLLS )
 	{
-		SHOWMSG( "Reset Timeout" );
+		IExec->DebugPrintF( "RTL8152: NIC reset did not complete\n" );
 		goto bailout;
 	}
 

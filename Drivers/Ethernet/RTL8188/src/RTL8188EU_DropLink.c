@@ -24,20 +24,16 @@ RTL8188EU_DropLink( struct EthernetUnit *unit )
 	handshaking = RTL8188EU_DeferredLink( unit ) && unit->unit_AssocID;
 	unit->unit_AssocID = 0;
 	unit->unit_Operational = FALSE;
-	unit->unit_Online = FALSE;
 	unit->unit_SAE = FALSE;
 
 	RTL8188EU_ClearKeys( unit );
 
 	if ( ( online ) || ( handshaking ) )
 	{
-		RTL8188EU_AbortData( unit, S2ERR_OUTOFSERVICE, S2WERR_UNIT_OFFLINE );
+		RTL8188EU_AbortData( unit, S2ERR_OUTOFSERVICE, S2WERR_UNIT_OFFLINE, FALSE );
 	}
 
-	if ( online )
-	{
-		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_OFFLINE, TRUE );
-	}
+	RTL8188EU_SetOnline( unit, FALSE );
 }
 
 // --

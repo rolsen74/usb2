@@ -35,7 +35,7 @@ Sana2_GetGlobalStats( struct IOSana2Req *ioreq, const struct Sana2DeviceStats *s
 
 void
 Sana2_GetPacketStats( struct IOSana2Req *ioreq, uint64 received, uint64 sent,
-	uint64 bad, uint64 unknown )
+	uint64 bad, uint64 unknown, const struct TimeVal *last_start )
 {
 	struct Sana2DeviceStats sample;
 
@@ -46,6 +46,11 @@ Sana2_GetPacketStats( struct IOSana2Req *ioreq, uint64 received, uint64 sent,
 	sample.PacketsSent = sent;
 	sample.BadData = bad;
 	sample.UnknownTypesReceived = unknown;
+
+	if ( last_start )
+	{
+		sample.LastStart = *last_start;
+	}
 
 	Sana2_GetGlobalStats( ioreq, & sample );
 }

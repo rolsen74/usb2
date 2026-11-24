@@ -45,7 +45,7 @@ Process_Main( struct EthernetUnit *unit )
 
 				unit->unit_Detached = TRUE;
 
-				Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE, FALSE );
+				Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE );
 
 				Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
 

@@ -16,7 +16,7 @@
 void
 Cmd_Offline( struct EthernetUnit *unit, struct IOSana2Req *ioreq UNUSED )
 {
-	Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_OFFLINE, FALSE );
+	Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_OFFLINE );
 }
 
 // --

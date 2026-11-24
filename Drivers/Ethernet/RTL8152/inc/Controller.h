@@ -120,7 +120,7 @@ void RTL8152_Disable_ALDPS( struct devUnit *unit );
 void RTL8152_EEE_Enable( struct devUnit *unit, int Enable );
 void RTL8152_Enable_EEE( struct devUnit *unit );
 void RTL8152_Init( struct devUnit *unit );
-void RTL8152_Exit_OOB( struct devUnit *unit );
-void RTL8152_Up( struct devUnit *unit );
+S32 RTL8152_Exit_OOB( struct devUnit *unit );
+S32 RTL8152_Up( struct devUnit *unit );
 
 #endif

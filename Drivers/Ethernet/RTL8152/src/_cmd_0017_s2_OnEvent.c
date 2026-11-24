@@ -19,8 +19,9 @@ s2_OnEvent( struct devUnit *unit, struct IOSana2Req *ioreq )
 	U32 current;
 
 	current = unit->unit_Online ? S2EVENT_ONLINE : S2EVENT_OFFLINE;
+	current |= unit->unit_LinkUp ? S2EVENT_CONNECT : S2EVENT_DISCONNECT;
 
-	if ( ! Sana2_QueueEvent( & unit->unit_EventsList, ioreq, current, SANA2_COMMON_EVENTS | S2EVENT_CONFIGCHANGED ) )
+	if ( ! Sana2_QueueEvent( & unit->unit_EventsList, ioreq, current, SANA2_COMMON_EVENTS | S2EVENT_CONFIGCHANGED | S2EVENT_CONNECT | S2EVENT_DISCONNECT ) )
 	{
 		ReplySanaRequest( unit, (PTR) ioreq );
 	}

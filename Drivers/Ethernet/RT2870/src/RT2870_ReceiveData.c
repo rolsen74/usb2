@@ -12,27 +12,29 @@
 
 // --
 
+static int
+CopyRead( PTR context UNUSED, struct IOSana2Req *ioreq, const U8 *data )
+{
+	return ( RT2870_CopyPacket( ioreq, ioreq->ios2_Data, (PTR) data, ioreq->ios2_DataLength, TRUE ) );
+}
+
+// --
+
 static void
 DeliverPacket( struct EthernetUnit *unit, const U8 *frame, U8 *body, U32 length )
 {
-	struct IOSana2Req *request;
-	struct IOSana2Req *orphan;
-
 	static const U8 broadcast[] = { 255, 255, 255, 255, 255, 255 };
 	U8 ethernet[RT2870_MTU + 14];
 	U8 *payload;
 	U32 type;
 	U32 dhcp;
 	U8 flags;
-	U32 payload_length;
-	S32 typed;
+	U32 result;
 
 	type = ( (U32) body[6] << 8 ) | body[7];
 	payload = body + 8;
 	flags = 0;
 	dhcp = 0;
-	orphan = NULL;
-	payload_length = length;
 
 	if ( ! memcmp( frame + 4, broadcast, sizeof( broadcast ) ) )
 	{
@@ -61,97 +63,37 @@ DeliverPacket( struct EthernetUnit *unit, const U8 *frame, U8 *body, U32 length 
 
 	Sana2_UpdateThroughput( & unit->unit_Pending, 0, length + 14 );
 
-	request = (PTR) GetHead( & unit->unit_Pending );
+	memcpy( ethernet, frame + 4, 6 );
 
-	while( request )
-	{
-		if ( ( request->ios2_Req.io_Command == CMD_READ ) && ( request->ios2_PacketType == type ) )
-		{
-			break;
-		}
+	memcpy( ethernet + 6, frame + 16, 6 );
 
-		if ( ( ! orphan ) && ( request->ios2_Req.io_Command == S2_READORPHAN ) )
-		{
-			orphan = request;
-		}
+	memcpy( ethernet + 12, body + 6, length + 2 );
 
-		request = (PTR) GetSucc( (PTR) request );
-	}
+	result = Sana2_DeliverReads( & unit->unit_Pending, ethernet, length + 14, type, flags,
+		TRUE, FALSE, NULL, CopyRead, NULL, unit );
 
-	typed = request != NULL;
-
-	if ( ! typed )
+	if ( ! ( result & SANA2_RX_TYPED ) )
 	{
 		unit->unit_UnknownPackets++;
-		request = orphan;
-
-		Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, TRUE );
 	}
 
-	if ( request )
+	if ( result & SANA2_RX_COPY_FAILED )
 	{
-		Remove( (PTR) request );
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF );
+	}
 
-		memcpy( request->ios2_DstAddr, frame + 4, 6 );
-
-		memcpy( request->ios2_SrcAddr, frame + 16, 6 );
-
-		if ( request->ios2_Req.io_Flags & SANA2IOF_RAW )
-		{
-			memcpy( ethernet, frame + 4, 6 );
-
-			memcpy( ethernet + 6, frame + 16, 6 );
-
-			memcpy( ethernet + 12, body + 6, 2 );
-
-			memcpy( ethernet + 14, payload, length );
-
-			payload = ethernet;
-			length += 14;
-		}
-
-		else if ( ! typed )
-		{
-			payload -= 2;
-			length += 2;
-		}
-
-		request->ios2_PacketType = type;
-		request->ios2_Req.io_Flags &= ~( SANA2IOF_MCAST | SANA2IOF_BCAST );
-		request->ios2_Req.io_Flags |= flags;
-		request->ios2_DataLength = length;
-
-		if ( ! RT2870_CopyPacket( request, request->ios2_Data, payload, length, TRUE ) )
-		{
-			request->ios2_Req.io_Error = S2ERR_NO_RESOURCES;
-			request->ios2_WireError = S2WERR_BUFF_ERROR;
-			request->ios2_DataLength = 0;
-
-			if ( typed )
-			{
-				Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, TRUE );
-			}
-
-			RT2870_ReportDHCP( & unit->unit_DHCPDropped, dhcp, "receive buffer copy failed" );
-
-			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_BUFF, FALSE );
-		}
-		else
-		{
-			if ( typed )
-			{
-				Sana2_AccountType( & unit->unit_TrackedTypes, type, payload_length, TRUE, FALSE );
-			}
-
-			RT2870_ReportDHCP( & unit->unit_DHCPDelivered, dhcp, "delivered to TCP/IP" );
-		}
-
-		ReplyMsg( (PTR) request );
+	if ( result & SANA2_RX_COPIED )
+	{
+		RT2870_ReportDHCP( & unit->unit_DHCPDelivered, dhcp, "delivered to TCP/IP" );
 	}
 	else
 	{
-		RT2870_ReportDHCP( & unit->unit_DHCPDropped, dhcp, "received with no pending IPv4 read" );
+		RT2870_ReportDHCP( & unit->unit_DHCPDropped, dhcp,
+			( result & SANA2_RX_COPY_FAILED ) ? "receive buffer copy failed" : "received with no pending IPv4 read" );
 	}
+
+	Sana2_AccountType( & unit->unit_TrackedTypes, type, length, TRUE,
+		( result & ( SANA2_RX_TYPED | SANA2_RX_COPIED ) ) != ( SANA2_RX_TYPED | SANA2_RX_COPIED ) );
 
 	ReleaseSemaphore( & unit->unit_CommandLock );
 }

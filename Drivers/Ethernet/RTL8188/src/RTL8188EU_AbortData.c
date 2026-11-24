@@ -10,12 +10,13 @@
 
 #include "All.h"
 #include "Firmware.h"
+#include "Crypto.h"
 #include "Radio.h"
 
 // --
 
 void
-RTL8188EU_AbortData( struct EthernetUnit *unit, S32 error, U32 wire )
+RTL8188EU_AbortData( struct EthernetUnit *unit, S32 error, U32 wire, S32 keep_eapol )
 {
 	struct IOSana2Req *request;
 	struct IOSana2Req *next;
@@ -25,6 +26,14 @@ RTL8188EU_AbortData( struct EthernetUnit *unit, S32 error, U32 wire )
 	while( request )
 	{
 		next = (PTR) GetSucc( (PTR) request );
+
+		if ( ( keep_eapol ) && ( request->ios2_PacketType == RTL8188EU_EAPOL ) &&
+			( ( request->ios2_Req.io_Command == CMD_READ ) || ( request->ios2_Req.io_Command == CMD_WRITE ) ) )
+		{
+			request = next;
+
+			continue;
+		}
 
 		switch( request->ios2_Req.io_Command )
 		{

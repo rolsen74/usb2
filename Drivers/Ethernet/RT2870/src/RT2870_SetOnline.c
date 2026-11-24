@@ -25,9 +25,18 @@ RT2870_SetOnline( struct EthernetUnit *unit, S32 online )
 	changed = unit->unit_Online != online;
 	unit->unit_Online = online;
 
+	if ( ( changed ) && ( online ) )
+	{
+		unit->unit_PacketsRx = 0;
+		unit->unit_PacketsTx = 0;
+		unit->unit_UnknownPackets = 0;
+
+		Sana2_GetTime( & unit->unit_LastStart );
+	}
+
 	if ( changed )
 	{
-		Sana2_SignalEvent( & unit->unit_Pending, online ? S2EVENT_ONLINE : S2EVENT_OFFLINE, FALSE );
+		Sana2_SignalEvent( & unit->unit_Pending, online ? S2EVENT_ONLINE : S2EVENT_OFFLINE );
 	}
 
 	if ( ! online )
@@ -39,6 +48,9 @@ RT2870_SetOnline( struct EthernetUnit *unit, S32 online )
 			next = (PTR) GetSucc( (PTR) request );
 
 			if ( ( request->ios2_Req.io_Command == S2_READORPHAN ) ||
+				( request->ios2_Req.io_Command == CMD_WRITE ) ||
+				( request->ios2_Req.io_Command == S2_BROADCAST ) ||
+				( request->ios2_Req.io_Command == S2_MULTICAST ) ||
 				( ( request->ios2_Req.io_Command == CMD_READ ) &&
 				  ( ( ! unit->unit_Operational ) || ( request->ios2_PacketType != RT2870_EAPOL_TYPE ) ) ) )
 			{

@@ -16,11 +16,17 @@ void
 unit_Process_MainLoop( struct devUnit *unit )
 {
 U32 mask;
+U32 link_signal;
+
+	link_signal = 1UL << unit->unit_LinkPort->mp_SigBit;
+
+	RTL8152_ArmLinkTimer( unit );
 
 	while( unit->unit_Running == TRUE )
 	{
 		mask = IExec->Wait( 0
 			| SIGBREAKF_CTRL_C
+			| link_signal
 			| unit->unit_USBRegister->Stack_MsgPortBit
 			| unit->unit_BeginIOMsgPortBit
 			| unit->unit_USBBulkIn->MsgPortBit
@@ -39,6 +45,20 @@ U32 mask;
 			unit->unit_Running = FALSE;
 
 			break;
+		}
+
+		if ( ( mask & link_signal ) && ( IExec->CheckIO( & unit->unit_LinkTimer->Request ) ) )
+		{
+			IExec->WaitIO( & unit->unit_LinkTimer->Request );
+
+			unit->unit_LinkTimerPending = FALSE;
+
+			if ( unit->unit_Configured )
+			{
+				RTL8152_UpdateLink( unit );
+			}
+
+			RTL8152_ArmLinkTimer( unit );
 		}
 
 		/* Handle Messages from Network Stack */
@@ -66,7 +86,7 @@ U32 mask;
 	{
 		unit->unit_Online = FALSE;
 
-		SignalSanaEvent( unit, S2EVENT_OFFLINE, TRUE );
+		SignalSanaEvent( unit, S2EVENT_OFFLINE );
 	}
 }
 

@@ -20,7 +20,7 @@ Process_Free( struct EthernetUnit *unit )
 
 	ObtainSemaphore( & unit->unit_CommandLock );
 
-	stop_firmware = ( ! unit->unit_Detached ) && ( unit->unit_FirmwareRunning );
+	stop_firmware = ( ! unit->unit_Detached ) && ( unit->unit_BringupStarted );
 	unit->unit_Detached = TRUE;
 	unit->unit_StationAddressValid = FALSE;
 	unit->unit_RadioReady = FALSE;
@@ -41,6 +41,7 @@ Process_Free( struct EthernetUnit *unit )
 	}
 
 	unit->unit_FirmwareRunning = FALSE;
+	unit->unit_BringupStarted = FALSE;
 
 	if ( unit->unit_Bulk_Rx_Resource )
 	{

@@ -23,8 +23,8 @@ extern struct DOSIFace *IDOS;
 
 // --
 
-static void
-GetSampleTime( struct TimeVal *time )
+void
+Sana2_GetTime( struct TimeVal *time )
 {
 	struct DateStamp stamp;
 
@@ -78,7 +78,7 @@ Sana2_QueueThroughput( struct List *list, struct IOSana2Req *ioreq, struct Timer
 	}
 	else
 	{
-		GetSampleTime( & sample.s2ts_StartTime );
+		Sana2_GetTime( & sample.s2ts_StartTime );
 	}
 
 	sample.s2ts_EndTime = sample.s2ts_StartTime;
@@ -161,7 +161,7 @@ Sana2_UpdateThroughput( struct List *list, uint32 sent, uint32 received )
 
 		stats = ioreq->ios2_StatData;
 
-		GetSampleTime( & time );
+		Sana2_GetTime( & time );
 
 		IExec->Forbid();
 

@@ -69,6 +69,8 @@ struct EthernetUnit
 	struct List unit_MulticastRanges;
 	struct List unit_TrackedTypes;
 	struct List						unit_Multicast;
+	struct TimeVal unit_LastStart;
+	U8 unit_BringupStarted;
 	U64								unit_PacketsRx;
 	U64								unit_PacketsTx;
 	U64								unit_UnknownPackets;

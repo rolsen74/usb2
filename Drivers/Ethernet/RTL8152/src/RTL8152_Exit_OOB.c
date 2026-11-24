@@ -13,11 +13,41 @@
 
 // --
 
-void
+static S32
+WaitLinkList( struct devUnit *unit )
+{
+	U32 count;
+	U8 status;
+
+	for( count = 0; count < 50; count++ )
+	{
+		if ( myRead1( unit, URE_PLA_OOB_CTRL, URE_MCU_TYPE_PLA, & status ) )
+		{
+			return ( FALSE );
+		}
+
+		if ( status & URE_LINK_LIST_READY )
+		{
+			return ( TRUE );
+		}
+
+		IDOS->Delay( 1 );
+	}
+
+	IExec->DebugPrintF( "RTL8152: timed out waiting for the OOB link list\n" );
+
+	return ( FALSE );
+}
+
+// --
+
+S32
 RTL8152_Exit_OOB( struct devUnit *unit )
 {
 U32 val4;
-U32 cnt;
+U32 speed;
+U32 threshold2;
+U32 threshold3;
 uint16 val2;
 uint8 val1;
 
@@ -38,57 +68,34 @@ uint8 val1;
 	myRead2(  unit, URE_PLA_SFF_STS_7, URE_MCU_TYPE_PLA, & val2 );
 	myWrite2( unit, URE_PLA_SFF_STS_7, URE_MCU_TYPE_PLA, val2 & ~URE_MCU_BORW_EN );
 
-    for( cnt=0 ; cnt<50 ; cnt++ )
-    {
-	    myRead1( unit, URE_PLA_OOB_CTRL, URE_MCU_TYPE_PLA, & val1 );
+	if ( ! WaitLinkList( unit ) )
+	{
+		return ( FALSE );
+	}
 
-	    if ( val1 & URE_LINK_LIST_READY )
-	    {
-		    break;
-	    }
-	    else
-	    {
-		    IDOS->Delay( 1 );
-	    }
-    }
+	myRead2( unit, URE_PLA_SFF_STS_7, URE_MCU_TYPE_PLA, & val2 );
 
-    if ( cnt == 50 )
-    {
-	    SHOWMSG( "Damn timeout" );
-    }
-
-	myRead2(  unit, URE_PLA_SFF_STS_7, URE_MCU_TYPE_PLA, & val2 );
 	myWrite2( unit, URE_PLA_SFF_STS_7, URE_MCU_TYPE_PLA, val2 | URE_RE_INIT_LL );
 
-    for( cnt=0 ; cnt<50 ; cnt++ )
-    {
-	    myRead1( unit, URE_PLA_OOB_CTRL, URE_MCU_TYPE_PLA, & val1 );
+	if ( ( ! WaitLinkList( unit ) ) || ( ! RTL8152_Nic_Reset( unit ) ) )
+	{
+		return ( FALSE );
+	}
 
-	    if ( val1 & URE_LINK_LIST_READY )
-	    {
-		    break;
-	    }
-	    else
-	    {
-		    IDOS->Delay( 1 );
-	    }
-    }
+	if ( unit->unit_IUSB2->USB2_Attr_Get( unit->unit_USBRegister->FKT_ID,
+		USB2Tag_Attr_Speed, & speed, sizeof( speed ) ) != sizeof( speed ) )
+	{
+		return ( FALSE );
+	}
 
-    if ( cnt == 50 )
-    {
-	    SHOWMSG( "Damn timeout" );
-    }
+	threshold2 = ( speed == USBSPEED_Full ) ? URE_RXFIFO_THR2_FULL : URE_RXFIFO_THR2_HIGH;
+	threshold3 = ( speed == USBSPEED_Full ) ? URE_RXFIFO_THR3_FULL : URE_RXFIFO_THR3_HIGH;
 
-	RTL8152_Nic_Reset( unit );
-
-	/* rx share fifo credit full threshold */
 	myWrite4( unit, URE_PLA_RXFIFO_CTRL0, URE_MCU_TYPE_PLA, URE_RXFIFO_THR1_NORMAL );
 
-	{
-		/* rx share fifo credit near full threshold */
-		myWrite4( unit, URE_PLA_RXFIFO_CTRL1, URE_MCU_TYPE_PLA, URE_RXFIFO_THR2_HIGH );
-		myWrite4( unit, URE_PLA_RXFIFO_CTRL2, URE_MCU_TYPE_PLA, URE_RXFIFO_THR3_HIGH );
-    }
+	myWrite4( unit, URE_PLA_RXFIFO_CTRL1, URE_MCU_TYPE_PLA, threshold2 );
+
+	myWrite4( unit, URE_PLA_RXFIFO_CTRL2, URE_MCU_TYPE_PLA, threshold3 );
 
 	/* TX share fifo free credit full threshold */
 	myWrite4( unit, URE_PLA_TXFIFO_CTRL, URE_MCU_TYPE_PLA, URE_TXFIFO_THR_NORMAL );
@@ -104,6 +111,7 @@ uint8 val1;
 	myRead2(  unit, URE_PLA_TCR0, URE_MCU_TYPE_PLA, & val2 );
 	myWrite2( unit, URE_PLA_TCR0, URE_MCU_TYPE_PLA, val2 | URE_TCR0_AUTO_FIFO );
 
+	return ( ! unit->unit_USBControlError );
 }
 
 // --

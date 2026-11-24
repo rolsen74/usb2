@@ -97,13 +97,13 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 
 			case S2_GETGLOBALSTATS:
 				Sana2_GetPacketStats( ioreq, unit->unit_PacketsRx, unit->unit_PacketsTx, 0,
-					unit->unit_UnknownPackets );
+					unit->unit_UnknownPackets, & unit->unit_LastStart );
 
 				break;
 
 			case S2_GETEXTENDEDGLOBALSTATS:
 				Sana2_GetExtendedPacketStats( ioreq, unit->unit_PacketsRx, unit->unit_PacketsTx, 0,
-					unit->unit_UnknownPackets, FALSE );
+					unit->unit_UnknownPackets, FALSE, & unit->unit_LastStart );
 
 				break;
 

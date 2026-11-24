@@ -36,7 +36,7 @@ ServiceReceive( struct EthernetUnit *unit )
 
 	ObtainSemaphore( & unit->unit_CommandLock );
 
-	Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE, FALSE );
+	Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE );
 
 	request = (PTR) GetHead( & unit->unit_Pending );
 

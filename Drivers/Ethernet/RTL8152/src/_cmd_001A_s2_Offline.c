@@ -26,11 +26,11 @@ s2_Offline( struct devUnit *unit, struct IOSana2Req *ioreq )
 	unit->unit_Online = FALSE;
 	ioreq->ios2_WireError = 0;
 
-	AbortPacketIO( unit );
+	AbortPacketIO( unit, S2WERR_UNIT_OFFLINE );
 
 	AbortAll( unit, NULL, S2WERR_UNIT_OFFLINE );
 
-	SignalSanaEvent( unit, S2EVENT_OFFLINE, TRUE );
+	SignalSanaEvent( unit, S2EVENT_OFFLINE );
 
 bailout:
 

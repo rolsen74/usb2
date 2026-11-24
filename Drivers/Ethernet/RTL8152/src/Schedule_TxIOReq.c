@@ -18,7 +18,7 @@ Schedule_TxIOReq( struct devUnit *unit )
 struct IOSana2Req *ioreq;
 struct IONode *node;
 
-	if ( ( ! unit->unit_Running ) || ( ! unit->unit_Online ) )
+	if ( ( ! unit->unit_Running ) || ( ! unit->unit_Online ) || ( ! unit->unit_LinkUp ) || ( unit->unit_TxHalted ) )
 	{
 		goto bailout;
 	}

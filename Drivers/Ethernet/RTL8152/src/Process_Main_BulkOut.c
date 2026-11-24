@@ -43,9 +43,14 @@ Handle_BulkOutMessages( struct devUnit *unit )
 		if ( node->AbortError )
 		{
 			request->ios2_Req.io_Error = node->AbortError;
-			request->ios2_WireError = ( node->AbortError == S2ERR_OUTOFSERVICE ) ?
-				S2WERR_UNIT_OFFLINE : S2WERR_GENERIC_ERROR;
+			request->ios2_WireError = node->AbortWire ? node->AbortWire : S2WERR_GENERIC_ERROR;
 			node->AbortError = 0;
+			node->AbortWire = 0;
+		}
+		else if ( ! unit->unit_LinkUp )
+		{
+			request->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
+			request->ios2_WireError = S2WERR_UNIT_DISCONNECTED;
 		}
 		else if ( ( usbio->io_Error == USB2Err_NoError ) && ( usbio->io_Actual == usbio->io_Length ) )
 		{
@@ -60,14 +65,20 @@ Handle_BulkOutMessages( struct devUnit *unit )
 		}
 		else
 		{
-			SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE, TRUE );
+			SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE );
 
 			request->ios2_Req.io_Error = S2ERR_TX_FAILURE;
 			request->ios2_WireError = S2WERR_GENERIC_ERROR;
 
-			if ( usbio->io_Error == USB2Err_Host_Stall )
+			if ( ( usbio->io_Error == USB2Err_Host_Stall ) && ( ! unit->unit_TxHalted ) )
 			{
-				IUSB2->USB2_EPRes_Destall( unit->unit_USBBulkOut );
+				unit->unit_TxHalted = ! IUSB2->USB2_EPRes_Destall( unit->unit_USBBulkOut );
+
+				if ( unit->unit_TxHalted )
+				{
+					Sana2_AbortPendingWithReply( & unit->unit_TxList, NULL, NULL,
+						S2ERR_TX_FAILURE, S2WERR_GENERIC_ERROR, ReplySanaRequest, unit );
+				}
 			}
 		}
 

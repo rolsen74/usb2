@@ -96,7 +96,7 @@ RT2870_Probe( struct EthernetUnit *unit )
 		unit->unit_RxCheckReady = RT2870_InitBaseband( control, version );
 	}
 
-	return ( TRUE );
+	return ( unit->unit_RxCheckReady );
 }
 
 // --

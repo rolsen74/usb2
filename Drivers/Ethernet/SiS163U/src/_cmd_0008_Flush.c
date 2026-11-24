@@ -16,7 +16,7 @@
 void
 Cmd_Flush( struct EthernetUnit *unit, struct IOSana2Req *ioreq UNUSED )
 {
-	Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
+	Sana2_AbortPackets( & unit->unit_Pending, IOERR_ABORTED, 0 );
 }
 
 // --

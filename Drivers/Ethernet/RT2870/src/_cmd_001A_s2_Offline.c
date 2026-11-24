@@ -16,7 +16,7 @@
 void
 Cmd_Offline( struct EthernetUnit *unit, struct IOSana2Req *ioreq UNUSED )
 {
-	if ( unit->unit_Online )
+	if ( ( unit->unit_Online ) || ( unit->unit_Channel ) )
 	{
 		RT2870_DropLink( unit, unit->unit_Detached );
 	}

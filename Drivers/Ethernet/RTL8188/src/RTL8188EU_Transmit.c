@@ -193,7 +193,7 @@ RTL8188EU_Transmit( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 			USB2_EPRes_Destall( resource );
 		}
 
-		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE, TRUE );
+		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE );
 	}
 	else if ( ! management )
 	{
