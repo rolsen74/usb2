@@ -17,7 +17,8 @@ struct USB2_IORequest *ioreq;
 
 U32 freebytes;
 
-	if ( ( unit->Detached ) || ( unit->ReadPending ) )
+	if ( ( ! unit->SessionOpen ) || ( unit->Detached ) || ( unit->ReadPending ) ||
+		( unit->Recovery[SERIAL_PIPE_IN].Waiting ) || ( unit->Recovery[SERIAL_PIPE_IN].Failed ) )
 	{
 		return;
 	}

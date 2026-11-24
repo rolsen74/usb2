@@ -36,6 +36,14 @@ struct IOExtSer *next;
 		}
 	}
 
+	if ( ( unit->ReadActive ) && ( unit->ReadActive->IOSer.io_Flags & IOSERF_ABORT ) )
+	{
+		ioreq = unit->ReadActive;
+		unit->ReadActive = NULL;
+
+		Serial_Reply( ctx, ioreq );
+	}
+
 	ioreq = (PTR) GetHead( & unit->ReadList );
 
 	while( ioreq )
@@ -67,6 +75,8 @@ struct IOExtSer *next;
 
 		ioreq = next;
 	}
+
+	Serial_Read_Drain( ctx, unit );
 
 	Serial_Write_Start( ctx, unit );
 }

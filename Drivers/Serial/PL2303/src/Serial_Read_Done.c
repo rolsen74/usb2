@@ -25,9 +25,10 @@ U32 next;
 
 		if ( ioreq->io_Error == USB2Err_NoError )
 		{
+			unit->Recovery[SERIAL_PIPE_IN].Attempts = 0;
 			data = ioreq->io_Data;
 
-			for( index = 0; index < ioreq->io_Actual; index++ )
+			for( index = 0; ( index < ioreq->io_Actual ) && ( index < ioreq->io_Length ); index++ )
 			{
 				next = ( unit->RxHead + 1 ) % SERIAL_RX_SIZE;
 
@@ -43,13 +44,9 @@ U32 next;
 
 			Serial_Read_Drain( ctx, unit );
 		}
-		else if ( ioreq->io_Error == USB2Err_Host_Stall )
-		{
-			USB2_EPRes_Destall( unit->BulkIn );
-		}
 		else
 		{
-			unit->Detached = TRUE;
+			Serial_RecoveryError( ctx, unit, SERIAL_PIPE_IN, ioreq->io_Error );
 		}
 	}
 

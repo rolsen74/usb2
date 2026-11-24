@@ -11,6 +11,40 @@
 
 // --
 
+SEC_CODE static void
+UpdateSession( struct SerialContext *ctx, struct SerialUnit *unit )
+{
+	enum USB2SerialSession state;
+
+	if ( ! unit->Sessions )
+	{
+		return;
+	}
+
+	state = unit->SerialInterface->Session( unit->PortUnit );
+
+	if ( state == USB2_SERIAL_CLOSING )
+	{
+		unit->SessionOpen = FALSE;
+
+		Serial_Reset( ctx, unit );
+
+		unit->SerialInterface->FinishClose( unit->PortUnit );
+	}
+	else if ( ( state == USB2_SERIAL_OPEN ) && ( ! unit->SessionOpen ) )
+	{
+		unit->SessionOpen = TRUE;
+
+		Serial_RecoveryResume( unit );
+
+		Serial_Read_Start( ctx, unit );
+
+		Serial_Interrupt_Start( ctx, unit );
+	}
+}
+
+// --
+
 SEC_CODE void Serial_Main( struct SerialContext *ctx, struct SerialUnit *unit )
 {
 struct USB2_NotifyMessage *msg;
@@ -27,6 +61,7 @@ U32 mask;
 	waitmask |= unit->BulkIn->MsgPortBit;
 	waitmask |= unit->BulkOut->MsgPortBit;
 	waitmask |= SIGBREAKF_CTRL_C;
+	waitmask |= 1UL << unit->RecoveryPort->mp_SigBit;
 
 	if ( unit->Interrupt )
 	{
@@ -55,18 +90,24 @@ U32 mask;
 			}
 		}
 
-		if ( unit->Detached )
+		if ( ( unit->Detached ) || ( mask & SIGBREAKF_CTRL_C ) )
 		{
+			unit->Detached = TRUE;
+
 			break;
 		}
 
 		if ( mask & ( 1UL << unit->AbortPort->mp_SigBit ) )
 		{
+			UpdateSession( ctx, unit );
+
 			Serial_Abort( ctx, unit );
 		}
 
 		if ( mask & ( 1UL << unit->BeginPort->mp_SigBit ) )
 		{
+			UpdateSession( ctx, unit );
+
 			Serial_Begin( ctx, unit );
 		}
 
@@ -90,9 +131,9 @@ U32 mask;
 			Serial_BreakDone( ctx, unit );
 		}
 
-		if ( mask & SIGBREAKF_CTRL_C )
+		if ( ( ! unit->Detached ) && ( mask & ( 1UL << unit->RecoveryPort->mp_SigBit ) ) )
 		{
-			unit->Detached = TRUE;
+			Serial_RecoveryDone( ctx, unit );
 		}
 	}
 }

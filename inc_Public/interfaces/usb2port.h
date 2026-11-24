@@ -47,7 +47,14 @@ struct USB2PortIFace
 	void APICALL (*Unregister)( struct USB2PortIFace *Self, struct USB2PortUnit *unit );
 };
 
-/* Serial backends can use "serial" v1 to publish effective line settings. */
+/* Serial device revision 5 extends "serial" v1 with session notifications. */
+enum USB2SerialSession
+{
+	USB2_SERIAL_IDLE,
+	USB2_SERIAL_OPEN,
+	USB2_SERIAL_CLOSING
+};
+
 struct IOExtSer;
 
 struct USB2SerialIFace
@@ -59,6 +66,10 @@ struct USB2SerialIFace
 	struct Interface *APICALL (*Clone)( struct USB2SerialIFace *Self );
 	void APICALL (*SetParams)( struct USB2SerialIFace *Self, struct USB2PortUnit *unit,
 		const struct IOExtSer *params );
+	struct USB2PortUnit *APICALL (*RegisterSession)( struct USB2SerialIFace *Self,
+		struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
+	enum USB2SerialSession APICALL (*Session)( struct USB2SerialIFace *Self, struct USB2PortUnit *unit );
+	void APICALL (*FinishClose)( struct USB2SerialIFace *Self, struct USB2PortUnit *unit );
 };
 
 /*

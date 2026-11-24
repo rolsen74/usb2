@@ -13,10 +13,7 @@
 
 SEC_CODE void Serial_Cmd_Write( struct SerialContext *ctx, struct SerialUnit *unit, struct IOExtSer *ioreq )
 {
-U8 *data;
-U32 length;
-
-	if ( ( unit->Stopped ) || ( ! ioreq->IOSer.io_Data ) )
+	if ( ! ioreq->IOSer.io_Data )
 	{
 		ioreq->IOSer.io_Error = SerErr_InvParam;
 		Serial_Reply( ctx, ioreq );
@@ -24,24 +21,18 @@ U32 length;
 		return;
 	}
 
-	if ( ioreq->IOSer.io_Length == (U32) -1 )
-	{
-		data = ioreq->IOSer.io_Data;
-		length = 0;
-
-		while( data[length] )
-		{
-			length++;
-		}
-
-		ioreq->IOSer.io_Length = length + 1;
-	}
-
 	if ( ! ioreq->IOSer.io_Length )
 	{
 		Serial_Reply( ctx, ioreq );
 
 		return;
+	}
+
+	if ( unit->Recovery[SERIAL_PIPE_OUT].Failed )
+	{
+		unit->Recovery[SERIAL_PIPE_OUT].Failed = FALSE;
+
+		Serial_RecoveryError( ctx, unit, SERIAL_PIPE_OUT, USB2Err_Host_Stall );
 	}
 
 	AddTail( & unit->WriteList, (PTR) ioreq );

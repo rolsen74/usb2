@@ -38,11 +38,40 @@ Serial_BreakInit( struct SerialUnit *unit )
 
 // --
 
-SEC_CODE void
-Serial_BreakStop( struct SerialContext *ctx, struct SerialUnit *unit, S32 error )
+SEC_CODE static void
+ScheduleBreak( struct SerialUnit *unit, U32 micro )
+{
+	unit->BreakTimer->Request.io_Command = TR_ADDREQUEST;
+	unit->BreakTimer->Time.Seconds = micro / 1000000;
+	unit->BreakTimer->Time.Microseconds = micro % 1000000;
+	unit->BreakTimerPending = TRUE;
+
+	SendIO( (PTR)unit->BreakTimer );
+}
+
+// --
+
+SEC_CODE static void
+FinishBreakRequest( struct SerialContext *ctx, struct SerialUnit *unit, S32 error )
 {
 	struct IOExtSer *ioreq;
 
+	ioreq = unit->BreakRequest;
+	unit->BreakRequest = NULL;
+
+	if ( ioreq )
+	{
+		ioreq->IOSer.io_Error = error;
+
+		Serial_Reply( ctx, ioreq );
+	}
+}
+
+// --
+
+SEC_CODE void
+Serial_BreakStop( struct SerialContext *ctx, struct SerialUnit *unit, S32 error )
+{
 	U16 ifcnr;
 
 	if ( ! unit->BreakActive )
@@ -62,27 +91,38 @@ Serial_BreakStop( struct SerialContext *ctx, struct SerialUnit *unit, S32 error 
 		unit->BreakTimerPending = FALSE;
 	}
 
-	ifcnr = unit->StartMsg->InterfaceDescriptor->InterfaceNumber;
+	ifcnr = unit->ACM ? unit->StartMsg->InterfaceDescriptor->InterfaceNumber : 0;
 
 	if ( ! Serial_Control( ctx, unit, REQTYPE_Write | REQTYPE_Class | REQTYPE_Interface,
 		0x23, 0, ifcnr, NULL, 0 ) )
 	{
-		if ( ! error )
+		if ( ( ! unit->Detached ) && ( unit->BreakRetries < 3 ) )
 		{
-			error = SerErr_DevBusy;
+			unit->BreakRetries++;
+			unit->BreakFinite = FALSE;
+
+			ScheduleBreak( unit, 100000 );
+
+			if ( ! error )
+			{
+				return;
+			}
 		}
+		else
+		{
+			unit->BreakFailed = TRUE;
+		}
+
+		FinishBreakRequest( ctx, unit, error ? error : SerErr_DevBusy );
+
+		return;
 	}
 
-	ioreq = unit->BreakRequest;
-	unit->BreakRequest = NULL;
 	unit->BreakActive = FALSE;
+	unit->BreakFailed = FALSE;
+	unit->BreakFinite = FALSE;
 
-	if ( ioreq )
-	{
-		ioreq->IOSer.io_Error = error;
-
-		Serial_Reply( ctx, ioreq );
-	}
+	FinishBreakRequest( ctx, unit, error );
 }
 
 // --
@@ -117,7 +157,17 @@ Serial_BreakDone( struct SerialContext *ctx, struct SerialUnit *unit )
 	{
 		unit->BreakTimerPending = FALSE;
 
-		Serial_BreakStop( ctx, unit, unit->BreakTimer->Request.io_Error ? SerErr_DevBusy : 0 );
+		if ( ( unit->BreakFinite ) && ( ! unit->BreakTimer->Request.io_Error ) )
+		{
+			unit->BreakActive = FALSE;
+			unit->BreakFinite = FALSE;
+
+			FinishBreakRequest( ctx, unit, 0 );
+		}
+		else
+		{
+			Serial_BreakStop( ctx, unit, unit->BreakTimer->Request.io_Error ? SerErr_DevBusy : 0 );
+		}
 
 		Serial_Write_Start( ctx, unit );
 	}
@@ -130,11 +180,20 @@ Serial_BreakStart( struct SerialContext *ctx, struct SerialUnit *unit, struct IO
 {
 	U32 micro;
 	U16 ifcnr;
+	U16 duration;
 
-	ifcnr = unit->StartMsg->InterfaceDescriptor->InterfaceNumber;
+	ifcnr = unit->ACM ? unit->StartMsg->InterfaceDescriptor->InterfaceNumber : 0;
+
+	micro = ioreq->io_BrkTime ? ioreq->io_BrkTime : 20000;
+	duration = 0xffff;
+
+	if ( ( unit->ACM ) && ( micro < 65535000 ) && ( ! ( micro % 1000 ) ) )
+	{
+		duration = micro / 1000;
+	}
 
 	if ( ( unit->BreakActive ) || ( ! Serial_Control( ctx, unit, REQTYPE_Write | REQTYPE_Class | REQTYPE_Interface,
-		0x23, 0xffff, ifcnr, NULL, 0 ) ) )
+		0x23, duration, ifcnr, NULL, 0 ) ) )
 	{
 		ioreq->IOSer.io_Error = SerErr_DevBusy;
 
@@ -143,14 +202,12 @@ Serial_BreakStart( struct SerialContext *ctx, struct SerialUnit *unit, struct IO
 		return;
 	}
 
-	micro = ioreq->io_BrkTime ? ioreq->io_BrkTime : 20000;
-	unit->BreakTimer->Request.io_Command = TR_ADDREQUEST;
-	unit->BreakTimer->Time.Seconds = micro / 1000000;
-	unit->BreakTimer->Time.Microseconds = micro % 1000000;
-	unit->BreakTimerPending = TRUE;
 	unit->BreakActive = TRUE;
+	unit->BreakFinite = ( duration != 0xffff );
+	unit->BreakRetries = 0;
+	unit->BreakFailed = FALSE;
 
-	SendIO( (PTR)unit->BreakTimer );
+	ScheduleBreak( unit, micro );
 
 	if ( ioreq->io_SerFlags & SERF_QUEUEDBRK )
 	{

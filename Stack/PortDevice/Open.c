@@ -174,6 +174,11 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 			goto bailout;
 		}
 
+		if ( ( unit->SerialSessions ) && ( ((struct IOExtSer *)request)->io_SerFlags & SERF_7WIRE ) )
+		{
+			goto bailout;
+		}
+
 		shared = SharedOpen( base, request );
 
 		if ( ( unit->Closing ) || ( unit->Quiescing ) || ( ( unit->Opens ) && ( ( ! unit->Shared ) || ( ! shared ) ) ) )
@@ -183,6 +188,11 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 
 		unit->Shared = shared;
 		unit->Opens++;
+
+		if ( ( unit->SerialSessions ) && ( unit->Opens == 1 ) )
+		{
+			IExec->Signal( unit->AbortPort->mp_SigTask, 1UL << unit->AbortPort->mp_SigBit );
+		}
 
 		if ( base->Type == PORT_SERIAL )
 		{

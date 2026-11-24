@@ -13,7 +13,7 @@
 
 SEC_CODE void Serial_Cmd_Flush( struct SerialContext *ctx, struct SerialUnit *unit, struct IOExtSer *ioreq )
 {
-	Serial_Flush( ctx, unit );
+	Serial_Flush( ctx, unit, FALSE );
 	Serial_Reply( ctx, ioreq );
 }
 

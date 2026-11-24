@@ -12,10 +12,9 @@
 
 // --
 
-SEC_CODE struct USB2PortUnit *
-PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct MsgPort *abort, ULONG *number )
+SEC_CODE static struct USB2PortUnit *
+Register( struct USB2PortDevice *base, struct MsgPort *begin, struct MsgPort *abort, ULONG *number, BOOL sessions )
 {
-	struct USB2PortDevice *base;
 	struct USB2PortUnit **link;
 	struct USB2PortUnit *unit;
 	struct ExecIFace *IExec;
@@ -34,7 +33,6 @@ PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct M
 		return ( NULL );
 	}
 
-	base = (PTR) Self->Data.LibBase;
 	IExec = base->IExec;
 
 	unit = IExec->AllocVecTags( sizeof( *unit ), AVT_Clear, 0, TAG_END );
@@ -46,6 +44,7 @@ PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct M
 
 	unit->BeginPort = begin;
 	unit->AbortPort = abort;
+	unit->SerialSessions = sessions;
 	index = 0;
 
 	IExec->ObtainSemaphore( & base->Lock );
@@ -75,6 +74,22 @@ PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct M
 	IExec->ReleaseSemaphore( & base->Lock );
 
 	return ( unit );
+}
+
+// --
+
+SEC_CODE struct USB2PortUnit *
+PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct MsgPort *abort, ULONG *number )
+{
+	return ( Register( (PTR)Self->Data.LibBase, begin, abort, number, FALSE ) );
+}
+
+// --
+
+SEC_CODE struct USB2PortUnit *
+PortDevice_RegisterSession( struct USB2SerialIFace *Self, struct MsgPort *begin, struct MsgPort *abort, ULONG *number )
+{
+	return ( Register( (PTR)Self->Data.LibBase, begin, abort, number, TRUE ) );
 }
 
 // --

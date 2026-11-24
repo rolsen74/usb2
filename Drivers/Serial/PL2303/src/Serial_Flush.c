@@ -11,9 +11,18 @@
 
 // --
 
-SEC_CODE void Serial_Flush( struct SerialContext *ctx, struct SerialUnit *unit )
+SEC_CODE void Serial_Flush( struct SerialContext *ctx, struct SerialUnit *unit, BOOL active )
 {
 struct IOExtSer *ioreq;
+
+	if ( ( active ) && ( unit->ReadActive ) )
+	{
+		ioreq = unit->ReadActive;
+		unit->ReadActive = NULL;
+		ioreq->IOSer.io_Error = IOERR_ABORTED;
+
+		Serial_Reply( ctx, ioreq );
+	}
 
 	while(( ioreq = (PTR) RemHead( & unit->ReadList ) ))
 	{

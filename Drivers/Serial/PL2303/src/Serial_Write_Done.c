@@ -11,6 +11,26 @@
 
 // --
 
+SEC_CODE void
+Serial_Write_Account( struct SerialUnit *unit, struct USB2_IORequest *usbio )
+{
+	struct IOExtSer *ioreq;
+
+	U32 confirmed;
+	U32 remaining;
+
+	ioreq = unit->WriteActive;
+
+	if ( ( ioreq ) && ( ioreq->IOSer.io_Actual < unit->WriteLength ) )
+	{
+		remaining = unit->WriteLength - ioreq->IOSer.io_Actual;
+		confirmed = ( usbio->io_Actual < usbio->io_Length ) ? usbio->io_Actual : usbio->io_Length;
+		ioreq->IOSer.io_Actual += ( confirmed < remaining ) ? confirmed : remaining;
+	}
+}
+
+// --
+
 SEC_CODE void Serial_Write_Done( struct SerialContext *ctx, struct SerialUnit *unit )
 {
 struct USB2_IORequest *usbio;
@@ -26,6 +46,17 @@ struct IOExtSer *ioreq;
 			continue;
 		}
 
+		Serial_Write_Account( unit, usbio );
+
+		if ( usbio->io_Error == USB2Err_NoError )
+		{
+			unit->Recovery[SERIAL_PIPE_OUT].Attempts = 0;
+		}
+		else
+		{
+			Serial_RecoveryError( ctx, unit, SERIAL_PIPE_OUT, usbio->io_Error );
+		}
+
 		if ( ioreq->IOSer.io_Flags & IOSERF_ABORT )
 		{
 			ioreq->IOSer.io_Error = IOERR_ABORTED;
@@ -37,15 +68,13 @@ struct IOExtSer *ioreq;
 
 		if ( usbio->io_Error == USB2Err_NoError )
 		{
-			ioreq->IOSer.io_Actual += usbio->io_Actual;
-
-			if ( ( usbio->io_Actual ) && ( ioreq->IOSer.io_Actual < ioreq->IOSer.io_Length ) )
+			if ( ( usbio->io_Actual ) && ( ioreq->IOSer.io_Actual < unit->WriteLength ) )
 			{
 				Serial_Write_Start( ctx, unit );
 				continue;
 			}
 
-			if ( ioreq->IOSer.io_Actual < ioreq->IOSer.io_Length )
+			if ( ioreq->IOSer.io_Actual < unit->WriteLength )
 			{
 				ioreq->IOSer.io_Error = SerErr_DevBusy;
 			}
@@ -53,15 +82,6 @@ struct IOExtSer *ioreq;
 		else
 		{
 			ioreq->IOSer.io_Error = SerErr_DevBusy;
-
-			if ( usbio->io_Error == USB2Err_Host_Stall )
-			{
-				USB2_EPRes_Destall( unit->BulkOut );
-			}
-			else
-			{
-				unit->Detached = TRUE;
-			}
 		}
 
 		unit->WriteActive = NULL;

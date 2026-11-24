@@ -34,7 +34,7 @@ PortDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request
 	wait = FALSE;
 	pending = 0;
 
-	if ( ( unit ) && ( base->Type == PORT_PRINTER ) )
+	if ( ( unit ) && ( ( base->Type == PORT_PRINTER ) || ( unit->SerialSessions ) ) )
 	{
 		reply = IExec->AllocSysObjectTags( ASOT_PORT, TAG_END );
 
@@ -75,7 +75,7 @@ PortDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request
 		{
 			IExec->FreeVec( unit );
 		}
-		else if ( ( base->Type == PORT_PRINTER ) && ( ! unit->Opens ) )
+		else if ( ( ( base->Type == PORT_PRINTER ) || ( unit->SerialSessions ) ) && ( ! unit->Opens ) )
 		{
 			unit->Closing = TRUE;
 

@@ -45,7 +45,7 @@ U8 state;
 		status |= IO_STATF_OVERRUN;
 	}
 
-	if ( state & SERIAL_UART_BREAK )
+	if ( unit->BreakQuery )
 	{
 		status |= IO_STATF_READBREAK;
 	}
@@ -53,6 +53,7 @@ U8 state;
 	ioreq->io_Status = status;
 	ioreq->IOSer.io_Actual = ( unit->RxHead + SERIAL_RX_SIZE - unit->RxTail ) % SERIAL_RX_SIZE;
 	unit->Overrun = FALSE;
+	unit->BreakQuery = FALSE;
 
 	Serial_Reply( ctx, ioreq );
 }

@@ -13,13 +13,14 @@
 
 SEC_CODE void Serial_Read_Break( struct SerialContext *ctx, struct SerialUnit *unit )
 {
-struct IOExtSer *ioreq;
+	unit->BreakQuery = TRUE;
 
-	while(( ioreq = (PTR) RemHead( & unit->ReadList ) ))
+	if ( unit->ReadBreaks != (U32)-1 )
 	{
-		ioreq->IOSer.io_Error = SerErr_DetectedBreak;
-		Serial_Reply( ctx, ioreq );
+		unit->ReadBreaks++;
 	}
+
+	Serial_Read_Drain( ctx, unit );
 }
 
 // --

@@ -27,6 +27,8 @@ struct IOExtSer *ioreq;
 
 	Serial_BreakFree( ctx, unit );
 
+	Serial_RecoveryFree( unit );
+
 	if ( unit->SerialInterface )
 	{
 		DropInterface( (PTR)unit->SerialInterface );
@@ -51,6 +53,9 @@ struct IOExtSer *ioreq;
 	if ( unit->WritePending )
 	{
 		Serial_IO_Stop( ctx, unit->BulkOut->IORequests[0] );
+
+		Serial_Write_Account( unit, unit->BulkOut->IORequests[0] );
+
 		unit->WritePending = FALSE;
 	}
 
@@ -60,7 +65,7 @@ struct IOExtSer *ioreq;
 		unit->InterruptPending = FALSE;
 	}
 
-	Serial_Flush( ctx, unit );
+	Serial_Flush( ctx, unit, TRUE );
 
 	if ( unit->BeginPort )
 	{

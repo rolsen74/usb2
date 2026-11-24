@@ -44,7 +44,7 @@ PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 
 	IExec->ObtainSemaphore( & base->Lock );
 
-	if ( ( unit ) && ( unit->BeginPort ) && ( ( base->Type != PORT_PRINTER ) || ( ( ! unit->Closing ) && ( ! unit->Quiescing ) ) ) &&
+	if ( ( unit ) && ( unit->BeginPort ) && ( ! unit->Closing ) && ( ( base->Type != PORT_PRINTER ) || ( ! unit->Quiescing ) ) &&
 		( ( request->io_Command != NSCMD_DEVICEQUERY ) ||
 		  ( ( base->Type != PORT_PRINTER ) && ( request->io_Message.mn_Length >= sizeof( *request ) ) ) ) )
 	{

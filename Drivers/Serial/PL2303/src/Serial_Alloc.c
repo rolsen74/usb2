@@ -11,11 +11,70 @@
 
 // --
 
+SEC_CODE static BOOL
+PL2303HasBulkPair( struct USB2_DriverMessage *msg )
+{
+	const U8 *desc;
+
+	U32 size;
+	U32 length;
+	U8 endpoints;
+	BOOL matched;
+
+	desc = (PTR)msg->ConfigDescriptors;
+
+	if ( ( ! desc ) || ( ! msg->Function ) ||
+		( USB2_Attr_Get( msg->Function->FKT_ID, USB2Tag_Attr_ConfigSize, &size, sizeof( size ) ) != sizeof( size ) ) )
+	{
+		// Let endpoint allocation check when cached descriptors are unavailable.
+		return ( TRUE );
+	}
+
+	matched = FALSE;
+	endpoints = 0;
+
+	while( size >= 2 )
+	{
+		length = desc[0];
+
+		if ( ( length < 2 ) || ( length > size ) )
+		{
+			break;
+		}
+
+		if ( ( desc[1] == DSCTYPE_Interface ) && ( length >= 9 ) )
+		{
+			matched = ( desc[2] == msg->InterfaceDescriptor->InterfaceNumber ) &&
+				( desc[3] == msg->InterfaceDescriptor->AlternateSetting );
+			endpoints = 0;
+		}
+		else if ( ( matched ) && ( desc[1] == DSCTYPE_EndPoint ) && ( length >= 7 ) &&
+			( ( desc[3] & EPATT_Type_Mask ) == EPATT_Type_Bulk ) )
+		{
+			endpoints |= ( desc[2] & EPADR_Dir_Mask ) ? 1 : 2;
+
+			if ( endpoints == 3 )
+			{
+				return ( TRUE );
+			}
+		}
+
+		size -= length;
+		desc += length;
+	}
+
+	return ( FALSE );
+}
+
+// --
+
 SEC_CODE struct SerialUnit *
 Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg )
 {
 	struct SerialUnit *		unit;
 	struct USB2_Interface * data;
+	struct USB2_Interface * status;
+	struct Library *device;
 
 	const char * stage;
 	U32			 control_nr;
@@ -48,6 +107,14 @@ Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg )
 	stage = "parse CDC ACM descriptors";
 
 	if ( ( unit->ACM ) && ( ! Serial_ACM_Parse ( unit, &data_nr, &alt ) ) )
+	{
+		goto bailout;
+	}
+
+	// Leave a split adapter's status interface unclaimed for the data worker.
+	stage = "find PL2303 bulk endpoints";
+
+	if ( ( ! unit->ACM ) && ( ! PL2303HasBulkPair( msg ) ) )
 	{
 		goto bailout;
 	}
@@ -141,6 +208,20 @@ Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg )
 											  EPATT_Type_Interrupt, USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
 											  USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize, TAG_END );
 
+	if ( ( ! unit->Interrupt ) && ( ! unit->ACM ) && ( control_nr == 1 ) )
+	{
+		// Some 067b:2303 adapters use interface 0 for status.
+		status = USB2_Ifc_FindTags( USB2Tag_Find_FunctionID, &unit->Register->FKT_ID,
+			USB2Tag_Find_InterfaceNumber, 0, TAG_END );
+
+		if ( ( status ) && ( USB2_Ifc_Claim( unit->Register, status ) ) )
+		{
+			unit->Interrupt = USB2_EPRes_ObtainTags( unit->Register, USB2Tag_EPRes_InterfaceNr, 0,
+				USB2Tag_EPRes_EPType, EPATT_Type_Interrupt, USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
+				USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize, TAG_END );
+		}
+	}
+
 	if ( ( ! unit->Interrupt ) && ( ! unit->ACM ) )
 	{
 		goto bailout;
@@ -179,9 +260,27 @@ Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg )
 
 	Serial_BreakInit( unit );
 
+	stage = "open serial recovery timer";
+
+	if ( ! Serial_RecoveryInit( unit ) )
+	{
+		goto bailout;
+	}
+
 	stage = "register serial unit";
 
-	unit->PortUnit = unit->PortInterface->Register ( unit->BeginPort, unit->AbortPort, &number );
+	device = (PTR)unit->PortRequest.io_Device;
+	unit->Sessions = ( ( unit->SerialInterface ) && ( ( device->lib_Version > 1 ) || ( device->lib_Revision >= 5 ) ) );
+	unit->SessionOpen = ! unit->Sessions;
+
+	if ( unit->Sessions )
+	{
+		unit->PortUnit = unit->SerialInterface->RegisterSession( unit->BeginPort, unit->AbortPort, &number );
+	}
+	else
+	{
+		unit->PortUnit = unit->PortInterface->Register( unit->BeginPort, unit->AbortPort, &number );
+	}
 
 	if ( ! unit->PortUnit )
 	{

@@ -19,7 +19,6 @@ SEC_CODE void
 Serial_ACM_Notification( struct SerialContext *ctx, struct SerialUnit *unit, const U8 *data, U32 length )
 {
 	U8 *packet;
-	U8 previous;
 	U32 used;
 	U32 total;
 	U32 index;
@@ -49,10 +48,9 @@ Serial_ACM_Notification( struct SerialContext *ctx, struct SerialUnit *unit, con
 				( packet[1] == ACM_SERIAL_STATE ) && ( ! packet[2] ) && ( ! packet[3] ) &&
 				( packet[4] == unit->StartMsg->InterfaceDescriptor->InterfaceNumber ) && ( ! packet[5] ) )
 			{
-				previous = unit->UartState;
 				unit->UartState = packet[8] & 0x7f;
 
-				if ( ( unit->UartState & SERIAL_UART_BREAK ) && ( ! ( previous & SERIAL_UART_BREAK ) ) )
+				if ( unit->UartState & SERIAL_UART_BREAK )
 				{
 					Serial_Read_Break( ctx, unit );
 				}

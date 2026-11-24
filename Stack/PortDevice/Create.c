@@ -93,6 +93,9 @@ SEC_RODATA static const PTR SerialVectors[] =
 	NULL,
 	NULL,
 	(PTR)PortDevice_SetParams,
+	(PTR)PortDevice_RegisterSession,
+	(PTR)PortDevice_SerialSession,
+	(PTR)PortDevice_SerialFinishClose,
 	(PTR)-1
 };
 
@@ -195,7 +198,7 @@ PortDevice_Create ( struct USBBase * usbbase )
 	// --
 	// Serial
 
-	serial = Alloc ( usbbase, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.4 (" DATE ")\r\n", 4, PORT_SERIAL );
+	serial = Alloc ( usbbase, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.5 (" DATE ")\r\n", 5, PORT_SERIAL );
 
 	if ( ! serial )
 	{
