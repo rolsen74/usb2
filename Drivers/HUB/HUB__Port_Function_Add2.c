@@ -223,3 +223,101 @@ S32 err;
 }
 
 // --
+
+SEC_CODE S32
+HUB__Port_Reset( struct USBBase *usbbase, struct intern *in, U32 port, struct USB2_PortStatus *status )
+{
+	S32 err;
+
+	err = HUB__Port_Status_Get( usbbase, in, port, status );
+
+	if ( err )
+	{
+		return ( err );
+	}
+
+	if ( ( ! ( status->wPortStatus & PORTSTATF_Connection ) ) || ( status->wPortChange & PORTCHGF_Connection ) )
+	{
+		return ( USB2Err_Device_Detached );
+	}
+
+	if ( status->wPortStatus & PORTSTATF_Reset )
+	{
+		return ( USB2Err_Host_HostError );
+	}
+
+	if ( status->wPortChange & PORTCHGF_Reset )
+	{
+		err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_RESET );
+
+		if ( err )
+		{
+			return ( err );
+		}
+	}
+
+	err = HUB__Port_Feature_Set( usbbase, in, port, PORT_RESET );
+
+	if ( err )
+	{
+		return ( err );
+	}
+
+	// Preserve the reset settling intervals used before deferred enumeration.
+	HUB_DELAY_MS( in->Function->fkt_Tier ? USB_PORT_RESET_DELAY : 100 );
+
+	do
+	{
+		err = HUB__Port_Status_Get( usbbase, in, port, status );
+
+		if ( err )
+		{
+			return ( err );
+		}
+
+		if ( ( ! ( status->wPortStatus & PORTSTATF_Connection ) ) ||
+			( status->wPortChange & PORTCHGF_Connection ) )
+		{
+			return ( USB2Err_Device_Detached );
+		}
+
+		if ( ( status->wPortChange & PORTCHGF_Reset ) && ( ! ( status->wPortStatus & PORTSTATF_Reset ) ) )
+		{
+			err = HUB__Port_Feature_Clr( usbbase, in, port, PORT_CLR_RESET );
+
+			if ( err )
+			{
+				return ( err );
+			}
+
+			HUB_DELAY_MS( 10 );
+
+			err = HUB__Port_Status_Get( usbbase, in, port, status );
+
+			if ( err )
+			{
+				return ( err );
+			}
+
+			if ( ( ! ( status->wPortStatus & PORTSTATF_Connection ) ) ||
+				( status->wPortChange & PORTCHGF_Connection ) )
+			{
+				return ( USB2Err_Device_Detached );
+			}
+
+			if ( ( status->wPortStatus & PORTSTATF_Enable ) && ( ! ( status->wPortStatus & PORTSTATF_Reset ) ) )
+			{
+				return ( USB2Err_NoError );
+			}
+
+			return ( USB2Err_Host_HostError );
+		}
+
+		HUB_DELAY_MS( 10 );
+	}
+	while ( HUB_Uptime( usbbase ) < in->ControlDeadline );
+
+	return ( USB2Err_Host_Timeout );
+}
+
+// --

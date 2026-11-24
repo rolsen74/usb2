@@ -259,7 +259,10 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			{
 				request->io_Error = USB2Err_Stack_InvalidStructure;
 			}
-			else if ( ( ( ! hn->hn_AcceptIO ) && ( ( fn->fkt_Tier ) || ( ! hn->hn_EHCIRecovering ) ) ) ||
+			else if ( ( ( ! hn->hn_AcceptIO ) && ( ( fn->fkt_Tier ) || ( ! hn->hn_EHCIRecovering ) ||
+					( request->io_Command == CMD_WRITE ) ) ) ||
+				 ( ( ioreq->req_CheckEpoch ) && ( ioreq->req_ExpectedEpoch != hn->hn_IOEpoch ) ) ||
+				 ( ( fn->fkt_EnumFenced ) && ( fn->fkt_EnumEpoch != hn->hn_IOEpoch ) ) ||
 				 ( ( fn->fkt_Tier ) && ( fn->fkt_HCDGeneration != hn->hn_Generation ) ) )
 			{
 				request->io_Error = USB2Err_Device_Detached;
@@ -285,6 +288,7 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 				request->io_Error = 0;
 				request->io_Flags &= ~IOF_QUICK;
 				ioreq->req_Submission++;
+				ioreq->req_SubmitEpoch = hn->hn_IOEpoch;
 				ioreq->req_AbortRequested = FALSE;
 				ioreq->req_PublicStat	  = IORS_HCD_Pending;
 

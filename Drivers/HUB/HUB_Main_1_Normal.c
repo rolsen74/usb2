@@ -91,82 +91,84 @@ RecoverPorts( struct USBBase *usbbase, struct intern *in )
 		{
 			HUB__Port_Chg( usbbase, in, port );
 		}
+
+		if ( in->PortWork )
+		{
+			HUB__Port_Probe_Holds( usbbase, in, port );
+		}
 	}
 }
 
 // --
 
-SEC_CODE void HUB_Main__Normal( struct USBBase *usbbase, struct intern *in )
+SEC_CODE void
+HUB_Main__Normal( struct USBBase *usbbase, struct intern *in )
 {
-U32 wait;
-U32 mask;
-
-	USBDEBUG( "__myMain (HUB)           : HUB_Main__Normal (1)" );
-	USBDEBUG( "FN Normal Locks #%lu", in->Function->fkt_Locks );
+	U32 mask;
+	U32 wait;
+	U64 now;
 
 	in->Running = TRUE;
+	wait = SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_D | in->Res_Interrupt->MsgPortBit |
+		in->Register->reg_Public.Stack_MsgPortBit | in->Tick_MsgPort.ump_Signal.sig_Signal_Mask;
 
-	// -- Normal mode
+	in->HousekeepingDue = HUB_Uptime( usbbase ) + 2000000;
 
-	wait  = SIGBREAKF_CTRL_C;
-	wait |= SIGBREAKF_CTRL_D;
-	wait |=	in->Res_Interrupt->MsgPortBit;
-	wait |=	in->Register->reg_Public.Stack_MsgPortBit;
-	wait |= in->Tick_MsgPort.ump_Signal.sig_Signal_Mask;
+	HUB_Arm_Tick( usbbase, in );
 
-	while( in->Running )
+	while ( in->Running )
 	{
-		USBDEBUG( "HUB : Adr #%ld : FN    %p : Normal : Drivers: %ld, Functions: %ld, Header: %ld", 
-			in->Function->fkt_Address, 
-			in->Function,
-			in->ASync_Drivers.ua_Counter, 
-			in->ASync_Functions.ua_Counter, 
-			in->FN_Header.uh_Nodes 
-		);
-
 		mask = TASK_WAIT( wait );
 
-		if ( mask &	in->Res_Interrupt->MsgPortBit )
+		if ( mask & in->Register->reg_Public.Stack_MsgPortBit )
 		{
-			USBDEBUG( "HUB : Normal : Got Int Bit" );
-
-			HUB_Handle_Interrupt( usbbase, in );
-		}
-
-		if ( mask &	in->Register->reg_Public.Stack_MsgPortBit )
-		{
-			USBDEBUG( "HUB : Normal : Got Stack Bit" );
-
 			HUB_Handle_Stack( usbbase, in );
 		}
 
-		if ( mask & SIGBREAKF_CTRL_C )
+		if ( ( mask & SIGBREAKF_CTRL_C ) || ( ! in->Running ) )
 		{
-			USBINFO( "HUB : Normal : Got CTRL+C" );
 			in->Running = FALSE;
+			break;
+		}
+
+		if ( mask & in->Res_Interrupt->MsgPortBit )
+		{
+			HUB_Handle_Interrupt( usbbase, in );
+		}
+
+		if ( ! in->Running )
+		{
+			break;
 		}
 
 		if ( mask & SIGBREAKF_CTRL_D )
 		{
-			USBDEBUG( "HUB : Normal : Got CTRL+D" );
 			HUB_Main__Free_FNs( usbbase, in );
 		}
-		if ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask )
+
+		if ( ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask ) &&
+			( MSGPORT_GETMSG( &in->Tick_MsgPort ) ) )
 		{
-//			USBDEBUG( "HUB : Normal : Got Timer Tick" );
-			if ( MSGPORT_GETMSG( & in->Tick_MsgPort ))
+			in->Tick_TimerAdded = FALSE;
+
+			now = HUB_Uptime( usbbase );
+
+			if ( now >= in->HousekeepingDue )
 			{
-				if ( in->Running )
-				{
-					RecoverPorts( usbbase, in );
-				}
+				RecoverPorts( usbbase, in );
 
 				HUB_Main__Free_FNs( usbbase, in );
-				in->Tick_TimeRequest.Time.Seconds = 2;
-				in->Tick_TimeRequest.Time.Microseconds = 0;
-				IO_SEND( & in->Tick_TimeRequest );
+
+				in->HousekeepingDue = now + 2000000;
+			}
+
+			if ( in->PortWork )
+			{
+				HUB_Port_Work( usbbase, in );
 			}
 		}
+
+		HUB_Arm_Tick( usbbase, in );
 	}
 }
 

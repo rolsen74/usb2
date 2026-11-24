@@ -102,6 +102,7 @@ struct USB2_PortStatus stat;
 S32 err;
 S32 reconnect;
 S32 recover;
+S32 draining;
 
 	// --
 
@@ -149,6 +150,9 @@ S32 recover;
 	recover = ( fn ) && ( fn->fkt_PortRecovery == PORT_RECOVERY_READY ) && ( hn->hn_AcceptIO )
 		&& ( ! in->Function->fkt_Detach ) && ( fn->fkt_HCDGeneration == hn->hn_Generation );
 
+	draining = ( fn ) && ( fn->fkt_PortRecovery == PORT_RECOVERY_DRAINING ) &&
+		( fn->fkt_HCDGeneration == hn->hn_Generation );
+
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	if ( ( recover ) || ( stat.wPortChange & PORTCHGF_Connection ) )
@@ -172,6 +176,11 @@ S32 recover;
 			}
 		}
 
+		if ( draining )
+		{
+			goto bailout;
+		}
+
 		reconnect = ( fn ) && ( stat.wPortStatus & PORTSTATF_Connection ) &&
 			( in->Function->fkt_Speed < USBSPEED_Super );
 
@@ -187,7 +196,11 @@ S32 recover;
 			HUB__Port_Function_Rem( usbbase, in, port );
 		}
 
-		if ( stat.wPortStatus & PORTSTATF_Connection )
+		if ( in->PortWork )
+		{
+			HUB_Queue_Port( usbbase, in, port, TRUE );
+		}
+		else if ( stat.wPortStatus & PORTSTATF_Connection )
 		{
 			if ( ( reconnect ) && ( ! WaitForReconnectedPort( usbbase, in, port ) ) )
 			{

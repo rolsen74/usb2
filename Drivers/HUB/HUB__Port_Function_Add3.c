@@ -44,139 +44,167 @@
 
 // --
 
-SEC_CODE struct RealFunctionNode *HUB__Port_Function_Add3( 
-	struct RealFunctionNode *parent,
-	struct USBBase *usbbase, 
-	struct intern *in,
-	U32 speed,
-	U32 port,
-	struct USB2_PortStatus *status )
+SEC_CODE struct RealFunctionNode *
+HUB__Port_Function_Address( struct USBBase *usbbase, struct intern *in, U32 speed, U32 port, U32 *address )
 {
-struct USB2_PortStatus fresh;
-struct RealFunctionNode *fn;
+	struct RealFunctionNode *fn;
 
-S32 stat;
-S32 error;
-U32 adr;
+	*address = 0;
 
-	#if 0
-	usbbase->usb_IExec->DebugPrintF(
-		"\n"
-		"##\n"
-		"## HUB : HUB__Port_Function_Add3 : Port #%lu\n"
-		"##\n"
-		"\n", port
-	);
-	#endif
-
-	error = TRUE;
-
-	fn = FUNCTION_ALLOC( in->HCDNode, & in->ASync_Functions, speed, in->Function->fkt_Tier+1 );
+	fn = FUNCTION_ALLOC( in->HCDNode, &in->ASync_Functions, speed, in->Function->fkt_Tier + 1 );
 
 	if ( ! fn )
 	{
-		USBDEBUG( "HUB__Port_Function_Add : Failed to alloc FN" );
-		goto bailout;
+		return ( NULL );
 	}
 
-	NODE_ADDTAIL( & in->FN_Header, & fn->fkt_DriverNode );
+	NODE_ADDTAIL( &in->FN_Header, &fn->fkt_DriverNode );
 
-	fn->fkt_PortNr	= port;
-	fn->fkt_Parent	= parent;
+	fn->fkt_PortNr = port;
+	fn->fkt_Parent = in->Function;
+	fn->fkt_EnumEpoch = in->EnumEpoch;
+	fn->fkt_EnumFenced = HUB_LEGACY( in );
 
-	// --
+	*address = HCD_ADDR_OBTAIN( in->HCDNode, fn );
 
-	adr = HCD_ADDR_OBTAIN( in->HCDNode, fn );
-
-	if ( ! adr )
+	if ( *address )
 	{
-		USBDEBUG( "HUB__Port_Function_Add : Failed to get Function Address" );
-		goto bailout;
+		fn->fkt_Address = *address;
 	}
 
-	fn->fkt_Address = adr;
+	return ( fn );
+}
 
-	if ( ! HUB__Port_Function_SetAddr( usbbase, in, fn ))
+// --
+
+SEC_CODE U32
+HUB__Port_Function_Configure( struct USBBase *usbbase, struct intern *in, struct RealFunctionNode *fn, U32 port, struct USB2_PortStatus *status )
+{
+	U32 published;
+	S32 err;
+
+	if ( ! HUB_Can_Enumerate( usbbase, in ) )
 	{
-		USBDEBUG( "HUB__Port_Function_Add : Failed to set Function Address" );
-		goto bailout;
+		return ( FALSE );
 	}
 
-	stat = FUNCTION_INIT( fn, & in->ASync_Drivers );
-
-	if ( ! stat )
+	if ( ! FUNCTION_INIT( fn, &in->ASync_Drivers ) )
 	{
-		USBDEBUG( "HUB__Port_Function_Add : Function Init failed : FN    %p : Stat $%08lx", fn, (U32) stat );
-		goto bailout;
+		if ( HUB_LEGACY( in ) )
+		{
+			usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu descriptor initialization failed at address %lu\n",
+				in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, port, fn->fkt_Address );
+		}
+
+		return ( FALSE );
 	}
 
-	stat = HUB__Port_Status_Get( usbbase, in, port, & fresh );
-
-	if ( stat != USB2Err_NoError )
+	if ( HUB_LEGACY( in ) )
 	{
-		goto bailout;
+		// Budget this hub request independently of the child's descriptor reads.
+		in->ControlDeadline = HUB_Uptime( usbbase ) + 500000;
 	}
 
-	*status = fresh;
+	err = HUB__Port_Status_Get( usbbase, in, port, status );
 
-	if ( ( ! ( status->wPortStatus & PORTSTATF_Connection ) ) || ( status->wPortChange & PORTCHGF_Connection ) )
+	in->ControlDeadline = 0;
+
+	if ( ( err != USB2Err_NoError ) ||
+		( ! ( status->wPortStatus & PORTSTATF_Connection ) ) || ( status->wPortChange & PORTCHGF_Connection ) ||
+		( ! HUB_Can_Enumerate( usbbase, in ) ) || ( FUNCTION_LOCK( fn ) != LSTAT_Okay ) )
 	{
-		USBDEBUG( "HUB__Port_Function_Add : Port changed during initialization" );
-		goto bailout;
+		if ( HUB_LEGACY( in ) )
+		{
+			usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu post-init status rejected (%ld), status $%04lx change $%04lx\n",
+				in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, port, err,
+				(U32) status->wPortStatus, (U32) status->wPortChange );
+		}
+
+		return ( FALSE );
 	}
 
-	if ( FUNCTION_LOCK( fn ) == LSTAT_Okay )
+	SEMAPHORE_OBTAIN( &usbbase->usb_LockSemaphore );
+
+	published = ( ! HUB_LEGACY( in ) ) || ( in->EnumEpoch == in->HCDNode->hn_IOEpoch );
+
+	if ( published )
 	{
-		USBDEBUG( "555 OKAY 444 : FN    %p", fn );
-
-		SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
-
-		fn->fkt_DriverASync = & in->ASync_Drivers;
+		fn->fkt_DriverASync = &in->ASync_Drivers;
 		in->PortFunctions[port] = fn;
 		fn->fkt_HUB_Data = in->HUB_ID;
 
-		error = ! USB2_Function_Publish( usbbase, fn );
+		published = USB2_Function_Publish( usbbase, fn );
 
-		if ( error )
+		if ( published )
+		{
+			fn->fkt_EnumFenced = FALSE;
+		}
+		else
 		{
 			fn->fkt_DriverASync = NULL;
 			in->PortFunctions[port] = NULL;
 			fn->fkt_HUB_Data = 0;
 		}
+	}
 
-		SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
+	SEMAPHORE_RELEASE( &usbbase->usb_LockSemaphore );
 
-		if ( error )
+	if ( published )
+	{
+		if ( ( HUB_LEGACY( in ) ) && ( fn->fkt_DeviceDescriptor ) )
 		{
-			FUNCTION_UNLOCK( fn );
-
-			goto bailout;
+			usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu enumerated %04lx:%04lx at address %lu, speed %lu\n",
+				in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, port,
+				(U32) LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ),
+				(U32) LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ), fn->fkt_Address, fn->fkt_Speed );
 		}
 
-		// Try and Bind Function to a Driver
-		// We don't care if there is a driver for it
 		FUNCTION_BIND( fn, fn->fkt_DriverASync );
 	}
 	else
 	{
-		USBDEBUG( "HUB__Port_Function_Add : Failed to Lock Function : FN    %p", fn );
+		FUNCTION_UNLOCK( fn );
 	}
 
-bailout:
+	return ( published );
+}
 
-	if (( fn ) && ( error ))
+// --
+
+SEC_CODE void
+HUB__Port_Function_Discard( struct USBBase *usbbase, struct intern *in, struct RealFunctionNode *fn )
+{
+	NODE_REMNODE( &in->FN_Header, &fn->fkt_DriverNode );
+
+	if ( FUNCTION_FREE( fn ) == FSTAT_Locked )
 	{
-		NODE_REMNODE( & in->FN_Header, & fn->fkt_DriverNode );
+		NODE_ADDHEAD( &in->FN_Header, &fn->fkt_DriverNode );
+	}
+}
 
-		if ( FUNCTION_FREE( fn ) == FSTAT_Locked )
-		{
-			NODE_ADDHEAD( & in->FN_Header, & fn->fkt_DriverNode );
-		}
+// --
 
-		fn = NULL;
+SEC_CODE struct RealFunctionNode *
+HUB__Port_Function_Add3( struct RealFunctionNode *parent UNUSED, struct USBBase *usbbase, struct intern *in, U32 speed, U32 port, struct USB2_PortStatus *status )
+{
+	struct RealFunctionNode *fn;
+
+	U32 address;
+
+	fn = HUB__Port_Function_Address( usbbase, in, speed, port, &address );
+
+	if ( ( fn ) && ( address ) && ( HUB__Port_Function_SetAddr( usbbase, in, fn ) ) &&
+		( HUB__Port_Function_Configure( usbbase, in, fn, port, status ) ) )
+	{
+		return ( fn );
 	}
 
-	return( fn );
+	if ( fn )
+	{
+		HUB__Port_Function_Discard( usbbase, in, fn );
+	}
+
+	return ( NULL );
 }
 
 // --

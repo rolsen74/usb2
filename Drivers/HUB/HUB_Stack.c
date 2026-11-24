@@ -46,34 +46,17 @@
 
 SEC_CODE void HUB_Handle_Stack( struct USBBase *usbbase, struct intern *in )
 {
-struct USB2_NotifyMessage *msg;
-S32 stop;
+	struct USB2_NotifyMessage *msg;
 
-	TASK_NAME_ENTER( "HUB : HUB_Handle_Stack" );
-	USBERROR( "HUB : HUB_Handle_Stack" );
-
-	stop = FALSE;
-
-	while(( msg = MSGPORT_GETMSG( & in->Register->reg_MsgPort )))
+	while ( ( msg = MSGPORT_GETMSG( &in->Register->reg_MsgPort ) ) )
 	{
-		switch( msg->nm_Type )
+		if ( ( msg->nm_Type == USBNT_Function ) && ( msg->nm_Command == USBNC_Detached ) )
 		{
-
-			default:
-			{
-				USBDEBUG( "HUB : Unknown Message Type (%lu)", msg->nm_Command );
-				break;
-			}
+			in->Running = FALSE;
 		}
 
 		MSGPORT_REPLYMSG( msg );
 	}
-
-	if ( stop )
-	{
-
-	}
-
-	TASK_NAME_LEAVE();}
+}
 
 // --

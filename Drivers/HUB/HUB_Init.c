@@ -139,6 +139,16 @@ S32 retval;
 		goto bailout;
 	}
 
+	if ( HUB_LEGACY( in ) )
+	{
+		in->PortWork = MEM_ALLOCVEC( sizeof( *in->PortWork ) * ( in->Ports + 1 ), TRUE );
+
+		if ( ! in->PortWork )
+		{
+			goto bailout;
+		}
+	}
+
 	// ---
 
 	in->Res_Interrupt = ENDPOINTRES_OBTAINTAGS( in->Register,
@@ -155,10 +165,6 @@ S32 retval;
 	}
 
 	// ---
-	// -- Start Timer Tick
-	in->Tick_TimerAdded = TRUE;
-	IO_SEND( & in->Tick_TimeRequest );
-
 	// --
 
 	retval = TRUE;

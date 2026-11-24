@@ -59,6 +59,15 @@ U32 mask;
 	wait |=	in->Register->reg_Public.Stack_MsgPortBit;
 	wait |= in->Tick_MsgPort.ump_Signal.sig_Signal_Mask;
 
+	if ( ! in->Tick_TimerAdded )
+	{
+		in->Tick_TimeRequest.Time.Seconds = 2;
+		in->Tick_TimeRequest.Time.Microseconds = 0;
+		in->Tick_TimerAdded = TRUE;
+
+		IO_SEND( &in->Tick_TimeRequest );
+	}
+
 	while( TRUE )
 	{
 		USBDEBUG( "HUB : Adr #%ld : FN    %p : Shutdown : Drivers: %ld, Functions: %ld, Header: %ld", 
@@ -95,7 +104,7 @@ U32 mask;
 		{
 			USBDEBUG( "HUB : Shutdown : Got Int Bit" );
 
-			HUB_Handle_Interrupt( usbbase, in );
+			usbbase->usb_IExec->GetMsg( in->Res_Interrupt->MsgPort );
 		}
 
 		if ( mask &	in->Register->reg_Public.Stack_MsgPortBit )

@@ -47,6 +47,16 @@
 
 /***************************************************************************/
 
+struct HUB_PortWork
+{
+	U64 Due;
+	U64 DebounceUntil;
+	U64 StableSince;
+	U8 Attempts;
+	U8 InitialSample;
+	U8 EmptyPolls;
+};
+
 struct intern
 {
 	#ifdef DO_DEBUG
@@ -60,6 +70,7 @@ struct intern
 	struct USB2_EPResource *		Res_Interrupt;
 	struct USB2_EPResource *		Res_Control;
 	struct RealFunctionNode **		PortFunctions;
+	struct HUB_PortWork *			PortWork;
 	struct USB2_DriverMessage *		StartMsg;
 	struct RealFunctionNode *		Function;
 	struct USB2_HCDNode *			HCDNode;
@@ -72,9 +83,40 @@ struct intern
 	U32		Running;
 	U32		Ports;
 	U32		HUB_ID;
+	U32		EnumEpoch;
+	U32		NextPort;
+	U64		ControlDeadline;
+	U64		TickDue;
+	U64		HousekeepingDue;
 };
 
 #define HUB_DELAY_MS(x)				HUB_Wait_ms(usbbase,in,x)
+
+#define HUB_LEGACY( in ) ( (in)->HCDNode->hn_HCDType != HCDTYPE_XHCI )
+
+enum HUB_AttachResult
+{
+	HUB_Attach_Complete,
+	HUB_Attach_Retry,
+	HUB_Attach_Deferred,
+	HUB_Attach_Reconnect,
+	HUB_Attach_Gone
+};
+
+SEC_CODE U64 HUB_Uptime( struct USBBase *usbbase );
+SEC_CODE U32 HUB_Can_Enumerate( struct USBBase *usbbase, struct intern *in );
+SEC_CODE S32 HUB_Control_IO( struct USBBase *usbbase, struct intern *in, struct USB2_IORequest *request );
+SEC_CODE void HUB_Port_Work( struct USBBase *usbbase, struct intern *in );
+SEC_CODE void HUB_Queue_Port( struct USBBase *usbbase, struct intern *in, U32 port, U32 changed );
+SEC_CODE void HUB_Arm_Tick( struct USBBase *usbbase, struct intern *in );
+SEC_CODE S32 HUB__Port_Reset( struct USBBase *usbbase, struct intern *in, U32 port, struct USB2_PortStatus *status );
+SEC_CODE void HUB__Port_Hold( struct USBBase *usbbase, struct intern *in, U32 port, U32 address );
+SEC_CODE U32 HUB__Port_Isolate( struct USBBase *usbbase, struct intern *in, U32 port );
+SEC_CODE U32 HUB__Port_Probe_Holds( struct USBBase *usbbase, struct intern *in, U32 port );
+SEC_CODE struct RealFunctionNode *HUB__Port_Function_Address( struct USBBase *usbbase, struct intern *in, U32 speed, U32 port, U32 *address );
+SEC_CODE U32 HUB__Port_Function_Configure( struct USBBase *usbbase, struct intern *in, struct RealFunctionNode *fn, U32 port, struct USB2_PortStatus *status );
+SEC_CODE void HUB__Port_Function_Discard( struct USBBase *usbbase, struct intern *in, struct RealFunctionNode *fn );
+SEC_CODE enum HUB_AttachResult HUB__Port_Attach( struct USBBase *usbbase, struct intern *in, U32 port );
 
 #define USB_HUB_MAX_DEPTH			5
 #define USB_EXTRA_POWER_UP_TIME		20		/* ms */

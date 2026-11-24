@@ -45,6 +45,8 @@ S32 error;
 	hn->hn_HCDType		= hcdtype;
 	hn->hn_USBBase		= usbbase;
 
+	SEMAPHORE_INIT( &hn->hn_AddressZero );
+
 	// --
 
 	error = FALSE;

@@ -26,7 +26,7 @@ U32 adr;
 
 	adr = fn->fkt_Address;
 
-	if ( ! adr )
+	if ( ( ! adr ) || ( adr >= 128 ) )
 	{
 		// Not an error
 		goto bailout;
@@ -51,7 +51,7 @@ U32 adr;
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_Addr_Semaphore );
 
-	if ( adr )
+	if ( hn->hn_Function_Array[adr] == fn )
 	{
 		// hmm what to do here.. 0 is roothub
 		// 255 is out of range, crash?

@@ -91,14 +91,7 @@ UHCI_Port_Set_Reset ( struct USB2_HCDNode * hn, U32 port )
 
 		HCD_WAIT_MS ( hn, 10 ); // Wait 10ms
 
-		/* clear the status change bits */
-
-		val = PCI_READWORD ( UHCI_PORTSC ( port ) );
-
-		val |= UHCI_PORTSC_POEDC | UHCI_PORTSC_CSC;
-
-		PCI_WRITEWORD ( UHCI_PORTSC ( port ), val );
-
+		// Leave connection changes latched for the hub's post-reset status read.
 		hn->hn_HCD.UHCI.PortResetChange[port] = 1;
 
 		err = USB2Err_NoError;

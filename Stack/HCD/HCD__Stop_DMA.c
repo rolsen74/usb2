@@ -17,6 +17,11 @@ HCD_CloseSubmissions( struct USBBase *usbbase, struct USB2_HCDNode *hn, S32 reco
 {
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
+	if ( hn->hn_AcceptIO )
+	{
+		hn->hn_IOEpoch++;
+	}
+
 	hn->hn_AcceptIO = FALSE;
 	hn->hn_EHCIRecovering = recovering && hn->hn_IsEHCI;
 

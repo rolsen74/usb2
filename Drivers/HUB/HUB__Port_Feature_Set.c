@@ -66,7 +66,7 @@ S32 errcode;
 
 	if (( port == 0 ) || ( port > in->Ports ))
 	{
-		errcode = -1;
+		errcode = USB2Err_Host_RuntPacket;
 		USBDEBUG( "HUB__Port_Feature_Set : Illegal Port Number (%lu)", port );
 		goto bailout;
 	}
@@ -119,10 +119,14 @@ S32 errcode;
 	}
 	#endif
 
-	IO_DO( ioreq );
+	errcode = HUB_Control_IO( usbbase, in, ioreq );
 
-	if (( ioreq->io_Error  == USB2Err_NoError )
-	&&	( ioreq->io_Actual == 0 ))
+	if ( errcode != USB2Err_NoError )
+	{
+		return ( errcode );
+	}
+
+	if ( ! ioreq->io_Actual )
 	{
 //		  usbbase->usb_IExec->Disable();
 //		  usbbase->usb_IExec->DebugPrintF( "\nSet Port Feature Success\n" );
@@ -143,7 +147,7 @@ S32 errcode;
 //		  usbbase->usb_IExec->DebugPrintF( "Sel         : %ld\n", sel );
 //		  usbbase->usb_IExec->Enable();
 
-		errcode = -1;
+		errcode = USB2Err_Host_RuntPacket;
 	}
 
 	#ifdef DO_STABLE

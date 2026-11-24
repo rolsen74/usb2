@@ -72,6 +72,9 @@ struct RealRequest
 	struct USB2_Node req_LiveNode;
 	struct Message	 req_AbortMessage;
 	U32				 req_Submission;
+	U32				 req_SubmitEpoch;
+	U32				 req_ExpectedEpoch;
+	U8				 req_CheckEpoch;
 	U32				 req_AbortSubmission;
 	U8				 req_AbortQueued;
 	U8				 req_AbortRequested;

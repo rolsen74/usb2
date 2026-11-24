@@ -112,6 +112,15 @@ struct HCDFunctions
 
 /***************************************************************************/
 
+#define USB2_ENUM_ROUTE_DEPTH 7
+
+struct USB2_AddressHold
+{
+	USB2_ID Hub[USB2_ENUM_ROUTE_DEPTH];
+	U32 Serial;
+	U8 Port[USB2_ENUM_ROUTE_DEPTH];
+};
+
 struct USB2_HCDNode
 {
 	struct USB2_Node hn_Node;
@@ -134,6 +143,10 @@ struct USB2_HCDNode
 	U32		hn_EHCIRecovering;
 	U32		hn_DMAActive;
 	U32		hn_Generation;
+	U32		hn_IOEpoch;
+	struct USB2_Semaphore hn_AddressZero;
+	U32 hn_AddressHoldSerial;
+	struct USB2_AddressHold hn_AddressHold[128];
 	U32		hn_HCDIndex;
 	U32		hn_HCDInterruptNr;
 	U32		hn_MaxSpeed;

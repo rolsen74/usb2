@@ -64,7 +64,7 @@ S32 errcode;
 
 	if (( port == 0 ) || ( port > in->Ports ))
 	{
-		errcode = -1;
+		errcode = USB2Err_Host_RuntPacket;
 		USBDEBUG( "HUB__Port_Status_Get : Illegal Port Number (%lu)", port );
 		goto bailout;
 	}
@@ -90,10 +90,9 @@ S32 errcode;
 
 	USBDEBUG( "Get Port Status #%lu", port );
 
-	IO_DO( ioreq );
+	errcode = HUB_Control_IO( usbbase, in, ioreq );
 
-	if (( ioreq->io_Error  == USB2Err_NoError )
-	&&	( ioreq->io_Actual == sizeof( struct USB2_PortStatus )))
+	if ( ( ! errcode ) && ( ioreq->io_Actual == sizeof( struct USB2_PortStatus ) ) )
 	{
 		stat->wPortStatus = LE_SWAP16( stat->wPortStatus );
 		stat->wPortChange = LE_SWAP16( stat->wPortChange );
@@ -154,7 +153,7 @@ S32 errcode;
 //		usbbase->usb_IExec->DebugPrintF( "Port        : %lu\n", port );
 //		usbbase->usb_IExec->Enable();
 	
-		errcode = ioreq->io_Error ? ioreq->io_Error : USB2Err_Host_RuntPacket;
+		errcode = errcode ? errcode : USB2Err_Host_RuntPacket;
 	}
 
 	#ifdef DO_STABLE

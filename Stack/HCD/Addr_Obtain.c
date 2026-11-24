@@ -39,7 +39,7 @@ U32 adr;
 
 	for( adr=1 ; adr<128 ; adr++ )
 	{
-		if ( ! hn->hn_Function_Array[adr] )
+		if ( ( ! hn->hn_Function_Array[adr] ) && ( ! hn->hn_AddressHold[adr].Hub[0] ) )
 		{
 			USBDEBUG( "__HCD_Addr_Obtain        : Using Address #%lu", adr );
 

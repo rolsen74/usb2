@@ -69,6 +69,9 @@ __myHandle_Begin ( struct USBBase * usbbase, struct USB2_HCDNode * hn )
 				ioreq->req_Public.io_Error = IOERR_ABORTED;
 			}
 			else if ( ( ! hn->hn_AcceptIO ) ||
+				 ( ( ( ioreq->req_CheckEpoch ) || ( fn->fkt_EnumFenced ) || ( ( ! fn->fkt_Tier ) &&
+					 ( ioreq->req_Public.io_Command == CMD_WRITE ) ) ) &&
+					 ( ioreq->req_SubmitEpoch != hn->hn_IOEpoch ) ) ||
 				 ( ( fn->fkt_Tier ) && ( fn->fkt_HCDGeneration != hn->hn_Generation ) ) )
 			{
 				ioreq->req_Public.io_Error = USB2Err_Device_Detached;

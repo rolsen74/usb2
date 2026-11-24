@@ -52,6 +52,7 @@
 SEC_CODE void EHCI_Control_Remove( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
 struct RealFunctionNode *fn;
+struct USB2_SetupData *setup;
 struct EHCI_TD *td;
 struct EHCI_QH *head;
 struct EHCI_QH *last;
@@ -60,6 +61,7 @@ struct EHCI_QH *qh;
 U32 token[3];
 U32 caps;
 U32 slot;
+S32 set_address;
 S32 stopped;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
@@ -134,15 +136,21 @@ S32 stopped;
 	ioreq->req_PublicStat = IORS_HCD;
 
 	fn = ioreq->req_Function;
+	setup = ioreq->req_Public.io_SetupData;
+	caps = LE_SWAP32( qh->qh_ep2 );
+	set_address = ( fn->fkt_Address == 0 ) && ( EHCI_QH_GET_HUBA( caps ) ) &&
+		( setup ) && ( ioreq->req_Public.io_SetupLength == sizeof( *setup ) ) &&
+		( setup->RequestType == ( REQTYPE_Write | REQTYPE_Standard | REQTYPE_Device ) ) &&
+		( setup->RequestCode == REQCODE_Set_Address );
 
 	if ( ( ( ioreq->req_Public.io_Error == USB2Err_Host_Timeout ) ||
 		   ( LE_SWAP32( qh->qh_status ) & EHCI_TD_HALTED ) ) &&
-		 ( fn->fkt_DeviceDescriptor ) &&
-		 ( LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ) == 0x0bda ) &&
-		 ( LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ) == 0x8152 ) )
+		 ( ( set_address ) ||
+		   ( ( fn->fkt_DeviceDescriptor ) &&
+		     ( LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ) == 0x0bda ) &&
+		     ( LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ) == 0x8152 ) ) ) )
 	{
 		// Snapshot after the controller releases the queue head.
-		caps = LE_SWAP32( qh->qh_ep2 );
 		td = qh->pqh_first_td;
 
 		for( slot = 0; slot < 3; slot++ )
@@ -151,7 +159,8 @@ S32 stopped;
 			td = td ? td->ptd_virt_next : NULL;
 		}
 
-		usbbase->usb_IExec->DebugPrintF( "RTL8152 EHCI EP0: addr %lu speed %lu max packet %lu TT hub %lu port %lu, QH $%08lx, qTDs $%08lx $%08lx $%08lx\n",
+		usbbase->usb_IExec->DebugPrintF( "%s EHCI EP0: addr %lu speed %lu max packet %lu TT hub %lu port %lu, QH $%08lx, qTDs $%08lx $%08lx $%08lx\n",
+			set_address ? "SET_ADDRESS" : "RTL8152",
 			(U32) fn->fkt_Address, (U32) fn->fkt_Speed, (U32) ioreq->req_EndPoint->ep_MaxPacketSize,
 			EHCI_QH_GET_HUBA( caps ), EHCI_QH_GET_PORT( caps ), LE_SWAP32( qh->qh_status ),
 			token[0], token[1], token[2] );

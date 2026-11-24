@@ -50,6 +50,7 @@ struct USB2_IORequest *ioreq;
 struct USB2_SetupData *sd;
 U32 retval;
 U32 adr;
+S32 err;
 
 	retval = FALSE;
 
@@ -98,13 +99,18 @@ U32 adr;
 
 //	usbbase->usb_IExec->DebugPrintF( "HUB__Port_Function_SetAddr : Adr %ld : Do Set Address\n", (S32) adr );
 	fn->fkt_Address = 0;
-	IO_DO( ioreq );
+	err = HUB_Control_IO( usbbase, in, ioreq );
 	fn->fkt_Address = adr;
 //	usbbase->usb_IExec->DebugPrintF( "HUB__Port_Function_SetAddr : Adr %ld : Set Address Returned (io_Err: %ld)\n", (S32) adr, (S32) ioreq->io_Error );
 
-	if ( ioreq->io_Error != USB2Err_NoError )
+	if ( err != USB2Err_NoError )
 	{
-		USBDEBUG( "SetAddr - io_Error %ld ( FN: %p )", ioreq->io_Error, fn );
+		if ( HUB_LEGACY( in ) )
+		{
+			usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu SET_ADDRESS failed (%ld), speed %lu\n",
+				in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, fn->fkt_PortNr, err, fn->fkt_Speed );
+		}
+		USBDEBUG( "SetAddr - io_Error %ld ( FN: %p )", err, fn );
 		goto bailout;
 	}
 

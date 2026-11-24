@@ -67,6 +67,13 @@ SEC_CODE void HUB_Free( struct USBBase *usbbase, struct intern *in )
 		in->PortFunctions = NULL;
 	}
 
+	if ( in->PortWork )
+	{
+		MEM_FREEVEC( in->PortWork );
+
+		in->PortWork = NULL;
+	}
+
 	// --
 
 	USBINFO( "HUB : HUB_Free : 2" );
