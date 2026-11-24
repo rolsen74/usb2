@@ -74,6 +74,12 @@ EHCI_Set_Schedule( struct USB2_HCDNode *hn, U32 command_mask, U32 status_mask, S
 
 	__asm__ volatile ( "sync" ::: "memory" );
 
+	if ( ( enabled ) && ( command_mask == EHCI_CMD_ASE ) )
+	{
+		// The controller's saved cursor can point to a queue head just unlinked.
+		PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_ASYNC, hn->hn_HCD.EHCI.ASync_Head->pqh_self_phy );
+	}
+
 	PCI_WRITELONG( address, command );
 
 	return ( WaitSchedule( usbbase, hn, status_mask, enabled ) );
