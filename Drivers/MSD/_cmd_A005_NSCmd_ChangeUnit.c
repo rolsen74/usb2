@@ -27,8 +27,8 @@ S32 reply;
 
 	reply = TRUE;
 
-	msdbase = usbbase->usb_MSDDevice;
 	msddisk = (PTR) ioreq->io_Unit;
+	msdbase = msddisk->msddisk_MSDBase;
 
 	SEMAPHORE_OBTAIN( & msdbase->msdbase_MSDDisk_Semaphore );
 

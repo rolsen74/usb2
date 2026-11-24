@@ -14,11 +14,13 @@
 
 SEC_CODE S32 MSD_Cmd_0004_CMD_Update( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq )
 {
+struct DoBulkResult result;
 struct MSDDisk *msddisk;
 
 	TASK_NAME_ENTER( "MSD : CMD_Update" );
 
 	msddisk = (PTR) ioreq->io_Unit;
+	ioreq->io_Actual = 0;
 
 	if ( ( msddisk ) && ( msddisk->msddisk_Removable ) && ( ! msddisk->msddisk_MediaPresent ) )
 	{
@@ -29,9 +31,9 @@ struct MSDDisk *msddisk;
 	{
 		ioreq->io_Error = TDERR_DiskChanged;
 	}
-	else if ( ( msddisk->msddisk_DeviceType != DG_CDROM ) && ( msddev->msddev_SubClass != MSD_SubClass_UFI ) && ( msddev->msddev_SubClass != MSD_SubClass_SFF ) && ( ! MSD_SCSI_SynchronizeCache( usbbase, msddisk ) ) )
+	else if ( ( msddisk->msddisk_DeviceType != DG_CDROM ) && ( msddev->msddev_SubClass != MSD_SubClass_UFI ) && ( msddev->msddev_SubClass != MSD_SubClass_SFF ) && ( ! MSD_SCSI_SynchronizeCache( usbbase, msddisk, &result ) ) )
 	{
-		ioreq->io_Error = TDERR_NotSpecified;
+		ioreq->io_Error = MSD_Disk_CommandError( usbbase, msddisk, &result );
 	}
 
 	TASK_NAME_LEAVE();

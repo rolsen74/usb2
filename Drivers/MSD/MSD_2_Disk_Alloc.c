@@ -33,7 +33,7 @@ U8 type;
 
 	error = TRUE;
 
-	msdbase = usbbase->usb_MSDDevice;
+	msdbase = msddev->msddev_MSDBase;
 	msddisk = MEM_ALLOCVEC( sizeof( struct MSDDisk ), TRUE );
 
 	if ( ! msddisk )
@@ -162,7 +162,6 @@ U8 type;
 	// --
 	// Mount
 
-	msddisk->msddisk_MsgPort_Abort = & msddev->msddev_MsgPort_Abort;
 	msddisk->msddisk_MsgPort_Begin = & msddev->msddev_MsgPort_Begin;
 
 	// --
@@ -190,17 +189,11 @@ U8 type;
 
 	// --
 
-	stat = usbbase->usb_IMounter->AnnounceDeviceTags( MSD_Device_Name, msddisk->msddisk_UnitNr,
-		MNTA_DosNamePrefixHint, "USB",
-		TAG_END
-	);
+	MSD_Disk_Announce( usbbase, msddisk );
 
-	msddisk->msddisk_Announced = ( stat ) ? TRUE : FALSE ;
-	USBERROR( "Mount Stat: %ld (%s/%ld)", stat, "USB", msddisk->msddisk_UnitNr );
-
-	MSDDEBUG( "MSD: unit %lu %04lX:%04lX LUN %lu, media %lu, mounter announce %ld\n",
+	MSDDEBUG( "MSD: unit %lu %04lX:%04lX LUN %lu, media %lu, announced %lu\n",
 		unit_nr, (U32) msddev->msddev_StartMsg->VendorID, (U32) msddev->msddev_StartMsg->DeviceID,
-		lun, (U32) msddisk->msddisk_MediaPresent, stat );
+		lun, (U32) msddisk->msddisk_MediaPresent, (U32) msddisk->msddisk_Announced );
 
 	// --
 

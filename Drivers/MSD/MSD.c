@@ -44,35 +44,9 @@ U32 retval;
 	#endif
 
 	// --
-	// Make sure we have "mounter.library"
-
-	if ( ! usbbase->usb_MounterBase )
+	if ( ! MSD_CreateDevice( usbbase ) )
 	{
-		usbbase->usb_MounterBase = usbbase->usb_IExec->OpenLibrary( "mounter.library", 0 );
-	}
-
-	if ( ! usbbase->usb_IMounter )
-	{
-		usbbase->usb_IMounter = (PTR) usbbase->usb_IExec->GetInterface( (PTR) usbbase->usb_MounterBase, "main", 1, NULL );
-	}
-
-	if ( ! usbbase->usb_IMounter )
-	{
-		USBERROR( "Error Need Mounter.library" );
-		goto bailout;
-	}
-
-	// --
-	// Make sure we have "usb2disk.device"
-
-	if ( ! usbbase->usb_MSDDevice )
-	{
-		MSD_CreateDevice( usbbase );
-	}
-
-	if ( ! usbbase->usb_MSDDevice )
-	{
-		USBERROR( "Error creating MSD Device" );
+		USBERROR( "MSD : Could not initialize mounter or usb2disk.device" );
 		goto bailout;
 	}
 

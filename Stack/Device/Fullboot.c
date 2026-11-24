@@ -287,15 +287,19 @@ Full_Boot_Entry ( void )
 				signalled = TRUE;
 			}
 
+			SEMAPHORE_OBTAIN ( &usbbase->usb_MSDSemaphore );
+
 			if ( ! usbbase->usb_MounterBase )
 			{
 				usbbase->usb_MounterBase = IExec->OpenLibrary ( "mounter.library", 0 );
 			}
 
-			if ( ! usbbase->usb_IMounterPriv )
+			if ( ( usbbase->usb_MounterBase ) && ( ! usbbase->usb_IMounterPriv ) )
 			{
 				usbbase->usb_IMounterPriv = (PTR)IExec->GetInterface ( (PTR)usbbase->usb_MounterBase, "private", 1, NULL );
 			}
+
+			SEMAPHORE_RELEASE ( &usbbase->usb_MSDSemaphore );
 
 			if ( usbbase->usb_IMounterPriv )
 			{

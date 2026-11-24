@@ -47,7 +47,7 @@ U32 flags;
 		MSD_Disk_MediaCheck( usbbase, msddisk );
 	}
 
-	if ( ! msddisk->msddisk_MediaPresent )
+	if ( ( ! msddisk->msddisk_MediaPresent ) || ( ! msddisk->msddisk_Block_Size ) )
 	{
 		ioreq->io_Error = TDERR_DiskChanged;
 		ioreq->io_Actual = 0;

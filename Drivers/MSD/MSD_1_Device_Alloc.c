@@ -46,14 +46,6 @@ U32 lun;
 	msddev->msddev_References = 1;
 
 	// ---
-	// AbortIO MsgPort
-
-	if ( ! MSGPORT_INIT( & msddev->msddev_MsgPort_Abort ))
-	{
-		USBDEBUG( "MSD : MSD_Device_Alloc : Abort MsgPort init failed" );
-		goto bailout;
-	}
-
 	// BeginIO MsgPort
 
 	if ( ! MSGPORT_INIT( & msddev->msddev_MsgPort_Begin ))
@@ -180,20 +172,25 @@ U32 lun;
 
 	USBERROR( "MSD : MSD_Device_Alloc : MSD MaxLuns %ld", MaxLun );
 
-	for( lun=0 ; lun <= MaxLun ; lun++ )
+	for ( lun = 0; ( lun <= MaxLun ) && ( ! msddev->msddev_Detached ) &&
+		( ! msddev->msddev_Register->reg_Function->fkt_Detach ); lun++ )
 	{
 		msddisk = MSD_Disk_Alloc( usbbase, msddev, lun );
 
 		if ( ! msddisk )
 		{
-			USBERROR( "MSD : MSD_Device_Alloc : Error Disk Node" );
-			goto bailout;
+			MSDDEBUG( "MSD: LUN %lu could not be initialized\n", lun );
+			continue;
 		}
 
 		NODE_ADDTAIL( & msddev->msddev_MSDDisk_Header, & msddisk->msddisk_Node );
 	}
 
-	// --
+	if ( ( ! Header_Head( &msddev->msddev_MSDDisk_Header ) ) || ( msddev->msddev_Detached ) ||
+		( msddev->msddev_Register->reg_Function->fkt_Detach ) )
+	{
+		goto bailout;
+	}
 
 	error = FALSE;
 

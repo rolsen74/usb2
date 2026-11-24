@@ -13,6 +13,11 @@
 
 // --
 
+#define MSD_CSW_TIMEOUT_US		500000
+#define MSD_CDROM_READY_TIMEOUT_US	5000000
+
+// --
+
 SEC_CODE enum PhaseStat MSD_Bulk_Cmd_Status( struct USBBase *usbbase, struct MSDDisk *msddisk )
 {
 struct USB2_EPResource *epr;
@@ -20,7 +25,7 @@ struct USB2_IORequest *ioreq;
 struct MSDDevice *msddev;
 //struct MSDDisk *msddisk;
 enum PhaseStat stat;
-S32 stalled;
+U32 timeout;
 S32 tries;
 
 	TASK_NAME_ENTER( "MSD_Bulk_Cmd_Status" );
@@ -30,10 +35,27 @@ S32 tries;
 
 //	USBERROR( "MSD : MSD_Disk_DoBulk : MSD_Bulk_Cmd_Status : Lun %ld : Cmd %p : CmdLen %ld : Mem %p : MemLen %ld : Flags $%04lx", msddisk->msddisk_Lun, cmd, cmdlen, mem, memlen, Flags );
 
-	stalled	= FALSE;
 	stat	= PS_Error;
 	epr		= msddev->msddev_Res_Bulk_In;
 	ioreq	= epr->IORequests[0];
+	timeout	= MSD_CSW_TIMEOUT_US;
+
+	// Some optical drives finish spinning up before replying to TEST UNIT READY.
+	switch ( msddisk->msddisk_CBW.cbw_CB[0] )
+	{
+		case 0x1b: // START STOP UNIT
+		case 0x35: // SYNCHRONIZE CACHE(10)
+		case 0x91: // SYNCHRONIZE CACHE(16)
+			timeout = 30 * 1000000;
+			break;
+
+		case 0x00: // TEST UNIT READY
+			if ( msddisk->msddisk_DeviceType == DG_CDROM )
+			{
+				timeout = MSD_CDROM_READY_TIMEOUT_US;
+			}
+			break;
+	}
 
 	for( tries=0 ; tries<2 ; tries++ )
 	{
@@ -46,7 +68,7 @@ S32 tries;
 		ioreq->io_Length		= sizeof( struct MSDCSW );
 		ioreq->io_SetupData		= NULL;
 		ioreq->io_SetupLength	= 0;
-		ioreq->io_TimeOut		= 500000;		// 0.5 sec
+		ioreq->io_TimeOut		= timeout;
 
 		IO_DO( ioreq );
 
@@ -57,7 +79,7 @@ S32 tries;
 			// I hard coded the Actual value too validate 'struct MSDCSW' size
 			if ( ioreq->io_Actual == MSDCSW_LEN )
 			{
-				stat = ( stalled ) ? PS_Stall : PS_Okay ;
+				stat = PS_Okay;
 			}
 			else
 			{
@@ -76,13 +98,23 @@ S32 tries;
 		}
 		else if ( ioreq->io_Error == USB2Err_Host_Stall )
 		{
-			ENDPOINTRES_DESTALL( epr );
-			stalled = TRUE;
-			continue;
+			MSDDEBUG( "MSD: LUN %lu CSW stalled on attempt %ld, %lu/%lu bytes\n",
+				msddisk->msddisk_Lun, tries + 1, ioreq->io_Actual, (U32) MSDCSW_LEN );
+
+			if ( ( ! tries ) && ( ENDPOINTRES_DESTALL( epr ) ) )
+			{
+				continue;
+			}
+
+			break;
 		}
 		else
 		{
 			// Any other transport error (timeout, CRC, etc.) → fail
+			MSDDEBUG( "MSD: LUN %lu SCSI $%02lX CSW USB error %ld, %lu/%lu bytes, timeout %lu ms\n",
+				msddisk->msddisk_Lun, (U32) msddisk->msddisk_CBW.cbw_CB[0], (S32) ioreq->io_Error,
+				ioreq->io_Actual, (U32) MSDCSW_LEN, timeout / 1000 );
+
 			stat = PS_Error;
 			break;
 		}

@@ -41,11 +41,7 @@ struct IOStdReq *ioreq;
 
 	SEMAPHORE_OBTAIN( & msddisk->msddisk_MSDUnit_Semaphore );
 
-	usbbase->usb_IExec->ObtainSemaphore( & msddisk->msddisk_StatSemaphore );
-
 	msddisk->msddisk_Detached = TRUE;
-
-	usbbase->usb_IExec->ReleaseSemaphore( & msddisk->msddisk_StatSemaphore );
 
 	SEMAPHORE_RELEASE( & msddisk->msddisk_MSDUnit_Semaphore );
 

@@ -13,188 +13,121 @@
 
 // --
 
-SEC_CODE S32 MSD_Disk_DoBulk( struct USBBase *usbbase, struct MSDDisk *msddisk, struct DoBulkStruct *dbs )
+SEC_CODE S32
+MSD_Disk_DoBulk( struct USBBase *usbbase, struct MSDDisk *msddisk, struct DoBulkStruct *dbs )
 {
-struct DoBulkResult *dbr;
-struct MSDDevice *msddev;
-enum PhaseStat stat;
-enum PhaseStat data_stat;
-U32 host_Tag;
-U32 csw_Tag;
-U32 residue;
-U32 actual;
-S32 short_input;
-S32 retval;
-S32 tries;
+	struct DoBulkResult *dbr;
+	struct MSDDevice *msddev;
+	enum PhaseStat stat;
+
+	U32 residue;
+	U32 actual;
+	U32 status;
+	S32 allow_short;
+	S32 retval;
 
 	TASK_NAME_ENTER( "MSD_Disk_DoBulk" );
 
-	msddev	= msddisk->msddisk_MSDDev;
-
-//	USBERROR( "MSD : MSD_Disk_DoBulk : Lun %ld : CmdLen %ld : Mem %p : MemLen %ld : Flags $%04lx", 
-//		msddisk->msddisk_Lun, 
-//		dbs->dbs_Command_Length, 
-//		dbs->dbs_Data, 
-//		dbs->dbs_Data_Length,
-//		dbs->dbs_Flags
-//	);
-
-	retval	= FALSE;
-	dbr		= dbs->dbs_Result;
-	short_input = ( dbs->dbs_Data ) && ( ( dbs->dbs_Flags & DOBULKF_DIR_MASK ) == DOBULKF_DIR_IN ) &&
+	msddev = msddisk->msddisk_MSDDev;
+	dbr = dbs->dbs_Result;
+	retval = FALSE;
+	dbs->dbs_Data_Actual = 0;
+	allow_short = ( ( dbs->dbs_Flags & DOBULKF_DIR_MASK ) == DOBULKF_DIR_IN ) &&
 		( dbs->dbs_Flags & DOBULKF_SHORT_OK );
 
-	if ( dbs->dbs_Command_Length > 16 )
+	if ( dbr )
 	{
-		#if defined( DO_ERROR ) || defined( DO_INFO ) || defined( DO_DEBUG )
-		USBERROR( "Limiting CmdLen to 16 bytes (Len %ld)", dbs->dbs_Command_Length );
-		#endif
-		dbs->dbs_Command_Length = 16;
+		MEM_SET( dbr, 0, sizeof( *dbr ) );
 	}
 
-	for( tries=0 ; tries<3 ; tries++ )
+	if ( ( ! dbs->dbs_Command_Length ) || ( dbs->dbs_Command_Length > sizeof( dbs->cmd ) ) ||
+		( ( msddev->msddev_SubClass != MSD_SubClass_SCSI ) && ( dbs->dbs_Command_Length > 12 ) ) ||
+		( ( dbs->dbs_Data_Length ) && ( ! dbs->dbs_Data ) ) || ( msddev->msddev_Detached ) )
 	{
-		data_stat = PS_Okay;
-		dbs->dbs_Data_Actual = 0;
+		goto bailout;
+	}
 
-		// Reset result struct for this attempt
-		if ( dbr )
+	if ( ( msddev->msddev_RecoveryRequired ) && ( ! MSD_DoBulk_Recovery( usbbase, msddisk ) ) )
+	{
+		goto bailout;
+	}
+
+	// Zero ID is invalid.
+	if ( ! ++msddev->msddev_Bulk_TagID )
+	{
+		msddev->msddev_Bulk_TagID++;
+	}
+
+	if ( MSD_Bulk_Cmd_Phase( usbbase, msddisk, dbs ) != PS_Okay )
+	{
+		goto recover;
+	}
+
+	if ( dbr )
+	{
+		dbr->CommandSent = TRUE;
+	}
+
+	if ( dbs->dbs_Data_Length )
+	{
+		stat = MSD_Bulk_Cmd_Data( usbbase, msddisk, dbs );
+
+		if ( ( stat == PS_Error ) || ( msddev->msddev_Detached ) )
 		{
-			dbr->csw_DataResidue = 0;
-			dbr->csw_DataActual	= 0;
-			dbr->csw_Valid		= FALSE;
-			dbr->csw_Status		= 0;
-			dbr->csw_SigOK		= 0;
-			dbr->csw_TagOK		= 0;
-		}
-
-		if ( msddev->msddev_Detached )
-		{
-			break;
-		}
-
-		// Zero ID is invalid
-		while( ++ msddev->msddev_Bulk_TagID == 0 );
-
-		// --
-
-//		MSDDEBUG( "__phase_command : Calling Function\n" );
-
-		stat = MSD_Bulk_Cmd_Phase( usbbase, msddisk, dbs );
-
-//		MSDDEBUG( "__phase_command : Stat %ld\n", stat );
-
-		if ( stat != PS_Okay )
-		{
-			goto retry;
-		}
-
-		if ( ( dbs->dbs_Data ) && ( dbs->dbs_Data_Length ) )
-		{
-			data_stat = MSD_Bulk_Cmd_Data( usbbase, msddisk, dbs );
-		}
-
-		if ( msddev->msddev_Detached )
-		{
-			break;
-		}
-
-		stat = MSD_Bulk_Cmd_Status( usbbase, msddisk );
-
-		if ( ( ( stat != PS_Okay ) && ( stat != PS_Stall ) ) || ( data_stat == PS_Error ) )
-		{
-			goto retry;
-		}
-
-		if ( LE_SWAP32( msddisk->msddisk_CSW.csw_Signature ) != MSDCSW_Signature )
-		{
-			MSDDEBUG( "MSD: invalid CSW signature $%08lx\n", msddisk->msddisk_CSW.csw_Signature );
-
-			goto retry;
-		}
-
-		host_Tag = msddev->msddev_Bulk_TagID;
-
-		csw_Tag = LE_SWAP32( msddisk->msddisk_CSW.csw_Tag );
-
-		if ( csw_Tag != host_Tag )
-		{
-			MSDDEBUG( "MSD: CSW tag $%08lx, expected $%08lx\n", csw_Tag, host_Tag );
-
-			goto retry;
-		}
-
-		if ( ( msddisk->msddisk_CSW.csw_Status != MSDCSW_Status_CmdPassed ) &&
-			( msddisk->msddisk_CSW.csw_Status != MSDCSW_Status_CmdFailed ) )
-		{
-			MSDDEBUG( "MSD: invalid CSW status %lu for SCSI $%02lx\n",
-				(U32) msddisk->msddisk_CSW.csw_Status, (U32) dbs->cmd[0] );
-
-			goto retry;
-		}
-
-		residue = LE_SWAP32( msddisk->msddisk_CSW.csw_DataResidue );
-
-		if ( ( residue > dbs->dbs_Data_Length ) || ( dbs->dbs_Data_Actual > dbs->dbs_Data_Length ) )
-		{
-			MSDDEBUG( "MSD: SCSI $%02lx, requested %lu, USB actual %lu, CSW residue %lu\n",
-				(U32) dbs->cmd[0], dbs->dbs_Data_Length, dbs->dbs_Data_Actual, residue );
-
-			goto retry;
-		}
-
-		actual = dbs->dbs_Data_Length - residue;
-
-		if ( actual != dbs->dbs_Data_Actual )
-		{
-			if ( ( ! short_input ) || ( data_stat != PS_Okay ) )
-			{
-				MSDDEBUG( "MSD: SCSI $%02lx, USB actual %lu differs from CSW count %lu\n",
-					(U32) dbs->cmd[0], dbs->dbs_Data_Actual, actual );
-
-				goto retry;
-			}
-
-			// A short IN result must fit both the received bytes and the CSW's relevant data.
-			actual = MIN( actual, dbs->dbs_Data_Actual );
-			residue = dbs->dbs_Data_Length - actual;
-		}
-
-		retval = ( msddisk->msddisk_CSW.csw_Status == MSDCSW_Status_CmdPassed );
-
-		if ( ( retval ) && ( ( data_stat != PS_Okay ) || ( ( ! short_input ) && ( residue ) ) ) )
-		{
-			retval = FALSE;
-
-			goto retry;
-		}
-
-		if ( dbr )
-		{
-			dbr->csw_DataResidue = residue;
-			dbr->csw_DataActual = actual;
-			dbr->csw_Valid = TRUE;
-			dbr->csw_Status = msddisk->msddisk_CSW.csw_Status;
-			dbr->csw_SigOK = TRUE;
-			dbr->csw_TagOK = TRUE;
-		}
-
-		break;
-
-retry:
-		if ( msddev->msddev_Detached )
-		{
-			break;
-		}
-
-		MSDDEBUG( "MSD: BOT recovery for SCSI $%02lx, attempt %ld\n", (U32) dbs->cmd[0], tries + 1 );
-
-		if ( ! MSD_DoBulk_Recovery( usbbase, msddisk ) )
-		{
-			break;
+			goto recover;
 		}
 	}
 
+	if ( MSD_Bulk_Cmd_Status( usbbase, msddisk ) != PS_Okay )
+	{
+		goto recover;
+	}
+
+	status = msddisk->msddisk_CSW.csw_Status;
+	residue = LE_SWAP32( msddisk->msddisk_CSW.csw_DataResidue );
+
+	if ( ( LE_SWAP32( msddisk->msddisk_CSW.csw_Signature ) != MSDCSW_Signature ) ||
+		( LE_SWAP32( msddisk->msddisk_CSW.csw_Tag ) != msddev->msddev_Bulk_TagID ) ||
+		( status > MSDCSW_Status_CmdFailed ) || ( residue > dbs->dbs_Data_Length ) ||
+		( dbs->dbs_Data_Actual > dbs->dbs_Data_Length ) )
+	{
+		MSDDEBUG( "MSD: Invalid CSW or data count for SCSI $%02lx (status %lu, residue %lu, USB actual %lu)\n",
+			(U32) dbs->cmd[0], status, residue, dbs->dbs_Data_Actual );
+
+		goto recover;
+	}
+
+	// OUT residue reports bytes processed, which can be fewer than bytes sent.
+	// IN can include padding or a bridge that reports zero residue on a short read.
+	actual = MIN( dbs->dbs_Data_Length - residue, dbs->dbs_Data_Actual );
+
+	if ( dbr )
+	{
+		dbr->csw_DataResidue = residue;
+		dbr->csw_DataActual = actual;
+		dbr->csw_Status = status;
+		dbr->csw_Valid = TRUE;
+		dbr->csw_SigOK = TRUE;
+		dbr->csw_TagOK = TRUE;
+	}
+
+	retval = ( status == MSDCSW_Status_CmdPassed ) &&
+		( ( allow_short ) || ( actual == dbs->dbs_Data_Length ) );
+
+	goto bailout;
+
+recover:
+	// Reset for the next command. A command without a CSW may have changed media.
+	if ( ! msddev->msddev_Detached )
+	{
+		msddev->msddev_RecoveryRequired = TRUE;
+
+		MSDDEBUG( "MSD: BOT recovery for SCSI $%02lx\n", (U32) dbs->cmd[0] );
+
+		MSD_DoBulk_Recovery( usbbase, msddisk );
+	}
+
+bailout:
 	TASK_NAME_LEAVE();
 
 	return ( retval );

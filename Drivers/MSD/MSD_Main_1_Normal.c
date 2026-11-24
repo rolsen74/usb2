@@ -30,6 +30,18 @@ U32 mask;
 	MEM_SET( & tick_port, 0, sizeof( tick_port ) );
 	tick_ready = MSGPORT_INIT( & tick_port );
 
+#ifdef MSD_DEBUG
+	for ( msddisk = Header_Head( &msddev->msddev_MSDDisk_Header ); msddisk; msddisk = Node_Next( msddisk ) )
+	{
+		if ( ( MSD_TRACE_OPTICAL( msddisk ) ) && ( msddisk->msddisk_Removable ) )
+		{
+			MSDDEBUG( "MSD: interface %lu unit %lu LUN %lu media poll timer %s\n",
+				msddev->msddev_InterfaceNr, msddisk->msddisk_UnitNr, msddisk->msddisk_Lun,
+				( tick_ready ) ? "scheduled" : "reply port unavailable" );
+		}
+	}
+#endif
+
 	if ( tick_ready )
 	{
 		MEM_COPY( usbbase->usb_TimeRequest, & tick, sizeof( tick ) );
@@ -47,7 +59,6 @@ U32 mask;
 
 	wait  = SIGBREAKF_CTRL_C;
 	wait |=	msddev->msddev_Register->reg_Public.Stack_MsgPortBit;
-	wait |= msddev->msddev_MsgPort_Abort.ump_Signal.sig_Signal_Mask;
 	wait |= msddev->msddev_MsgPort_Begin.ump_Signal.sig_Signal_Mask;
 
 	if ( tick_ready )
@@ -83,14 +94,21 @@ U32 mask;
 					}
 					else if ( ( msddisk->msddisk_Removable ) && ( ! msddev->msddev_Detached ) )
 					{
+#ifdef MSD_DEBUG
+						if ( ( MSD_TRACE_OPTICAL( msddisk ) ) && ( ! msddisk->msddisk_FirstTimedProbe ) )
+						{
+							msddisk->msddisk_FirstTimedProbe = TRUE;
+
+							MSDDEBUG( "MSD: interface %lu unit %lu LUN %lu first timed media poll, timer error %ld\n",
+								msddev->msddev_InterfaceNr, msddisk->msddisk_UnitNr,
+								msddisk->msddisk_Lun, (S32) tick.Request.io_Error );
+						}
+#endif
 						MSD_Disk_MediaCheck( usbbase, msddisk );
 
-						if ( ( msddisk->msddisk_MediaPresent ) && ( ! msddisk->msddisk_Announced ) )
+						if ( msddisk->msddisk_MediaPresent )
 						{
-							msddisk->msddisk_Announced = usbbase->usb_IMounter->AnnounceDeviceTags( MSD_Device_Name, msddisk->msddisk_UnitNr,
-								MNTA_DosNamePrefixHint, "USB",
-								TAG_END
-							) ? TRUE : FALSE;
+							MSD_Disk_Announce( usbbase, msddisk );
 						}
 					}
 
@@ -101,13 +119,6 @@ U32 mask;
 				tick.Time.Microseconds = 0;
 				IO_SEND( & tick );
 			}
-		}
-
-		if ( mask & msddev->msddev_MsgPort_Abort.ump_Signal.sig_Signal_Mask )
-		{
-			USBERROR( "MSD : __myHandle_Abort" );
-
-			MSD_Main__myHandle_Abort( usbbase, msddev );
 		}
 
 		if ( mask & msddev->msddev_MsgPort_Begin.ump_Signal.sig_Signal_Mask )

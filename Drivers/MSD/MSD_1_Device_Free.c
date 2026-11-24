@@ -49,7 +49,6 @@ MSD_Device_Free( struct USBBase *usbbase, struct MSDDevice *msddev )
 		msddev->msddev_Res_Bulk_Out = NULL;
 	}
 
-	MSGPORT_FREE( & msddev->msddev_MsgPort_Abort );
 
 	MSGPORT_FREE( & msddev->msddev_MsgPort_Begin );
 

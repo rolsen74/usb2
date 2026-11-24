@@ -42,6 +42,8 @@ S32 retval;
 
 	if ( ! MSD_Disk_DoBulk( usbbase, msddisk, & dbs ) )
 	{
+		MSD_Disk_CommandError( usbbase, msddisk, &result );
+
 		goto bailout;
 	}
 

@@ -23,6 +23,7 @@ SEC_CODE S32 MSD_SCSI_RequestSense(
 struct DoBulkResult result;
 struct DoBulkStruct dbs;
 S32 retval;
+	S32 completed;
 U32 len;
 
 	TASK_NAME_ENTER( "MSD_SCSI_RequestSense" );
@@ -62,7 +63,21 @@ U32 len;
 //	dbs.cmd[15]	= 0;
 
 	// --
-	if ( ! MSD_Disk_DoBulk( usbbase, msddisk, & dbs ))
+	completed = MSD_Disk_DoBulk( usbbase, msddisk, &dbs );
+
+#ifdef MSD_DEBUG
+	if ( ( MSD_TRACE_OPTICAL( msddisk ) ) && ( ( ! completed ) || ( result.csw_DataActual < 4 ) ) &&
+		( MSD_TraceDue( &msddisk->msddisk_SenseTrace,
+			0x40000000U | ( (U32) result.CommandSent << 24 ) | ( (U32) result.csw_Valid << 16 ) |
+			( (U32) result.csw_Status << 8 ) | result.csw_DataActual ) ) )
+	{
+		MSDDEBUG( "MSD: interface %lu LUN %lu REQUEST SENSE failed or short, %lu/%lu bytes, CBW sent %lu, CSW valid %lu status $%02lX\n",
+			msddisk->msddisk_MSDDev->msddev_InterfaceNr, msddisk->msddisk_Lun,
+			result.csw_DataActual, len, (U32) result.CommandSent, (U32) result.csw_Valid, (U32) result.csw_Status );
+	}
+#endif
+
+	if ( ! completed )
 	{
 		USBERROR( "MSD_SCSI_RequestSense() failed" );
 		goto bailout;

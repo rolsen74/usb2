@@ -83,7 +83,7 @@ struct USBBase
 
 	struct MSDBase * usb_MSDDevice;
 	//	struct USB2_Header				usb_MSDHeader;
-	//	struct USB2_Semaphore			usb_MSDSemaphore;
+	struct USB2_Semaphore usb_MSDSemaphore;
 	//	struct USB2_Header				usb_MSDDiskChangeList;
 
 	USB2_ID				  usb_Notify_ID;

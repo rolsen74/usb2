@@ -21,8 +21,8 @@
 
 #define MSD_Device_Name		"usb2disk.device"
 #define MSD_Device_Version	1
-#define MSD_Device_Revision 2
-#define MSD_Device_Date		"23.11.2026"
+#define MSD_Device_Revision 5
+#define MSD_Device_Date		"24.11.2026"
 
 #ifdef MSD_DEBUG
 #define MSDDEBUG( ... ) usbbase->usb_IExec->DebugPrintF ( __VA_ARGS__ )
@@ -147,8 +147,9 @@ struct DoBulkResult
 	U8	csw_Status;		 // MSDCSW_Status_*
 	U8	csw_SigOK;		 // optional
 	U8	csw_TagOK;		 // optional
-	U32 csw_DataResidue; // host order, bytes not transferred
-	U32 csw_DataActual;	 // host order, bytes transferred ( requested - residue )
+	U8	CommandSent;
+	U32 csw_DataResidue; // raw device residue in host order
+	U32 csw_DataActual;	 // relevant or processed bytes, bounded by the USB count
 };
 
 struct DoBulkStruct
@@ -172,7 +173,6 @@ struct DoBulkStruct
 #define DOBULKF_DIR_OUT	  0x01 // host -> device
 #define DOBULKF_DIR_MASK  0x01
 
-#define DOBULKF_AUTOSENSE 0x02 // perform REQUEST SENSE on CSW=CmdFailed
 #define DOBULKF_SHORT_OK  0x04 // tolerate short data (residue) without error
 
 // --
@@ -196,7 +196,6 @@ struct MSDDevice
 	struct MSDBase *			msddev_MSDBase;
 	struct USB2_Header			msddev_MSDDisk_Header; // struct MSDDisk's
 	struct USB2_MsgPort			msddev_MsgPort_Begin;
-	struct USB2_MsgPort			msddev_MsgPort_Abort;
 	struct RealRegister *		msddev_Register;
 	struct USB2_EPResource *	msddev_Res_Bulk_Out;
 	struct USB2_EPResource *	msddev_Res_Bulk_In;
@@ -209,6 +208,7 @@ struct MSDDevice
 	// --
 	U8 Running;
 	U8 msddev_Detached;
+	U8 msddev_RecoveryRequired;
 };
 
 // --
@@ -222,6 +222,15 @@ struct MSDStatCallback
 // --
 
 // one pr. lun
+
+#ifdef MSD_DEBUG
+struct MSDTraceState
+{
+	U32 Result;
+	U8 Seen;
+	U8 Repeats;
+};
+#endif
 
 struct MSDDisk
 {
@@ -241,7 +250,6 @@ struct MSDDisk
 
 	S32					  msddisk_OpenCnt;
 	struct USB2_MsgPort * msddisk_MsgPort_Begin;
-	struct USB2_MsgPort * msddisk_MsgPort_Abort;
 	U32					  msddisk_UnitNr;
 
 	struct USB2_Semaphore	 msddisk_MSDUnit_Semaphore;
@@ -261,8 +269,21 @@ struct MSDDisk
 	U8 msddisk_Released;
 #ifdef MSD_DEBUG
 	U8 msddisk_ReadLogged;
+	U8 msddisk_FirstTimedProbe;
+	struct MSDTraceState msddisk_ReadyTrace;
+	struct MSDTraceState msddisk_CapacityTrace;
+	struct MSDTraceState msddisk_SenseTrace;
 #endif
 };
+
+// --
+
+#ifdef MSD_DEBUG
+SEC_CODE U32 MSD_TraceDue( struct MSDTraceState *trace, U32 result );
+#define MSD_TRACE_OPTICAL( disk ) ( ( (disk)->msddisk_DeviceType == DG_CDROM ) || \
+	( (disk)->msddisk_DeviceType == DG_OPTICAL_DISK ) || \
+	( (disk)->msddisk_MSDDev->msddev_SubClass == MSD_SubClass_ATAPI ) )
+#endif
 
 // --
 
@@ -340,7 +361,7 @@ S32 MSD_SCSI_ReadCapacity10 ( struct USBBase * usbbase, struct MSDDisk * msddisk
 S32 MSD_SCSI_ReadCapacity16 ( struct USBBase * usbbase, struct MSDDisk * msddisk, PTR mem, U32 len );
 S32 MSD_SCSI_GetCapacity ( struct USBBase * usbbase, struct MSDDisk * msddisk, U64 * blocks, U32 * block_size );
 S32 MSD_SCSI_GetWriteProtect ( struct USBBase * usbbase, struct MSDDisk * msddisk, U32 * protected );
-S32 MSD_SCSI_SynchronizeCache ( struct USBBase * usbbase, struct MSDDisk * msddisk );
+S32 MSD_SCSI_SynchronizeCache ( struct USBBase * usbbase, struct MSDDisk * msddisk, struct DoBulkResult *result );
 S32 MSD_SCSI_RequestSense ( struct USBBase * usbbase, struct MSDDisk * msddisk, struct DoBulkResult * dbr, PTR mem, U32 reqlen );
 S32 MSD_SCSI_TestUnitReady ( struct USBBase * usbbase, struct MSDDisk * msddisk, struct DoBulkResult * dbr );
 S32 MSD_SCSI_Write10 ( struct USBBase * usbbase, struct MSDDisk * msddisk, struct DoBulkResult * dbr, U32 blk_start,
@@ -348,13 +369,19 @@ S32 MSD_SCSI_Write10 ( struct USBBase * usbbase, struct MSDDisk * msddisk, struc
 S32 MSD_SCSI_Write16 ( struct USBBase * usbbase, struct MSDDisk * msddisk, struct DoBulkResult * dbr, U64 blk_start,
 					   U32 blk_blocks, PTR mem, U32 * actual_ptr );
 S32 MSD_Disk_TestUnitReady ( struct USBBase * usbbase, struct MSDDisk * msddisk );
+SEC_CODE U32 MSD_SCSI_UnformattedMedia( struct USBBase *usbbase, struct MSDDisk *msddisk );
+SEC_CODE S32 MSD_Disk_ApplySense( struct USBBase *usbbase, struct MSDDisk *msddisk, const U8 *sense, U32 length );
+SEC_CODE S32 MSD_Disk_CommandError( struct USBBase *usbbase, struct MSDDisk *msddisk, const struct DoBulkResult *result );
+SEC_CODE S32 MSD_Disk_TransferBlocks( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq, U64 offset, S32 write );
+SEC_CODE void MSD_Disk_CancelWrites( struct USBBase *usbbase, struct MSDDisk *msddisk );
 S32 MSD_Disk_MediaCheck ( struct USBBase * usbbase, struct MSDDisk * msddisk );
+SEC_CODE void MSD_Disk_Announce( struct USBBase *usbbase, struct MSDDisk *msddisk );
 void MSD_Disk_NotifyChange ( struct USBBase * usbbase, struct MSDDisk * msddisk );
 
 void MSD_Main ( struct USBBase * usbbase, struct MSDDevice * msddev );
 void MSD_Main_1_Normal ( struct USBBase * usbbase, struct MSDDevice * msddev );
 void MSD_Main_2_Stopping ( struct USBBase * usbbase, struct MSDDevice * msddev );
-void MSD_Main__myHandle_Abort ( struct USBBase * usbbase UNUSED, struct MSDDevice * msddev UNUSED );
+SEC_CODE struct IOStdReq *MSD_Queue_Remove( struct USBBase *usbbase, struct MSDDisk *msddisk, struct IOStdReq *wanted );
 void MSD_Main__myHandle_Begin ( struct USBBase * usbbase, struct MSDDevice * msddev );
 void MSD_Main__myHandle_Stack ( struct USBBase * usbbase UNUSED, struct MSDDevice * msddev UNUSED );
 

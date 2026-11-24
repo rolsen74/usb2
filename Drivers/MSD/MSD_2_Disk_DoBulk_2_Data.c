@@ -69,15 +69,20 @@ U32 IsRead;
 	}
 	else if ( ioreq->io_Error == USB2Err_Host_Stall )
 	{
-		// Clearing both Bulk, some devices need this, hope it wont break others
-		ENDPOINTRES_DESTALL( msddev->msddev_Res_Bulk_In );
-		ENDPOINTRES_DESTALL( msddev->msddev_Res_Bulk_Out );
+		MSDDEBUG( "MSD: LUN %lu SCSI $%02lX data stalled, %lu/%lu bytes\n",
+			msddisk->msddisk_Lun, (U32) dbs->cmd[0], ioreq->io_Actual, dbs->dbs_Data_Length );
 
-		stat = PS_Stall;
+		if ( ENDPOINTRES_DESTALL( epr ) )
+		{
+			stat = PS_Stall;
+		}
 	}
 	else
 	{
 		// Any other transport error (timeout, CRC, etc.): let caller recover
+		MSDDEBUG( "MSD: LUN %lu SCSI $%02lX data USB error %ld, %lu/%lu bytes\n",
+			msddisk->msddisk_Lun, (U32) dbs->cmd[0], (S32) ioreq->io_Error,
+			ioreq->io_Actual, dbs->dbs_Data_Length );
 
 		stat = PS_Error;
 	}

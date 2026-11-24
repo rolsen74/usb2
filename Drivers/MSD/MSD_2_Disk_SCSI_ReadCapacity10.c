@@ -57,6 +57,8 @@ S32 retval;
 	if ( ! MSD_Disk_DoBulk( usbbase, msddisk, & dbs ))
 	{
 		USBERROR( "MSD_SCSI_ReadCapacity10() failed" );
+		MSD_Disk_CommandError( usbbase, msddisk, &result );
+
 		goto bailout;
 	}
 

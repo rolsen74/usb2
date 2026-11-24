@@ -43,7 +43,7 @@ struct MSDDisk *msddisk;
 	if (( msddisk )
 	&&	( ! msddisk->msddisk_MSDDev->msddev_Detached )
 	&&	( ioreq->io_Message.mn_Length ) 
-	&&	( ioreq->io_Message.mn_Length >= sizeof( struct IORequest )))
+	&&	( ioreq->io_Message.mn_Length >= sizeof( struct IOStdReq )))
 	{
 		// okay
 

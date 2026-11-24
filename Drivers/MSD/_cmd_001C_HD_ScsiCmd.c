@@ -76,6 +76,8 @@ struct DoBulkResult dbr;	// Scsi Result
 struct MSDDisk *msddisk;
 struct SCSICmd *scsi;
 U32 flags;
+U32 want;
+U8 sense[255];
 S32 stat;
 
 	TASK_NAME_ENTER( "MSD : HD_ScsiCmd : Default" );
@@ -94,18 +96,12 @@ S32 stat;
 	{
 		if ( scsi->scsi_Flags & SCSIF_READ ) 
 		{
-			flags |= DOBULKF_DIR_IN | DOBULKF_SHORT_OK;		// short IN is common for SCSI-direct
+			flags |= DOBULKF_DIR_IN | DOBULKF_SHORT_OK;
 		} 
 		else 
 		{
 			flags |= DOBULKF_DIR_OUT;
 		}
-	}
-
-	if ( scsi->scsi_Flags & SCSIF_AUTOSENSE ) 
-	{
-		// informational; policy below
-		flags |= DOBULKF_AUTOSENSE; 
 	}
 
 	scsi->scsi_Actual		= 0;
@@ -126,56 +122,53 @@ S32 stat;
 
 //	stat = MSD_Disk_DoBulk( usbbase, msddisk, & dbr, si->cmd, scsi->scsi_CmdLength, scsi->scsi_Data, scsi->scsi_Length, flags );
 
-	scsi->scsi_CmdActual	= scsi->scsi_CmdLength;
+	scsi->scsi_CmdActual = dbr.CommandSent ? scsi->scsi_CmdLength : 0;
 
-	// --
-
-	if (( ! stat ) && ( ! dbr.csw_Valid ))
+	if ( ! dbr.csw_Valid )
 	{
-//		ioreq->io_Actual = 0;
-		ioreq->io_Error = IOERR_BADLENGTH;
+		ioreq->io_Error = msddisk->msddisk_MSDDev->msddev_Detached ? TDERR_DiskChanged : HFERR_Phase;
+
 		goto bailout;
 	}
 
-	if ( dbr.csw_Valid )
-	{
-		scsi->scsi_Actual	= dbr.csw_DataActual;
-		ioreq->io_Actual	= dbr.csw_DataActual;
-	}
+	scsi->scsi_Actual = dbr.csw_DataActual;
+	ioreq->io_Actual = dbr.csw_DataActual;
 
 	if ( stat )
 	{
-		// Command passed (Good)
-		scsi->scsi_Status	= 0x00;
-		goto bailout;
-	}
-
-	// Command did not pass. Distinguish CmdFailed vs PhaseError.
-	if ( dbr.csw_Status == MSDCSW_Status_CmdFailed )
-	{
-		scsi->scsi_Status	= 0x02;	// Check Condition
-
-		if (( scsi->scsi_Flags & SCSIF_AUTOSENSE )
-		&&	( scsi->scsi_SenseData )
-		&&	( scsi->scsi_SenseLength >= 4 ))
+		if ( ( dbs.cmd[0] == 0x03 ) && ( scsi->scsi_Flags & SCSIF_READ ) )
 		{
-			U32 want = MIN( scsi->scsi_SenseLength, 255 );
-			want = MAX( want, 4 );
-
-			stat = MSD_SCSI_RequestSense( usbbase, msddisk, & sbr, scsi->scsi_SenseData, want );
-
-			if ( stat )
-			{
-				scsi->scsi_SenseActual = sbr.csw_DataActual;
-			}
+			MSD_Disk_ApplySense( usbbase, msddisk, (PTR) scsi->scsi_Data, scsi->scsi_Actual );
 		}
 
-		// Transport succeeded (we had a CSW), keep io_Error = 0
 		goto bailout;
 	}
 
-	// Phase error or other unexpected status → transport failure
-	ioreq->io_Error = IOERR_BADLENGTH;
+	if ( dbr.csw_Status == MSDCSW_Status_CmdFailed )
+	{
+		scsi->scsi_Status = 0x02;
+		ioreq->io_Error = HFERR_BadStatus;
+
+		if ( ( scsi->scsi_Flags & SCSIF_AUTOSENSE ) && ( scsi->scsi_SenseData ) &&
+			( scsi->scsi_SenseLength >= 4 ) )
+		{
+			want = ( ( scsi->scsi_Flags & SCSIF_OLDAUTOSENSE ) == SCSIF_OLDAUTOSENSE ) ?
+				4 : MIN( scsi->scsi_SenseLength, sizeof( sense ) );
+
+			if ( MSD_SCSI_RequestSense( usbbase, msddisk, &sbr, sense, MAX( want, 18 ) ) )
+			{
+				scsi->scsi_SenseActual = MIN( sbr.csw_DataActual, want );
+
+				MEM_COPY( sense, scsi->scsi_SenseData, scsi->scsi_SenseActual );
+
+				MSD_Disk_ApplySense( usbbase, msddisk, sense, sbr.csw_DataActual );
+			}
+		}
+	}
+	else
+	{
+		ioreq->io_Error = HFERR_Phase;
+	}
 
 	// --
 
@@ -186,7 +179,7 @@ bailout:
 
 // --
 
-SEC_CODE S32 MSD_Cmd_001C_HD_SCSICmd( struct USBBase *usbbase, struct MSDDevice *msddev UNUSED, struct IOStdReq *ioreq )
+SEC_CODE S32 MSD_Cmd_001C_HD_SCSICmd( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq )
 {
 struct __scsi_intern si;
 struct MSDDisk *msddisk;
@@ -199,18 +192,41 @@ S32 reply;
 	USBERROR( "MSD : io_Length ........ : %ld", ioreq->io_Length );
 
 	reply = TRUE;
+	ioreq->io_Actual = 0;
 	scsi = ioreq->io_Data;
 	msddisk = (PTR) ioreq->io_Unit;
 
-	if (( scsi == NULL )
-	||	( ioreq->io_Length < sizeof( struct SCSICmd ))
-	||	( scsi->scsi_CmdLength == 0 )
-	||	( scsi->scsi_CmdLength > 16 )
-	||	( ! scsi->scsi_Command )
-	||	( ( scsi->scsi_Length ) && ( ! scsi->scsi_Data ) ))
+	if ( ( ! scsi ) || ( ioreq->io_Length < sizeof( struct SCSICmd ) ) )
 	{
-		USBERROR( "MSD : HD_ScsiCmd : bad SCSICmd" );
 		ioreq->io_Error = IOERR_BADLENGTH;
+
+		goto bailout;
+	}
+
+	scsi->scsi_Actual = 0;
+	scsi->scsi_CmdActual = 0;
+	scsi->scsi_SenseActual = 0;
+	scsi->scsi_Status = SCSI_GOOD;
+
+	if ( ( ! msddisk ) || ( msddev->msddev_Detached ) )
+	{
+		ioreq->io_Error = TDERR_DiskChanged;
+
+		goto bailout;
+	}
+
+	if ( ( ! scsi->scsi_CmdLength ) || ( scsi->scsi_CmdLength > sizeof( si.cmd ) ) ||
+		( ! scsi->scsi_Command ) || ( ( scsi->scsi_Length ) && ( ! scsi->scsi_Data ) ) )
+	{
+		ioreq->io_Error = IOERR_BADLENGTH;
+
+		goto bailout;
+	}
+
+	if ( ( msddev->msddev_SubClass != MSD_SubClass_SCSI ) && ( scsi->scsi_CmdLength > 12 ) )
+	{
+		ioreq->io_Error = IOERR_NOCMD;
+
 		goto bailout;
 	}
 
@@ -235,7 +251,7 @@ S32 reply;
 
 	// Optical drives must report the current disc's capacity or sense data.
 	if ( ( si.cmd[0] == SCSI_DA_READ_CAPACITY ) && ( scsi->scsi_CmdLength == 10 ) &&
-		( msddisk->msddisk_DeviceType != DG_CDROM ) && ( msddisk->msddisk_MediaPresent ) &&
+		( ! msddisk->msddisk_Removable ) && ( msddisk->msddisk_MediaPresent ) &&
 		( msddisk->msddisk_TotalBlocks ) && ( msddisk->msddisk_Block_Size ) )
 	{
 		__HDSCSI_ReadCap10( usbbase, ioreq, & si );
@@ -244,6 +260,16 @@ S32 reply;
 	{
 		__HDSCSI_Default( usbbase, ioreq, & si );
 	}
+
+#ifdef MSD_DEBUG
+	if ( ( msddisk->msddisk_DeviceType == DG_CDROM ) &&
+		( ( si.cmd[0] == SCSI_DA_READ_CAPACITY ) || ( si.cmd[0] == 0x43 ) ) )
+	{
+		MSDDEBUG( "MSD: LUN %lu optical SCSI $%02lX, status $%02lX, error %ld, %lu/%lu bytes\n",
+			msddisk->msddisk_Lun, (U32) si.cmd[0], (U32) scsi->scsi_Status,
+			(S32) ioreq->io_Error, scsi->scsi_Actual, scsi->scsi_Length );
+	}
+#endif
 
 bailout:
 

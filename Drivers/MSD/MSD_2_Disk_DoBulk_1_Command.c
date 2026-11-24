@@ -134,10 +134,13 @@ U32 IsRead;
 	}
 	else
 	{
-		if ( ioreq->io_Error == USB2Err_Host_Stall )
-		{
-			ENDPOINTRES_DESTALL( epr );
-		}
+		MSDDEBUG( "MSD: LUN %lu SCSI $%02lX CBW USB error %ld, %lu/%lu bytes\n",
+			msddisk->msddisk_Lun, (U32) dbs->cmd[0], (S32) ioreq->io_Error,
+			ioreq->io_Actual, (U32) MSDCBW_LEN );
+
+		MSDDEBUG( "MSD: CBW command length %lu (requested %lu), flags $%02lX, data length %lu\n",
+			(U32) msddisk->msddisk_CBW.cbw_CBLength, dbs->dbs_Command_Length,
+			(U32) msddisk->msddisk_CBW.cbw_Flags, dbs->dbs_Data_Length );
 
 		stat = PS_Error;
 	}

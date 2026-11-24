@@ -12,7 +12,7 @@
 
 // --
 
-SEC_CODE S32 MSD_SCSI_SynchronizeCache( struct USBBase *usbbase, struct MSDDisk *msddisk )
+SEC_CODE S32 MSD_SCSI_SynchronizeCache( struct USBBase *usbbase, struct MSDDisk *msddisk, struct DoBulkResult *result )
 {
 struct DoBulkStruct dbs;
 S32 retval;
@@ -20,6 +20,7 @@ S32 retval;
 	TASK_NAME_ENTER( "MSD_SCSI_SynchronizeCache" );
 
 	MEM_SET( & dbs, 0, sizeof( dbs ) );
+	dbs.dbs_Result = result;
 	dbs.dbs_Command_Length = 10;
 	dbs.cmd[0] = 0x35;
 

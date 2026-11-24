@@ -29,7 +29,6 @@ MSD_Main_2_Stopping( struct USBBase *usbbase, struct MSDDevice *msddev )
 	for( msddisk = Header_Head( & msddev->msddev_MSDDisk_Header ); msddisk; msddisk = Node_Next( msddisk ) )
 	{
 		msddisk->msddisk_MsgPort_Begin = NULL;
-		msddisk->msddisk_MsgPort_Abort = NULL;
 	}
 
 	SEMAPHORE_RELEASE( & msdbase->msdbase_MSDDisk_Semaphore );

@@ -116,7 +116,7 @@ LDFLAGS		+= -Wl,--cref,-M,-Map=$(MAPFILE)
 #CFLAGS		+= -DDO_DEBUG
 
 # Print mass storage diagnostics on serial
-MSD_DEBUG	?= 0
+MSD_DEBUG	?= 1
 
 # Add extra error code checks, 
 # for higher Stability and larger Binary file

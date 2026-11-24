@@ -14,6 +14,7 @@
 
 SEC_CODE S32 MSD_Cmd_0017_TD_Eject( struct USBBase *usbbase, struct MSDDevice *msddev, struct IOStdReq *ioreq )
 {
+struct DoBulkResult result;
 struct DoBulkStruct dbs;
 struct MSDDisk *msddisk;
 
@@ -41,13 +42,14 @@ struct MSDDisk *msddisk;
 	}
 
 	MEM_SET( & dbs, 0, sizeof( dbs ) );
+	dbs.dbs_Result = &result;
 	dbs.dbs_Command_Length = 6;
 	dbs.cmd[0] = 0x1b;
 	dbs.cmd[4] = ( ioreq->io_Length ) ? 0x02 : 0x03;
 
 	if ( ! MSD_Disk_DoBulk( usbbase, msddisk, & dbs ) )
 	{
-		ioreq->io_Error = ( msddev->msddev_Detached ) ? TDERR_DiskChanged : TDERR_NotSpecified;
+		ioreq->io_Error = MSD_Disk_CommandError( usbbase, msddisk, &result );
 		goto bailout;
 	}
 

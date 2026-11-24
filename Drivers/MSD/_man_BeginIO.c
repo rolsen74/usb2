@@ -47,6 +47,15 @@ S32 queued;
 		return;
 	}
 
+	if ( ioreq->io_Command == NSCMD_TD_REMSTATCALLBACK )
+	{
+		MSD_Cmd_A007_NSCmd_RemStatCallBack( usbbase, ioreq );
+
+		TASK_NAME_LEAVE();
+
+		return;
+	}
+
 	ioreq->io_Message.mn_Node.ln_Type = NT_MESSAGE;
 	ioreq->io_Flags		&= ~IOF_QUICK;
 	ioreq->io_Error		= 0;
@@ -78,14 +87,6 @@ S32 queued;
 			break;
 		}
 
-		case NSCMD_TD_REMSTATCALLBACK:
-		{
-			MSD_Cmd_A007_NSCmd_RemStatCallBack( usbbase, ioreq );
-
-			MSGPORT_REPLYMSG( ioreq );
-
-			break;
-		}
 
 		// case /* 0001 */ CMD_RESET:
 		case /* 0002 */ CMD_READ:

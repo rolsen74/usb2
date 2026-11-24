@@ -24,7 +24,11 @@ S32 reply;
 
 	while( TRUE )
 	{
-		ioreq = MSGPORT_GETMSG( & msddev->msddev_MsgPort_Begin );
+		SEMAPHORE_OBTAIN( &msddev->msddev_MSDBase->msdbase_MSDDisk_Semaphore );
+
+		ioreq = MSGPORT_GETMSG( &msddev->msddev_MsgPort_Begin );
+
+		SEMAPHORE_RELEASE( &msddev->msddev_MSDBase->msdbase_MSDDisk_Semaphore );
 
 		if ( ! ioreq )
 		{

@@ -54,43 +54,46 @@ SEC_RODATA static const struct TagItem devCreateTags[] =
 #endif
 // --
 
-SEC_CODE S32 MSD_CreateDevice( struct USBBase *usbbase )
+SEC_CODE S32
+MSD_CreateDevice( struct USBBase *usbbase )
 {
-struct MSDBase *MSDBase;
-S32 retval;
+	struct MSDBase *msdbase;
 
-	TASK_NAME_ENTER( "MSD_CreateDevice" );
+	S32 ready;
 
-	retval = FALSE;
+	SEMAPHORE_OBTAIN( &usbbase->usb_MSDSemaphore );
 
-	if ( ! usbbase->usb_MSDDevice )
+	if ( ! usbbase->usb_MounterBase )
 	{
-		MSDBase = MISC_CREATELIBRARY( (PTR) devCreateTags );
+		usbbase->usb_MounterBase = usbbase->usb_IExec->OpenLibrary( "mounter.library", 0 );
+	}
 
-		if ( MSDBase )
+	if ( ( usbbase->usb_MounterBase ) && ( ! usbbase->usb_IMounter ) )
+	{
+		usbbase->usb_IMounter = (PTR) usbbase->usb_IExec->GetInterface( usbbase->usb_MounterBase, "main", 1, NULL );
+	}
+
+	if ( ( usbbase->usb_IMounter ) && ( ! usbbase->usb_MSDDevice ) )
+	{
+		msdbase = MISC_CREATELIBRARY( (PTR) devCreateTags );
+
+		if ( msdbase )
 		{
-			usbbase->usb_MSDDevice = (PTR) MSDBase;
+			msdbase->msdbase_usbbase = usbbase;
 
-			MSDBase->msdbase_usbbase = usbbase;
+			SEMAPHORE_INIT( &msdbase->msdbase_MSDDisk_Semaphore );
 
-			SEMAPHORE_INIT( & MSDBase->msdbase_MSDDisk_Semaphore );
+			MISC_ADDDEVICE( msdbase );
 
-			MISC_ADDDEVICE( MSDBase );
+			usbbase->usb_MSDDevice = msdbase;
 		}
 	}
 
-	if ( ! usbbase->usb_MSDDevice )
-	{
-		USBERROR( "Error creating MSD Device" );
-		goto bailout;
-	}
+	ready = usbbase->usb_MSDDevice != NULL;
 
-	retval = TRUE;
+	SEMAPHORE_RELEASE( &usbbase->usb_MSDSemaphore );
 
-bailout:
-
-	TASK_NAME_LEAVE();
-	return(	retval );
+	return ( ready );
 }
 
 // --

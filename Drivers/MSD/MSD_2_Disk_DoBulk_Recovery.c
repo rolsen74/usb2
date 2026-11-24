@@ -72,6 +72,7 @@ MSD_DoBulk_Recovery( struct USBBase *usbbase, struct MSDDisk *msddisk )
 	}
 
 	msddisk->msddisk_InRecovery = FALSE;
+	msddev->msddev_RecoveryRequired = ! result;
 
 bailout:
 
