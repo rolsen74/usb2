@@ -22,7 +22,7 @@ Cmd_Write_Direct( struct PrinterUnit *unit, struct IOStdReq *pario )
 		pario->io_Actual = 0;
 		pario->io_Error = ParErr_LineErr;
 
-		ReplyMsg( (PTR) pario );
+		Printer_Reply( (PTR) pario );
 
 		return;
 	}
@@ -32,7 +32,7 @@ Cmd_Write_Direct( struct PrinterUnit *unit, struct IOStdReq *pario )
 		pario->io_Actual = 0;
 		pario->io_Error = 0;
 
-		ReplyMsg( (PTR) pario );
+		Printer_Reply( (PTR) pario );
 
 		return;
 	}
@@ -41,9 +41,6 @@ Cmd_Write_Direct( struct PrinterUnit *unit, struct IOStdReq *pario )
 	AddTail( unit->unit_PAR_IOReq_WaitingList, (PTR) pario );
 
 	unit->unit_PAR_IOReq_WaitingCount++;
-
-	// Start Sending if not running
-	Direct_Schedule( unit );
 }
 
 // --

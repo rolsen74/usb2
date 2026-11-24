@@ -16,11 +16,11 @@
 #define DEVNAME		"cls_Printer.Driver"
 
 #define VERSION		1
-#define REVISION	5
-#define DATE		"23.11.2026"
-#define VERS		DEVNAME " 1.5"
-#define VSTRING		DEVNAME " 1.5 (" DATE ")\r\n"
-#define VERSTAG		"\0$VER: " DEVNAME " 1.5 (" DATE ")"
+#define REVISION	6
+#define DATE		"24.11.2026"
+#define VERS		DEVNAME " 1.6"
+#define VSTRING		DEVNAME " 1.6 (" DATE ")\r\n"
+#define VERSTAG		"\0$VER: " DEVNAME " 1.6 (" DATE ")"
 
 // --
 

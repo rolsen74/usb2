@@ -58,7 +58,7 @@ __myProcess_Free_Lists( struct PrinterUnit *unit )
 			pario->io_Actual = 0;
 			pario->io_Error = ( pario->io_Flags & IOPARF_ABORT ) ? IOERR_ABORTED : ParErr_NotOpen;
 
-			ReplyMsg( (PTR) pario );
+			Printer_Reply( (PTR) pario );
 		}
 
 		FreeSysObject( ASOT_LIST, unit->unit_PAR_IOReq_WaitingList );

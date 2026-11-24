@@ -13,28 +13,20 @@
 // --
 
 void
-Cmd_Write_Buffer( struct PrinterUnit *unit, struct IOStdReq *pario )
+Cmd_Write_Buffer( struct PrinterUnit *unit, struct IOStdReq *request )
 {
-	U32 len;
-	U32 accepted;
-
-	if ( ( ! pario->io_Data ) || ( ! pario->io_Length ) )
+	if ( ( ! request->io_Data ) || ( ! request->io_Length ) )
 	{
-		pario->io_Error = ParErr_InvParam;
+		request->io_Error = ParErr_InvParam;
 
-		ReplyMsg( (PTR)pario );
+		Printer_Reply( (PTR)request );
 
 		return;
 	}
 
-	len = ( pario->io_Length == -1U ) ? strlen( pario->io_Data ) : pario->io_Length;
+	AddTail( unit->unit_PAR_IOReq_WaitingList, (PTR)request );
 
-	accepted = Buffer_Write( unit, pario->io_Data, len );
-
-	pario->io_Actual = accepted;
-	pario->io_Error = ( accepted == len ) ? 0 : ParErr_LineErr;
-
-	ReplyMsg( (PTR)pario );
+	unit->unit_PAR_IOReq_WaitingCount++;
 }
 
 // --

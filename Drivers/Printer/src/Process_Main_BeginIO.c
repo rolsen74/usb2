@@ -14,19 +14,21 @@
 
 #include "cmd_0009_PDQuery.c"
 
-static void
+static S32
 __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 {
 	struct IORequest *ioreq;
 	struct IOExtPar *pario;
 
-	while( TRUE )
+	U32 index;
+
+	for ( index = 0 ; index < 32 ; index++ )
 	{
 		ioreq = (PTR) GetMsg( unit->unit_PRT_Begin_MsgPort );
 
 		if ( ! ioreq )
 		{
-			break;
+			return ( TRUE );
 		}
 
 		ioreq->io_Error = 0;
@@ -35,7 +37,7 @@ __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 		{
 			ioreq->io_Error = IOERR_BADLENGTH;
 
-			ReplyMsg( (PTR) ioreq );
+			Printer_Reply( (PTR) ioreq );
 
 			continue;
 		}
@@ -50,7 +52,7 @@ __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 		{
 			ioreq->io_Error = ( ioreq->io_Flags & IOPARF_ABORT ) ? IOERR_ABORTED : ParErr_NotOpen;
 
-			ReplyMsg( (PTR) ioreq );
+			Printer_Reply( (PTR) ioreq );
 
 			continue;
 		}
@@ -59,17 +61,11 @@ __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 		{
 			case CMD_WRITE:
 			{
-				if ( unit->unit_NewJob )
-				{
-					unit->unit_JobError = 0;
-					unit->unit_NewJob = FALSE;
-				}
-
 				if ( unit->unit_JobError )
 				{
 					ioreq->io_Error = unit->unit_JobError;
 
-					ReplyMsg( (PTR)ioreq );
+					Printer_Reply( (PTR)ioreq );
 
 					break;
 				}
@@ -98,7 +94,7 @@ __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 				{
 					ioreq->io_Error = IOERR_BADLENGTH;
 
-					ReplyMsg( (PTR) ioreq );
+					Printer_Reply( (PTR) ioreq );
 				}
 
 				break;
@@ -110,12 +106,16 @@ __myProcess_Main_BeginIO( struct PrinterUnit *unit )
 
 				ioreq->io_Error = IOERR_NOCMD;
 
-				ReplyMsg( (PTR) ioreq );
+				Printer_Reply( (PTR) ioreq );
 
 				break;
 			}
 		}
 	}
+
+	Signal( FindTask( NULL ), unit->unit_PRT_Begin_MsgPortBit );
+
+	return ( FALSE );
 }
 
 // --

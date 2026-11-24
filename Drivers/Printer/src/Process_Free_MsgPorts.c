@@ -13,32 +13,37 @@
 // --
 
 static void
-__myProcess_Free_MsgPorts( struct PrinterUnit *unit )
+__myProcess_Drain_MsgPort( struct PrinterUnit *unit )
 {
 	struct IORequest *request;
 
-	USBERROR( "Printer : __myProcess_Free_MsgPorts" );
+	if ( unit->unit_PRT_Begin_MsgPort )
+	{
+		while ( ( request = (PTR)GetMsg( unit->unit_PRT_Begin_MsgPort ) ) )
+		{
+			request->io_Error = ParErr_NotOpen;
+
+			Printer_Reply( request );
+		}
+	}
+}
+
+// --
+
+static void
+__myProcess_Free_MsgPorts( struct PrinterUnit *unit )
+{
+	__myProcess_Drain_MsgPort( unit );
 
 	if ( unit->unit_PRT_Abort_MsgPort )
 	{
 		FreeSysObject( ASOT_PORT, unit->unit_PRT_Abort_MsgPort );
-
-		unit->unit_PRT_Abort_MsgPortBit = 0;
-		unit->unit_PRT_Abort_MsgPort = NULL;
 	}
 
 	if ( unit->unit_PRT_Begin_MsgPort )
 	{
-		while( ( request = (PTR) GetMsg( unit->unit_PRT_Begin_MsgPort ) ) )
-		{
-			request->io_Error = ( request->io_Flags & IOPARF_ABORT ) ? IOERR_ABORTED : ParErr_NotOpen;
-
-			ReplyMsg( (PTR) request );
-		}
-
 		FreeSysObject( ASOT_PORT, unit->unit_PRT_Begin_MsgPort );
-
-		unit->unit_PRT_Begin_MsgPortBit = 0;
-		unit->unit_PRT_Begin_MsgPort = NULL;
 	}
 }
+
+// --

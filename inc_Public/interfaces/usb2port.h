@@ -64,7 +64,9 @@ struct USB2SerialIFace
 /*
  * Printer drivers obtain "main" v1 on USB2_PRINTER_DEVICE. The usual
  * abort-port signal also wakes the worker on last close. Flush the print
- * job, then call FinishJob. Unregister also releases a waiting closer.
+ * job, then call FinishJob. Printer device revision 8 adds Quiesce.
+ * Call Quiesce before retiring USB and replying to queued requests.
+ * Unregister then releases the unit and any waiting closer.
  */
 struct USB2PrinterIFace
 {
@@ -79,6 +81,7 @@ struct USB2PrinterIFace
 	void APICALL (*Unregister)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 	BOOL APICALL (*JobClosing)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 	void APICALL (*FinishJob)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
+	void APICALL (*Quiesce)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 };
 
 #endif

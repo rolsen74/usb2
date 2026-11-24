@@ -30,17 +30,6 @@ Cmd_PDQuery( struct PrinterUnit *unit, struct IOExtPar *pario )
 	**
 	*/
 
-	if ( unit->unit_JobError )
-	{
-		pario->IOPar.io_Actual = 0;
-		pario->IOPar.io_Error = unit->unit_JobError;
-		pario->io_Status = 0;
-
-		ReplyMsg( (PTR)pario );
-
-		return;
-	}
-
 	epr = unit->unit_USB_Register->Res_Control;
 	sd = epr->SetupData;
 
@@ -61,6 +50,8 @@ Cmd_PDQuery( struct PrinterUnit *unit, struct IOExtPar *pario )
 //	usbio->io_Offset	= 0;
 	usbio->io_Length	= 1;	// USB Printer status is 1 byte
 	usbio->io_Data		= & unit->unit_PrinterStatus;
+	usbio->io_Actual = 0;
+	usbio->io_TimeOut = 2000000;
 
 	DoIO( (PTR) usbio );
 
@@ -96,11 +87,13 @@ Cmd_PDQuery( struct PrinterUnit *unit, struct IOExtPar *pario )
 
 			if ( unit->unit_PrinterStatus & USBPRT_STAT_SELECTED )
 			{
-				pario->io_Status |= IOPTF_PARBUSY;
+				pario->io_Status |= IOPTF_PARSEL;
 			}
-			else
+
+			if ( ( unit->unit_PrinterStatus & ( USBPRT_STAT_SELECTED | USBPRT_STAT_NOERROR ) ) !=
+				( USBPRT_STAT_SELECTED | USBPRT_STAT_NOERROR ) )
 			{
-				pario->io_Status &= ~IOPTF_PARBUSY;
+				pario->io_Status |= IOPTF_PARBUSY;
 			}
 
 			break;
@@ -132,18 +125,7 @@ Cmd_PDQuery( struct PrinterUnit *unit, struct IOExtPar *pario )
 
 	USBERROR( "Cmd_PDQuery : Reply IOReq %p", pario );
 
-	Disable();
-
-	if ( pario->IOPar.io_Flags & IOPARF_ABORT )
-	{
-		pario->IOPar.io_Actual = 0;
-		pario->IOPar.io_Error = IOERR_ABORTED;
-		pario->io_Status = 0;
-	}
-
-	ReplyMsg( (PTR) pario );
-
-	Enable();
+	Printer_Reply( (PTR)pario );
 }
 
 // --

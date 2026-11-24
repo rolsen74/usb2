@@ -22,107 +22,53 @@ Buffer_Write( struct PrinterUnit *unit, U8 *data, U32 size )
 
 	accepted = 0;
 
-	while( TRUE )
+	while ( size )
 	{
-		USBERROR( "Buffer_Write : Data %p : Size %lu", data, size );
-
-		if ( size <= 0 )
-		{
-			break;
-		}
-
 		pb = unit->unit_Buffer_Active;
 
-		while( ! pb )
+		if ( ! pb )
 		{
-			pb = (PTR) RemHead( unit->unit_Buffer_FreeList );
-
-			if ( pb )
-			{
-				unit->unit_Buffer_FreeCount--;
-				pb->pb_Pos = 0;
-				pb->pb_Sent = 0;
-				pb->pb_Free = unit->unit_Buffer_Size;
-				break;
-			}
-
-			unit->unit_Buffer_FreeCount = 0;
-
-			pb = AllocVecTags( sizeof( struct PrtBuffer ) + unit->unit_Buffer_Size, TAG_END );
+			pb = (PTR)RemHead( unit->unit_Buffer_FreeList );
 
 			if ( ! pb )
 			{
-				USBERROR( "Printer : Error allocing memory" );
+				if ( unit->unit_Buffer_Allocated == PRINTER_BUFFER_COUNT )
+				{
+					break;
+				}
 
-				goto bailout;
+				pb = AllocVecTags( sizeof( *pb ) + unit->unit_Buffer_Size, TAG_END );
+
+				if ( ! pb )
+				{
+					unit->unit_JobError = ParErr_LineErr;
+					break;
+				}
+
+				unit->unit_Buffer_Allocated++;
 			}
 
-			pb->pb_Pos	= 0;
+			pb->pb_Pos = 0;
 			pb->pb_Sent = 0;
-			pb->pb_Free	= unit->unit_Buffer_Size;
-			break;
+			pb->pb_Free = unit->unit_Buffer_Size;
+			unit->unit_Buffer_Active = pb;
 		}
 
-		unit->unit_Buffer_Active = pb;
+		len = MIN( size, pb->pb_Free );
 
-		len	= MIN( size, pb->pb_Free );
+		memcpy( &pb->pb_Data[pb->pb_Pos], data, len );
 
-		memcpy( & pb->pb_Data[pb->pb_Pos], data, len );
-
-	#if 0
-	{
-		U32 cnt;
-		U32 line;
-		U8 *buf;
-
-		buf = data;
-
-		cnt = 0;
-		line = 1;
-
-		while( TRUE )
-		{
-			if ( cnt >= 1024 )
-			{
-				break;
-			}
-
-			if ( cnt >= len )
-			{
-				break;
-			}
-
-			if ( line > 32 )
-			{
-				DebugPrintF( "\n" );
-
-				line = 0;
-			}
-
-			DebugPrintF( "%02x ", buf[cnt] );
-
-			line++;
-			cnt++;
-		}
-
-		DebugPrintF( "\n" );
-	}
-	#endif
-
-		data		+= len;
-		size		-= len;
+		data += len;
+		size -= len;
 		accepted += len;
-		pb->pb_Pos	+= len;
-		pb->pb_Free	-= len;
+		pb->pb_Pos += len;
+		pb->pb_Free -= len;
 
-		if ( pb->pb_Free <= 0 )
+		if ( ! pb->pb_Free )
 		{
 			Buffer_Flush( unit );
 		}
 	}
-
-
-bailout:
 
 	return ( accepted );
 }

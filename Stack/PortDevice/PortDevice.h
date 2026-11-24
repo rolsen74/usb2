@@ -37,6 +37,7 @@ struct USB2PortUnit
 	U32 Opens;
 	U8 Shared;
 	U8 Closing;
+	U8 Quiescing;
 	struct Message *CloseReply;
 	U8 SerialParamsValid;
 	struct IOExtSer SerialParams;
@@ -61,6 +62,7 @@ SEC_CODE void PortDevice_Query( struct USB2PortDevice *base, struct IOStdReq *re
 SEC_CODE struct USB2PortUnit *PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
 SEC_CODE void PortDevice_Unregister( struct USB2PortIFace *Self, struct USB2PortUnit *unit );
 SEC_CODE BOOL PortDevice_JobClosing( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
+SEC_CODE void PortDevice_Quiesce( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 SEC_CODE void PortDevice_FinishJob( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 SEC_CODE void PortDevice_SetParams( struct USB2SerialIFace *Self, struct USB2PortUnit *unit, const struct IOExtSer *params );
 SEC_CODE void PortDevice_ReplyClose( struct ExecIFace *IExec, struct USB2PortUnit *unit );

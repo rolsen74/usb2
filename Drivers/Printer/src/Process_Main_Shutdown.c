@@ -18,9 +18,12 @@ Discard_Job( struct PrinterUnit *unit )
 	struct IOStdReq *request;
 	struct PrtBuffer *pb;
 
+	Printer_TimerStop( &unit->unit_IdleTimer );
+
 	while ( ( pb = (PTR)RemHead( unit->unit_Buffer_WaitingList ) ) )
 	{
 		FreeVec( pb );
+		unit->unit_Buffer_Allocated--;
 	}
 
 	unit->unit_Buffer_WaitingCount = 0;
@@ -28,6 +31,7 @@ Discard_Job( struct PrinterUnit *unit )
 	if ( unit->unit_Buffer_Active )
 	{
 		FreeVec( unit->unit_Buffer_Active );
+		unit->unit_Buffer_Allocated--;
 
 		unit->unit_Buffer_Active = NULL;
 	}
@@ -36,7 +40,7 @@ Discard_Job( struct PrinterUnit *unit )
 	{
 		request->io_Error = ( request->io_Flags & IOPARF_ABORT ) ? IOERR_ABORTED : unit->unit_JobError;
 
-		ReplyMsg( (PTR)request );
+		Printer_Reply( (PTR)request );
 	}
 
 	unit->unit_PAR_IOReq_WaitingCount = 0;
@@ -51,7 +55,13 @@ Close_Timeout( struct PrinterUnit *unit )
 
 	U32 index;
 
-	unit->unit_CloseTimerPending = FALSE;
+	unit->unit_CloseTimer.Pending = FALSE;
+
+	if ( ( ! unit->unit_Dot4_Request ) && ( ! unit->unit_USB_IOReq_ActiveCount ) && ( ! unit->unit_Buffer_Active ) &&
+		( ! unit->unit_Buffer_WaitingCount ) && ( ! unit->unit_PAR_IOReq_WaitingCount ) )
+	{
+		return;
+	}
 
 	if ( ! unit->unit_JobError )
 	{
@@ -60,7 +70,7 @@ Close_Timeout( struct PrinterUnit *unit )
 
 	if ( unit->unit_CloseAborting )
 	{
-		// Unregister before cleanup. The worker still owns all unretired DMA.
+		// Quiesce admission and retire DMA before releasing a waiting closer.
 		DebugPrintF( "USB2 printer: unit %lu did not retire its transfers\n", unit->unit_UnitNr );
 
 		unit->unit_Detached = TRUE;
@@ -72,6 +82,8 @@ Close_Timeout( struct PrinterUnit *unit )
 
 	Discard_Job( unit );
 
+	Dot4_Abort( unit );
+
 	for ( index = 0; index < NR_of_TXs; index++ )
 	{
 		usbio = unit->unit_Bulk_Tx_Active[index];
@@ -82,35 +94,34 @@ Close_Timeout( struct PrinterUnit *unit )
 		}
 	}
 
-	Printer_CloseTimerArm( unit, 5 );
+	Printer_TimerArm( &unit->unit_CloseTimer, 5000000 );
 }
 
 // --
 
 static void
-Finish_Job( struct PrinterUnit *unit )
+Finish_Job( struct PrinterUnit *unit, S32 closing )
 {
 	if ( unit->unit_JobError )
 	{
 		Discard_Job( unit );
 	}
 
-	if ( ! unit->unit_PortInterface->JobClosing( unit->unit_PortUnit ) )
+	if ( ! closing )
 	{
 		return;
 	}
 
-	if ( ! unit->unit_CloseTimerPending )
+	if ( ( unit->unit_Buffer_Active ) && ( ! unit->unit_JobError ) )
 	{
-		Printer_CloseTimerArm( unit, 60 );
-	}
+		Printer_TimerStop( &unit->unit_IdleTimer );
 
-	if ( ( unit->unit_Buffer_Size ) && ( ! unit->unit_JobError ) )
-	{
 		Buffer_Flush( unit );
+
+		Buffer_Schedule( unit );
 	}
 
-	if ( ( unit->unit_USB_IOReq_ActiveCount ) || ( unit->unit_PAR_IOReq_WaitingCount ) ||
+	if ( ( unit->unit_Dot4_Request ) || ( unit->unit_USB_IOReq_ActiveCount ) || ( unit->unit_PAR_IOReq_WaitingCount ) ||
 		( unit->unit_Buffer_WaitingCount ) )
 	{
 		return;
@@ -127,7 +138,7 @@ Finish_Job( struct PrinterUnit *unit )
 		unit->unit_JobError = ParErr_LineErr;
 	}
 
-	Printer_CloseTimerStop( unit );
+	Printer_TimerStop( &unit->unit_CloseTimer );
 
 	if ( unit->unit_JobError )
 	{
@@ -136,7 +147,7 @@ Finish_Job( struct PrinterUnit *unit )
 
 	unit->unit_CloseAborting = FALSE;
 	unit->unit_JobHasData = FALSE;
-	unit->unit_NewJob = TRUE;
+	unit->unit_JobError = 0;
 
 	unit->unit_PortInterface->FinishJob( unit->unit_PortUnit );
 }

@@ -28,8 +28,6 @@ Buffer_Flush( struct PrinterUnit *unit )
 		AddTail( unit->unit_Buffer_WaitingList, & pb->pb_Node );
 
 		unit->unit_Buffer_WaitingCount++;
-
-		Buffer_Schedule( unit );
 	}
 }
 

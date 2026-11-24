@@ -22,11 +22,11 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 
 	while( TRUE )
 	{
-		USBERROR( "Printer : Main_Direct : USB Active %ld : PAR Waiting %ld : BUF Waiting %ld : BUF Free %ld :",
+		USBERROR( "Printer : Main_Direct : USB Active %ld : PAR Waiting %ld : BUF Waiting %ld : BUF Allocated %ld :",
 			unit->unit_USB_IOReq_ActiveCount,
 			unit->unit_PAR_IOReq_WaitingCount,
 			unit->unit_Buffer_WaitingCount,
-			unit->unit_Buffer_FreeCount
+			unit->unit_Buffer_Allocated
 		);
 
 		usbio = (PTR) GetMsg( unit->unit_Bulk_Tx_Resource->MsgPort );
@@ -127,6 +127,13 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 				break;
 			}
 
+			case IOERR_ABORTED:
+			{
+				pario->io_Actual = usbio->io_Actual;
+				pario->io_Error = unit->unit_JobError ? unit->unit_JobError : IOERR_ABORTED;
+				break;
+			}
+
 			default:
 			{
 				USBERROR( "__myProcess_Main_Direct : Unknown error %lu", (U32) usbio->io_Error );
@@ -151,16 +158,8 @@ __myProcess_Main_Direct( struct PrinterUnit *unit )
 
 		USBERROR( "__myProcess_Main_Direct : Reply ParIO %p", pario );
 
-		if ( pario->io_Flags & IOPARF_ABORT )
-		{
-			pario->io_Actual = usbio->io_Actual;
-			pario->io_Error = IOERR_ABORTED;
-		}
-
-		ReplyMsg( (PTR) pario );
+		Printer_Reply( (PTR)pario );
 
 		AddTail( unit->unit_USB_IOReq_FreeList, (PTR) usbio );
 	}
-
-	Direct_Schedule( unit );
 }

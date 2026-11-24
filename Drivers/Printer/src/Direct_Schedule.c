@@ -25,65 +25,13 @@ Direct_Schedule( struct PrinterUnit *unit )
 		return;
 	}
 
-	if ( unit->unit_Dot4_Active )
-	{
-		while(( pario = (PTR) RemHead( unit->unit_PAR_IOReq_WaitingList )))
-		{
-			U32 length;
-			U32 written;
-			S32 success;
-
-			if ( pario->io_Flags & IOPARF_ABORT )
-			{
-				unit->unit_PAR_IOReq_WaitingCount--;
-				pario->io_Error = IOERR_ABORTED;
-
-				ReplyMsg( (PTR) pario );
-
-				continue;
-			}
-
-			length = ( pario->io_Length == -1U )
-				? strlen( pario->io_Data ) : pario->io_Length;
-
-			written = 0;
-
-			unit->unit_PAR_IOReq_WaitingCount--;
-
-			success = Dot4_Write( unit, pario->io_Data, length, &written );
-
-			pario->io_Actual = written;
-			pario->io_Error = success ? 0 : ( unit->unit_Detached ? ParErr_NotOpen : ParErr_LineErr );
-
-			if ( written )
-			{
-				unit->unit_LastByteSend = ((U8 *) pario->io_Data)[written-1];
-			}
-
-			if ( pario->io_Flags & IOPARF_ABORT )
-			{
-				pario->io_Error = IOERR_ABORTED;
-			}
-
-			ReplyMsg( (PTR) pario );
-
-			if ( ! success )
-			{
-				unit->unit_Detached = TRUE;
-				break;
-			}
-		}
-
-		return;
-	}
-
 	while( TRUE )
 	{
-		USBERROR( "Printer : Direct_Schedule : USB Active %ld : PAR Waiting %ld : BUF Waiting %ld : BUF Free %ld :",
+		USBERROR( "Printer : Direct_Schedule : USB Active %ld : PAR Waiting %ld : BUF Waiting %ld : BUF Allocated %ld :",
 			unit->unit_USB_IOReq_ActiveCount,
 			unit->unit_PAR_IOReq_WaitingCount,
 			unit->unit_Buffer_WaitingCount,
-			unit->unit_Buffer_FreeCount
+			unit->unit_Buffer_Allocated
 		);
 
 		usbio = (PTR) GetHead( unit->unit_USB_IOReq_FreeList );
@@ -133,7 +81,7 @@ Direct_Schedule( struct PrinterUnit *unit )
 		{
 			pario->io_Error = IOERR_ABORTED;
 
-			ReplyMsg( (PTR) pario );
+			Printer_Reply( (PTR) pario );
 
 			continue;
 		}

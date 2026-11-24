@@ -176,7 +176,7 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 
 		shared = SharedOpen( base, request );
 
-		if ( ( unit->Closing ) || ( ( unit->Opens ) && ( ( ! unit->Shared ) || ( ! shared ) ) ) )
+		if ( ( unit->Closing ) || ( unit->Quiescing ) || ( ( unit->Opens ) && ( ( ! unit->Shared ) || ( ! shared ) ) ) )
 		{
 			goto bailout;
 		}

@@ -62,19 +62,8 @@ __myProcess_Main_Buffer( struct PrinterUnit *unit )
 			}
 		}
 
-		if ( unit->unit_Buffer_FreeCount < 3 )
-		{
-			AddTail( unit->unit_Buffer_FreeList, &pb->pb_Node );
-
-			unit->unit_Buffer_FreeCount++;
-		}
-		else
-		{
-			FreeVec( pb );
-		}
+		AddTail( unit->unit_Buffer_FreeList, &pb->pb_Node );
 	}
-
-	Buffer_Schedule( unit );
 }
 
 // --

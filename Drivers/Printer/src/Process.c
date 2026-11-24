@@ -28,6 +28,7 @@ Printer_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *m
 	U8 protocol;
 	S32 opened;
 	S32 registered;
+	S32 quiesced;
 
 	if ( ( ! msg ) || ( ! msg->IUSB2 ) || ( ! msg->Interface ) || ( ! msg->InterfaceDescriptor ) ||
 		( msg->InterfaceDescriptor->InterfaceClass != USBCLASS_Printer ) ||
@@ -46,6 +47,7 @@ Printer_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *m
 	IUSB2 = msg->IUSB2;
 	opened = FALSE;
 	registered = FALSE;
+	quiesced = FALSE;
 	stage = "allocate unit";
 
 	unit = AllocVecTags( sizeof( *unit ), AVT_Clear, 0, TAG_END );
@@ -114,6 +116,22 @@ bailout:
 
 	if ( unit )
 	{
+		if ( ( unit->unit_PortUnit ) && ( request.io_Device->dd_Library.lib_Revision >= 8 ) )
+		{
+			unit->unit_PortInterface->Quiesce( unit->unit_PortUnit );
+			quiesced = TRUE;
+		}
+
+		__myProcess_CleanupDevice( unit );
+
+		if ( quiesced )
+		{
+			// Reply to admitted work while the bridge still owns both ports.
+			__myProcess_Free_Lists( unit );
+
+			__myProcess_Drain_MsgPort( unit );
+		}
+
 		if ( unit->unit_PortUnit )
 		{
 			unit->unit_PortInterface->Unregister( unit->unit_PortUnit );

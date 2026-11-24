@@ -23,8 +23,6 @@ __myProcess_Free( struct PrinterUnit *unit )
 
 	Printer_CloseTimerFree( unit );
 
-	__myProcess_CleanupDevice( unit );
-
 	__myProcess_Free_Lists( unit );
 
 	__myProcess_Free_MsgPorts( unit );

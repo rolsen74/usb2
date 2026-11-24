@@ -12,44 +12,78 @@
 
 // --
 
+static S32
+Open_Timer( struct PrinterUnit *unit, struct PrinterTimer *timer )
+{
+	timer->Request = AllocSysObjectTags( ASOT_IOREQUEST,
+		ASOIOR_Size, sizeof( struct TimeRequest ), ASOIOR_ReplyPort, unit->unit_CloseTimerPort, TAG_END );
+
+	if ( ! timer->Request )
+	{
+		return ( FALSE );
+	}
+
+	timer->Open = ( OpenDevice( "timer.device", UNIT_MICROHZ, (PTR)timer->Request, 0 ) == 0 );
+
+	return ( timer->Open );
+}
+
+// --
+
 S32
 Printer_CloseTimerInit( struct PrinterUnit *unit )
 {
 	unit->unit_CloseTimerPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
-	if ( ! unit->unit_CloseTimerPort )
+	if ( ( ! unit->unit_CloseTimerPort ) || ( ! Open_Timer( unit, &unit->unit_CloseTimer ) ) ||
+		( ! Open_Timer( unit, &unit->unit_IdleTimer ) ) )
 	{
 		return ( FALSE );
 	}
 
-	unit->unit_CloseTimer = AllocSysObjectTags( ASOT_IOREQUEST,
-		ASOIOR_Size, sizeof( struct TimeRequest ), ASOIOR_ReplyPort, unit->unit_CloseTimerPort, TAG_END );
-
-	if ( ! unit->unit_CloseTimer )
+	if ( unit->unit_Dot4_Active )
 	{
-		return ( FALSE );
+		unit->unit_Dot4_Clock = (PTR)GetInterface( (PTR)unit->unit_CloseTimer.Request->Request.io_Device, "main", 1, NULL );
+
+		return ( unit->unit_Dot4_Clock != NULL );
 	}
 
-	unit->unit_CloseTimerOpen = ( OpenDevice( "timer.device", UNIT_MICROHZ, (PTR)unit->unit_CloseTimer, 0 ) == 0 );
-
-	return ( unit->unit_CloseTimerOpen );
+	return ( TRUE );
 }
 
 // --
 
 void
-Printer_CloseTimerStop( struct PrinterUnit *unit )
+Printer_TimerStop( struct PrinterTimer *timer )
 {
-	if ( unit->unit_CloseTimerPending )
+	if ( timer->Pending )
 	{
-		if ( ! CheckIO( (PTR)unit->unit_CloseTimer ) )
+		if ( ! CheckIO( (PTR)timer->Request ) )
 		{
-			AbortIO( (PTR)unit->unit_CloseTimer );
+			AbortIO( (PTR)timer->Request );
 		}
 
-		WaitIO( (PTR)unit->unit_CloseTimer );
+		WaitIO( (PTR)timer->Request );
 
-		unit->unit_CloseTimerPending = FALSE;
+		timer->Pending = FALSE;
+	}
+}
+
+// --
+
+static void
+Free_Timer( struct PrinterTimer *timer )
+{
+	Printer_TimerStop( timer );
+
+	if ( timer->Open )
+	{
+		CloseDevice( (PTR)timer->Request );
+	}
+
+	if ( timer->Request )
+	{
+		FreeSysObject( ASOT_IOREQUEST, timer->Request );
 	}
 }
 
@@ -58,17 +92,14 @@ Printer_CloseTimerStop( struct PrinterUnit *unit )
 void
 Printer_CloseTimerFree( struct PrinterUnit *unit )
 {
-	Printer_CloseTimerStop( unit );
-
-	if ( unit->unit_CloseTimerOpen )
+	if ( unit->unit_Dot4_Clock )
 	{
-		CloseDevice( (PTR)unit->unit_CloseTimer );
+		DropInterface( (PTR)unit->unit_Dot4_Clock );
 	}
 
-	if ( unit->unit_CloseTimer )
-	{
-		FreeSysObject( ASOT_IOREQUEST, unit->unit_CloseTimer );
-	}
+	Free_Timer( &unit->unit_IdleTimer );
+
+	Free_Timer( &unit->unit_CloseTimer );
 
 	if ( unit->unit_CloseTimerPort )
 	{
@@ -79,14 +110,14 @@ Printer_CloseTimerFree( struct PrinterUnit *unit )
 // --
 
 void
-Printer_CloseTimerArm( struct PrinterUnit *unit, U32 seconds )
+Printer_TimerArm( struct PrinterTimer *timer, U32 usec )
 {
-	unit->unit_CloseTimer->Request.io_Command = TR_ADDREQUEST;
-	unit->unit_CloseTimer->Time.Seconds = seconds;
-	unit->unit_CloseTimer->Time.Microseconds = 0;
-	unit->unit_CloseTimerPending = TRUE;
+	timer->Request->Request.io_Command = TR_ADDREQUEST;
+	timer->Request->Time.Seconds = usec / 1000000;
+	timer->Request->Time.Microseconds = usec % 1000000;
+	timer->Pending = TRUE;
 
-	SendIO( (PTR)unit->unit_CloseTimer );
+	SendIO( (PTR)timer->Request );
 }
 
 // --

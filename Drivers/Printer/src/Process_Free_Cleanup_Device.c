@@ -22,6 +22,8 @@ __myProcess_CleanupDevice( struct PrinterUnit *unit )
 
 	USBERROR( "Printer : __myProcess_CleanupDevice" );
 
+	Dot4_Drain( unit );
+
 	for( index = 0; index < NR_of_TXs; index++ )
 	{
 		usbio = unit->unit_Bulk_Tx_Active[index];
@@ -53,11 +55,11 @@ __myProcess_CleanupDevice( struct PrinterUnit *unit )
 			request->io_Actual = usbio->io_Actual;
 			request->io_Error = ( request->io_Flags & IOPARF_ABORT ) ? IOERR_ABORTED : ParErr_NotOpen;
 
-			ReplyMsg( (PTR) request );
+			Printer_Reply( (PTR) request );
 		}
 	}
 
-	if ( ( unit->unit_Dot4_Ready ) && ( ! unit->unit_Detached ) )
+	if ( ( unit->unit_Dot4_Initialized ) && ( ! unit->unit_Detached ) )
 	{
 		Dot4_Shutdown( unit );
 	}

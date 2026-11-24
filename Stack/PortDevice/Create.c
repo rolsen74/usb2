@@ -118,6 +118,7 @@ SEC_RODATA static const PTR PrinterVectors[] =
 	(PTR) PortDevice_Unregister,
 	(PTR) PortDevice_JobClosing,
 	(PTR) PortDevice_FinishJob,
+	(PTR) PortDevice_Quiesce,
 	(PTR) -1
 };
 
@@ -217,7 +218,7 @@ PortDevice_Create ( struct USBBase * usbbase )
 		return ( FALSE );
 	}
 
-	printer = Alloc ( usbbase, USB2_PRINTER_DEVICE, USB2_PRINTER_DEVICE " 1.7 (" DATE ")\r\n", 7, PORT_PRINTER );
+	printer = Alloc ( usbbase, USB2_PRINTER_DEVICE, USB2_PRINTER_DEVICE " 1.8 (" DATE ")\r\n", 8, PORT_PRINTER );
 
 	if ( ! printer )
 	{

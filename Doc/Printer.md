@@ -9,7 +9,11 @@ has been cross-compiled and awaits physical printer testing.
 Set the device name to `usb2printer.device` in printer preferences.
 Unit 0 answers `NSCMD_DEVICEQUERY` even with the printer unplugged. The
 device reports a parallel-compatible interface with `CMD_WRITE` and
-`PDCMD_QUERY`. Buffered writes flush when the print job closes.
+`PDCMD_QUERY`. Buffered writes flush after 250 ms of idle time and
+when the print job closes. Each unit keeps up to four buffers. Larger
+writes wait for USB to free space. A successful buffered write confirms
+that the driver accepted the data. If a pending write is aborted,
+`io_Actual` reports bytes already accepted, which can still print.
 
 The driver reads `BUFFERSIZE` in KiB from `ENV:usb2_printer.device/unitN`.
 Set `BUFFERSIZE=0` for direct writes. `cls_Printer.Class` controls which USB

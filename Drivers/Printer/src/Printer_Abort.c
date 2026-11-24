@@ -21,6 +21,8 @@ Printer_Abort( struct PrinterUnit *unit )
 
 	U32 index;
 
+	Dot4_Abort( unit );
+
 	for( index = 0; ( ! unit->unit_Buffer_Size ) && ( index < NR_of_TXs ); index++ )
 	{
 		usbio = unit->unit_Bulk_Tx_Active[index];
@@ -49,7 +51,7 @@ Printer_Abort( struct PrinterUnit *unit )
 			unit->unit_PAR_IOReq_WaitingCount--;
 			request->io_Error = IOERR_ABORTED;
 
-			ReplyMsg( (PTR) request );
+			Printer_Reply( (PTR) request );
 		}
 
 		request = next;
