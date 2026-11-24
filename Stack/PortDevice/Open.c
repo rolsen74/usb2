@@ -89,6 +89,7 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 	U8 shared;
 	U32 poll;
 	U32 size;
+	S32 metadata;
 
 	base = (PTR) Self->Data.LibBase;
 	IExec = base->IExec;
@@ -97,8 +98,26 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 	request->io_Unit = NULL;
 	request->io_Error = IOERR_OPENFAIL;
 
-	// Class drivers use the backend unit to register without waiting.
-	if ( ( number != USB2_PORT_BACKEND_UNIT ) && ( ! USB2_FullBoot_Wait( usbbase ) ) )
+	switch( base->Type )
+	{
+		case PORT_SERIAL: size = sizeof( struct IOExtSer ); break;
+		case PORT_PARALLEL: size = sizeof( struct IOExtPar ); break;
+		default: size = sizeof( struct IOStdReq ); break;
+	}
+
+	metadata = ( number == USB2_PORT_BACKEND_UNIT ) ||
+		( ( number == 0 ) && ( request->io_Message.mn_Length >= sizeof( struct IOStdReq ) ) &&
+			( request->io_Message.mn_Length < size ) );
+
+	if ( ( ! metadata ) && ( request->io_Message.mn_Length < size ) )
+	{
+		request->io_Device = NULL;
+
+		return ( request->io_Error );
+	}
+
+	// Unit 0 also serves discovery callers before the first backend registers.
+	if ( ( number != 0 ) && ( ! metadata ) && ( ! USB2_FullBoot_Wait( usbbase ) ) )
 	{
 		request->io_Device = NULL;
 
@@ -107,25 +126,8 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 
 	IExec->ObtainSemaphore( & base->Lock );
 
-	if ( number != USB2_PORT_BACKEND_UNIT )
+	if ( ! metadata )
 	{
-		switch( base->Type )
-		{
-			case PORT_SERIAL: size = sizeof( struct IOExtSer ); break;
-			case PORT_PARALLEL: size = sizeof( struct IOExtPar ); break;
-			default: size = sizeof( struct IOStdReq ); break;
-		}
-
-		if ( request->io_Message.mn_Length < size )
-		{
-			if ( ( number == 0 ) && ( request->io_Message.mn_Length >= sizeof( struct IOStdReq ) ) )
-			{
-				goto opened;
-			}
-
-			goto bailout;
-		}
-
 		for ( poll = 0; ; poll++ )
 		{
 			unit = base->Units;
@@ -135,7 +137,7 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 				unit = unit->Next;
 			}
 
-			if ( ( ( unit ) && ( unit->Number == number ) ) || ( poll == 30 ) )
+			if ( ( ( unit ) && ( unit->Number == number ) ) || ( number == 0 ) || ( poll == 30 ) )
 			{
 				break;
 			}
@@ -165,8 +167,7 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 		{
 			unit = NULL;
 
-			// Printer queries and writes both use IOStdReq.
-			if ( ( number == 0 ) && ( base->Type == PORT_PRINTER ) )
+			if ( number == 0 )
 			{
 				goto opened;
 			}

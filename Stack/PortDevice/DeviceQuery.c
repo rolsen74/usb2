@@ -53,7 +53,7 @@ PortDevice_Query( struct USB2PortDevice *base, struct IOStdReq *request )
 	}
 	else if ( base->Type == PORT_PRINTER )
 	{
-		USB2_DeviceQuery( request, NSDEVTYPE_PARALLEL, PrinterCommands );
+		USB2_DeviceQuery( request, NSDEVTYPE_PRINTER, PrinterCommands );
 	}
 	else
 	{

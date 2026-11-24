@@ -24,29 +24,33 @@ PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 	unit = (PTR) request->io_Unit;
 	request->io_Error = 0;
 
+	if ( request->io_Command == NSCMD_DEVICEQUERY )
+	{
+		PortDevice_Query( base, request );
+
+		goto reply;
+	}
+
 	if ( request->io_Message.mn_Length >= sizeof( *request ) )
 	{
 		request->io_Actual = 0;
 	}
 
-	if ( request->io_Command != NSCMD_DEVICEQUERY )
+	if ( ( request->io_Message.mn_Length < sizeof( *request ) ) ||
+		( ( base->Type == PORT_SERIAL ) && ( request->io_Message.mn_Length < sizeof( struct IOExtSer ) ) ) ||
+		( ( ( base->Type == PORT_PARALLEL ) ||
+		    ( ( base->Type == PORT_PRINTER ) && ( request->io_Command == PDCMD_QUERY ) ) ) &&
+		  ( request->io_Message.mn_Length < sizeof( struct IOExtPar ) ) ) )
 	{
-		if ( ( request->io_Message.mn_Length < sizeof( *request ) ) ||
-			( ( base->Type == PORT_SERIAL ) && ( request->io_Message.mn_Length < sizeof( struct IOExtSer ) ) ) ||
-			( ( ( base->Type == PORT_PARALLEL ) ||
-			    ( ( base->Type == PORT_PRINTER ) && ( request->io_Command == PDCMD_QUERY ) ) ) &&
-			  ( request->io_Message.mn_Length < sizeof( struct IOExtPar ) ) ) )
-		{
-			request->io_Error = IOERR_BADLENGTH;
-			goto reply;
-		}
+		request->io_Error = IOERR_BADLENGTH;
+
+		goto reply;
 	}
 
 	IExec->ObtainSemaphore( & base->Lock );
 
-	if ( ( unit ) && ( unit->BeginPort ) && ( ! unit->Closing ) && ( ( base->Type != PORT_PRINTER ) || ( ! unit->Quiescing ) ) &&
-		( ( request->io_Command != NSCMD_DEVICEQUERY ) ||
-		  ( ( base->Type != PORT_PRINTER ) && ( request->io_Message.mn_Length >= sizeof( *request ) ) ) ) )
+	if ( ( unit ) && ( unit->BeginPort ) && ( ! unit->Closing ) &&
+		( ( base->Type != PORT_PRINTER ) || ( ! unit->Quiescing ) ) )
 	{
 		request->io_Flags &= ~( IOF_QUICK |
 			( base->Type == PORT_SERIAL ? ( IOSERF_ABORT | IOSERF_QUEUED | IOSERF_ACTIVE ) :
@@ -62,11 +66,7 @@ PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 
 	IExec->ReleaseSemaphore( & base->Lock );
 
-	if ( request->io_Command == NSCMD_DEVICEQUERY )
-	{
-		PortDevice_Query( base, request );
-	}
-	else if ( base->Type == PORT_PRINTER )
+	if ( base->Type == PORT_PRINTER )
 	{
 		request->io_Error = ParErr_NotOpen;
 
