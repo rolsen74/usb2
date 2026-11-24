@@ -12,8 +12,8 @@
 
 // --
 
-#define DRIVER_REVISION 1
-#define DRIVER_ID USB2SMARTCARD_DRIVER " 1.1 (23.11.2026)\r\n"
+#define DRIVER_REVISION 2
+#define DRIVER_ID USB2SMARTCARD_DRIVER " 1.2 (24.11.2026)\r\n"
 
 struct Library *SysBase;
 struct ExecIFace *IExec;
@@ -87,6 +87,13 @@ static const PTR ClientVectors[] =
 	(PTR) SmartCard_GetInfo, (PTR) SmartCard_Command, (PTR) -1
 };
 
+static const PTR InstanceVectors[] =
+{
+	(PTR) Obtain, (PTR) Release, NULL, NULL,
+	(PTR) SmartCard_GetInfo, (PTR) SmartCard_Command,
+	(PTR) SmartCard_GetInstance, (PTR) SmartCard_CommandInstance, (PTR) -1
+};
+
 static const struct TagItem ManagerTags[] =
 {
 	{ MIT_Name, (Tag) "__library" },
@@ -111,9 +118,17 @@ static const struct TagItem ClientTags[] =
 	{ TAG_END, 0 }
 };
 
+static const struct TagItem InstanceTags[] =
+{
+	{ MIT_Name, (Tag) USB2SMARTCARD_INSTANCE_INTERFACE },
+	{ MIT_VectorTable, (Tag) InstanceVectors },
+	{ MIT_Version, USB2SMARTCARD_INSTANCE_VERSION },
+	{ TAG_END, 0 }
+};
+
 static const PTR Interfaces[] =
 {
-	(PTR) ManagerTags, (PTR) DriverTags, (PTR) ClientTags, NULL
+	(PTR) ManagerTags, (PTR) DriverTags, (PTR) ClientTags, (PTR) InstanceTags, NULL
 };
 
 // --

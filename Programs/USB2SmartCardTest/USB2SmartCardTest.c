@@ -19,13 +19,24 @@ static int
 Probe( struct USB2SmartCardIFace *card, ULONG unit, ULONG slot, BOOL atr )
 {
 	struct USB2SmartCardReply reply;
+	struct USB2SmartCardInfo info;
 
 	LONG result;
 	ULONG index;
+	ULONG instance;
 	UBYTE bytes[USB2SMARTCARD_ATR_MAX];
 	static const char * const states[] = { "active", "present, inactive", "no card", "unknown" };
 
-	result = card->Command( unit, slot, USB2SCC_Status, NULL, 0, NULL, 0, & reply );
+	result = card->GetInstance( unit, &info, &instance );
+
+	if ( result != USB2SC_Okay )
+	{
+		printf( "Unit %lu is unavailable (%ld).\n", unit, result );
+
+		return ( RETURN_WARN );
+	}
+
+	result = card->CommandInstance( unit, instance, slot, USB2SCC_Status, NULL, 0, NULL, 0, & reply );
 
 	if ( result != USB2SC_Okay )
 	{
@@ -42,7 +53,7 @@ Probe( struct USB2SmartCardIFace *card, ULONG unit, ULONG slot, BOOL atr )
 		return ( RETURN_OK );
 	}
 
-	result = card->Command( unit, slot, USB2SCC_PowerOn, NULL, 0, bytes, sizeof( bytes ), & reply );
+	result = card->CommandInstance( unit, instance, slot, USB2SCC_PowerOn, NULL, 0, bytes, sizeof( bytes ), & reply );
 
 	if ( result != USB2SC_Okay )
 	{
@@ -116,7 +127,7 @@ main( void )
 		goto done;
 	}
 
-	card = (APTR) IExec->GetInterface( driver, USB2SMARTCARD_INTERFACE, USB2SMARTCARD_VERSION, NULL );
+	card = (APTR) IExec->GetInterface( driver, USB2SMARTCARD_INSTANCE_INTERFACE, USB2SMARTCARD_INSTANCE_VERSION, NULL );
 
 	if ( card )
 	{
@@ -149,7 +160,7 @@ main( void )
 	}
 	else
 	{
-		puts( "cls_SmartCard.Driver does not expose the CCID interface." );
+		puts( "cls_SmartCard.Driver does not expose the CCID version 2 interface." );
 		result = RETURN_ERROR;
 	}
 

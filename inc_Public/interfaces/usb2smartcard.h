@@ -18,6 +18,8 @@
 #define USB2SMARTCARD_DRIVER "cls_SmartCard.Driver"
 #define USB2SMARTCARD_INTERFACE "ccid"
 #define USB2SMARTCARD_VERSION 1
+#define USB2SMARTCARD_INSTANCE_INTERFACE "ccid-instance"
+#define USB2SMARTCARD_INSTANCE_VERSION 2
 #define USB2SMARTCARD_UNITS 32
 #define USB2SMARTCARD_APDU_MAX 261
 #define USB2SMARTCARD_APDU_RESPONSE_MAX 258
@@ -70,7 +72,14 @@ struct USB2SmartCardReply
 	UBYTE ReaderError;
 };
 
-/* Calls are synchronous. A reader's slots share one USB command queue. */
+/*
+ * Calls are synchronous. A reader's slots share one USB command queue.
+ * PowerOn and Exchange require buffers of ATR_MAX and APDU_RESPONSE_MAX
+ * respectively. BufferTooSmall is returned before submitting the command.
+ * A USB or protocol error may leave the result of a dispatched APDU unknown.
+ * Version 1 unit numbers select the current reader. Version 2 callers can
+ * bind an individual command to the instance returned by GetInstance.
+ */
 struct USB2SmartCardIFace
 {
 	struct InterfaceData Data;
@@ -82,6 +91,13 @@ struct USB2SmartCardIFace
 	LONG APICALL (*GetInfo)( struct USB2SmartCardIFace *Self, ULONG unit, struct USB2SmartCardInfo *info );
 	LONG APICALL (*Command)( struct USB2SmartCardIFace *Self, ULONG unit, ULONG slot,
 		enum USB2SmartCardOperation operation, CONST_APTR input, ULONG inputSize,
+		APTR output, ULONG outputSize, struct USB2SmartCardReply *reply );
+
+	/* Version 2 */
+	LONG APICALL (*GetInstance)( struct USB2SmartCardIFace *Self, ULONG unit,
+		struct USB2SmartCardInfo *info, ULONG *instance );
+	LONG APICALL (*CommandInstance)( struct USB2SmartCardIFace *Self, ULONG unit, ULONG instance,
+		ULONG slot, enum USB2SmartCardOperation operation, CONST_APTR input, ULONG inputSize,
 		APTR output, ULONG outputSize, struct USB2SmartCardReply *reply );
 };
 

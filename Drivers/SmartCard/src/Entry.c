@@ -13,55 +13,92 @@
 
 // --
 
-static void
+static struct SmartCardCommand *
 Run( struct SmartCardReader *reader )
 {
-	struct USB2_NotifyMessage *notice;
 	struct SmartCardCommand *command;
 
-	U32 commandSignal;
 	U32 signals;
-	S32 running;
+	U32 mask;
 
-	commandSignal = 1UL << reader->Commands->mp_SigBit;
-	running = TRUE;
+	mask = ( 1UL << reader->Commands->mp_SigBit ) |
+		reader->Registration->Stack_MsgPortBit | SIGBREAKF_CTRL_C;
+	signals = IExec->SetSignal( 0, SIGBREAKF_CTRL_C );
 
-	while( running )
+	for( ;; )
 	{
-		signals = IExec->Wait( commandSignal | reader->Registration->Stack_MsgPortBit | SIGBREAKF_CTRL_C );
+		SmartCard_Notice( reader, signals );
 
-		if ( signals & reader->Registration->Stack_MsgPortBit )
+		if ( reader->Stopped )
 		{
-			while( ( notice = (PTR) IExec->GetMsg( reader->Registration->Stack_MsgPort ) ) )
-			{
-				if ( notice->nm_Command == USBNC_Detached )
-				{
-					running = FALSE;
-				}
-
-				IExec->ReplyMsg( (PTR) notice );
-			}
+			return ( NULL );
 		}
 
-		if ( signals & SIGBREAKF_CTRL_C )
+		command = (PTR) IExec->GetMsg( reader->Commands );
+
+		if ( ! command )
 		{
-			running = FALSE;
+			signals = IExec->Wait( mask );
+
+			continue;
 		}
 
-		if ( running )
+		command->Result = SmartCard_Exchange( reader, command );
+
+		if ( ( reader->Stopped ) || ( reader->Faulted ) )
 		{
-			// Take one command per loop so detach is serviced between requests.
-			command = (PTR) IExec->GetMsg( reader->Commands );
-
-			if ( command )
-			{
-				command->Result = SmartCard_Exchange( reader, command );
-
-				IExec->ReplyMsg( (PTR) command );
-
-				IExec->SetSignal( commandSignal, commandSignal );
-			}
+			return ( command );
 		}
+
+		IExec->ReplyMsg( (PTR) command );
+
+		signals = IExec->SetSignal( 0, SIGBREAKF_CTRL_C );
+	}
+}
+
+// --
+
+static BOOL
+OpenClock( struct SmartCardReader *reader )
+{
+	reader->ClockRequest = IExec->AllocSysObjectTags( ASOT_IOREQUEST,
+		ASOIOR_Size, sizeof( *reader->ClockRequest ), ASOIOR_ReplyPort, reader->Commands, TAG_END );
+
+	if ( ! reader->ClockRequest )
+	{
+		return ( FALSE );
+	}
+
+	if ( IExec->OpenDevice( "timer.device", UNIT_MICROHZ, (PTR)reader->ClockRequest, 0 ) )
+	{
+		reader->ClockRequest->Request.io_Device = NULL;
+
+		return ( FALSE );
+	}
+
+	reader->Clock = (PTR) IExec->GetInterface( (PTR)reader->ClockRequest->Request.io_Device, "main", 1, NULL );
+
+	return ( reader->Clock != NULL );
+}
+
+// --
+
+static void
+CloseClock( struct SmartCardReader *reader )
+{
+	if ( reader->Clock )
+	{
+		IExec->DropInterface( (PTR)reader->Clock );
+	}
+
+	if ( reader->ClockRequest )
+	{
+		if ( reader->ClockRequest->Request.io_Device )
+		{
+			IExec->CloseDevice( (PTR)reader->ClockRequest );
+		}
+
+		IExec->FreeSysObject( ASOT_IOREQUEST, reader->ClockRequest );
 	}
 }
 
@@ -73,6 +110,8 @@ SmartCard_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
 	struct SmartCardReader *reader;
 	struct SmartCardDriver *base;
 	struct SmartCardCommand *command;
+	struct SmartCardCommand *active;
+	struct USB2_EPResource *control;
 	struct USB2IFace *usb;
 
 	U32 interface;
@@ -86,7 +125,7 @@ SmartCard_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
 		return ( FALSE );
 	}
 
-	reader = IExec->AllocVecTags( sizeof( *reader ), AVT_Clear, 0, TAG_END );
+	reader = IExec->AllocVecTags( sizeof( *reader ), AVT_Type, MEMF_SHARED, AVT_Clear, 0, TAG_END );
 
 	if ( ! reader )
 	{
@@ -96,6 +135,8 @@ SmartCard_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
 	base = (PTR) Self->Data.LibBase;
 	usb = msg->IUSB2;
 	interface = msg->InterfaceDescriptor->InterfaceNumber;
+	reader->USB = usb;
+	reader->Interface = interface;
 	success = FALSE;
 
 	if ( ! SmartCard_Parse( msg, & reader->Info ) )
@@ -110,9 +151,7 @@ SmartCard_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
 		goto bailout;
 	}
 
-	reader->Buffer = IExec->AllocVecTags( reader->Info.MaxMessage, AVT_Type, MEMF_SHARED, TAG_END );
-
-	if ( ! reader->Buffer )
+	if ( ! OpenClock( reader ) )
 	{
 		goto bailout;
 	}
@@ -123,6 +162,13 @@ SmartCard_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
 		TAG_END );
 
 	if ( ! reader->Registration )
+	{
+		goto bailout;
+	}
+
+	control = reader->Registration->Res_Control;
+
+	if ( ( ! control ) || ( ! control->SetupData ) || ( ! control->IORequests ) || ( ! control->IORequests[0] ) )
 	{
 		goto bailout;
 	}
@@ -140,7 +186,20 @@ SmartCard_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_Out,
 		TAG_END );
 
-	if ( ( ! reader->In ) || ( ! reader->Out ) )
+	if ( ( ! reader->In ) || ( ! reader->Out ) ||
+		( reader->Info.MaxMessage < reader->Out->EndPointMax ) ||
+		( ( reader->Info.Features & USB2SMARTCARD_EXTENDED_APDU ) &&
+		  ( reader->Info.MaxMessage < CCID_HEADER + USB2SMARTCARD_APDU_MAX ) ) )
+	{
+		goto bailout;
+	}
+
+	// One extra byte lets a packet-aligned maximum-size reply consume its ZLP.
+	reader->ReceiveSize = reader->Info.MaxMessage + 1;
+
+	reader->Buffer = IExec->AllocVecTags( reader->ReceiveSize, AVT_Type, MEMF_SHARED, TAG_END );
+
+	if ( ! reader->Buffer )
 	{
 		goto bailout;
 	}
@@ -151,6 +210,12 @@ SmartCard_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
 	{
 		if ( ! base->Readers[unit] )
 		{
+			if ( ! ++base->NextInstance )
+			{
+				base->NextInstance++;
+			}
+
+			reader->Instance = base->NextInstance;
 			base->Readers[unit] = reader;
 			break;
 		}
@@ -163,7 +228,7 @@ SmartCard_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
 		goto bailout;
 	}
 
-	Run( reader );
+	active = Run( reader );
 
 	IExec->ObtainSemaphore( & base->Lock );
 
@@ -171,7 +236,12 @@ SmartCard_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg )
 
 	IExec->ReleaseSemaphore( & base->Lock );
 
-	while( ( command = (PTR) IExec->GetMsg( reader->Commands ) ) )
+	if ( active )
+	{
+		IExec->ReplyMsg( (PTR)active );
+	}
+
+	while(( command = (PTR) IExec->GetMsg( reader->Commands ) ))
 	{
 		command->Result = USB2SC_NoReader;
 
@@ -190,6 +260,8 @@ bailout:
 	{
 		IExec->FreeVec( reader->Buffer );
 	}
+
+	CloseClock( reader );
 
 	if ( reader->Commands )
 	{

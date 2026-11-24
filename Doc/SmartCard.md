@@ -28,6 +28,17 @@ provide the slot state and CCID reader error. Provide an output buffer
 of at least `USB2SMARTCARD_ATR_MAX` for power-on or
 `USB2SMARTCARD_APDU_RESPONSE_MAX` for exchange.
 
+The driver also exposes `ccid-instance` version 2. Use `GetInstance` to get
+the reader instance and pass it to `CommandInstance`. The command fails if
+that unit now belongs to another reader. The original `ccid` interface
+looks up the current reader on each call. Neither interface reserves a
+slot across several calls or detects a different card in the same slot.
+
+A too-small output buffer is rejected before the operation starts, with
+the required capacity in the reply. A transport error after dispatch can
+leave the outcome of an APDU unknown. If the reader cannot recover after
+a fault, reconnect it to register a fresh instance.
+
 The driver is experimental. Card state is queried on demand.
 PC/SC integration, interrupt notifications, PIN-pad commands, TPDU or
 character-level exchanges, extended APDUs, and USB ICCD use separate
