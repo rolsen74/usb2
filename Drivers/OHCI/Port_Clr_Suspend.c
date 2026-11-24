@@ -52,7 +52,6 @@
 SEC_CODE S32 OHCI_Port_Clr_Suspend( struct USB2_HCDNode *hn, U32 port )
 {
 S32 err;
-U32 val;
 
 	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
@@ -68,15 +67,8 @@ U32 val;
 	}
 	else
 	{
-		val = PCI_READLONG( OHCI_RH_PORT_STATUS( port ));
+		PCI_WRITELONG( OHCI_RH_PORT_STATUS( port ), OHCI_PORT_POCI );
 
-		if ( val & 0x00000004 )
-		{
-			val &= ~0x00000004;
-	
-			PCI_WRITELONG( OHCI_RH_PORT_STATUS( port ), val );
-		}
-	
 		err = USB2Err_NoError;
 	}
 

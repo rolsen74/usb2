@@ -259,7 +259,7 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			{
 				request->io_Error = USB2Err_Stack_InvalidStructure;
 			}
-			else if ( ( ( ! hn->hn_AcceptIO ) && ( ( fn->fkt_Tier ) || ( ! hn->hn_EHCIRecovering ) ||
+			else if ( ( ( ! hn->hn_AcceptIO ) && ( ( fn->fkt_Tier ) || ( ! hn->hn_RootHubRecovering ) ||
 					( request->io_Command == CMD_WRITE ) ) ) ||
 				 ( ( ioreq->req_CheckEpoch ) && ( ioreq->req_ExpectedEpoch != hn->hn_IOEpoch ) ) ||
 				 ( ( fn->fkt_EnumFenced ) && ( fn->fkt_EnumEpoch != hn->hn_IOEpoch ) ) ||

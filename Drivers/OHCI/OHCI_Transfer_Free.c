@@ -59,6 +59,8 @@ struct OHCI_ITD *itd;
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Transfer_Free" );
 
+	OHCI_Slot_Free( hn, ioreq );
+
 	while ( ( itd = ioreq->req_HCD.OHCI.IsoHead ) )
 	{
 		ioreq->req_HCD.OHCI.IsoHead = itd->Next;

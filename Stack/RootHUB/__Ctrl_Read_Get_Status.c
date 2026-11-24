@@ -73,6 +73,7 @@ U16 val;
 	else if	( sd->RequestType == ( REQTYPE_Read | REQTYPE_Class | REQTYPE_Device ))
 	{
 		struct USB2_HUBStatus *hubstat = buffer;
+		U32 status;
 
 		// Get HUB Status
 
@@ -80,21 +81,10 @@ U16 val;
 
 		// --
 
-		val = 0;
-		hubstat->wHubStatus = LE_SWAP16( val );
+		status = hn->HCD_Functions.Hub_Get_Status ? hn->HCD_Functions.Hub_Get_Status( hn ) : 0;
 
-//		#define HUBSTATF_Local_Power			0x01
-//		#define HUBSTATF_Over_Current			0x02
-
-		// --
-
-		val = 0;
-		hubstat->wHubChange = LE_SWAP16( val );
-
-//		#define HUBCHGF_Local_Power_Chg		0x01
-//		#define HUBCHGF_Over_Current_Chg		0x02
-
-		// --
+		hubstat->wHubStatus = LE_SWAP16( (U16) status );
+		hubstat->wHubChange = LE_SWAP16( (U16) ( status >> 16 ) );
 
 		*max = sizeof( struct USB2_HUBStatus );
 

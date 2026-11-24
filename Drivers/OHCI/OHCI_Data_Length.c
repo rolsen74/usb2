@@ -53,7 +53,7 @@
 ** Should set io_Error if there are transfer errors
 */
 
-SEC_CODE U32 OHCI_Bulk_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
+SEC_CODE U32 OHCI_Data_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
 struct OHCI_ED *ed;
 struct OHCI_TD *td;
@@ -70,7 +70,7 @@ U32 BE;
 S32 err;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "OHCI : OHCI_Bulk_Length" );
+	TASK_NAME_ENTER( "OHCI : OHCI_Data_Length" );
 
 	actual = 0;
 
@@ -93,7 +93,7 @@ S32 err;
 		copy = FALSE;
 	}
 
-	// Count every queued bulk TD up to the dummy tail.
+	// Count every queued data TD up to the dummy tail.
 	td = ed->ped_first_td;
 	tail = LE_SWAP32( ed->ed_tailp );
 
@@ -102,7 +102,7 @@ S32 err;
 		BE  	= LE_SWAP32( td->td_be );
 		CBP		= LE_SWAP32( td->td_cbp );
 		status	= OHCI_TD_GET_CC( LE_SWAP32( td->td_flags ) );
- 		size	= td->ptd_buffer_size;
+		size	= td->ptd_buffer_size;
 
 		/**/ if ( CBP == 0 )
 		{
@@ -117,13 +117,23 @@ S32 err;
 			bytes = 0;
 		}
 
- 		len	= ( size >= bytes ) ? ( size - bytes ) : ( 0 ) ;
+		len	= ( size >= bytes ) ? ( size - bytes ) : ( 0 ) ;
 
 		/**/ if ( ( status & OHCI_CC_NOT_ACCESSED_MASK ) == OHCI_CC_NOT_ACCESSED )
 		{
 			break;
 		}
-		else if ( ( status != OHCI_CC_NO_ERROR ) &&
+		if (( copy ) && ( len ))
+		{
+			// copy src, dest, len
+			MEM_COPY( td->ptd_buffer_virt, mem, len );
+
+			mem += len;
+		}
+
+		actual += len;
+
+		if ( ( status != OHCI_CC_NO_ERROR ) &&
 			( ( status != OHCI_CC_DATA_UNDERRUN ) || ( ioreq->req_Public.io_Command != CMD_READ ) ||
 				( ! ioreq->req_Public.io_AllowShortPackets ) ) )
 		{
@@ -180,16 +190,6 @@ S32 err;
 			ioreq->req_Public.io_Error = err;
 			goto bailout;
 		}
-
-		if (( copy ) && ( len ))
-		{
-			// copy src, dest, len
-			MEM_COPY( td->ptd_buffer_virt, mem, len );
-
-			mem += len;
-		}
-
-		actual += len;
 
 		// Check for short Packet
 		if ( ( len < size ) || ( status == OHCI_CC_DATA_UNDERRUN ) )

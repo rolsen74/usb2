@@ -49,154 +49,6 @@
 
 // --
 
-static S32 __is_ED_Finished( struct USB2_HCDNode *hn UNUSED, struct OHCI_ED *ed )
-{
-struct OHCI_TD *td;
-S32 retval;
-U32 status;
-U32 len;
-
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
-
-	TASK_NAME_ENTER( "OHCI : __is_ED_Finished" );
-
-	retval = TRUE;
-
-	td = ed->ped_first_td;
-
-	while( td )
-	{
-		status = OHCI_TD_GET_CC( LE_SWAP32( td->td_flags ));
-
-		if ( status == 15 )
-		{
-			// Still Active
-			retval = FALSE;
-			break;
-		}
-
-		if ( status )
-		{
-			// An error
-			switch( status )
-			{
-				case /* 0 */ OHCI_CC_NO_ERROR:
-				{
-					USBDEBUG( "No Error, check next TD" );
-					break;
-				}
-
-				case /* 1 */ OHCI_CC_CRC:
-				{
-					USBINFO( "OHCI_CC_CRC" );
-					break;
-				}
-
-				case /* 2 */ OHCI_CC_BIT_STUFFING:
-				{
-					USBINFO( "OHCI_CC_BIT_STUFFING" );
-					break;
-				}
-
-				case /* 3 */ OHCI_CC_DATA_TOGGLE_MISMATCH:
-				{
-					USBINFO( "OHCI_CC_DATA_TOGGLE_MISMATCH" );
-					break;
-				}
-
-				case /* 4 */ OHCI_CC_STALL:
-				{
-					USBINFO( "OHCI_CC_STALL" );
-					break;
-				}
-
-				case /* 5 */ OHCI_CC_DEVICE_NOT_RESPONDING:
-				{
-					USBINFO( "OHCI_CC_DEVICE_NOT_RESPONDING" );
-					break;
-				}
-
-				case /* 6 */ OHCI_CC_PID_CHECK_FAILURE:
-				{
-					USBINFO( "OHCI_CC_PID_CHECK_FAILURE" );
-					break;
-				}
-
-				case /* 7 */ OHCI_CC_UNEXPECTED_PID:
-				{
-					USBINFO( "OHCI_CC_UNEXPECTED_PID" );
-					break;
-				}
-
-				case /* 8 */ OHCI_CC_DATA_OVERRUN:
-				{
-					USBINFO( "OHCI_CC_DATA_OVERRUN" );
-					break;
-				}
-
-				case /* 9 */ OHCI_CC_DATA_UNDERRUN:
-				{
-					USBINFO( "OHCI_CC_DATA_UNDERRUN" );
-					break;
-				}
-
-				/* A * Reserved / Unused */
-
-				/* B * Reserved / Unused */
-
-				case /* C */ OHCI_CC_BUFFER_OVERRUN:
-				{
-					USBINFO( "OHCI_CC_BUFFER_OVERRUN" );
-					break;
-				}
-
-				case /* D */ OHCI_CC_BUFFER_UNDERRUN:
-				{
-					USBINFO( "OHCI_CC_BUFFER_UNDERRUN" );
-					break;
-				}
-
-				/* E * Not Accessed / Still Active */
-				/* F * Not Accessed / Still Active */
-
-				default:
-				{
-					USBINFO( "Unknown error ( %02x )", status );
-					break;
-				}
-			}
-			break;
-		}
-
-		if ( td->ptd_buffer_virt )
-		{
-			if ( td->td_cbp )
-			{
-				len = LE_SWAP32( td->td_be ) - LE_SWAP32( td->td_cbp ) + 1;
-			}
-			else
-			{
-				len = LE_SWAP32( td->td_be )  - td->ptd_buffer_phy + 1;
-			}
-
-			if ( len < 2 * 4096 )
-			{
-				break;
-			}
-		}
-
-		td = td->ptd_virt_next;
-	}
-
-	TASK_NAME_LEAVE();
-
-	return( retval );
-}
-
-// --
-
 /*
 \\
 // Returns:
@@ -220,11 +72,10 @@ S32 retval;
 
 	ed = ioreq->req_HCD.OHCI.ED_Header;
 
-	if ( ( ed ) && ( ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Control ) ||
-		( ioreq->req_EndPoint->ep_Type == EPATT_Type_Bulk ) ||
-		( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous ) ) )
+	if ( ed )
 	{
 		U32 head;
+		U16 elapsed;
 
 		head = LE_SWAP32( *(volatile U32 *) &ed->ed_headp );
 
@@ -234,10 +85,13 @@ S32 retval;
 		}
 
 		retval = ( ( head & OHCI_HALTED ) || ( ( head & OHCI_HEADMASK ) == LE_SWAP32( ed->ed_tailp ) ) );
-	}
-	else if ( ed )
-	{
-		retval = __is_ED_Finished( hn, ed );
+
+		if ( ( ! retval ) && ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous ) )
+		{
+			// The periodic worker tick also checks requests when no WDH arrived.
+			elapsed = PCI_READLONG( OHCI_FM_NUMBER ) - ioreq->req_HCD.OHCI.IsoLastFrame;
+			retval = ( ( elapsed >= 3 ) && ( elapsed < 0x8000 ) );
+		}
 	}
 	else
 	{

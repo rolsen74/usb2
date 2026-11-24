@@ -28,7 +28,13 @@ U32 port;
 	actual	= 0;
 	update	= FALSE;
 
-	// Port 0 is RootHUB we skip that
+	if ( ( buflen ) && ( hn->HCD_Functions.Hub_Get_Status ) &&
+		( hn->HCD_Functions.Hub_Get_Status( hn ) >> 16 ) )
+	{
+		buffer[0] = 1;
+		update = TRUE;
+	}
+
 	for( port=1 ; port <= loops ; port++ )
 	{
 		// Returns HUBF_xx flags

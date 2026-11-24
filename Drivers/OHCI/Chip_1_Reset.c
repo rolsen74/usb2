@@ -50,77 +50,99 @@
 // --
 
 SEC_CODE S32
-OHCI_Chip_Reset ( struct USB2_HCDNode * hn )
+OHCI_ResetController( struct USB2_HCDNode *hn )
 {
-	// volatile U32 *adr;
+	struct USBBase *usbbase;
+
+	U32 count;
+
+	usbbase = hn->hn_USBBase;
+
+	PCI_WRITELONG( OHCI_INTERRUPT_DISABLE, OHCI_MIE | OHCI_ALL_INTRS );
+
+	PCI_WRITELONG( OHCI_COMMAND_STATUS, OHCI_HCR );
+
+	for ( count = 0 ; count < 30 ; count++ )
+	{
+		if ( ! ( PCI_READLONG( OHCI_COMMAND_STATUS ) & OHCI_HCR ) )
+		{
+			return ( ( PCI_READLONG( OHCI_CONTROL ) & OHCI_HCFS_MASK ) == OHCI_HCFS_SUSPEND );
+		}
+
+		MISC_MICRODELAY( 1 );
+	}
+
+	return ( FALSE );
+}
+
+// --
+
+SEC_CODE S32
+OHCI_Chip_Reset( struct USB2_HCDNode *hn )
+{
+	struct USBBase *usbbase;
+
 	S32 retval;
 	U32 ctrl;
 	U32 cnt;
-	U32 val;
+	U32 interval;
 
-	struct USBBase * usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER ( "OHCI : OHCI_Chip_Reset" );
-
+	usbbase = hn->hn_USBBase;
 	retval = FALSE;
 
-	//-------------
-	// --
+	TASK_NAME_ENTER( "OHCI : OHCI_Chip_Reset" );
 
-	ctrl								  = PCI_READLONG ( OHCI_CONTROL );
-	hn->hn_HCD.OHCI.Remote_Wakeup_Connect = ctrl & OHCI_RWC;
-	hn->hn_HCD.OHCI.Frame_Interval		  = PCI_READLONG ( OHCI_FM_INTERVAL );
-
-	//-------------
-	// Ownership Change Request
+	ctrl = PCI_READLONG( OHCI_CONTROL );
 
 	if ( ctrl & OHCI_IR )
 	{
-		val = PCI_READLONG ( OHCI_COMMAND_STATUS );
-		val |= OHCI_OCR;
-		PCI_WRITELONG ( OHCI_COMMAND_STATUS, val );
+		PCI_WRITELONG( OHCI_COMMAND_STATUS, OHCI_OCR );
 
-		for ( cnt = 0; cnt < 100; cnt++ )
+		for ( cnt = 0 ; ( cnt < 100 ) && ( ctrl & OHCI_IR ) ; cnt++ )
 		{
-			ctrl = PCI_READLONG ( OHCI_CONTROL );
+			HCD_WAIT_MS( hn, 10 );
 
-			if ( ! ( ctrl & OHCI_IR ) )
-			{
-				break;
-			}
-			else
-			{
-				HCD_WAIT_MS ( hn, 250 ); // Wait 250ms
-			}
+			ctrl = PCI_READLONG( OHCI_CONTROL );
 		}
 
-		if ( cnt == 100 )
+		if ( ctrl & OHCI_IR )
 		{
-			ctrl &= OHCI_IR;
-
-			USBINFO ( "Ownership Change Timeouted" );
+			USBERROR( "OHCI ownership change timed out" );
+			goto bailout;
 		}
 	}
 
-	//-------------
-	// Reset
+	hn->hn_HCD.OHCI.Remote_Wakeup_Connect = ctrl & OHCI_RWC;
 
-	ctrl &= ~OHCI_HCFS_MASK;
-	ctrl |= OHCI_HCFS_RESET;
+	interval = OHCI_GET_IVAL( PCI_READLONG( OHCI_FM_INTERVAL ) );
 
-	PCI_WRITELONG ( OHCI_CONTROL, ctrl );
-	PCI_WRITELONG ( OHCI_CONTROL, ctrl );
-	PCI_READLONG ( OHCI_CONTROL );
+	// Retain firmware timing across software resets.
+	if ( ! hn->hn_HCD.OHCI.Frame_Interval )
+	{
+		hn->hn_HCD.OHCI.Frame_Interval = ( interval > 210 ) ? interval : 11999;
+	}
 
-	HCD_WAIT_MS ( hn, 75 ); // Wait 75ms
+	if ( ! OHCI_ResetController( hn ) )
+	{
+		USBERROR( "OHCI host controller reset timed out" );
+		goto bailout;
+	}
 
-	//-------------
-	// --
+	// Hold USB Reset before the transition to Operational.
+	PCI_WRITELONG( OHCI_CONTROL, OHCI_HCFS_RESET | hn->hn_HCD.OHCI.Remote_Wakeup_Connect );
+
+	if ( ( PCI_READLONG( OHCI_CONTROL ) & OHCI_HCFS_MASK ) != OHCI_HCFS_RESET )
+	{
+		goto bailout;
+	}
+
+	HCD_WAIT_MS( hn, 75 );
 
 	retval = TRUE;
 
-	// bailout:
+bailout:
 
-	TASK_NAME_LEAVE ();
+	TASK_NAME_LEAVE();
 
 	return ( retval );
 }

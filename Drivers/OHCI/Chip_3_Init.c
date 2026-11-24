@@ -49,150 +49,124 @@
 
 // --
 
-SEC_CODE S32 OHCI_Chip_Init( struct USB2_HCDNode *hn UNUSED )
+SEC_RODATA static const U8 revbits[OHCI_NO_INTRS] =
 {
-//struct USBBase *usbbase;
-// struct OHCI_QH *qh;
-S32 retval;
-// U32 slot;
-// U32 cnt;
-// U32 i;
-// U32 j;
-// U32 r;
+	0x00, 0x10, 0x08, 0x18, 0x04, 0x14, 0x0c, 0x1c,
+	0x02, 0x12, 0x0a, 0x1a, 0x06, 0x16, 0x0e, 0x1e,
+	0x01, 0x11, 0x09, 0x19, 0x05, 0x15, 0x0d, 0x1d,
+	0x03, 0x13, 0x0b, 0x1b, 0x07, 0x17, 0x0f, 0x1f
+};
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
+SEC_CODE S32
+OHCI_Chip_Init( struct USB2_HCDNode *hn )
+{
+	struct USBBase *usbbase;
+	struct OHCI_HCCA *hcca;
+	struct OHCI_ED *ped;
+	struct OHCI_ED *ed;
+
+	S32 retval;
+	U32 cnt;
+
+	usbbase = hn->hn_USBBase;
+	hcca = hn->hn_HCD.OHCI.HCCA_Table;
+	retval = FALSE;
 
 	TASK_NAME_ENTER( "OHCI : OHCI_Chip_Init" );
 
-// //	usbbase = hn->hn_USBBase;
+	MEM_SET( hcca, 0, sizeof( *hcca ) );
 
- 	retval = FALSE;
+	MEM_SET( hn->hn_HCD.OHCI.BandWidth, 0, sizeof( hn->hn_HCD.OHCI.BandWidth ) );
 
-// 	// --
+	/* Allocate dummy ED that starts the Control list. */
 
-// 	USBDEBUG( "OHCI_Chip_Init           : 1 :" );
-// 	USBDEBUG( "OHCI_Chip_Init           : 1 : ISlots %p", hn->hn_HCD.OHCI.FrameList_ISlots );
+	ed = OHCI_Get_EDBuffer( hn, NULL );
 
-// 	/*
-// 	 * Allocate the interrupt dummy QHs. These are arranged to give poll
-// 	 * intervals that are powers of 2 times 1ms.
-// 	 */
+	if ( ! ed )
+	{
+		USBERROR( "Error allocating memory" );
+		goto bailout;
+	}
 
-// 	for( cnt=0 ; cnt<255 ; cnt++ )
-// 	{
-// 		qh = OHCI_Get_QHBuffer( hn, NULL );
+	hn->hn_HCD.OHCI.Ctrl_Head = ed;
 
-// //		USBDEBUG( "OHCI_Chip_Init           : 1 : QH %p", qh );
+	//-------------
+	/* Allocate dummy ED that starts the Bulk list. */
 
-// 		if ( ! qh )
-// 		{
-// 			USBDEBUG( "OHCI_Chip_Init           : Error allocating memory" );
-// 			goto bailout;
-// 		}
+	ed = OHCI_Get_EDBuffer( hn, NULL );
 
-// 		hn->hn_HCD.OHCI.FrameList_ISlots[ cnt ] = qh;
-// 	}
+	if ( ! ed )
+	{
+		USBERROR( "Error allocating memory" );
+		goto bailout;
+	}
 
-// 	// --
+	hn->hn_HCD.OHCI.Bulk_Head = ed;
 
-// 	USBDEBUG( "OHCI_Chip_Init           : 2 : Link Pyramide QH's" );
+	//-------------
+	/* Allocate dummy ED that starts the Isochronous list. */
 
-// 	/*
-// 	** Link ms Pyramide
-// 	**
-// 	**    1ms                             o0
-// 	**
-// 	**    2ms                     o1              o2
-// 	**
-// 	**    4ms                 o3      o4      o5      o6
-// 	**
-// 	**    8ms               o7  o8  o9  10  11  12  13  14
-// 	**
-// 	**   16ms             15 ..                       ..  30
-// 	**
-// 	**   32ms           31 ..                           ..  62
-// 	**
-// 	**   64ms         63 ..                               ..  126
-// 	**
-// 	**  128ms      127 ..                                   ..  254
-// 	*/
+	ed = OHCI_Get_EDBuffer( hn, NULL );
 
-// 	for( cnt=0 ; cnt<255 ; cnt++ )
-// 	{
-// 		qh = hn->hn_HCD.OHCI.FrameList_ISlots[ cnt ];
+	if ( ! ed )
+	{
+		USBERROR( "Error allocating memory" );
+		goto bailout;
+	}
 
-// 		if ( ! cnt )
-// 		{
-// 			// The last (1ms) QH terminates.
-// 			qh->pqh_virt_next	= NULL;
-// 			qh->qh_link			= OHCI_NULL;
-// 		}
-// 		else
-// 		{
-// 			// Otherwise the next QH has half the poll interval.
-// 			qh->pqh_virt_next	= hn->hn_HCD.OHCI.FrameList_ISlots[ ((( cnt + 1 ) / 2 ) - 1 ) ];
-// 			qh->qh_link			= LE_SWAP32( qh->pqh_virt_next->pqh_self_phy | OHCI_LINK_QH );
-// 		}
-// 	}
+	hn->hn_HCD.OHCI.Isoc_Head = ed;
 
-// 	// --
-// 	// -- Periodic Frame List
-// 	// Point the frame list at the last level (128ms).
+	/* Allocate all the dummy EDs that make up the interrupt tree. */
 
-// 	USBDEBUG( "OHCI_Chip_Init           : 3 : Build Periodic Frame List" );
+	for( cnt=0 ; cnt<OHCI_NO_EDS ; cnt++ )
+	{
+		ed = OHCI_Get_EDBuffer( hn, NULL );
 
-// 	for( i=0 ; i<128 ; i++ )
-// 	{
-// 		r = OHCI_Reverse_Bits( i, OHCI_IPOLLRATES - 1 );
+		if ( ! ed )
+		{
+			USBERROR( "Error allocating memory" );
+			goto bailout;
+		}
 
-// 		slot = OHCI_IQHIDX( OHCI_IPOLLRATES, r );
+		hn->hn_HCD.OHCI.HCCA_EDArray[cnt] = ed;
 
-// 		qh = hn->hn_HCD.OHCI.FrameList_ISlots[ slot ];
+		if ( cnt != 0 )
+		{
+			ped = hn->hn_HCD.OHCI.HCCA_EDArray[ ( cnt - 1 ) / 2 ];
+		}
+		else
+		{
+			ped = hn->hn_HCD.OHCI.Isoc_Head;
+		}
 
-// 		for( j=i ; j<1024 ; j += 128 )
-// 		{
-// 			hn->hn_HCD.OHCI.FrameList[j] = LE_SWAP32( qh->pqh_self_phy | OHCI_LINK_QH );
-// 		}
-// 	}
+		ed->ed_nexted 		= LE_SWAP32( ped->ped_self_phy );
+		ed->ped_virt_next	= ped;
+	}
 
-// 	// --
-// 	// Allocate dummy QH that starts the async list.
+	/*
+	 * Fill HCCA interrupt table.  The bit reversal is to get
+	 * the tree set up properly to spread the interrupts.
+	 */
 
-// 	USBDEBUG( "OHCI_Chip_Init           : 4 : Alloc QH Dummy Header" );
+	for( cnt=0 ; cnt<OHCI_NO_INTRS ; cnt++ )
+	{
+		ed = hn->hn_HCD.OHCI.HCCA_EDArray[ OHCI_NO_EDS - OHCI_NO_INTRS + cnt ];
 
-// 	qh = OHCI_Get_QHBuffer( hn, NULL );
-
-// 	if ( ! qh )
-// 	{
-// 		USBDEBUG( "Error allocating memory" );
-// 		goto bailout;
-// 	}
-
-// 	// Fill the QH
-// 	qh->qh_link			= LE_SWAP32( qh->pqh_self_phy | OHCI_LINK_QH );
-// 	qh->qh_ep1			= LE_SWAP32( OHCI_QH_SET_EPS( OHCI_QH_SPEED_HIGH ) | ( OHCI_QH_HRECL ));
-// 	qh->qh_ep2			= 0;
-// 	qh->qh_td_cur		= 0;
-// 	qh->qh_td_next		= OHCI_NULL;
-// 	qh->qh_td_alt		= OHCI_NULL;
-// 	qh->qh_status		= 0;	//LE_SWAP32( OHCI_TD_HALTED );
-// 	qh->pqh_virt_next	= qh;
-
-// 	hn->hn_HCD.OHCI.ASync_Head = qh;
-
-// 	// --
+		hcca->hcca_Interrupt_Table[ revbits[cnt] ] = LE_SWAP32( ed->ped_self_phy );
+	}
 
 	retval = TRUE;
 
-//bailout:
+bailout:
 
-// 	USBDEBUG( "OHCI_Chip_Init           : 9 : retval %ld", retval );
+	if ( ! retval )
+	{
+		OHCI_Chip_Deinit( hn );
+	}
 
 	TASK_NAME_LEAVE();
 
-	return( retval );
+	return ( retval );
 }
 
 // --

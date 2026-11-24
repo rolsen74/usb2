@@ -75,6 +75,9 @@ SEC_RODATA const struct HCDFunctions OHCIFunctions =
 
 	// -- Port Functions
 
+	.Hub_Get_Status				= OHCI_Hub_Get_Status,
+	.Hub_Clr_OverCurrent_Chg	= OHCI_Hub_Clr_OverCurrent_Chg,
+
 	.Port_Clr_Enable			= OHCI_Port_Clr_Enable,
 	.Port_Clr_Suspend			= OHCI_Port_Clr_Suspend,
 	.Port_Clr_Power				= OHCI_Port_Clr_Power,
@@ -98,7 +101,7 @@ SEC_RODATA const struct HCDFunctions OHCIFunctions =
 	
 	.Bulk_Add					= OHCI_Bulk_Add,
 	.Bulk_Build					= OHCI_Bulk_Build,
-	.Bulk_Length				= OHCI_Bulk_Length,
+	.Bulk_Length				= OHCI_Data_Length,
 	.Bulk_Remove				= OHCI_Bulk_Remove,
 
 	.Control_Add				= OHCI_Control_Add,
@@ -108,7 +111,7 @@ SEC_RODATA const struct HCDFunctions OHCIFunctions =
 
 	.Interrupt_Add				= OHCI_Interrupt_Add,
 	.Interrupt_Build			= OHCI_Interrupt_Build,
-	.Interrupt_Length			= OHCI_Interrupt_Length,
+	.Interrupt_Length			= OHCI_Data_Length,
 	.Interrupt_Remove			= OHCI_Interrupt_Remove,
 
 	.Isochronous_Build			= OHCI_Isochronous_Build,

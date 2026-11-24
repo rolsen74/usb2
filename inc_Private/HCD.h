@@ -57,6 +57,9 @@ struct HCDFunctions
 
 	// -- Root HUB Functions --
 
+	U32 ( *Hub_Get_Status ) ( struct USB2_HCDNode *hn );
+	void ( *Hub_Clr_OverCurrent_Chg ) ( struct USB2_HCDNode *hn );
+
 	S32 ( *Port_Clr_Enable ) ( struct USB2_HCDNode * hn, U32 port );
 	S32 ( *Port_Clr_Suspend ) ( struct USB2_HCDNode * hn, U32 port );
 	S32 ( *Port_Clr_Power ) ( struct USB2_HCDNode * hn, U32 port );
@@ -139,8 +142,9 @@ struct USB2_HCDNode
 	USB2_ID hn_NotifyID;
 	U32		hn_HCDType;
 	U32		hn_IsEHCI;
+	U32		hn_IsOHCI;
 	U32		hn_AcceptIO;
-	U32		hn_EHCIRecovering;
+	U32		hn_RootHubRecovering;
 	U32		hn_DMAActive;
 	U32		hn_Generation;
 	U32		hn_IOEpoch;

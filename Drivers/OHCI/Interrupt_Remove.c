@@ -53,9 +53,8 @@ SEC_CODE void OHCI_Interrupt_Remove( struct USB2_HCDNode *hn, struct RealRequest
 {
 struct OHCI_ED *cur;
 struct OHCI_ED *ed;
-U32 head;
 	
-	struct USBBase *usbbase = hn->hn_USBBase;
+	struct USBBase *usbbase UNUSED = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Interrupt_Remove" );
 
 	ed = ioreq->req_HCD.OHCI.ED_Header;
@@ -63,6 +62,8 @@ U32 head;
 	if ( ! ed )
 	{
 		USBERROR( "NULL Pointer" );
+
+		USB2_HCD_RequestReset( hn );
 		goto bailout;
 	}
 
@@ -76,31 +77,19 @@ U32 head;
 	if ( ! cur )
 	{
 		USBERROR( "QH Header not found" );
+
+		USB2_HCD_RequestReset( hn );
 		goto bailout;
 	}
 
-	OHCI_Slot_Free( hn, ioreq->req_HCD.OHCI.Start_Slot );
+	if ( ! OHCI_UnlinkPeriodic( hn, cur, ed ) )
+	{
+		goto bailout;
+	}
 
-	// --
-	cur->ped_virt_next	= ed->ped_virt_next;
-	cur->ed_nexted		= ed->ed_nexted;
-
-	// --
-	// its no longer active, but still controlled by HCD
+	ioreq->req_EndPoint->ep_DataToggle = OHCI_GetToggle( ed );
 	ioreq->req_PublicStat = IORS_HCD;
 
-	// --
-	// If it happens that oure ED is active,
-	// we need to wait 2ms (3 to be sure).
-	// Give it time to update ToggleCarry
-
-	HCD_WAIT_MS( hn, 3 );
-
-	head = LE_SWAP32( ed->ed_headp );
-
-	ioreq->req_EndPoint->ep_DataToggle = ( head & OHCI_TOGGLECARRY ) ? TRUE : FALSE;
-
-	// --
 bailout:
 
 	TASK_NAME_LEAVE();

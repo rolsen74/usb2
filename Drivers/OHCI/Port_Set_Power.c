@@ -49,38 +49,45 @@
  
 // --
 
-SEC_CODE S32 OHCI_Port_Set_Power( struct USB2_HCDNode *hn, U32 port )
+SEC_CODE S32
+OHCI_Port_Set_Power( struct USB2_HCDNode *hn, U32 port )
 {
-U32 val;
-S32 err;
+	struct USBBase *usbbase;
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
+	U32 desc;
+	U32 status;
 
-	USBDEBUG( "OHCI_Port_Set_Power( Port #%lu )", port );
+	usbbase = hn->hn_USBBase;
 
-	if (( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ))
+	if ( ( ! port ) || ( port > hn->hn_HUB_NumPorts ) || ( port > 15 ) )
 	{
-		USBDEBUG( "Invalid Port Number #%lu", port );
-
-		err = USB2Err_Host_HostError;
+		return ( USB2Err_Host_HostError );
 	}
-	else
-	{
-		val = PCI_READLONG( OHCI_RH_PORT_STATUS( port ));
 
-		if ( ! ( val & 0x00000100 ))
+	desc = PCI_READLONG( OHCI_RH_DESCRIPTOR_A );
+
+	if ( desc & OHCI_NPS )
+	{
+		return ( USB2Err_NoError );
+	}
+
+	status = PCI_READLONG( OHCI_RH_PORT_STATUS( port ) );
+
+	if ( ! ( status & OHCI_PORT_PPS ) )
+	{
+		if ( ( desc & OHCI_PSM ) && ( PCI_READLONG( OHCI_RH_DESCRIPTOR_B ) & OHCI_RH_PPCM( port ) ) )
 		{
-			val |= 0x00000100;
-	
-			PCI_WRITELONG( OHCI_RH_PORT_STATUS( port ), val );
+			PCI_WRITELONG( OHCI_RH_PORT_STATUS( port ), OHCI_PORT_PPS );
+		}
+		else
+		{
+			PCI_WRITELONG( OHCI_RH_STATUS, OHCI_LPSC );
 		}
 
-		err = USB2Err_NoError;
+		HCD_WAIT_MS( hn, MAX( OHCI_ENABLE_POWER_DELAY, OHCI_GET_POTPGT( desc ) * 2 ) );
 	}
 
-	return( err );
+	return ( USB2Err_NoError );
 }
 
 // --

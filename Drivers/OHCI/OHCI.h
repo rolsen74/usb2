@@ -40,11 +40,16 @@ SEC_CODE void OHCI_Dump_TD(		struct USB2_HCDNode *hn, struct OHCI_TD *td );
 
 #endif
 
+SEC_CODE S32	OHCI_WaitFrames( struct USB2_HCDNode *hn );
+SEC_CODE S32	OHCI_UnlinkPeriodic( struct USB2_HCDNode *hn, struct OHCI_ED *previous, struct OHCI_ED *ed );
+SEC_CODE U32	OHCI_GetToggle( struct OHCI_ED *ed );
+SEC_CODE U32	OHCI_Hub_Get_Status( struct USB2_HCDNode *hn );
+SEC_CODE void	OHCI_Hub_Clr_OverCurrent_Chg( struct USB2_HCDNode *hn );
 SEC_CODE S32	OHCI_PauseList( struct USB2_HCDNode *hn, U32 control, U32 enable );
 
 SEC_CODE void	OHCI_Bulk_Add( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE S32	OHCI_Bulk_Build( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-SEC_CODE U32	OHCI_Bulk_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
+SEC_CODE U32	OHCI_Data_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	OHCI_Bulk_Remove( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	OHCI_Control_Add( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE S32	OHCI_Control_Build( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
@@ -52,10 +57,10 @@ SEC_CODE U32	OHCI_Control_Length( struct USB2_HCDNode *hn, struct RealRequest *i
 SEC_CODE void	OHCI_Control_Remove( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	OHCI_Interrupt_Add( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE S32	OHCI_Interrupt_Build( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-SEC_CODE U32	OHCI_Interrupt_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	OHCI_Interrupt_Remove( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 
 SEC_CODE S32	OHCI_Chip_Preinit( struct USB2_HCDNode *hn );
+SEC_CODE S32	OHCI_ResetController( struct USB2_HCDNode *hn );
 SEC_CODE S32	OHCI_Chip_Reset( struct USB2_HCDNode *hn );
 SEC_CODE S32	OHCI_Chip_Alloc( struct USB2_HCDNode *hn );
 SEC_CODE S32	OHCI_Chip_Init( struct USB2_HCDNode *hn );
@@ -93,8 +98,8 @@ SEC_CODE U32	OHCI_Handler_Interrupt( struct ExceptionContext *Context, struct Ex
 SEC_CODE U32	OHCI_Handler_Reset( struct ExceptionContext *Context, struct ExecBase *SysBase, PTR userData );
 SEC_CODE S32	OHCI_Transfer_Check( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	OHCI_Transfer_Free( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
-SEC_CODE U32	OHCI_Slot_Find( struct USB2_HCDNode *hn, U32 interval );
-SEC_CODE void	OHCI_Slot_Free( struct USB2_HCDNode *hn, U32 slot );
+SEC_CODE S32	OHCI_Slot_Find( struct USB2_HCDNode *hn, struct RealRequest *req, U32 interval, U32 first );
+SEC_CODE void	OHCI_Slot_Free( struct USB2_HCDNode *hn, struct RealRequest *req );
 
 /***************************************************************************/
 

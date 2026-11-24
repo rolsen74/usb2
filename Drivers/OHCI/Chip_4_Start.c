@@ -53,14 +53,10 @@ SEC_CODE S32 OHCI_Chip_Start( struct USB2_HCDNode *hn )
 {
 S32 retval;
 U32 portnr;
-U32 desca;
-U32 descb;
 U32 ival;
-U32 cnt;
-U32 hcr;
 U32 fm;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
+	struct USBBase *usbbase UNUSED = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Chip_Start" );
 
 	retval = FALSE;
@@ -71,42 +67,15 @@ U32 fm;
 	 * OHCI Setup *
 	 *------------*/
 
-	desca = PCI_READLONG( OHCI_RH_DESCRIPTOR_A );
-	descb = PCI_READLONG( OHCI_RH_DESCRIPTOR_B );
-
-	// todo: use port calls
-	for( portnr=1 ; portnr <= hn->hn_HUB_NumPorts ; portnr++ )
+	if ( ( ! hn->hn_HCD.OHCI.HCCA_Table ) || ( ! hn->hn_HCD.OHCI.Ctrl_Head ) ||
+		( ! hn->hn_HCD.OHCI.Bulk_Head ) )
 	{
-		PCI_WRITELONG( OHCI_RH_PORT_STATUS( portnr ), 0x00000200 );
-	}
-
-	// We now own the host controller and the bus has been reset.
-
-	PCI_WRITELONG( OHCI_COMMAND_STATUS, OHCI_HCR );
-
-	for( cnt=0 ; cnt<100 ; cnt++ )
-	{
-		hcr = PCI_READLONG( OHCI_COMMAND_STATUS ) & OHCI_HCR;
-
-		if ( hcr == 0 )
-		{
-			break;
-		}
-		else
-		{
-			HCD_WAIT_MS( hn, 25 );		// Wait 25ms
-		}
-	}
-
-	if ( hcr )
-	{
-		USBERROR( "Taking over Port timed out" );
 		goto bailout;
 	}
 
-	/* The controller is now in SUSPEND state, we have 2ms to finish. */
+	__asm__ volatile ( "sync" ::: "memory" );
 
-	PCI_WRITELONG( OHCI_HCCA_PTR,			hn->hn_HCD.OHCI.HCCA_Table->phcca_self_phy );
+	PCI_WRITELONG( OHCI_HCCA_PTR, hn->hn_HCD.OHCI.HCCA_Physical );
 
 	PCI_WRITELONG( OHCI_CONTROL_HEAD_ED,	hn->hn_HCD.OHCI.Ctrl_Head->ped_self_phy );
 
@@ -115,6 +84,11 @@ U32 fm;
 	PCI_WRITELONG( OHCI_INTERRUPT_DISABLE,	OHCI_ALL_INTRS );
 
 	PCI_WRITELONG( OHCI_CONTROL,			OHCI_PLE | OHCI_IE | OHCI_CLE | OHCI_BLE | OHCI_RATIO_1_4 | OHCI_HCFS_OPERATIONAL | hn->hn_HCD.OHCI.Remote_Wakeup_Connect );
+
+	if ( ( PCI_READLONG( OHCI_CONTROL ) & OHCI_HCFS_MASK ) != OHCI_HCFS_OPERATIONAL )
+	{
+		goto bailout;
+	}
 
 	//
 	// The controller is now OPERATIONAL. Set a some final
@@ -131,31 +105,13 @@ U32 fm;
 	PCI_WRITELONG( OHCI_FM_INTERVAL, 		fm );
 	PCI_WRITELONG( OHCI_PERIODIC_START, 	OHCI_PERIODIC( ival ));
 
-	PCI_WRITELONG( OHCI_RH_DESCRIPTOR_A,	OHCI_NOCP | desca );
-	PCI_WRITELONG( OHCI_RH_STATUS,			OHCI_LPSC );
-
-	HCD_WAIT_MS( hn, OHCI_ENABLE_POWER_DELAY );
-
-
-	// Set Individuial Port mode
-//	  desca &= OHCI_NPS;
-//	  desca &= OHCI_NOCP;
-//	  desca |= OHCI_PSM;
-//	  desca |= OHCI_OCPM;
-
-	PCI_WRITELONG( OHCI_RH_DESCRIPTOR_A, desca );
-	PCI_WRITELONG( OHCI_RH_DESCRIPTOR_B, descb ); //0xffff0000 );
-
-	HCD_WAIT_MS( hn, OHCI_GET_POTPGT( desca ) * 2 );
-
-	/* Set Port Power */
-	// todo: use port calls
-	for( portnr=1 ; portnr <= hn->hn_HUB_NumPorts ; portnr++ )
+	for ( portnr = 1 ; portnr <= hn->hn_HUB_NumPorts ; portnr++ )
 	{
-		PCI_WRITELONG( OHCI_RH_PORT_STATUS( portnr ), 0x00000100 );
+		if ( OHCI_Port_Set_Power( hn, portnr ) != USB2Err_NoError )
+		{
+			goto bailout;
+		}
 	}
-
-	PCI_WRITELONG( OHCI_RH_STATUS, OHCI_LPSC );
 
 	PCI_WRITELONG( OHCI_INTERRUPT_ENABLE, ( OHCI_WDH | OHCI_UE | OHCI_RHSC | OHCI_MIE ));
 

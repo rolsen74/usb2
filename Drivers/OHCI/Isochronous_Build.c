@@ -31,6 +31,9 @@ OHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 	U32 physical;
 	U32 index;
 	U32 step;
+	U32 frame;
+	U32 distance;
+	U32 span;
 	S32 in;
 	U16 *lengths;
 
@@ -49,14 +52,6 @@ OHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 		return ( TRUE );
 	}
 
-	if ( ( hn->hn_HCD.OHCI.Isoc_Head->ped_virt_next ) &&
-		( ( ! active ) || ( active->req_HCD.OHCI.ED_Header != hn->hn_HCD.OHCI.Isoc_Head->ped_virt_next ) ) )
-	{
-		req->req_Public.io_Error = USB2Err_Host_NoBandWidth;
-
-		return ( TRUE );
-	}
-
 	if ( ( ! length ) || ( ! req->req_Public.io_Data ) || ( ! packet ) || ( packet > 1023 ) ||
 		( ! ep->ep_Interval ) || ( ep->ep_Interval > 16 ) )
 	{
@@ -69,13 +64,15 @@ OHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 	step = 1U << ( ep->ep_Interval - 1 );
 
 	// Limit the schedule to less than half the 16-bit frame number range.
-	if ( ( count > 256 ) || ( count > 32764 / step ) ||
+	if ( ( count > 256 ) || ( count - 1 > 32732 / step ) ||
 		( ( req->req_Public.io_IsoPacketLengths ) && ( req->req_Public.io_IsoPacketCount != count ) ) )
 	{
 		req->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
 
 		return ( TRUE );
 	}
+
+	span = ( count - 1 ) * step;
 
 	ed = OHCI_Get_EDBuffer( hn, req );
 
@@ -146,6 +143,26 @@ OHCI_Isochronous_Build ( struct USB2_HCDNode *hn, struct RealRequest *req )
 	}
 
 	ed->ed_headp = LE_SWAP32( req->req_HCD.OHCI.IsoHead->Physical );
+
+	frame = PCI_READLONG( OHCI_FM_NUMBER ) & 0xffff;
+	distance = 4;
+
+	if ( active )
+	{
+		distance = ( active->req_HCD.OHCI.IsoNextFrame - frame ) & 0xffff;
+
+		if ( distance < 4 )
+		{
+			distance += ( ( 4 - distance + step - 1 ) / step ) * step;
+		}
+	}
+
+	if ( ( distance + span >= 0x8000 ) || ( ! OHCI_Slot_Find( hn, req, step, frame + distance ) ) )
+	{
+		req->req_Public.io_Error = USB2Err_Host_NoBandWidth;
+
+		return ( TRUE );
+	}
 
 	return ( FALSE );
 }

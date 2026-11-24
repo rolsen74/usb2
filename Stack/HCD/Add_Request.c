@@ -336,11 +336,12 @@ __HCD_Request_CanStart ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 
 	if ( ! hn->hn_IsEHCI )
 	{
-		return ( ( speed == USBSPEED_Full ) && ( ( hn->hn_HCDType == HCDTYPE_OHCI )
-			|| ( hn->hn_HCDType == HCDTYPE_SAM440 ) || ( hn->hn_HCDType == HCDTYPE_SAM460 ) )
-			&& ( ( command == CMD_READ ) || ( command == CMD_WRITE ) )
-			&& ( ioreq->req_Public.io_IsoPacketCount <= ( 16380U >> ( ep->ep_Interval - 1 ) ) )
-			&& ( active->req_Public.io_IsoPacketCount <= ( 16380U >> ( ep->ep_Interval - 1 ) ) ) );
+		step = 1U << ( ep->ep_Interval - 1 );
+		count = ioreq->req_Public.io_IsoPacketCount;
+
+		return ( ( hn->hn_IsOHCI ) && ( speed == USBSPEED_Full ) && ( step < 0x8000 ) &&
+			( ( command == CMD_READ ) || ( command == CMD_WRITE ) ) && ( count ) &&
+			( count - 1 <= 32732 / step ) );
 	}
 
 	if ( ( ( speed != USBSPEED_High ) && ( speed != USBSPEED_Full ) ) ||

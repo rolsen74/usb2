@@ -197,6 +197,7 @@ struct USB2_HCDNode *node;
 	else if ( fs->fs_Type2 == FT2_OHCI )
 	{
 		in->ohci++;
+		node->hn_IsOHCI = TRUE;
 
 		node->hn_HCDIndex		= in->idx++;
 		node->hn_MaxSpeed		= USBSPEED_Full;
@@ -398,6 +399,7 @@ U32 cnt;
 		else if ( fs->fs_Type2 == FT2_OHCI )
 		{
 			in->ohci++;
+			node->hn_IsOHCI = TRUE;
 	
 			node->hn_HCDIndex		= in->idx++;
 			node->hn_MaxSpeed		= USBSPEED_Full;

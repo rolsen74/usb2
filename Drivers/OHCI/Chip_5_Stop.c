@@ -49,61 +49,11 @@
 
 // --
 
-SEC_CODE S32 OHCI_Chip_Stop( struct USB2_HCDNode *hn )
+SEC_CODE S32
+OHCI_Chip_Stop( struct USB2_HCDNode *hn )
 {
-U32 timeout;
-S32 retval;
-U32 val;
-
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "OHCI : OHCI_Chip_Stop" );
-
-	// --
-	// Disable interrupts
-
-	PCI_WRITELONG( OHCI_INTERRUPT_DISABLE, 0xFFFFFFFF );
-
-	// --
-	// Disable scheduling
-
-	val  = PCI_READLONG( OHCI_CONTROL );
-	val &= ~( OHCI_CLE | OHCI_BLE | OHCI_PLE | OHCI_IE );
-	PCI_WRITELONG( OHCI_CONTROL, val );
-
-	// --
-	// Move controller to USB Suspend state
-
-	val &= ~OHCI_HCFS_MASK;
-	val |= OHCI_HCFS_SUSPEND;
-	PCI_WRITELONG( OHCI_CONTROL, val );
-
-	// --
-	// Wait until controller leaves operational state
-
-	retval = FALSE;
-	timeout = 100;	// max 200ms
-
-	while( timeout-- )
-	{
-		val = PCI_READLONG( OHCI_CONTROL );
-
-		if (( val & OHCI_HCFS_MASK ) == OHCI_HCFS_SUSPEND )
-		{
-			retval = TRUE;
-			break;
-		}
-		else
-		{
-			HCD_WAIT_MS( hn, 2 );	// Wait 2ms
-		}
-	}
-
-
-	// --
-
-	TASK_NAME_LEAVE();
-
-	return( retval );
+	// HCR completion fences outstanding schedule DMA.
+	return ( OHCI_ResetController( hn ) );
 }
 
 // --

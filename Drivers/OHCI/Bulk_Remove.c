@@ -54,7 +54,6 @@ SEC_CODE void OHCI_Bulk_Remove( struct USB2_HCDNode *hn, struct RealRequest *ior
 struct OHCI_ED *last;
 struct OHCI_ED *ed;
 U32 control;
-U32 val;
 
 	struct USBBase *usbbase UNUSED = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Bulk_Remove" );
@@ -97,8 +96,7 @@ U32 val;
 	PCI_WRITELONG( OHCI_CONTROL, control );
 
 	// --
-	val = LE_SWAP32( ed->ed_headp );
-	ioreq->req_EndPoint->ep_DataToggle = ( val & OHCI_TOGGLECARRY ) ? TRUE : FALSE;
+	ioreq->req_EndPoint->ep_DataToggle = OHCI_GetToggle( ed );
 
 	// its no longer active, but still controlled by HCD
 	ioreq->req_PublicStat = IORS_HCD;

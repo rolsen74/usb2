@@ -22,6 +22,10 @@ struct __ohci
 	struct OHCI_ED *  Start_Header;
 	U32				  Start_Slot;
 	U32				  IsoNextFrame;
+	U32				  IsoLastFrame;
+	U32				  IsoFirstFrame;
+	U32				  PeriodicMask;
+	U32				  PeriodicCost;
 };
 
 struct __uhci

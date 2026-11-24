@@ -18,9 +18,6 @@ OHCI_Isochronous_Remove ( struct USB2_HCDNode *hn, struct RealRequest *req )
 {
 	struct OHCI_ED *previous;
 	struct OHCI_ED *ed;
-	struct USBBase *usbbase;
-
-	usbbase = hn->hn_USBBase;
 	previous = hn->hn_HCD.OHCI.Isoc_Head;
 	ed = req->req_HCD.OHCI.ED_Header;
 
@@ -31,20 +28,12 @@ OHCI_Isochronous_Remove ( struct USB2_HCDNode *hn, struct RealRequest *req )
 
 	if ( ( ! ed ) || ( ! previous->ped_virt_next ) )
 	{
+		USB2_HCD_RequestReset( hn );
+
 		return;
 	}
 
-	ed->ed_flags = LE_SWAP32( LE_SWAP32( ed->ed_flags ) | OHCI_ED_SKIP );
-
-	__asm__ volatile ( "sync" ::: "memory" );
-
-	previous->ed_nexted = ed->ed_nexted;
-	previous->ped_virt_next = ed->ped_virt_next;
-
-	__asm__ volatile ( "sync" ::: "memory" );
-
-	// Allow a frame already referencing this ED and done writeback to retire.
-	HCD_WAIT_MS( hn, 3 );
+	OHCI_UnlinkPeriodic( hn, previous, ed );
 }
 
 // --

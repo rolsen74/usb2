@@ -64,8 +64,8 @@ U32 pid;
 U32 val;
 U32 len;
 PTR buf;
-U32 dt;
 U32 l;
+U32 interval;
 
 	struct USBBase *usbbase UNUSED = hn->hn_USBBase;
 	TASK_NAME_ENTER( "OHCI : OHCI_Interrupt_Build" );
@@ -103,8 +103,12 @@ U32 l;
 	len		= ( ioreq->req_Public.io_Length );
 	buf		= ( ioreq->req_Public.io_Command == CMD_READ ) ? NULL : ioreq->req_Public.io_Data ;
 	pid		= ( ioreq->req_Public.io_Command == CMD_READ ) ? OHCI_TD_IN : OHCI_TD_OUT;
-	pid	   |=(( ioreq->req_Public.io_Command == CMD_READ ) && ( ioreq->req_Public.io_AllowShortPackets )) ? OHCI_TD_R : 0;
-	dt		= ep->ep_DataToggle;
+
+	if ( ! ep->ep_MaxPacketSize )
+	{
+		err = USB2Err_Stack_InvalidStructure;
+		goto bailout;
+	}
 
 	Zero	=	(( ioreq->req_Public.io_Command == CMD_WRITE )
 			&&	 ( ioreq->req_Public.io_AddZeroPackets )
@@ -143,13 +147,18 @@ U32 l;
 		}
 		else
 		{
-			ed->ed_headp		= LE_SWAP32( data->ptd_self_phy );
+			ed->ed_headp		= LE_SWAP32( data->ptd_self_phy | ( ep->ep_DataToggle ? OHCI_TOGGLECARRY : 0 ) );
 			ed->ped_first_td	= data;
 		}
 
 		l = MIN( 2 * 4096, len );
 
-		if ( ! OHCI_Get_8kBuffer( hn, data, buf, l ))
+		if ( l < len )
+		{
+			l -= l % ep->ep_MaxPacketSize;
+		}
+
+		if ( ( l ) && ( ! OHCI_Get_8kBuffer( hn, data, buf, l ) ) )
 		{
 			USBERROR( "Error allocating buffer" );
 			goto bailout;
@@ -160,7 +169,19 @@ U32 l;
 		val  = pid;
 		val |= OHCI_TD_NOCC;
 		val |= OHCI_TD_NOINTR;
-		val |= ( dt ) ? OHCI_TD_TOGGLE_1 : OHCI_TD_TOGGLE_0 ;
+		val |= OHCI_TD_TOGGLE_CARRY;
+
+		if ( ( l == len ) && ( pid == OHCI_TD_IN ) && ( ioreq->req_Public.io_AllowShortPackets ) )
+		{
+			val |= OHCI_TD_R;
+		}
+
+		// A short packet or error on an intermediate TD can halt the ED.
+		if ( l < len )
+		{
+			val &= ~OHCI_TD_INTR_MASK;
+			val |= OHCI_TD_SET_DI( 1 );
+		}
 
 		data->td_flags = LE_SWAP32( val );
 
@@ -174,8 +195,6 @@ U32 l;
 		}
 
 		len -= l;
-
-		dt = ( dt ) ? 0 : 1 ;
 	}
 	while( len );
 
@@ -193,6 +212,7 @@ U32 l;
 
 		last->td_nexttd		= LE_SWAP32( data->ptd_self_phy );
 		last->ptd_virt_next	= data;
+		data->td_flags = LE_SWAP32( OHCI_TD_OUT | OHCI_TD_NOCC | OHCI_TD_TOGGLE_CARRY );
 		last = data;
 	}
 
@@ -222,6 +242,16 @@ U32 l;
 	ed->ed_tailp		= LE_SWAP32( dummy->ptd_self_phy );
 
 	/* -- Done -- */
+
+	for ( interval = OHCI_NO_INTRS ; ( interval > 1 ) && ( interval > ep->ep_Interval ) ; interval >>= 1 )
+	{
+	}
+
+	if ( ! OHCI_Slot_Find( hn, ioreq, interval, 0 ) )
+	{
+		err = USB2Err_Host_NoBandWidth;
+		goto bailout;
+	}
 
 	err = USB2Err_NoError;
 

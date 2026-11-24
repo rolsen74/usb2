@@ -96,7 +96,7 @@
 #define OHCI_INTERRUPT_ENABLE	0x10
 #define OHCI_INTERRUPT_DISABLE	0x14
 #define OHCI_HCCA_PTR			0x18
-// #define OHCI_PERIOD_CURRENT_ED	0x1c
+#define OHCI_PERIOD_CURRENT_ED	0x1c
 #define OHCI_CONTROL_HEAD_ED	0x20
 #define OHCI_CONTROL_CURRENT_ED	0x24
 #define OHCI_BULK_HEAD_ED		0x28
@@ -112,20 +112,30 @@
 // #define OHCI_LS_THRESHOLD		0x44
 #define OHCI_RH_DESCRIPTOR_A	0x48
 #define  OHCI_GET_NDP(s)		((s) & 0xff)
-// #define  OHCI_PSM				0x0100     /* Power Switching Mode */
-// #define  OHCI_NPS				0x0200	   /* No Power Switching */
+#define  OHCI_PSM				0x0100     /* Power Switching Mode */
+#define  OHCI_NPS				0x0200	   /* No Power Switching */
 // #define  OHCI_DT				0x0400     /* Device Type */
 // #define  OHCI_OCPM				0x0800     /* Overcurrent Protection Mode */
 #define  OHCI_NOCP				0x1000     /* No Overcurrent Protection */
 #define  OHCI_GET_POTPGT(s)		((s) >> 24)
 #define OHCI_RH_DESCRIPTOR_B	0x4c
 #define OHCI_RH_STATUS			0x50
-// #define  OHCI_LPS				0x00000001 /* Local Power Status */
-// #define  OHCI_OCI				0x00000002 /* OverCurrent Indicator */
+#define  OHCI_LPS				0x00000001 /* Local Power Status */
+#define  OHCI_OCI				0x00000002 /* OverCurrent Indicator */
 // #define  OHCI_DRWE				0x00008000 /* Device Remote Wakeup Enable */
 #define  OHCI_LPSC				0x00010000 /* Local Power Status Change */
-// #define  OHCI_CCIC				0x00020000 /* OverCurrent Indicator Change */
+#define  OHCI_CCIC				0x00020000 /* OverCurrent Indicator Change */
 // #define  OHCI_CRWE				0x80000000 /* Clear Remote Wakeup Enable */
+#define OHCI_RH_PPCM(port)		( 1UL << ( 16 + (port) ) )
+#define OHCI_PORT_CCS			0x00000001
+#define OHCI_PORT_PES			0x00000002
+#define OHCI_PORT_PSS			0x00000004
+#define OHCI_PORT_POCI			0x00000008
+#define OHCI_PORT_PRS			0x00000010
+#define OHCI_PORT_PPS			0x00000100
+#define OHCI_PORT_LSDA			0x00000200
+#define OHCI_PORT_CSC			0x00010000
+#define OHCI_PORT_PRSC			0x00100000
 #define OHCI_RH_PORT_STATUS(n)	(0x50 + (n)*4) /* 1 based indexing */
 
 // #define OHCI_LES 				( OHCI_PLE | OHCI_IE | OHCI_CLE | OHCI_BLE )
@@ -151,8 +161,7 @@ struct OHCI_HCCA
 /* 80 */ U16		hcca_Frame_Number;
 /* 82 */ U16		hcca_Pad1;
 /* 84 */ U32		hcca_Done_Head;
-/* 88    Private - Software */
-	U32				phcca_self_phy;
+/* 88 */ U8		hcca_Reserved[0x78];
 };
 
 // #define OHCI_NO_INTRS 32
@@ -340,8 +349,9 @@ struct _OHCI
 	struct OHCI_ED *			Bulk_Head;
 	struct OHCI_ED *			Isoc_Head;
 	struct OHCI_HCCA *			HCCA_Table;
+	U32							HCCA_Physical;
 	struct OHCI_ED *			HCCA_EDArray[OHCI_NO_EDS];
-	S32							BandWidth[OHCI_NO_EDS];
+	U32							BandWidth[OHCI_NO_INTRS];
 };
 
 /***************************************************************************/

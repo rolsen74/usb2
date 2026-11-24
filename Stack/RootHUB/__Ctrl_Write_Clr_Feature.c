@@ -31,9 +31,12 @@ S32 err;
 
 	/**/ if	( sd->RequestType == ( REQTYPE_Write | REQTYPE_Class | REQTYPE_Device ))
 	{
-		// Clear HUB Status
+		if ( ( wValue == HUB_CLR_OVER_CURRENT ) && ( hn->HCD_Functions.Hub_Clr_OverCurrent_Chg ) )
+		{
+			hn->HCD_Functions.Hub_Clr_OverCurrent_Chg( hn );
 
-		USBDEBUG( "__Clr_Feature : Clear HUB Staus??" );
+			err = USB2Err_NoError;
+		}
 	}
 	else if ( sd->RequestType == ( REQTYPE_Write | REQTYPE_Class | REQTYPE_Other ))
 	{
@@ -58,25 +61,25 @@ S32 err;
 				break;
 			}
 
-			#if 0
 			case PORT_SUSPEND:
 			{
-				err = PORT_CLEAR_SUSPEND( port );
+				if ( ( hn->hn_IsOHCI ) && ( hn->HCD_Functions.Port_Clr_Suspend ) )
+				{
+					err = hn->HCD_Functions.Port_Clr_Suspend( hn, port );
+				}
+
 				break;
 			}
 
 			case PORT_POWER:
 			{
-				err = PORT_CLEAR_POWER( port );
-				break;
-			}
+				if ( ( hn->hn_IsOHCI ) && ( hn->HCD_Functions.Port_Clr_Power ) )
+				{
+					err = hn->HCD_Functions.Port_Clr_Power( hn, port );
+				}
 
-			case PORT_INDICATOR:
-			{
-				err = PORT_CLEAR_INDICATOR( port );
 				break;
 			}
-			#endif
 
 			case PORT_CLR_CONNECTION:
 			{

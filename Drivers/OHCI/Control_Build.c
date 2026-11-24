@@ -216,7 +216,7 @@ OHCI_Control_Build ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 
 	val = OHCI_TD_TOGGLE_1;
 	val |= OHCI_TD_NOCC;
-	val |= ( ioreq->req_Public.io_Command == CMD_READ ) ? OHCI_TD_OUT : OHCI_TD_IN;
+	val |= ( ( ioreq->req_Public.io_Length ) && ( ioreq->req_Public.io_Command == CMD_READ ) ) ? OHCI_TD_OUT : OHCI_TD_IN;
 	val |= OHCI_TD_SET_DI ( 1 );
 
 	status->td_flags = LE_SWAP32 ( val );

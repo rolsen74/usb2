@@ -51,7 +51,6 @@
 
 SEC_CODE void OHCI_Interrupt_Add( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
-struct USB2_EndPointNode *ep;
 struct OHCI_ED *new;
 struct OHCI_ED *ed;
 U32 slot;
@@ -61,9 +60,7 @@ U32 slot;
 
 	// -- Find Last Entry
 
-	ep	= ioreq->req_EndPoint;
-
-	slot = OHCI_Slot_Find( hn, ep->ep_Interval );
+	slot = ioreq->req_HCD.OHCI.Start_Slot;
 
 	ed	= hn->hn_HCD.OHCI.HCCA_EDArray[ slot ];
 
@@ -74,12 +71,13 @@ U32 slot;
 	new->ed_nexted		= ed->ed_nexted;
 	new->ped_virt_next	= ed->ped_virt_next;
 
+	__asm__ volatile ( "sync" ::: "memory" );
+
 	ed->ed_nexted		= LE_SWAP32( new->ped_self_phy );
 	ed->ped_virt_next	= new;
 
 	// --
 	ioreq->req_HCD.OHCI.Start_Header = ed;
-	ioreq->req_HCD.OHCI.Start_Slot = slot;
 	ioreq->req_PublicStat = IORS_HCD_Active;
 	
 	TASK_NAME_LEAVE();

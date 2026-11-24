@@ -49,30 +49,69 @@
  
 // --
 
-SEC_CODE S32 OHCI_Port_Set_Reset( struct USB2_HCDNode *hn, U32 port )
+SEC_CODE S32
+OHCI_Port_Set_Reset( struct USB2_HCDNode *hn, U32 port )
 {
-S32 err;
+	struct USBBase *usbbase;
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
+	U32 reg;
+	U32 status;
+	U32 pulse;
+	U32 poll;
+	U16 frame;
 
-	USBDEBUG( "OHCI_Port_Set_Reset( Port #%lu )", port );
+	usbbase = hn->hn_USBBase;
 
-	if (( port <= 0 ) || ( hn->hn_HUB_NumPorts < port ))
+	if ( ( ! port ) || ( port > hn->hn_HUB_NumPorts ) )
 	{
-		USBDEBUG( "Invalid Port Number #%lu", port );
-
-		err = USB2Err_Host_HostError;
-	}
-	else 
-	{
-		PCI_WRITELONG( OHCI_RH_PORT_STATUS( port ), 0x00000010 );
-
-		err = USB2Err_NoError;
+		return ( USB2Err_Host_HostError );
 	}
 
-	return( err );
+	reg = OHCI_RH_PORT_STATUS( port );
+
+	// OHCI generates 10 ms per command. Keep gaps below 3 ms
+	// and leave the last reset-change bit for the hub worker.
+	for ( pulse = 0 ; pulse < 5 ; pulse++ )
+	{
+		status = PCI_READLONG( reg );
+
+		if ( ( ! ( status & OHCI_PORT_CCS ) ) || ( status & OHCI_PORT_CSC ) )
+		{
+			return ( USB2Err_Device_Detached );
+		}
+
+		PCI_WRITELONG( reg, OHCI_PORT_PRSC );
+
+		frame = PCI_READLONG( OHCI_FM_NUMBER );
+
+		PCI_WRITELONG( reg, OHCI_PORT_PRS );
+
+		HCD_WAIT_MS( hn, 8 );
+
+		for ( poll = 0 ; poll < 24 ; poll++ )
+		{
+			status = PCI_READLONG( reg );
+
+			if ( ( ! ( status & OHCI_PORT_CCS ) ) || ( status & OHCI_PORT_CSC ) )
+			{
+				return ( USB2Err_Device_Detached );
+			}
+
+			if ( ( status & OHCI_PORT_PRSC ) && ( ! ( status & OHCI_PORT_PRS ) ) )
+			{
+				break;
+			}
+
+			MISC_MICRODELAY( 250 );
+		}
+
+		if ( ( poll == 24 ) || ( ( pulse < 4 ) && ( (U16) ( PCI_READLONG( OHCI_FM_NUMBER ) - frame ) >= 13 ) ) )
+		{
+			return ( USB2Err_Host_Timeout );
+		}
+	}
+
+	return ( ( status & OHCI_PORT_PES ) ? USB2Err_NoError : USB2Err_Host_HostError );
 }
 
 // --

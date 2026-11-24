@@ -49,70 +49,111 @@
 
 // --
 
-SEC_CODE U32 OHCI_Slot_Find( struct USB2_HCDNode *hn, U32 interval )
+// USB 2.0 sections 5.7.4 and 5.11.3. All times are in nanoseconds.
+SEC_CODE static U32
+OHCI_PeriodicTime( struct RealRequest *req )
 {
-U32 lowestslot;
-U32 lowestbw;
-U32 offset;
-U32 slots;
-U32 lev;
-U32 cnt;
-U32 pos;
-U32 bw;
-U32 l;
+	U32 bits;
+	U32 overhead;
 
-	// -- Find Level
+	// Worst case stuffing adds one bit for each six payload bits.
+	bits = ( req->req_EndPoint->ep_MaxPacketSize * 56 + 5 ) / 6;
 
-	for( lev=5 ; lev ; lev-- )
+	if ( req->req_Function->fkt_Speed == USBSPEED_Low )
 	{
-		if (( 1UL << lev ) <= interval )
+		// Allow for the low-speed preamble, hub delays and handshake.
+		return ( 80000 + ( bits * 2000 + 2 ) / 3 );
+	}
+
+	overhead = req->req_EndPoint->ep_Type == EPATT_Type_Isochronous ? 12000 : 15000;
+
+	return ( overhead + ( bits * 250 + 2 ) / 3 );
+}
+
+// --
+
+SEC_CODE S32
+OHCI_Slot_Find( struct USB2_HCDNode *hn, struct RealRequest *req, U32 interval, U32 first )
+{
+	struct RealRequest *active;
+
+	U32 limit;
+	U32 cost;
+	U32 best;
+	U32 phase;
+	U32 stride;
+	U32 frame;
+	U32 load;
+	U32 peak;
+	U32 mask;
+	U32 slot;
+	U32 bits;
+
+	stride = MIN( interval, OHCI_NO_INTRS );
+	active = req->req_EndPoint->ep_Request_Active;
+
+	if ( active )
+	{
+		// The next isochronous batch uses the same endpoint and phase.
+		req->req_HCD.OHCI.PeriodicCost = active->req_HCD.OHCI.PeriodicCost;
+		req->req_HCD.OHCI.PeriodicMask = active->req_HCD.OHCI.PeriodicMask;
+		req->req_HCD.OHCI.IsoFirstFrame = first & 0xffff;
+
+		return ( TRUE );
+	}
+
+	cost = OHCI_PeriodicTime( req );
+	best = OHCI_NO_INTRS;
+	limit = 900000;
+
+	for ( phase = 0 ; phase < stride ; phase++ )
+	{
+		peak = 0;
+
+		for ( frame = phase ; frame < OHCI_NO_INTRS ; frame += stride )
 		{
-			break;
+			load = hn->hn_HCD.OHCI.BandWidth[frame] + cost;
+			peak = MAX( peak, load );
+		}
+
+		if ( peak <= limit )
+		{
+			limit = peak;
+			best = phase;
 		}
 	}
 
-	// -- Find Slot
-
-	slots		= 1UL << lev;
-	lowestbw	= -1UL;
-	lowestslot	= 0;
-	offset		= ( 1UL << lev ) - 1;
-
-	for( cnt=0 ; cnt<slots ; cnt++ )
+	if ( best == OHCI_NO_INTRS )
 	{
-		bw = 0;
-
-		pos = offset + cnt;
-
-		for( l=0 ; l<=lev ; l++ )
-		{
-			bw += hn->hn_HCD.OHCI.BandWidth[ pos ];
-
-			pos = ((( pos + 1 ) / 2 ) - 1 );
-		}
-
-		if ( bw < lowestbw )
-		{
-			lowestbw	= bw;
-			lowestslot	= offset + cnt;
-
-		}
+		return ( FALSE );
 	}
 
-	// -- Adjust Slots
+	mask = 0;
 
-	pos = lowestslot;
-
-	for( l=0 ; l<=lev ; l++ )
+	for ( frame = best ; frame < OHCI_NO_INTRS ; frame += stride )
 	{
-		hn->hn_HCD.OHCI.BandWidth[ pos ]++;
-
-		pos = ((( pos + 1 ) / 2 ) - 1 );
+		hn->hn_HCD.OHCI.BandWidth[frame] += cost;
+		mask |= 1UL << frame;
 	}
 
-	// --
+	req->req_HCD.OHCI.PeriodicCost = cost;
+	req->req_HCD.OHCI.PeriodicMask = mask;
 
-	return( lowestslot );
+	// The HCCA links to the leaves in bit-reversed frame order.
+	slot = 0;
+	bits = best;
+
+	for ( phase = stride ; phase > 1 ; phase >>= 1 )
+	{
+		slot = ( slot << 1 ) | ( bits & 1 );
+		bits >>= 1;
+	}
+
+	req->req_HCD.OHCI.Start_Slot = stride - 1 + slot;
+
+	req->req_HCD.OHCI.IsoFirstFrame = ( first + ( ( best - first ) & ( stride - 1 ) ) ) & 0xffff;
+
+	return ( TRUE );
 }
 
 // --

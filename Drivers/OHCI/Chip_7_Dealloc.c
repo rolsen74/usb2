@@ -58,8 +58,9 @@ SEC_CODE void OHCI_Chip_Dealloc( struct USB2_HCDNode *hn )
 
 	if ( hn->hn_HCD.OHCI.HCCA_Table )
 	{
-		MEMORY_FREE( MEMID_OHCI_HCCA, hn->hn_HCD.OHCI.HCCA_Table, hn->hn_HCD.OHCI.HCCA_Table->phcca_self_phy );
+		MEMORY_FREE( MEMID_OHCI_HCCA, hn->hn_HCD.OHCI.HCCA_Table, hn->hn_HCD.OHCI.HCCA_Physical );
 		hn->hn_HCD.OHCI.HCCA_Table = NULL;
+		hn->hn_HCD.OHCI.HCCA_Physical = 0;
 	}
 
 	// --

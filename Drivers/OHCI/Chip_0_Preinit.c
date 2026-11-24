@@ -89,9 +89,9 @@ OHCI_Chip_Preinit ( struct USB2_HCDNode * hn )
 
 	//	hn->hn_USBBase->usb_IExec->DebugPrintF( "OHCI : Ports %ld\n", ports );
 
-	if ( ports == 0 )
+	if ( ( ! ports ) || ( ports > 15 ) )
 	{
-		USBINFO ( "OHCI Has no Ports" );
+		USBINFO ( "OHCI invalid port count %lu", ports );
 		goto bailout;
 	}
 

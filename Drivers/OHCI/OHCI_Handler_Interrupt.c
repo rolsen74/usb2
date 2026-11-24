@@ -69,7 +69,14 @@ OHCI_Handler_Interrupt ( struct ExceptionContext * Context UNUSED, struct ExecBa
 
 	//	IExec->DebugPrintF( "OHCI Interrupt\n" );
 
-	intflags = PCI_READLONG ( OHCI_INTERRUPT_STATUS );
+	intflags = PCI_READLONG ( OHCI_INTERRUPT_ENABLE );
+
+	if ( ! ( intflags & OHCI_MIE ) )
+	{
+		goto bailout;
+	}
+
+	intflags &= PCI_READLONG ( OHCI_INTERRUPT_STATUS );
 	sigflags = 0;
 
 	// Anything too handle
@@ -79,7 +86,15 @@ OHCI_Handler_Interrupt ( struct ExceptionContext * Context UNUSED, struct ExecBa
 	}
 
 	/* Acknowledge */
-	PCI_WRITELONG ( OHCI_INTERRUPT_STATUS, intflags );
+	PCI_WRITELONG ( OHCI_INTERRUPT_STATUS, intflags & ~OHCI_UE );
+
+	if ( intflags & OHCI_UE )
+	{
+		PCI_WRITELONG ( OHCI_INTERRUPT_DISABLE, OHCI_UE | OHCI_WDH | OHCI_RHSC );
+
+		sigflags = hn->HCD_Restart_Chip.sig_Signal_Mask;
+		goto signal;
+	}
 
 	/* Writeback Done Head */
 	if ( intflags & OHCI_WDH )
@@ -117,6 +132,8 @@ OHCI_Handler_Interrupt ( struct ExceptionContext * Context UNUSED, struct ExecBa
 		/* Block unprocessed interrupts. */
 		PCI_WRITELONG ( OHCI_INTERRUPT_DISABLE, intflags );
 	}
+
+signal:
 
 	if ( sigflags )
 	{

@@ -119,14 +119,20 @@ OHCI_Control_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 					break;
 			}
 
-			if ( error )
+			if ( ( status & OHCI_CC_NOT_ACCESSED_MASK ) == OHCI_CC_NOT_ACCESSED )
 			{
-				ioreq->req_Public.io_Error = error;
+				ioreq->req_Public.io_Error = USB2Err_Host_HostError;
 				break;
 			}
 
 			if ( ( td == ed->ped_first_td ) || ( ! td->ptd_buffer_virt ) )
 			{
+				if ( error )
+				{
+					ioreq->req_Public.io_Error = error;
+					break;
+				}
+
 				continue;
 			}
 
@@ -148,6 +154,12 @@ OHCI_Control_Length( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 			}
 
 			actual += length;
+
+			if ( error )
+			{
+				ioreq->req_Public.io_Error = error;
+				break;
+			}
 		}
 	}
 	else

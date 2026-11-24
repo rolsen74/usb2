@@ -80,11 +80,14 @@ SEC_CODE static S32
 __myHandle_Reset( struct USBBase *usbbase, struct USB2_HCDNode *hn )
 {
 	U32 port;
+	S32 preserve_root_reads;
 
 	HCD_CloseSubmissions( usbbase, hn, TRUE );
 
-	// Leave pending root-hub reads queued until EHCI can service them again.
-	if ( ! hn->hn_IsEHCI )
+	preserve_root_reads = hn->hn_RootHubRecovering;
+
+	// Leave pending root-hub reads queued until the controller can service them again.
+	if ( ! preserve_root_reads )
 	{
 		__myHandle_Begin( usbbase, hn );
 	}
@@ -144,7 +147,7 @@ __myHandle_Reset( struct USBBase *usbbase, struct USB2_HCDNode *hn )
 
 	SEMAPHORE_OBTAIN( & usbbase->usb_LockSemaphore );
 
-	if ( ( hn->hn_IsEHCI ) || ( hn->hn_HCDType == HCDTYPE_XHCI ) )
+	if ( ( hn->hn_IsEHCI ) || ( hn->hn_HCDType == HCDTYPE_XHCI ) || ( hn->hn_IsOHCI ) )
 	{
 		hn->hn_Generation++;
 
@@ -155,13 +158,13 @@ __myHandle_Reset( struct USBBase *usbbase, struct USB2_HCDNode *hn )
 	}
 
 	hn->hn_AcceptIO = TRUE;
-	hn->hn_EHCIRecovering = FALSE;
+	hn->hn_RootHubRecovering = FALSE;
 
 	SEMAPHORE_RELEASE( & usbbase->usb_LockSemaphore );
 
 	ROOTHUB_HANDLE_CHANGE( hn );
 
-	if ( hn->hn_IsEHCI )
+	if ( preserve_root_reads )
 	{
 		__myHandle_Begin( usbbase, hn );
 	}

@@ -65,7 +65,7 @@ OHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask UNUSED )
 		ioreq = hn->hn_Active_Transfer_List.uh_Head;
 		USBDEBUG ( "OHCI_Handler_HCD         : IOReq %p", ioreq );
 
-		while ( ioreq )
+		while ( ( ioreq ) && ( hn->hn_AcceptIO ) )
 		{
 			next = Node_Next ( ioreq );
 			fn	 = ioreq->req_Function;

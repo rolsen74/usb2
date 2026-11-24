@@ -14,26 +14,18 @@
 // --
 
 SEC_CODE S32
-OHCI_PauseList( struct USB2_HCDNode *hn, U32 control, U32 enable )
+OHCI_WaitFrames( struct USB2_HCDNode *hn )
 {
 	struct USBBase *usbbase;
 
-	U32 frame;
+	U16 frame;
 	U32 retry;
 
 	usbbase = hn->hn_USBBase;
 
-	PCI_WRITELONG( OHCI_CONTROL, control & ~enable );
-
-	if ( ( PCI_READLONG( OHCI_CONTROL ) & ( OHCI_HCFS_MASK | enable ) ) != OHCI_HCFS_OPERATIONAL )
-	{
-		return ( FALSE );
-	}
-
 	frame = PCI_READLONG( OHCI_FM_NUMBER );
 
-	// Allow the current transaction and its done writeback to retire.
-	for( retry = 0; retry < 25; retry++ )
+	for ( retry = 0 ; retry < 25 ; retry++ )
 	{
 		HCD_WAIT_MS( hn, 1 );
 
@@ -44,6 +36,21 @@ OHCI_PauseList( struct USB2_HCDNode *hn, U32 control, U32 enable )
 	}
 
 	return ( FALSE );
+}
+
+// --
+
+SEC_CODE S32
+OHCI_PauseList( struct USB2_HCDNode *hn, U32 control, U32 enable )
+{
+	PCI_WRITELONG( OHCI_CONTROL, control & ~enable );
+
+	if ( ( PCI_READLONG( OHCI_CONTROL ) & ( OHCI_HCFS_MASK | enable ) ) != OHCI_HCFS_OPERATIONAL )
+	{
+		return ( FALSE );
+	}
+
+	return ( OHCI_WaitFrames( hn ) );
 }
 
 // --

@@ -49,38 +49,42 @@
 
 // --
 
-SEC_CODE void OHCI_Slot_Free( struct USB2_HCDNode *hn, U32 slot )
+SEC_CODE void
+OHCI_Slot_Free( struct USB2_HCDNode *hn, struct RealRequest *req )
 {
-U32 pos;
-U32 lev;
-U32 l;
+	struct RealRequest *other;
 
-	// -- Find Level
+	U32 cost;
+	U32 frame;
+	U32 mask;
 
-	pos = 0;
+	cost = req->req_HCD.OHCI.PeriodicCost;
 
-	for( lev=0 ; lev<6 ; lev++ )
+	if ( ! cost )
 	{
-		l = 1UL << lev;
+		return;
+	}
 
-		if (( pos <= slot ) && ( slot < pos + l ))
+	mask = req->req_HCD.OHCI.PeriodicMask;
+	req->req_HCD.OHCI.PeriodicCost = 0;
+	req->req_HCD.OHCI.PeriodicMask = 0;
+
+	// Keep the reservation while another batch of this endpoint is linked.
+	for ( other = hn->hn_Active_Transfer_List.uh_Head ; other ; other = Node_Next( other ) )
+	{
+		if ( ( other->req_EndPoint == req->req_EndPoint ) && ( other->req_HCD.OHCI.PeriodicCost ) )
 		{
-			break;
-		}
-		else
-		{
-			pos += l;
+			return;
 		}
 	}
 
-	// -- Adjust Slots
-
-	pos = slot;
-
-	for( l=0 ; l<=lev ; l++ )
+	for ( frame = 0 ; frame < OHCI_NO_INTRS ; frame++ )
 	{
-		hn->hn_HCD.OHCI.BandWidth[ pos ]--;
-
-		pos = ((( pos + 1 ) / 2 ) - 1 );
+		if ( mask & ( 1UL << frame ) )
+		{
+			hn->hn_HCD.OHCI.BandWidth[frame] -= cost;
+		}
 	}
 }
+
+// --

@@ -112,7 +112,7 @@ OHCI_Get_EDBuffer ( struct USB2_HCDNode * hn, struct RealRequest * ioreq )
 	}
 	else
 	{
-		val = LE_SWAP32 ( OHCI_ED_SKIP );
+		val = OHCI_ED_SKIP;
 	}
 
 	// --
