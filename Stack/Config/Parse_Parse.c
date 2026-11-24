@@ -285,6 +285,10 @@ U32 owners[32];
 
 			case DSCTYPE_EndPoint:
 			{
+				const U8 *companion;
+
+				U32 capacity;
+
 				USBDEBUG( "EndPoint Descriptor" );
 
 				if ( dsc->Length < sizeof( struct USB2_EndPoint_Desc ) )
@@ -328,6 +332,24 @@ U32 owners[32];
 				{
 					USBERROR( "__Parse: Error allocating memory" );
 					goto bailout;
+				}
+
+				if ( ( fn->fkt_Speed == USBSPEED_Super ) && ( ep->ep_Type == EPATT_Type_Isochronous ) &&
+					( len - dsc->Length >= 6 ) )
+				{
+					companion = (const U8 *) dsc + dsc->Length;
+
+					// Only one packet per interval is supported on SuperSpeed.
+					if ( ( companion[0] == 6 ) && ( companion[1] == 0x30 ) &&
+						( ! companion[2] ) && ( ! companion[3] ) )
+					{
+						capacity = companion[4] | ( (U32) companion[5] << 8 );
+
+						if ( capacity <= ep->ep_MaxPacketSize )
+						{
+							ep->ep_SS_IsoCapacity = capacity;
+						}
+					}
 				}
 
 				NODE_ADDTAIL( & in->in_EndPoints, ep );

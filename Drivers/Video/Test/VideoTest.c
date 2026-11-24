@@ -162,6 +162,8 @@ U32 frameindex;
 U32 firstsize;
 U32 minsize;
 U32 maxsize;
+	S32 written;
+	S32 closed;
 LONG options[6];
 LONG mode;
 LONG unit;
@@ -381,7 +383,7 @@ open_timer:
 		ioreq->io_Length = format.MaxFrameSize;
 		timer->Request.io_Command = TR_ADDREQUEST;
 		timer->Request.io_Flags = 0;
-		timer->Time.Seconds = 10;
+		timer->Time.Seconds = VIDEO_FRAME_TIMEOUT_SECONDS + 11;
 		timer->Time.Microseconds = 0;
 		stopped = FALSE;
 
@@ -468,17 +470,19 @@ open_timer:
 		goto close_timer;
 	}
 
-	if ( Write( file, frame, ioreq->io_Actual ) == (S32) ioreq->io_Actual )
+	written = Write( file, frame, ioreq->io_Actual );
+
+	closed = Close( file );
+
+	if ( ( written == (S32) ioreq->io_Actual ) && ( closed ) )
 	{
 		Printf( "Saved %ld bytes to %s\n", ioreq->io_Actual, name );
 		result = RETURN_OK;
 	}
 	else
 	{
-		Printf( "Could not write complete frame.\n" );
+		Printf( "Could not save the complete frame to %s.\n", name );
 	}
-
-	Close( file );
 
 close_timer:
 	if ( options[5] )

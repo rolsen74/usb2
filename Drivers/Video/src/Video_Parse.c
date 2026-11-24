@@ -11,14 +11,6 @@
 
 // --
 
-static U16
-Video_LE16( const U8 *data )
-{
-	return ( (U16) data[0] | ( (U16) data[1] << 8 ) );
-}
-
-// --
-
 static U32
 Video_FrameInterval( const U8 *data, U32 length, U32 *number )
 {
@@ -73,6 +65,53 @@ Video_FrameInterval( const U8 *data, U32 length, U32 *number )
 
 // --
 
+static S32
+Video_ValidInterval( const U8 *data, U32 length, U32 interval )
+{
+	U32 count;
+	U32 index;
+	U32 minimum;
+	U32 step;
+
+	count = data[25];
+
+	if ( ! interval )
+	{
+		return ( FALSE );
+	}
+
+	if ( ! count )
+	{
+		if ( length < 38 )
+		{
+			return ( FALSE );
+		}
+
+		minimum = Video_LE32( & data[26] );
+		step = Video_LE32( & data[34] );
+
+		return ( ( interval >= minimum ) && ( interval <= Video_LE32( & data[30] ) ) &&
+			( ( ! step ) || ( ( interval - minimum ) % step == 0 ) ) );
+	}
+
+	if ( length < 26 + 4 * count )
+	{
+		return ( FALSE );
+	}
+
+	for ( index = 0; index < count; index++ )
+	{
+		if ( Video_LE32( & data[26 + 4 * index] ) == interval )
+		{
+			return ( TRUE );
+		}
+	}
+
+	return ( FALSE );
+}
+
+// --
+
 SEC_CODE S32
 Video_Parse( struct VideoUnit *unit, U32 number, struct VideoMode *mode )
 {
@@ -87,6 +126,8 @@ U32 wanted;
 U8 active;
 U8 alt;
 U8 index;
+U8 defaultFrame;
+U8 selectedDefault;
 
 	config = (PTR) unit->StartMsg->ConfigDescriptors;
 
@@ -103,6 +144,8 @@ U8 index;
 	mode->Format.Width = 0;
 	mode->Format.Format = 0;
 	index = 0;
+	defaultFrame = 0;
+	selectedDefault = 0;
 	active = FALSE;
 	alt = 0;
 
@@ -126,6 +169,7 @@ U8 index;
 			{
 				format = VIDEO_FORMAT_MJPEG;
 				index = data[3];
+				defaultFrame = data[6];
 			}
 			else if ( ( data[2] == 0x04 ) && ( length >= 22 ) &&
 				( data[5] == 'Y' ) && ( data[6] == 'U' ) &&
@@ -133,6 +177,7 @@ U8 index;
 			{
 				format = VIDEO_FORMAT_YUY2;
 				index = data[3];
+				defaultFrame = length >= 27 ? data[22] : 0;
 			}
 			else if ( ( data[2] == 0x04 ) || ( data[2] == 0x06 ) || ( data[2] == 0x10 ) )
 			{
@@ -151,9 +196,25 @@ U8 index;
 					interval = Video_FrameInterval( data, length, & wanted );
 				}
 				else if ( ( ! mode->Format.Width ) ||
-					( ( format == VIDEO_FORMAT_MJPEG ) && ( mode->Format.Format != VIDEO_FORMAT_MJPEG ) ) )
+					( ( format == VIDEO_FORMAT_MJPEG ) && ( mode->Format.Format != VIDEO_FORMAT_MJPEG ) ) ||
+					( ( index == mode->FormatIndex ) && ( format == mode->Format.Format ) &&
+						( ! selectedDefault ) && ( data[3] == defaultFrame ) ) )
 				{
 					interval = Video_LE32( & data[21] );
+
+					if ( ! Video_ValidInterval( data, length, interval ) )
+					{
+						wanted = 1;
+
+						if ( data[25] )
+						{
+							interval = Video_FrameInterval( data, length, & wanted );
+						}
+						else
+						{
+							interval = length >= 38 ? Video_LE32( & data[26] ) : 0;
+						}
+					}
 				}
 
 				if ( interval )
@@ -167,22 +228,13 @@ U8 index;
 					mode->Format.DeviceID = unit->StartMsg->DeviceID;
 					mode->FormatIndex = index;
 					mode->FrameIndex = data[3];
+					selectedDefault = data[3] == defaultFrame;
 
 					if ( number )
 					{
 						return ( TRUE );
 					}
 				}
-			}
-		}
-		else if ( ( active ) && ( ! alt ) && ( data[1] == DSCTYPE_EndPoint ) &&
-			( length >= sizeof( struct USB2_EndPoint_Desc ) ) &&
-			( ( data[2] & EPADR_Dir_Mask ) == EPADR_Dir_In ) &&
-			( ( data[3] & EPATT_Type_Mask ) == EPATT_Type_Bulk ) )
-		{
-			if ( ! number )
-			{
-				unit->BulkEndPoint = data[2];
 			}
 		}
 

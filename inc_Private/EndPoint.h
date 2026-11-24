@@ -45,6 +45,7 @@ struct USB2_EndPointNode
 	U32 ep_Number;	  // Number 0-15
 	U32 ep_Direction; // EPDir_xxx
 	U32 ep_Interval;  // 0-255 ms
+	U32 ep_SS_IsoCapacity;
 	U32 ep_MaxPacketSize;
 	U32 ep_Transactions;
 	U32 ep_Stalled; // EndPoint is stalled, need Destall (TRUE/FALSE)

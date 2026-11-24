@@ -30,6 +30,12 @@ struct VideoMode
 	U8 FrameIndex;
 };
 
+static inline U16
+Video_LE16( const U8 *data )
+{
+	return ( (U16) data[0] | ( (U16) data[1] << 8 ) );
+}
+
 static inline U32
 Video_LE32( const U8 *data )
 {
@@ -71,9 +77,13 @@ struct VideoUnit
 	struct USB2_EPResource *Stream;
 	struct MsgPort *BeginPort;
 	struct MsgPort *StreamPort;
+	struct MsgPort *TimerPort;
+	struct TimeRequest *Timer;
+	struct TimerIFace *ProbeClock;
 	struct IOStdReq *ReadActive;
 	struct USB2_IORequest *ReadReady;
 	struct VideoFormat Format;
+	struct VideoMode DefaultMode;
 	U32 UnitNr;
 	U32 OpenCount;
 	U32 FrameUsed;
@@ -81,11 +91,13 @@ struct VideoUnit
 	U32 StreamPacketSize;
 	U32 IsoPacketCount;
 	U32 ReadPacket;
+	U64 ProbeDeadline;
 	U16 IsoPacketLengths[VIDEO_USB_READS][VIDEO_ISO_MAX_PACKETS];
 	U8 Commit[48];
 	U8 InterfaceNr;
 	U8 EndPoint;
 	U8 BulkEndPoint;
+	U8 VideoEndPoint;
 	U8 StreamAlt;
 	U8 StreamAltActive;
 	U8 StreamConfigured;
@@ -98,6 +110,11 @@ struct VideoUnit
 	U8 FrameReports;
 	U8 ProbeLength;
 	U8 ReadPending;
+	U8 ReadHead;
+	U8 ReadTail;
+	U8 ReadGaps;
+	U8 TimerPending;
+	U8 TimerOpen;
 	U8 ReadReset;
 	U8 Detached;
 	U8 Released;
@@ -108,6 +125,7 @@ SEC_CODE S32 Video_CreateDevice( struct VideoContext *ctx );
 SEC_CODE struct VideoUnit *Video_Alloc( struct VideoContext *ctx, struct USB2_DriverMessage *msg );
 SEC_CODE void Video_Free( struct VideoUnit *unit );
 SEC_CODE void Video_Main( struct VideoUnit *unit );
+SEC_CODE S32 Video_Find_Endpoint( struct VideoUnit *unit );
 SEC_CODE S32 Video_Parse( struct VideoUnit *unit, U32 number, struct VideoMode *mode );
 SEC_CODE S32 Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode );
 SEC_CODE S32 Video_Stream_Start( struct VideoUnit *unit );

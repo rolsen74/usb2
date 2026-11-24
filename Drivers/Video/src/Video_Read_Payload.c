@@ -191,7 +191,7 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 		return ( TRUE );
 	}
 
-	limit = expected ? expected : read->io_Length;
+	limit = expected ? expected : MIN( read->io_Length, unit->Format.MaxFrameSize );
 
 	if ( payload > limit - unit->FrameUsed )
 	{

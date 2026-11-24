@@ -29,6 +29,7 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	U32	  extra;
 	U32	  offset;
 	U32	  size;
+	U32	  capacity;
 	U16 * lengths;
 
 	ep		  = req->req_EndPoint;
@@ -47,6 +48,20 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	}
 
 	packet *= extra + 1;
+	capacity = packet;
+
+	if ( req->req_Function->fkt_Speed == USBSPEED_Super )
+	{
+		capacity = ep->ep_SS_IsoCapacity;
+
+		if ( ! capacity )
+		{
+			req->req_Public.io_Error = USB2Err_Stack_InvalidStructure;
+
+			return ( TRUE );
+		}
+	}
+
 	count = 1 + ( length - 1 ) / packet;
 
 	if ( ( count > 254 ) || ( req->req_Public.io_IsoPacketLengths && ( req->req_Public.io_IsoPacketCount != count ) ) )
@@ -80,7 +95,7 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 
 	for ( index = 0, offset = 0; index < count; index++, offset += packet )
 	{
-		size = MIN ( packet, length - offset );
+		size = MIN ( capacity, length - offset );
 
 		if ( lengths )
 		{

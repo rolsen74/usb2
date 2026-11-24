@@ -48,6 +48,21 @@ struct VideoBase *base;
 		unit->Register = NULL;
 	}
 
+	if ( unit->TimerOpen )
+	{
+		CloseDevice( & unit->Timer->Request );
+	}
+
+	if ( unit->Timer )
+	{
+		FreeSysObject( ASOT_IOREQUEST, unit->Timer );
+	}
+
+	if ( unit->TimerPort )
+	{
+		FreeSysObject( ASOT_PORT, unit->TimerPort );
+	}
+
 	if ( unit->StreamPort )
 	{
 		FreeSysObject( ASOT_PORT, unit->StreamPort );

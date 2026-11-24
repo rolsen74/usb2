@@ -11,9 +11,19 @@ struct AudioWav
 	U32 Channels;
 };
 
+struct AudioWavResampler
+{
+	U64 Phase;
+	S32 Previous[2];
+	S32 Ready;
+};
+
 S32 Audio_Wav_Parse( U8 *data, U32 length, struct AudioWav *wav );
 void Audio_WriteLE16( U8 *data, U32 value );
 void Audio_Wav_Header( U8 *header, U32 length, U32 rate, U32 channels );
 void Audio_Wav_Convert( const struct AudioWav *wav, U8 *output, U32 frames, U32 rate, U32 channels );
+
+U32 Audio_Wav_ConvertBlock( struct AudioWavResampler *state, const struct AudioWav *wav,
+	U8 *output, U32 rate, U32 channels );
 
 #endif

@@ -14,22 +14,35 @@
 SEC_CODE void Video_Read_Start( struct VideoUnit *unit )
 {
 struct USB2_IORequest *ioreq;
+struct USB2_IORequest *last;
 
 U32 index;
 U32 slot;
+U32 previous;
 
 	if ( ( unit->Detached ) || ( ! unit->ReadActive ) )
 	{
 		return;
 	}
 
-	for ( slot = 0; slot < VIDEO_USB_READS; slot++ )
+	for ( ;; )
 	{
+		slot = unit->ReadTail;
 		ioreq = unit->Stream->IORequests[slot];
 
 		if ( ( unit->ReadPending & ( 1U << slot ) ) || ( ioreq == unit->ReadReady ) )
 		{
-			continue;
+			break;
+		}
+
+		previous = ( slot + VIDEO_USB_READS - 1 ) % VIDEO_USB_READS;
+		last = unit->Stream->IORequests[previous];
+
+		// Mark the new batch, leaving any retained packets before the gap usable.
+		if ( ( ! unit->ReadPending ) ||
+			( ( unit->ReadPending & ( 1U << previous ) ) && ( CheckIO( (PTR) last ) ) ) )
+		{
+			unit->ReadGaps |= 1U << slot;
 		}
 
 		ioreq->io_Command = CMD_READ;
@@ -52,6 +65,7 @@ U32 slot;
 		}
 
 		unit->ReadPending |= 1U << slot;
+		unit->ReadTail = ( slot + 1 ) % VIDEO_USB_READS;
 
 		SendIO( (PTR) ioreq );
 	}

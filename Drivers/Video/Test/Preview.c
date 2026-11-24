@@ -60,7 +60,6 @@ struct DataTypesIFace *IDataTypes;
 #define PREVIEW_OUTPUT_RATE 17
 #define PREVIEW_WIDTH 640
 #define PREVIEW_HEIGHT 480
-#define PREVIEW_PATH_SIZE 512
 
 enum SettingsClass
 {
@@ -423,7 +422,7 @@ StartFrame( struct IOStdReq *ioreq, struct TimeRequest *timer, U8 *frame, U32 si
 	ioreq->io_Length = size;
 	timer->Request.io_Command = TR_ADDREQUEST;
 	timer->Request.io_Flags = 0;
-	timer->Time.Seconds = 10;
+	timer->Time.Seconds = VIDEO_FRAME_TIMEOUT_SECONDS + 11;
 	timer->Time.Microseconds = 0;
 
 	SendIO( & timer->Request );
@@ -1227,8 +1226,8 @@ ConfirmRecordingFile( struct Window *window, const char *path )
 	confirm = (struct EasyStruct) {
 		.es_StructSize = sizeof( confirm ),
 		.es_Title = "USB2VideoTest",
-		.es_TextFormat = "Replace the existing file %s?",
-		.es_GadgetFormat = "Replace|Cancel"
+		.es_TextFormat = "%s already exists. Keep it and save the new recording separately?",
+		.es_GadgetFormat = "Keep both|Cancel"
 	};
 
 	return ( EasyRequest( window, & confirm, NULL, path ) != 0 );
@@ -1680,6 +1679,9 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 	struct TimerIFace *clock;
 	struct PreviewAudio audio;
 	struct PreviewAvi avi;
+	struct PreviewRecording videoFile;
+	struct PreviewRecording audioFile;
+	enum PreviewRecordingResult videoResult;
 
 	U8 *frame;
 	U8 *spare;
@@ -1702,6 +1704,8 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 	S32 interrupted;
 	S32 timedout;
 	S32 recordVideo;
+	S32 saveVideo;
+	S32 saveAudio;
 	S32 stopError;
 	U16 input;
 
@@ -1717,7 +1721,11 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 	audio = (struct PreviewAudio) { 0 };
 	audio.Volume = preview->Volume;
 	avi = (struct PreviewAvi) { 0 };
-	recordVideo = preview->Video && preview->RecordVideo;
+	saveVideo = preview->Video && preview->RecordVideo;
+	saveAudio = preview->AudioCapture && preview->RecordAudio;
+	videoFile = (struct PreviewRecording) { 0 };
+	audioFile = (struct PreviewRecording) { 0 };
+	videoResult = PREVIEW_RECORD_EMPTY;
 	frame = NULL;
 	spare = NULL;
 	capacity = 0;
@@ -1731,6 +1739,13 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 		Printf( "Could not allocate video frame buffers.\n" );
 
 		return ( RETURN_FAIL );
+	}
+
+	recordVideo = saveVideo && PreviewRecording_Stage( & videoFile, preview->VideoPath, "video.avi" );
+
+	if ( saveAudio )
+	{
+		PreviewRecording_Stage( & audioFile, preview->AudioPath, "audio.wav" );
 	}
 
 	clock = NULL;
@@ -1755,10 +1770,10 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 		StartFrame( ioreq, timer, frame, format->MaxFrameSize );
 	}
 
-	if ( ( preview->AudioCapture ) && ( ( preview->Play ) || ( preview->RecordAudio ) ) )
+	if ( ( preview->AudioCapture ) && ( ( preview->Play ) || ( audioFile.Drawer[0] ) ) )
 	{
 		PreviewAudio_Start( & audio, & preview->Inputs, preview->Play,
-			& preview->Outputs, preview->RecordAudio ? preview->AudioPath : NULL );
+			& preview->Outputs, audioFile.Drawer[0] ? audioFile.Path : NULL );
 	}
 
 	if ( ( volumeSlider ) && ( ! audio.Output.Request ) )
@@ -1823,7 +1838,7 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 					format->VendorID, format->DeviceID, format->Format == VIDEO_FORMAT_MJPEG ? "MJPEG" : "YUY2",
 					format->Width, format->Height, format->FrameInterval );
 
-				if ( timedout )
+				if ( ( timedout ) || ( ioreq->io_Error == VIDEO_ERR_FRAME_TIMEOUT ) )
 				{
 					SetWindowTitles( window, "USB2VideoTest - Capture timed out", (CONST_STRPTR) -1 );
 
@@ -1868,15 +1883,15 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 				{
 					now = clock ? PreviewTime( clock ) : 0;
 
-					if ( ! PreviewAvi_Write( & avi, preview->VideoPath, format, ready, size, now ) )
+					if ( ! PreviewAvi_Write( & avi, videoFile.Path, format, ready, size, now ) )
 					{
-						PreviewAvi_Close( & avi, preview->VideoPath, format );
+						videoResult = PreviewAvi_Close( & avi, videoFile.Path, format );
 
 						recordVideo = FALSE;
 					}
 				}
 
-				if ( RenderPreviewFrame( preview, format, ready, size ) )
+				if ( ( failures < 3 ) && ( RenderPreviewFrame( preview, format, ready, size ) ) )
 				{
 					failures = 0;
 
@@ -1894,15 +1909,11 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 						}
 					}
 				}
-				else if ( ++failures == 3 )
+				else if ( ( failures < 3 ) && ( ++failures == 3 ) )
 				{
-					SetWindowTitles( window, "USB2VideoTest - Frame decode failed", (CONST_STRPTR) -1 );
-
-					FinishRequest( (PTR) ioreq );
-
-					FinishRequest( & timer->Request );
-
-					pending = FALSE;
+					SetWindowTitles( window, recordVideo ?
+						"USB2VideoTest - Preview unavailable, recording AVI" :
+						"USB2VideoTest - Preview unavailable", (CONST_STRPTR) -1 );
 
 					if ( format->Format == VIDEO_FORMAT_MJPEG )
 					{
@@ -1912,6 +1923,17 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 					{
 						Printf( "Could not display the YUY2 frames.\n" );
 					}
+				}
+
+				if ( ( failures == 3 ) && ( ! recordVideo ) )
+				{
+					FinishRequest( (PTR) ioreq );
+
+					FinishRequest( & timer->Request );
+
+					pending = FALSE;
+
+					SetWindowTitles( window, "USB2VideoTest - Video stopped", (CONST_STRPTR) -1 );
 				}
 			}
 		}
@@ -1923,6 +1945,13 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 			FinishRequest( & timer->Request );
 
 			pending = FALSE;
+
+			if ( ( recordVideo ) && ( ! ioreq->io_Error ) )
+			{
+				now = clock ? PreviewTime( clock ) : 0;
+
+				PreviewAvi_Write( & avi, videoFile.Path, format, frame, ioreq->io_Actual, now );
+			}
 		}
 		if ( ( streaming ) && ( ! pending ) )
 		{
@@ -1946,7 +1975,12 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 				Printf( "Could not stop the video stream (error %ld).\n", stopError );
 			}
 
-			PreviewAvi_Close( & avi, preview->VideoPath, format );
+			if ( recordVideo )
+			{
+				videoResult = PreviewAvi_Close( & avi, videoFile.Path, format );
+
+				recordVideo = FALSE;
+			}
 
 			streaming = FALSE;
 		}
@@ -1958,6 +1992,16 @@ RunPreview( struct Preview *preview, Object *capture, struct IOStdReq *ioreq,
 	}
 
 	PreviewAudio_Stop( & audio );
+
+	if ( saveVideo )
+	{
+		PreviewRecording_Finish( & videoFile, window, "AVI", videoResult );
+	}
+
+	if ( saveAudio )
+	{
+		PreviewRecording_Finish( & audioFile, window, "WAV", audio.RecordingResult );
+	}
 
 	FreeVec( frame );
 

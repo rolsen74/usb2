@@ -2,6 +2,8 @@
 #define USB2_VIDEO_TEST_PREVIEW_AUDIO_H
 
 #include "../../Audio/inc/AudioDevice.h"
+#include "PreviewRecording.h"
+#include "../../Audio/Test/Wav.h"
 
 #define PREVIEW_AUDIO_CHOICES ( AUDIO_MAX_UNITS - AUDIO_PLAYBACK_UNIT_BASE + 1 )
 #define PREVIEW_MONITOR_BUFFERS 3
@@ -46,6 +48,7 @@ struct PreviewAudio
 	struct MsgPort *Port;
 	struct PreviewAudioStream Input;
 	struct PreviewAudioStream Output;
+	struct AudioWavResampler MonitorResampler;
 
 	BPTR File;
 	const char *Path;
@@ -59,6 +62,8 @@ struct PreviewAudio
 	U32 Written;
 	U32 Volume;
 	S32 Record;
+	S32 WriteFailed;
+	enum PreviewRecordingResult RecordingResult;
 	S32 MonitorPrimed;
 };
 

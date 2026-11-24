@@ -43,7 +43,9 @@ The size menu shows **Default** above a separator, then the remaining sizes
 ordered by width and height. FPS choices run from lowest to highest. Changing
 size refreshes the rates for that size. Mode and size changes keep the
 previous values when offered and otherwise choose the closest available
-values. Use the updated `cls_Video.Driver` to query the camera default.
+values. The driver starts with the camera's default frame and interval for
+the preferred format when the camera accepts them. If that probe fails,
+**Default** uses the first mode negotiated successfully at attachment.
 
 **Audio Capture** enables the input selector. Check **Audio Output** to
 monitor the selected input through USB audio or AHI's configured unit 0.
@@ -68,8 +70,10 @@ choose a destination with its file picker. The default is
 `RAM:usb2video.avi`. The AVI contains the captured MJPEG or YUY2 frames.
 Playback uses the average captured frame rate when the timer is available.
 When **Save WAV** is also checked, audio goes to a separate WAV. Both files
-are finalized when you close the session window. AVI recording stops at
-the 2 GiB limit, and the tool asks before replacing existing files.
+are finalized when you close the session window. AVI capture continues if only
+the preview decoder fails. AVI recording stops at the 2 GiB limit. If the
+requested filename is occupied or publication fails, the tool keeps the
+finalized recording separately and displays its path.
 
 Live video, recording and monitoring can share an EHCI controller when the
 streams fit within its [periodic schedule](EHCI.md).
@@ -89,7 +93,8 @@ another selection or the next reconnect.
 Run `USB2VideoTest SAVE` from a Shell to capture 30 frames and save the last
 one as `RAM:usbvideo.jpg` (MJPEG) or `RAM:usbvideo.yuy2` (raw YUY2).
 Combine `MODE` and `SAVE` to capture in a selected mode.
-Each frame read times out after ten seconds.
+The driver allows ten seconds for an active read to produce a complete
+frame. A timed-out request reports zero frame bytes.
 If the tool cannot open a video unit, check that `cls_Video.Class` and `cls_Video.Driver`
 were installed before connecting the webcam, then reconnect it.
 
@@ -109,6 +114,8 @@ isochronous burst and Mult modes are unsupported.
 Video uses two USB read buffers while capturing. For high-speed isochronous
 input, EHCI can schedule the second batch immediately after the first.
 The video driver keeps unused packets from a completed batch for the next frame.
+After a known gap in the USB reads, it discards the partial frame and waits for
+a frame boundary.
 Stopping capture releases the USB read buffers and returns the isochronous
 interface to alternate setting 0. The selected mode is kept for the next start.
 Mode changes probe the camera while it is idle. Capture commits the negotiated

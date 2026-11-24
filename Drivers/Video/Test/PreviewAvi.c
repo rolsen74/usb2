@@ -210,6 +210,8 @@ PreviewAvi_Write( struct PreviewAvi *avi, const char *path, const struct VideoFo
 
 	if ( (U64) MAX( avi->End, AVI_HEADER_BYTES ) + extent + 8 + ( (U64) avi->Frames + 1 ) * 16 > AVI_FILE_LIMIT )
 	{
+		avi->WriteFailed = TRUE;
+
 		Printf( "AVI recording reached the file size limit.\n" );
 
 		return ( FALSE );
@@ -223,6 +225,8 @@ PreviewAvi_Write( struct PreviewAvi *avi, const char *path, const struct VideoFo
 
 		if ( ! index )
 		{
+			avi->WriteFailed = TRUE;
+
 			Printf( "Could not allocate the AVI frame index.\n" );
 
 			return ( FALSE );
@@ -238,6 +242,8 @@ PreviewAvi_Write( struct PreviewAvi *avi, const char *path, const struct VideoFo
 
 		if ( ! avi->File )
 		{
+			avi->WriteFailed = TRUE;
+
 			Printf( "Could not open %s for AVI recording.\n", path );
 
 			return ( FALSE );
@@ -247,6 +253,7 @@ PreviewAvi_Write( struct PreviewAvi *avi, const char *path, const struct VideoFo
 
 		if ( ! WriteHeader( avi, format, avi->End, FALSE ) )
 		{
+			avi->WriteFailed = TRUE;
 			Printf( "Could not write AVI headers to %s.\n", path );
 
 			return ( FALSE );
@@ -263,6 +270,8 @@ PreviewAvi_Write( struct PreviewAvi *avi, const char *path, const struct VideoFo
 		( Write( avi->File, frame, bytes ) != (S32) bytes ) ||
 		( ( bytes & 1 ) && ( Write( avi->File, & pad, 1 ) != 1 ) ) )
 	{
+		avi->WriteFailed = TRUE;
+
 		Printf( "AVI frame write failed for %s.\n", path );
 
 		return ( FALSE );
@@ -285,12 +294,15 @@ PreviewAvi_Write( struct PreviewAvi *avi, const char *path, const struct VideoFo
 
 // --
 
-void
+enum PreviewRecordingResult
 PreviewAvi_Close( struct PreviewAvi *avi, const char *path, const struct VideoFormat *format )
 {
 	U32 end;
 	S32 indexed;
 	S32 saved;
+	enum PreviewRecordingResult result;
+
+	result = avi->WriteFailed ? PREVIEW_RECORD_FAILED : PREVIEW_RECORD_EMPTY;
 
 	if ( avi->File )
 	{
@@ -313,19 +325,23 @@ PreviewAvi_Close( struct PreviewAvi *avi, const char *path, const struct VideoFo
 			saved = FALSE;
 		}
 
-		if ( saved )
-		{
-			Printf( "Saved %lu video frames to %s.\n", (unsigned long) avi->Frames, path );
-		}
-		else
+		if ( ! saved )
 		{
 			Printf( "Could not finalize %s.\n", path );
+
+			result = PREVIEW_RECORD_FAILED;
+		}
+		else if ( avi->Frames )
+		{
+			result = ( ( indexed ) && ( ! avi->WriteFailed ) ) ? PREVIEW_RECORD_SAVED : PREVIEW_RECORD_PARTIAL;
 		}
 	}
 
 	free( avi->Index );
 
 	*avi = (struct PreviewAvi) { 0 };
+
+	return ( result );
 }
 
 // --

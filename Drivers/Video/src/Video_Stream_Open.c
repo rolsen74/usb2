@@ -18,6 +18,7 @@ Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode )
 	struct USB2_DriverMessage *msg;
 
 	U32 speed;
+	U32 hcd;
 
 	msg = unit->StartMsg;
 	unit->Format = mode->Format;
@@ -25,6 +26,8 @@ Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode )
 	unit->FrameIndex = mode->FrameIndex;
 	unit->EndPoint = unit->BulkEndPoint;
 	unit->StreamAlt = 0;
+	unit->StreamInterval = 0;
+	unit->StreamPacketSize = 0;
 	unit->IsoPacketCount = 0;
 	unit->StreamConfigured = FALSE;
 
@@ -51,6 +54,12 @@ Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode )
 			( speed == USBSPEED_High ) )
 		{
 			unit->IsoPacketCount = VIDEO_ISO_MAX_PACKETS >> ( unit->StreamInterval - 1 );
+
+			if ( ( USB2_Attr_Get( msg->Function->FKT_ID, USB2Tag_Attr_HCDType,
+				& hcd, sizeof( hcd ) ) != sizeof( hcd ) ) || ( hcd == HCDTYPE_XHCI ) )
+			{
+				unit->IsoPacketCount = MIN( unit->IsoPacketCount, 254 );
+			}
 		}
 	}
 

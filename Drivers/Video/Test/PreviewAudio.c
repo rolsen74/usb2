@@ -14,7 +14,6 @@
 #include <proto/dos.h>
 #include <devices/ahi.h>
 #include <devices/usb2.h>
-#include "../../Audio/Test/Wav.h"
 #include "PreviewAudio.h"
 
 // --
@@ -368,10 +367,29 @@ CloseMonitor( struct PreviewAudio *audio )
 // --
 
 static void
+UpdateRecording( struct PreviewAudio *audio, U8 *buffer, U32 bytes );
+
+// --
+
+static S32
+ValidInput( const struct PreviewAudioStream *input, S32 error, U32 bytes )
+{
+	U32 frameBytes;
+
+	frameBytes = input->Format.Channels * 2;
+
+	return ( ( ( ! error ) || ( error == AUDIO_ERR_SHORT_READ ) ) && ( frameBytes ) &&
+		( bytes ) && ( bytes <= input->Frames * frameBytes ) && ( bytes % frameBytes == 0 ) );
+}
+
+// --
+
+static void
 FinishRecording( struct PreviewAudio *audio )
 {
 	U8 header[AUDIO_WAV_HEADER_SIZE];
 	S32 saved;
+	U32 end;
 
 	audio->Record = FALSE;
 
@@ -382,7 +400,15 @@ FinishRecording( struct PreviewAudio *audio )
 
 	Audio_Wav_Header( header, audio->Written, audio->Input.Format.SampleRate, audio->Input.Format.Channels );
 
-	saved = ( ChangeFilePosition( audio->File, 0, OFFSET_BEGINNING ) ) &&
+	end = AUDIO_WAV_HEADER_SIZE + audio->Written;
+
+	if ( GetFileSize( audio->File ) != end )
+	{
+		ChangeFileSize( audio->File, end, OFFSET_BEGINNING );
+	}
+
+	saved = ( GetFileSize( audio->File ) == end ) &&
+		( ChangeFilePosition( audio->File, 0, OFFSET_BEGINNING ) ) &&
 		( Write( audio->File, header, sizeof( header ) ) == sizeof( header ) );
 
 	if ( ! Close( audio->File ) )
@@ -392,13 +418,17 @@ FinishRecording( struct PreviewAudio *audio )
 
 	audio->File = 0;
 
-	if ( saved )
+	if ( ! saved )
 	{
-		Printf( "Saved %lu audio bytes to %s.\n", audio->Written, audio->Path );
+		audio->RecordingResult = PREVIEW_RECORD_FAILED;
 	}
-	else
+	else if ( audio->Written )
 	{
-		Printf( "Could not finalize %s.\n", audio->Path );
+		audio->RecordingResult = audio->WriteFailed ? PREVIEW_RECORD_PARTIAL : PREVIEW_RECORD_SAVED;
+	}
+	else if ( audio->WriteFailed )
+	{
+		audio->RecordingResult = PREVIEW_RECORD_FAILED;
 	}
 }
 
@@ -407,7 +437,31 @@ FinishRecording( struct PreviewAudio *audio )
 void
 PreviewAudio_Stop( struct PreviewAudio *audio )
 {
-	CloseAudioStream( & audio->Input );
+	struct PreviewAudioStream *input;
+
+	S32 error;
+	U32 bytes;
+
+	input = & audio->Input;
+
+	if ( ( input->Request ) && ( input->Pending ) )
+	{
+		if ( ! CheckIO( (PTR) input->Request ) )
+		{
+			AbortIO( (PTR) input->Request );
+		}
+
+		error = WaitIO( (PTR) input->Request );
+		input->Pending = FALSE;
+		bytes = input->Request->io_Actual;
+
+		if ( ValidInput( input, error, bytes ) )
+		{
+			UpdateRecording( audio, input->Buffer, bytes );
+		}
+	}
+
+	CloseAudioStream( input );
 
 	if ( audio->ShortReads )
 	{
@@ -624,6 +678,7 @@ UpdateRecording( struct PreviewAudio *audio, U8 *buffer, U32 bytes )
 		if ( ! audio->File )
 		{
 			audio->Record = FALSE;
+			audio->RecordingResult = PREVIEW_RECORD_FAILED;
 
 			Printf( "Could not start recording to %s.\n", audio->Path );
 
@@ -646,6 +701,8 @@ UpdateRecording( struct PreviewAudio *audio, U8 *buffer, U32 bytes )
 
 	if ( written != (S32) bytes )
 	{
+		audio->WriteFailed = TRUE;
+
 		Printf( "Audio recording stopped after a write failure or WAV size limit.\n" );
 
 		FinishRecording( audio );
@@ -784,14 +841,13 @@ QueueMonitorAudio( struct PreviewAudio *audio, U8 *input, U32 bytes )
 		samples.Rate = audio->Input.Format.SampleRate;
 		samples.Channels = audio->Input.Format.Channels;
 		samples.Frames = bytes / ( samples.Channels * 2 );
-		frames = ( (U64) samples.Frames * output->Format.SampleRate + samples.Rate / 2 ) / samples.Rate;
+		frames = Audio_Wav_ConvertBlock( & audio->MonitorResampler, & samples, buffer,
+			output->Format.SampleRate, output->Format.Channels );
 
 		if ( ! frames )
 		{
 			return;
 		}
-
-		Audio_Wav_Convert( & samples, buffer, frames, output->Format.SampleRate, output->Format.Channels );
 
 		bytes = frames * output->Format.Channels * 2;
 	}
@@ -888,8 +944,7 @@ PreviewAudio_Update( struct PreviewAudio *audio )
 	bytes = input->Request->io_Actual;
 	wanted = input->Frames * input->Format.Channels * 2;
 
-	if ( ( ( error ) && ( error != AUDIO_ERR_SHORT_READ ) ) || ( ! bytes ) ||
-		( bytes > wanted ) || ( bytes % ( input->Format.Channels * 2 ) ) )
+	if ( ! ValidInput( input, error, bytes ) )
 	{
 		Printf( "Preview audio input stopped (error %ld, %lu bytes).\n", error, bytes );
 

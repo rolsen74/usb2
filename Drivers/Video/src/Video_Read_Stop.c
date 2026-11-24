@@ -44,6 +44,9 @@ Video_Read_Stop( struct VideoUnit *unit )
 	}
 
 	unit->ReadPending = 0;
+	unit->ReadHead = 0;
+	unit->ReadTail = 0;
+	unit->ReadGaps = 0;
 	unit->ReadReady = NULL;
 	unit->ReadPacket = 0;
 	unit->FrameUsed = 0;

@@ -16,8 +16,14 @@ SEC_CODE void Video_Begin( struct VideoUnit *unit )
 struct IOStdReq *ioreq;
 struct VideoMode mode;
 
-	while(( ioreq = (PTR) GetMsg( unit->BeginPort ) ))
+U32 budget;
+
+	budget = 16;
+
+	while ( ( budget ) && ( ioreq = (PTR) GetMsg( unit->BeginPort ) ) )
 	{
+		budget--;
+
 		Video_Abort( unit );
 
 		if ( ioreq->io_Flags & VIDEO_IO_ABORT )
@@ -46,12 +52,17 @@ struct VideoMode mode;
 			{
 				ioreq->io_Error = IOERR_BADLENGTH;
 			}
-			else if ( ! Video_Parse( unit, ioreq->io_Offset, & mode ) )
+			else if ( ( ioreq->io_Offset ) && ( ! Video_Parse( unit, ioreq->io_Offset, & mode ) ) )
 			{
 				ioreq->io_Error = IOERR_BADADDRESS;
 			}
 			else
 			{
+				if ( ! ioreq->io_Offset )
+				{
+					mode = unit->DefaultMode;
+				}
+
 				CopyMem( & mode.Format, ioreq->io_Data, sizeof( mode.Format ) );
 
 				ioreq->io_Actual = sizeof( mode.Format );
@@ -86,9 +97,22 @@ struct VideoMode mode;
 			}
 			else
 			{
+				unit->Timer->Request.io_Command = TR_ADDREQUEST;
+				unit->Timer->Time.Seconds = VIDEO_FRAME_TIMEOUT_SECONDS;
+				unit->Timer->Time.Microseconds = 0;
+				unit->TimerPending = TRUE;
+
+				SendIO( & unit->Timer->Request );
+
+				ObtainSemaphore( & unit->Base->Semaphore );
+
 				unit->ReadActive = ioreq;
 
-				Video_Read_Done( unit );
+				ReleaseSemaphore( & unit->Base->Semaphore );
+
+				Video_Read_Start( unit );
+
+				Signal( unit->StreamPort->mp_SigTask, 1UL << unit->StreamPort->mp_SigBit );
 				continue;
 			}
 		}
@@ -98,6 +122,11 @@ struct VideoMode mode;
 		}
 
 		ReplyMsg( (PTR) ioreq );
+	}
+
+	if ( ! budget )
+	{
+		Signal( unit->BeginPort->mp_SigTask, 1UL << unit->BeginPort->mp_SigBit );
 	}
 }
 

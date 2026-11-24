@@ -23,6 +23,7 @@ S32 notified;
 	waitmask = unit->Register->Stack_MsgPortBit;
 	waitmask |= 1UL << unit->BeginPort->mp_SigBit;
 	waitmask |= 1UL << unit->StreamPort->mp_SigBit;
+	waitmask |= 1UL << unit->TimerPort->mp_SigBit;
 	waitmask |= SIGBREAKF_CTRL_C;
 
 	while( ! unit->Detached )
@@ -51,6 +52,11 @@ S32 notified;
 		{
 			Video_Abort( unit );
 			Video_Begin( unit );
+		}
+
+		if ( ( unit->ReadActive ) && ( unit->TimerPending ) && ( CheckIO( & unit->Timer->Request ) ) )
+		{
+			Video_Read_Reply( unit, VIDEO_ERR_FRAME_TIMEOUT );
 		}
 
 		if ( ( unit->Stream ) && ( mask & ( 1UL << unit->StreamPort->mp_SigBit ) ) )

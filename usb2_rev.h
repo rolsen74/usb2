@@ -1,7 +1,7 @@
 #define VERSION	 1
-#define REVISION 104
+#define REVISION 105
 #define DATE	 "24.11.2026"
-#define VERS	 "usb2.kmod 1.104"
+#define VERS	 "usb2.kmod 1.105"
 #ifdef SIS163U_RX_TRACE
 #define VSTRING VERS " SiS163U RX trace (" DATE ")\r\n"
 #define VERSTAG "\0$VER: " VERS " SiS163U RX trace (" DATE ")"

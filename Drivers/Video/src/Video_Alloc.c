@@ -11,6 +11,79 @@
 
 // --
 
+static S32
+Video_Open_Default( struct VideoUnit *unit, const struct VideoMode *preferred )
+{
+	struct TimeVal time;
+	struct VideoMode mode;
+
+	U32 index;
+	U32 attempts;
+	S32 opened;
+	S8 error;
+
+	unit->ProbeClock = (PTR) GetInterface( (PTR) unit->Timer->Request.io_Device, "main", 1, NULL );
+
+	if ( ! unit->ProbeClock )
+	{
+		return ( FALSE );
+	}
+
+	unit->ProbeClock->GetUpTime( & time );
+
+	unit->ProbeDeadline = (U64) time.Seconds * 1000000 + time.Microseconds + 5000000;
+	mode = *preferred;
+	attempts = 0;
+	index = 0;
+	opened = FALSE;
+
+	for ( ;; )
+	{
+		opened = Video_Stream_Open( unit, & mode );
+
+		if ( opened )
+		{
+			unit->DefaultMode = mode;
+			unit->DefaultMode.Format = unit->Format;
+
+			break;
+		}
+
+		error = unit->Control->IORequests[0]->io_Error;
+
+		if ( ( error == USB2Err_Device_Detached ) || ( error == USB2Err_Host_Timeout ) ||
+			( error == USB2Err_Host_HostError ) || ( ++attempts == 4 ) )
+		{
+			break;
+		}
+
+		do
+		{
+			if ( ! Video_Parse( unit, ++index, & mode ) )
+			{
+				goto finished;
+			}
+		}
+		while ( ( mode.FormatIndex == preferred->FormatIndex ) && ( mode.FrameIndex == preferred->FrameIndex ) &&
+			( mode.Format.FrameInterval == preferred->Format.FrameInterval ) );
+
+		DebugPrintF( "USB Video: %04lx:%04lx trying format %lu frame %lu interval %lu\n",
+			mode.Format.VendorID, mode.Format.DeviceID, (U32) mode.FormatIndex, (U32) mode.FrameIndex,
+			mode.Format.FrameInterval );
+	}
+
+finished:
+	DropInterface( (PTR) unit->ProbeClock );
+
+	unit->ProbeClock = NULL;
+	unit->ProbeDeadline = 0;
+	unit->Control->IORequests[0]->io_TimeOut = 0;
+
+	return ( opened );
+}
+
+// --
+
 SEC_CODE struct VideoUnit *Video_Alloc( struct VideoContext *ctx, struct USB2_DriverMessage *msg )
 {
 struct VideoUnit *unit;
@@ -33,7 +106,7 @@ U32 index;
 	unit->UnitNr = VIDEO_MAX_UNITS;
 	unit->InterfaceNr = msg->InterfaceDescriptor->InterfaceNumber;
 
-	if ( ! Video_Parse( unit, 0, & mode ) )
+	if ( ( ! Video_Find_Endpoint( unit ) ) || ( ! Video_Parse( unit, 0, & mode ) ) )
 	{
 		goto bailout;
 	}
@@ -52,6 +125,27 @@ U32 index;
 		goto bailout;
 	}
 
+	unit->TimerPort = AllocSysObjectTags( ASOT_PORT, TAG_END );
+
+	if ( ! unit->TimerPort )
+	{
+		goto bailout;
+	}
+
+	unit->Timer = AllocSysObjectTags( ASOT_IOREQUEST,
+		ASOIOR_Size, sizeof( *unit->Timer ), ASOIOR_ReplyPort, unit->TimerPort, TAG_END );
+
+	if ( ! unit->Timer )
+	{
+		goto bailout;
+	}
+
+	if ( OpenDevice( TIMERNAME, UNIT_MICROHZ, & unit->Timer->Request, 0 ) )
+	{
+		goto bailout;
+	}
+
+	unit->TimerOpen = TRUE;
 	unit->Register = USB2_Reg_RegisterTags(
 		USB2Tag_Reg_DriverMessage, msg,
 		USB2Tag_Reg_Title, "USB Video",
@@ -65,10 +159,11 @@ U32 index;
 
 	unit->Control = unit->Register->Res_Control;
 
-	if ( ! Video_Stream_Open( unit, & mode ) )
+	if ( ! Video_Open_Default( unit, & mode ) )
 	{
 		goto bailout;
 	}
+
 
 	ObtainSemaphore( & base->Semaphore );
 

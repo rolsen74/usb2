@@ -417,7 +417,8 @@ struct USB2_IORequest
 	U8 io_Pad[2];
 
 	// Optional isochronous packet lengths. One entry per service interval.
-	// Buffers are spaced by the endpoint's maximum bytes per interval.
+	// Slot stride is the maximum packet size times the transaction count.
+	// Single-packet SuperSpeed endpoints can transfer fewer bytes per slot.
 	// For writes, supply each packet's nonzero length before submitting.
 	// io_Length includes the full stride of every packet slot for such writes.
 	// For reads, the array receives the lengths on successful completion.

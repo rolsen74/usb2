@@ -20,8 +20,12 @@ Video_Read_Done( struct VideoUnit *unit )
 	U32 count;
 	S32 consumed;
 	S8 error;
+	U32 budget;
+	U32 slot;
 
-	while ( unit->ReadActive )
+	budget = VIDEO_ISO_MAX_PACKETS;
+
+	while ( ( unit->ReadActive ) && ( budget ) )
 	{
 		if ( unit->ReadActive->io_Flags & VIDEO_IO_ABORT )
 		{
@@ -31,18 +35,42 @@ Video_Read_Done( struct VideoUnit *unit )
 			break;
 		}
 
+		if ( CheckIO( & unit->Timer->Request ) )
+		{
+			Video_Read_Reply( unit, VIDEO_ERR_FRAME_TIMEOUT );
+			break;
+		}
+
+		budget--;
 		ioreq = unit->ReadReady;
 
 		if ( ! ioreq )
 		{
-			ioreq = (PTR) GetMsg( unit->StreamPort );
+			slot = unit->ReadHead;
 
-			if ( ! ioreq )
+			if ( ! ( unit->ReadPending & ( 1U << slot ) ) )
 			{
 				break;
 			}
 
-			unit->ReadPending &= ~( 1U << ioreq->io_UserValue );
+			ioreq = unit->Stream->IORequests[slot];
+
+			if ( ! CheckIO( (PTR) ioreq ) )
+			{
+				break;
+			}
+
+			WaitIO( (PTR) ioreq );
+
+			unit->ReadPending &= ~( 1U << slot );
+			unit->ReadHead = ( slot + 1 ) % VIDEO_USB_READS;
+
+			if ( unit->ReadGaps & ( 1U << slot ) )
+			{
+				unit->ReadGaps &= ~( 1U << slot );
+
+				Video_Read_Payload( unit, NULL, 1 );
+			}
 
 			if ( ioreq->io_Error )
 			{
@@ -121,6 +149,11 @@ Video_Read_Done( struct VideoUnit *unit )
 	}
 
 	Video_Read_Start( unit );
+
+	if ( ( ! budget ) && ( unit->ReadActive ) )
+	{
+		Signal( unit->StreamPort->mp_SigTask, 1UL << unit->StreamPort->mp_SigBit );
+	}
 }
 
 // --

@@ -9,9 +9,14 @@
 #define DRIVERS_VIDEO_DEVICE_H
 
 #define VIDEO_DEVICE_NAME "usb2video.device"
+#define VIDEO_DEVICE_VERSION 1
+#define VIDEO_DEVICE_REVISION 1
+#define VIDEO_DEVICE_ID VIDEO_DEVICE_NAME " 1.1 (24.11.2026)"
+#define VIDEO_FRAME_TIMEOUT_SECONDS 10
+#define VIDEO_ERR_FRAME_TIMEOUT (-45)
 #define VIDEO_MAX_UNITS 16
 #define VIDEO_CMD_QUERY 0x8000
-// io_Offset selects a mode. Mode 0 is the default camera mode.
+// io_Offset selects a mode. Mode 0 selects the default negotiated at attachment.
 // GET_MODE returns a VideoFormat. SET_MODE takes no buffer.
 #define VIDEO_CMD_GET_MODE 0x8001
 #define VIDEO_CMD_SET_MODE 0x8002

@@ -15,6 +15,9 @@ SEC_CODE S32 Video_Control( struct VideoUnit *unit, U8 type, U8 code, U16 value,
 {
 struct USB2_IORequest *ioreq;
 struct USB2_SetupData *setup;
+struct TimeVal time;
+
+U64 now;
 
 	ioreq = unit->Control->IORequests[0];
 	setup = unit->Control->SetupData;
@@ -29,6 +32,22 @@ struct USB2_SetupData *setup;
 	ioreq->io_Length = length;
 	ioreq->io_SetupData = setup;
 	ioreq->io_SetupLength = sizeof( struct USB2_SetupData );
+
+	if ( unit->ProbeClock )
+	{
+		unit->ProbeClock->GetUpTime( & time );
+
+		now = (U64) time.Seconds * 1000000 + time.Microseconds;
+
+		if ( now >= unit->ProbeDeadline )
+		{
+			ioreq->io_Error = USB2Err_Host_Timeout;
+
+			return ( FALSE );
+		}
+
+		ioreq->io_TimeOut = unit->ProbeDeadline - now;
+	}
 
 	DoIO( (PTR) ioreq );
 

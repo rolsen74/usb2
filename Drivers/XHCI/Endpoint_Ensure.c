@@ -27,6 +27,7 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 	U32	  value;
 	U32	  packet;
 	U32	  burst;
+	U32	  esit;
 
 	usbbase = hn->hn_USBBase;
 	state	= hn->hn_HCD.XHCI.State;
@@ -37,6 +38,19 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 	if ( ( ! dci ) || ( dci > 31 ) || ( ! packet ) || ( packet > 1024 ) || ( burst > 2 ) )
 	{
 		return ( FALSE );
+	}
+
+	value = packet * ( burst + 1 );
+	esit = value;
+
+	if ( ( slot->Speed == USBSPEED_Super ) && ( ep->ep_Type == EPATT_Type_Isochronous ) )
+	{
+		esit = ep->ep_SS_IsoCapacity;
+
+		if ( ! esit )
+		{
+			return ( FALSE );
+		}
 	}
 
 	ring = &slot->EndPoints[dci];
@@ -105,8 +119,7 @@ XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, struct
 	endpoint[1] = LE_SWAP32 ( ( packet << 16 ) | ( burst << 8 ) | ( type << 3 )
 							  | ( ep->ep_Type == EPATT_Type_Isochronous ? 0 : ( 3 << 1 ) ) );
 	endpoint[2] = LE_SWAP32 ( ring->Physical | 1 );
-	value		= packet * ( burst + 1 );
-	endpoint[4] = LE_SWAP32 ( ( ep->ep_Type == EPATT_Type_Bulk ) ? value : ( value << 16 ) | value );
+	endpoint[4] = LE_SWAP32 ( ( ep->ep_Type == EPATT_Type_Bulk ) ? value : ( esit << 16 ) | value );
 
 	if ( ! XHCI_Command ( hn, slot->Input_Physical, 0, 0, XHCI_TRB_TYPE ( XHCI_TRB_CONFIGURE_EP ) | ( slot->Slot_ID << 24 ),
 						  NULL ) )

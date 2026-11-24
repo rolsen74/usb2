@@ -122,6 +122,12 @@ U64 raw_size;
 		}
 		else
 		{
+			if ( ( unit->Control->IORequests[0]->io_Error ) &&
+			( unit->Control->IORequests[0]->io_Error != USB2Err_Host_Stall ) )
+			{
+				return ( FALSE );
+			}
+
 			USB2_EPRes_Destall( unit->Control );
 
 			size = 26;
@@ -141,6 +147,12 @@ U64 raw_size;
 	if ( ! Video_Control( unit, REQTYPE_Read | REQTYPE_Class | REQTYPE_Interface,
 		0x81, 0x0100, probe, size ) )
 	{
+		if ( ( unit->Control->IORequests[0]->io_Error ) &&
+			( unit->Control->IORequests[0]->io_Error != USB2Err_Host_Stall ) )
+		{
+			return ( FALSE );
+		}
+
 		USB2_EPRes_Destall( unit->Control );
 
 		for( index = 0; index < sizeof( probe ); index++ )

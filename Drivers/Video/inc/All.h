@@ -13,6 +13,8 @@
 #include <proto/exec.h>
 #include <proto/usb2.h>
 #include <devices/newstyle.h>
+#include <devices/timer.h>
+#include <interfaces/timer.h>
 #include <dos/dos.h>
 
 #ifndef UNUSED
@@ -27,8 +29,8 @@
 
 #define VIDEO_DRIVER_NAME "cls_Video.Driver"
 #define VIDEO_DRIVER_VERSION 1
-#define VIDEO_DRIVER_REVISION 2
-#define VIDEO_DRIVER_ID VIDEO_DRIVER_NAME " 1.2 (23.11.2026)\r\n"
+#define VIDEO_DRIVER_REVISION 3
+#define VIDEO_DRIVER_ID VIDEO_DRIVER_NAME " 1.3 (24.11.2026)\r\n"
 
 #include "Video.h"
 

@@ -23,7 +23,11 @@ Video_Set_Mode( struct VideoUnit *unit, U32 number )
 		return ( IOERR_UNITBUSY );
 	}
 
-	if ( ! Video_Parse( unit, number, & requested ) )
+	if ( ! number )
+	{
+		requested = unit->DefaultMode;
+	}
+	else if ( ! Video_Parse( unit, number, & requested ) )
 	{
 		return ( IOERR_BADADDRESS );
 	}
