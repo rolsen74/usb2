@@ -49,7 +49,17 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 	#ifdef USB2_BIND_DEBUG
 	trace = ( number != USB2_ETH_BACKEND_UNIT ) &&
 		( request->io_Message.mn_Length >= sizeof( struct IOSana2Req ) );
+	#endif
 
+	if ( ( number == USB2_ETH_BACKEND_UNIT ) ||
+		( ( number == 0 ) && ( request->io_Message.mn_Length < sizeof( struct IOSana2Req ) ) ) )
+	{
+		IExec->ObtainSemaphore( & base->OpenLock );
+
+		goto metadata;
+	}
+
+	#ifdef USB2_BIND_DEBUG
 	if ( trace )
 	{
 		caller = IExec->FindTask( NULL );
@@ -59,8 +69,15 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 	}
 	#endif
 
-	if ( ( number != USB2_ETH_BACKEND_UNIT ) && ( ! USB2_FullBoot_Wait( usbbase ) ) )
+	if ( ! USB2_FullBoot_Wait( usbbase ) )
 	{
+		if ( ( number == 0 ) && ( usbbase->usb_FullBootState == USB2_FullBoot_Failed ) )
+		{
+			IExec->ObtainSemaphore( & base->OpenLock );
+
+			goto metadata;
+		}
+
 		#ifdef USB2_BIND_DEBUG
 		if ( trace )
 		{
@@ -72,12 +89,6 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 	}
 
 	IExec->ObtainSemaphore( & base->OpenLock );
-
-	if ( ( number == USB2_ETH_BACKEND_UNIT ) ||
-		( ( number == 0 ) && ( request->io_Message.mn_Length < sizeof( struct IOSana2Req ) ) ) )
-	{
-		goto metadata;
-	}
 
 	if ( ( number >= USB2_ETH_MAX_UNITS ) || ( request->io_Message.mn_Length < sizeof( struct IOSana2Req ) ) )
 	{
@@ -110,6 +121,11 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 	}
 
 	unit = base->Units[number];
+
+	if ( ( ! unit ) && ( number == 0 ) )
+	{
+		goto metadata;
+	}
 
 	if ( unit )
 	{
