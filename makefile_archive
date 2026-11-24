@@ -151,7 +151,7 @@ build_rtl8152: | build_dir_tree
 
 build_rtl8188: | build_dir_tree
 	@echo "Building RTL8188EU Wi-Fi Driver"
-	cd $(ROOTDIR)/Drivers/Ethernet/RTL8188 && \
+	cd $(ROOTDIR)/Drivers/Ethernet/RTL8188EU && \
 	$(MAKE) -f makefile BINDIR=bin clean && \
 	$(MAKE) -f makefile BINDIR=bin && \
 	$(MAKE) -f makefile BINDIR=bin strip && \
