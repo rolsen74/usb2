@@ -16,11 +16,20 @@ SEC_CODE void
 XHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask UNUSED )
 {
 	struct USBBase *		  usbbase;
+	struct XHCI_State * state;
 	struct RealRequest *	  req;
 	struct RealRequest *	  next;
 	struct RealFunctionNode * fn;
 
 	usbbase = hn->hn_USBBase;
+	state = hn->hn_HCD.XHCI.State;
+
+	if ( PCI_READLONG ( state->Operational + XHCI_USBSTS ) & XHCI_STS_CONTROLLER_ERROR )
+	{
+		USB2_HCD_RequestReset ( hn );
+
+		return;
+	}
 
 	XHCI_Event_Poll ( hn );
 
@@ -36,6 +45,11 @@ XHCI_Handler_HCD ( struct USB2_HCDNode * hn, U32 mask UNUSED )
 
 			FUNCTION_UNLOCK ( fn );
 		}
+	}
+
+	if ( hn->hn_TTClearPending )
+	{
+		HCD_TT_Complete ( hn );
 	}
 
 	ROOTHUB_HANDLE_CHANGE ( hn );

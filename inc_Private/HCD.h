@@ -69,6 +69,7 @@ struct HCDFunctions
 	S32 ( *Port_Clr_Suspend_Chg ) ( struct USB2_HCDNode * hn, U32 port );
 	S32 ( *Port_Clr_OverCurrent_Chg ) ( struct USB2_HCDNode * hn, U32 port );
 	S32 ( *Port_Clr_Reset_Chg ) ( struct USB2_HCDNode * hn, U32 port );
+	S32 ( *Port_Clr_Super_Change ) ( struct USB2_HCDNode * hn, U32 port, U32 feature );
 
 	S32 ( *Port_Set_Enable ) ( struct USB2_HCDNode * hn, U32 port );
 	S32 ( *Port_Set_Suspend ) ( struct USB2_HCDNode * hn, U32 port );
@@ -203,6 +204,8 @@ struct USB2_HCDNode
 	//	PTR								hn_SuperState;
 	struct USB2_HUBDesc * hn_HUB_Desc;		 // Root HUB
 	struct USB2_ASync	  hn_HUB_ASync;		 //
+	struct USB2_MsgPort hn_TTClearPort;
+	U32 hn_TTClearPending;
 	struct USB2_Header	  hn_HUB_Interrupts; // Root HUB
 	struct USB2_Signal	  hn_HUB_Signal;	 // Root HUB
 	U32					  hn_HUB_NumPorts;	 // Set by HCD driver
@@ -241,5 +244,9 @@ struct USB2_HCDNode
 
 S32 __HCD_Request_CanStart ( struct USB2_HCDNode * hn, struct RealRequest * ioreq );
 void USB2_HCD_RequestReset ( struct USB2_HCDNode * hn );
+
+S32 HCD_Clear_TT( struct USB2_HCDNode *hn, struct RealRequest *ioreq,
+	struct RealFunctionNode *hub, U32 address, U32 index );
+void HCD_TT_Complete( struct USB2_HCDNode *hn );
 
 #endif // INC_PRIVATE_HCD_H

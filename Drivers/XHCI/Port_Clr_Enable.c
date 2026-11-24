@@ -21,9 +21,14 @@ XHCI_Port_Clr_Enable ( struct USB2_HCDNode * hn, U32 port )
 
 	state = hn->hn_HCD.XHCI.State;
 
-	if ( ( ! port ) || ( port > state->Max_Ports ) )
+	if ( ( ! port ) || ( port > state->Max_Ports ) || ( ! state->Port[port].Major ) )
 	{
 		return ( USB2Err_Host_HostError );
+	}
+
+	if ( state->Port[port].Major == 3 )
+	{
+		return ( USB2Err_Host_Stall );
 	}
 
 	status = PCI_READLONG ( state->Operational + XHCI_PORTSC ( port ) );

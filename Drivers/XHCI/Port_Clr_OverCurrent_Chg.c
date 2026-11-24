@@ -21,7 +21,7 @@ XHCI_Port_Clr_OverCurrent_Chg ( struct USB2_HCDNode * hn, U32 port )
 
 	state = hn->hn_HCD.XHCI.State;
 
-	if ( ( ! port ) || ( port > state->Max_Ports ) )
+	if ( ( ! port ) || ( port > state->Max_Ports ) || ( ! state->Port[port].Major ) )
 	{
 		return ( USB2Err_Host_HostError );
 	}

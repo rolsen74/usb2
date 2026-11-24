@@ -174,6 +174,29 @@ HUB__Port_Attach( struct USBBase *usbbase, struct intern *in, U32 port )
 		return ( HUB_Attach_Deferred );
 	}
 
+	if ( hn->hn_HCDType == HCDTYPE_XHCI )
+	{
+		SEMAPHORE_OBTAIN( &usbbase->usb_LockSemaphore );
+
+		in->EnumEpoch = hn->hn_IOEpoch;
+
+		SEMAPHORE_RELEASE( &usbbase->usb_LockSemaphore );
+
+		in->ControlDeadline = HUB_Uptime( usbbase ) + 500000;
+		err = HUB__Port_Status_Get( usbbase, in, port, &status );
+		in->ControlDeadline = 0;
+
+		if ( err )
+		{
+			return ( HUB_Attach_Retry );
+		}
+
+		if ( HUB_Port_Is_Super( in, &status ) )
+		{
+			return ( HUB__Port_Attach_Super( usbbase, in, port ) );
+		}
+	}
+
 	if ( ! SEMAPHORE_ATTEMPT( &hn->hn_AddressZero ) )
 	{
 		return ( HUB_Attach_Deferred );

@@ -115,6 +115,16 @@ S32 err;
 				break;
 			}
 
+			case PORT_BH_RESET:
+			{
+				if ( ( hn->hn_HCDType != HCDTYPE_XHCI ) || ( ! hn->HCD_Functions.Port_Get_Status ) ||
+					( ! ( hn->HCD_Functions.Port_Get_Status( hn, port ) & HUBF_Status_Super_Speed ) ) )
+				{
+					break;
+				}
+				// xHCI selects warm reset from the root port's protocol.
+				__attribute__((fallthrough));
+			}
 			case PORT_RESET:
 			{
 				if ( hn->HCD_Functions.Port_Set_Reset )

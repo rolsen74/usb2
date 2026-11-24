@@ -182,7 +182,7 @@ S32 draining;
 		}
 
 		reconnect = ( fn ) && ( stat.wPortStatus & PORTSTATF_Connection ) &&
-			( in->Function->fkt_Speed < USBSPEED_Super );
+			( ! HUB_Port_Is_Super( in, &stat ) );
 
 		if ( fn )
 		{
@@ -320,7 +320,7 @@ S32 draining;
 		}
 	}
 
-	if ( in->Function->fkt_Speed >= USBSPEED_Super )
+	if ( HUB_Port_Is_Super( in, &stat ) )
 	{
 		if ( stat.wPortChange & PORTCHGF_BH_PORT_RESET )
 		{

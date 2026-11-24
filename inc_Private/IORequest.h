@@ -48,11 +48,13 @@ struct __xhci
 {
 	struct XHCI_Slot *	 Slot;
 	U32					 EndPoint;
+	U32					 First_TRB;
 	U32					 Last_TRB;
 	U32					 Actual;
 	U32					 Completion;
 	U32					 Finished;
 	U32					 Short_Packet;
+	U32					 Iso_Lost;
 	struct XHCI_Buffer * Buffers;
 };
 

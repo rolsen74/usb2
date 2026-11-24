@@ -139,14 +139,11 @@ S32 retval;
 		goto bailout;
 	}
 
-	if ( HUB_LEGACY( in ) )
-	{
-		in->PortWork = MEM_ALLOCVEC( sizeof( *in->PortWork ) * ( in->Ports + 1 ), TRUE );
+	in->PortWork = MEM_ALLOCVEC( sizeof( *in->PortWork ) * ( in->Ports + 1 ), TRUE );
 
-		if ( ! in->PortWork )
-		{
-			goto bailout;
-		}
+	if ( ! in->PortWork )
+	{
+		goto bailout;
 	}
 
 	// ---

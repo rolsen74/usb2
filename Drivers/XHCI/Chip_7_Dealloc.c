@@ -31,6 +31,8 @@ XHCI_Chip_Dealloc ( struct USB2_HCDNode * hn )
 		PCI_WRITEBYTE ( state->Legacy_Offset + 3, 0 );
 	}
 
+	MSGPORT_FREE ( &hn->hn_TTClearPort );
+
 	TASK_FREESIGNAL ( &state->Signal_Event );
 	MEM_FREEVEC ( state );
 	hn->hn_HCD.XHCI.State = NULL;

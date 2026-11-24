@@ -359,8 +359,6 @@ struct _EHCI
 
 	struct EHCI_QH *				ASync_Head;
 	struct EHCI_TD *				ShortStop;
-	struct USB2_MsgPort				TTClearPort;
-	U32								TTClearPending;
 
 	U8 *							PortResetChange;
 

@@ -35,6 +35,7 @@ struct XHCI_TRB
 struct XHCI_Ring
 {
 	struct XHCI_TRB * TRBs;
+	struct XHCI_TRB * Unpublished;
 	U32 Physical;
 	U32 Enqueue;
 	U32 Dequeue;
@@ -51,6 +52,8 @@ struct XHCI_Buffer
 	U32 Length;
 	U32 Actual;
 	U32 TRB_Physical;
+	U32 Done;
+	U32 Failed;
 };
 
 struct XHCI_Slot
@@ -68,6 +71,14 @@ struct XHCI_Slot
 	U32 EP0_Packet;
 	U32 Hub_Configured;
 	struct XHCI_Ring EndPoints[32];
+};
+
+struct XHCI_PortProtocol
+{
+	U8 Major;
+	U8 Slot_Type;
+	U8 Speed[16]; // Stack speed plus one, or zero for an unknown ID.
+	U8 Speed_ID[4];
 };
 
 struct XHCI_State
@@ -99,6 +110,9 @@ struct XHCI_State
 	struct XHCI_Slot * Slots[256];
 	struct USB2_Signal Signal_Event;
 	U8 Port_Reset_Change[256];
+	struct XHCI_PortProtocol Port[256];
+	U32 Iso_Empty_Ring;
+	U32 Iso_Missed_Service;
 };
 
 /***************************************************************************/

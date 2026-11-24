@@ -63,7 +63,7 @@ HUB__Port_Function_Address( struct USBBase *usbbase, struct intern *in, U32 spee
 	fn->fkt_PortNr = port;
 	fn->fkt_Parent = in->Function;
 	fn->fkt_EnumEpoch = in->EnumEpoch;
-	fn->fkt_EnumFenced = HUB_LEGACY( in );
+	fn->fkt_EnumFenced = TRUE;
 
 	*address = HCD_ADDR_OBTAIN( in->HCDNode, fn );
 
@@ -90,20 +90,14 @@ HUB__Port_Function_Configure( struct USBBase *usbbase, struct intern *in, struct
 
 	if ( ! FUNCTION_INIT( fn, &in->ASync_Drivers ) )
 	{
-		if ( HUB_LEGACY( in ) )
-		{
-			usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu descriptor initialization failed at address %lu\n",
-				in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, port, fn->fkt_Address );
-		}
+		usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu descriptor initialization failed at address %lu\n",
+			in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, port, fn->fkt_Address );
 
 		return ( FALSE );
 	}
 
-	if ( HUB_LEGACY( in ) )
-	{
-		// Budget this hub request independently of the child's descriptor reads.
-		in->ControlDeadline = HUB_Uptime( usbbase ) + 500000;
-	}
+	// Budget this hub request independently of the child's descriptor reads.
+	in->ControlDeadline = HUB_Uptime( usbbase ) + 500000;
 
 	err = HUB__Port_Status_Get( usbbase, in, port, status );
 
@@ -113,19 +107,18 @@ HUB__Port_Function_Configure( struct USBBase *usbbase, struct intern *in, struct
 		( ! ( status->wPortStatus & PORTSTATF_Connection ) ) || ( status->wPortChange & PORTCHGF_Connection ) ||
 		( ! HUB_Can_Enumerate( usbbase, in ) ) || ( FUNCTION_LOCK( fn ) != LSTAT_Okay ) )
 	{
-		if ( HUB_LEGACY( in ) )
-		{
-			usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu post-init status rejected (%ld), status $%04lx change $%04lx\n",
-				in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, port, err,
-				(U32) status->wPortStatus, (U32) status->wPortChange );
-		}
+		usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu post-init status rejected (%ld), status $%04lx change $%04lx\n",
+			in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, port, err,
+			(U32) status->wPortStatus, (U32) status->wPortChange );
 
 		return ( FALSE );
 	}
 
 	SEMAPHORE_OBTAIN( &usbbase->usb_LockSemaphore );
 
-	published = ( ! HUB_LEGACY( in ) ) || ( in->EnumEpoch == in->HCDNode->hn_IOEpoch );
+	published = ( in->HCDNode->hn_AcceptIO ) &&
+		( in->EnumEpoch == in->HCDNode->hn_IOEpoch ) &&
+		( fn->fkt_HCDGeneration == in->HCDNode->hn_Generation );
 
 	if ( published )
 	{
@@ -151,7 +144,7 @@ HUB__Port_Function_Configure( struct USBBase *usbbase, struct intern *in, struct
 
 	if ( published )
 	{
-		if ( ( HUB_LEGACY( in ) ) && ( fn->fkt_DeviceDescriptor ) )
+		if ( fn->fkt_DeviceDescriptor )
 		{
 			usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu enumerated %04lx:%04lx at address %lu, speed %lu\n",
 				in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, port,

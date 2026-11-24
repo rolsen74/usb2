@@ -105,10 +105,13 @@ XHCI_Chip_Init ( struct USB2_HCDNode * hn )
 	PCI_WRITELONG ( state->Operational + XHCI_CRCR, state->Commands.Physical | 1 );
 	PCI_WRITELONG ( state->Operational + XHCI_CRCR + 4, 0 );
 	PCI_WRITELONG ( state->Runtime + XHCI_ERSTSZ, 1 );
-	PCI_WRITELONG ( state->Runtime + XHCI_ERSTBA, state->ERST_Physical );
-	PCI_WRITELONG ( state->Runtime + XHCI_ERSTBA + 4, 0 );
 	PCI_WRITELONG ( state->Runtime + XHCI_ERDP, state->Events.Physical );
 	PCI_WRITELONG ( state->Runtime + XHCI_ERDP + 4, 0 );
+
+	XHCI_Sync ();
+
+	PCI_WRITELONG ( state->Runtime + XHCI_ERSTBA, state->ERST_Physical );
+	PCI_WRITELONG ( state->Runtime + XHCI_ERSTBA + 4, 0 );
 	PCI_WRITELONG ( state->Runtime + XHCI_IMOD, 0 );
 
 	return ( TRUE );

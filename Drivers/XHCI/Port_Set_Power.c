@@ -26,6 +26,11 @@ XHCI_Port_Set_Power ( struct USB2_HCDNode * hn, U32 port )
 		return ( USB2Err_Host_HostError );
 	}
 
+	if ( ! state->Port[port].Major )
+	{
+		return ( USB2Err_NoError );
+	}
+
 	status = PCI_READLONG ( state->Operational + XHCI_PORTSC ( port ) );
 	PCI_WRITELONG ( state->Operational + XHCI_PORTSC ( port ), XHCI_PORT_WRITE_SAFE ( status ) | XHCI_PORT_POWER );
 

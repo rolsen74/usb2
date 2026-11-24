@@ -19,6 +19,7 @@ XHCI_Ring_Queue ( struct XHCI_Ring * ring, U32 low, U32 high, U32 status, U32 co
 
 	U32 physical;
 	U32 index;
+	U32 cycle;
 
 	index = ring->Enqueue;
 	trb = &ring->TRBs[index];
@@ -26,7 +27,15 @@ XHCI_Ring_Queue ( struct XHCI_Ring * ring, U32 low, U32 high, U32 status, U32 co
 	trb->Parameter_Low = LE_SWAP32 ( low );
 	trb->Parameter_High = LE_SWAP32 ( high );
 	trb->Status = LE_SWAP32 ( status );
-	trb->Control = LE_SWAP32 ( control | ring->Cycle );
+	cycle = ring->Cycle;
+
+	if ( ! ring->Unpublished )
+	{
+		ring->Unpublished = trb;
+		cycle ^= XHCI_TRB_CYCLE;
+	}
+
+	trb->Control = LE_SWAP32 ( control | cycle );
 
 	index++;
 

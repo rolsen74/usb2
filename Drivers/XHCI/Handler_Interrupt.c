@@ -27,7 +27,7 @@ XHCI_Handler_Interrupt ( struct ExceptionContext * context UNUSED, struct ExecBa
 	state = hn->hn_HCD.XHCI.State;
 	status = PCI_READLONG ( state->Operational + XHCI_USBSTS );
 
-	if ( ! ( status & ( XHCI_STS_EVENT | XHCI_STS_PORT_CHANGE | XHCI_STS_HOST_ERROR ) ) )
+	if ( ! ( status & ( XHCI_STS_EVENT | XHCI_STS_PORT_CHANGE | XHCI_STS_HOST_ERROR | XHCI_STS_CONTROLLER_ERROR ) ) )
 	{
 		return ( FALSE );
 	}
@@ -36,7 +36,7 @@ XHCI_Handler_Interrupt ( struct ExceptionContext * context UNUSED, struct ExecBa
 	PCI_WRITELONG ( state->Runtime + XHCI_IMAN, XHCI_IMAN_PENDING | XHCI_IMAN_ENABLE );
 	mask = state->Signal_Event.sig_Signal_Mask;
 
-	if ( status & XHCI_STS_HOST_ERROR )
+	if ( status & ( XHCI_STS_HOST_ERROR | XHCI_STS_CONTROLLER_ERROR ) )
 	{
 		mask |= hn->HCD_Restart_Chip.sig_Signal_Mask;
 	}

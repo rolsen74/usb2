@@ -238,6 +238,7 @@ SRCS		+= Stack/HCD/Controllers_Stop.c
 SRCS		+= Stack/HCD/Free.c
 SRCS		+= Stack/HCD/Lock.c
 SRCS		+= Stack/HCD/Reply.c
+SRCS		+= Stack/HCD/TTClear.c
 SRCS		+= Stack/HCD/Restart_EndPoint.c
 SRCS		+= Stack/HCD/Transfer_Check.c
 SRCS		+= Stack/HCD/Transfer_Remove.c

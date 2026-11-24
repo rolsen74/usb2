@@ -88,7 +88,7 @@ S32 retval;
 		goto bailout;
 	}
 
-	if ( ! MSGPORT_INIT( & hn->hn_HCD.EHCI.TTClearPort ) )
+	if ( ! MSGPORT_INIT( & hn->hn_TTClearPort ) )
 	{
 		goto bailout;
 	}
@@ -144,7 +144,7 @@ S32 retval;
 		hn->hn_HCD.EHCI.Signal_EI.sig_Signal_Mask	|
 		hn->hn_HCD.EHCI.Signal_INT.sig_Signal_Mask	|
 		hn->hn_HCD.EHCI.Signal_IAA.sig_Signal_Mask |
-		hn->hn_HCD.EHCI.TTClearPort.ump_Signal.sig_Signal_Mask;
+		hn->hn_TTClearPort.ump_Signal.sig_Signal_Mask;
 
 	// --
 

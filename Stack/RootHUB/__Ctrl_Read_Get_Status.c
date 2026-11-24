@@ -151,7 +151,10 @@ U16 val;
 				(( status &	HUBF_Chg_Enable )		? PORTCHGF_Enable		: 0 ) |
 				(( status &	HUBF_Chg_Suspend )		? PORTCHGF_Suspend		: 0 ) |
 				(( status &	HUBF_Chg_Over_Current )	? PORTCHGF_Over_Current : 0 ) |
-				(( status &	HUBF_Chg_Reset )			? PORTCHGF_Reset		: 0 ) ;
+				(( status & HUBF_Chg_Reset ) ? PORTCHGF_Reset : 0 ) |
+				(( status & HUBF_Chg_Warm_Reset ) ? PORTCHGF_BH_PORT_RESET : 0 ) |
+				(( status & HUBF_Chg_Link_State ) ? PORTCHGF_PORT_LINK_STATE : 0 ) |
+				(( status & HUBF_Chg_Config_Error ) ? PORTCHGF_PORT_CONFIG_ERROR : 0 );
 
 		portstat->wPortChange = LE_SWAP16( val );
 

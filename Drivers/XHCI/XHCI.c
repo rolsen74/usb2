@@ -36,6 +36,7 @@ SEC_RODATA const struct HCDFunctions XHCIFunctions = {
 
 	.Transfer_Check	 = XHCI_Transfer_Check,
 	.Transfer_Free	 = XHCI_Transfer_Free,
+	.Recover_Request = XHCI_Clear_TT,
 	.Reset_Interface = XHCI_Endpoint_Drop,
 
 	// -- Root HUB
@@ -46,6 +47,7 @@ SEC_RODATA const struct HCDFunctions XHCIFunctions = {
 	.Port_Clr_Enable_Chg	  = XHCI_Port_Clr_Enable_Chg,
 	.Port_Clr_OverCurrent_Chg = XHCI_Port_Clr_OverCurrent_Chg,
 	.Port_Clr_Reset_Chg		  = XHCI_Port_Clr_Reset_Chg,
+	.Port_Clr_Super_Change    = XHCI_Port_Clr_Super_Change,
 	.Port_Get_Status		  = XHCI_Port_Get_Status,
 	.Port_Set_Reset			  = XHCI_Port_Set_Reset,
 	.Port_Set_Power			  = XHCI_Port_Set_Power,

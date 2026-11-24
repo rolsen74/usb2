@@ -94,7 +94,7 @@ SEC_CODE void EHCI_Chip_Dealloc( struct USB2_HCDNode *hn )
 
 	USBDEBUG( "EHCI_Chip_Dealloc : 4 :" );
 
-	MSGPORT_FREE( & hn->hn_HCD.EHCI.TTClearPort );
+	MSGPORT_FREE( & hn->hn_TTClearPort );
 
 	TASK_FREESIGNAL( & hn->hn_HCD.EHCI.Signal_IAA );
 	TASK_FREESIGNAL( & hn->hn_HCD.EHCI.Signal_INT );

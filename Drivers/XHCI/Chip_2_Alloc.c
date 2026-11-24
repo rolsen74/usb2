@@ -21,12 +21,12 @@ XHCI_Chip_Alloc ( struct USB2_HCDNode * hn )
 	usbbase = hn->hn_USBBase;
 	state = hn->hn_HCD.XHCI.State;
 
-	if ( ! TASK_ALLOCSIGNAL ( &state->Signal_Event ) )
+	if ( ( ! TASK_ALLOCSIGNAL ( &state->Signal_Event ) ) || ( ! MSGPORT_INIT ( &hn->hn_TTClearPort ) ) )
 	{
 		return ( FALSE );
 	}
 
-	hn->HCD_Mask = state->Signal_Event.sig_Signal_Mask;
+	hn->HCD_Mask = state->Signal_Event.sig_Signal_Mask | hn->hn_TTClearPort.ump_Signal.sig_Signal_Mask;
 
 	return ( TRUE );
 }

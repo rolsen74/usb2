@@ -24,11 +24,16 @@ XHCI_Command ( struct USB2_HCDNode * hn, U32 low, U32 high, U32 status, U32 cont
 	usbbase = hn->hn_USBBase;
 	state->Command_Done = FALSE;
 	state->Command_Physical = XHCI_Ring_Queue ( &state->Commands, low, high, status, control );
-	XHCI_Sync ();
+	XHCI_Ring_Publish ( &state->Commands );
 	PCI_WRITELONG ( state->Doorbells, 0 );
 
 	for ( count = 0; count < 1000; count++ )
 	{
+		if ( PCI_READLONG ( state->Operational + XHCI_USBSTS ) & XHCI_STS_CONTROLLER_ERROR )
+		{
+			break;
+		}
+
 		XHCI_Event_Poll ( hn );
 
 		if ( state->Command_Done )

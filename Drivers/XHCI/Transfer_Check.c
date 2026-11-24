@@ -15,11 +15,7 @@
 SEC_CODE S32
 XHCI_Transfer_Check ( struct USB2_HCDNode * hn, struct RealRequest * req )
 {
-	struct XHCI_Ring * ring;
-	struct XHCI_Slot * slot;
-
 	U32 completion;
-	U32 control;
 
 
 	if ( ! req->req_HCD.XHCI.Finished )
@@ -44,11 +40,11 @@ XHCI_Transfer_Check ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return ( TRUE );
 	}
 
-	if ( completion == 6 )
+	if ( completion == XHCI_CC_STALL )
 	{
 		req->req_Public.io_Error = USB2Err_Host_Stall;
 	}
-	else if ( completion == 3 )
+	else if ( completion == XHCI_CC_BABBLE )
 	{
 		req->req_Public.io_Error = USB2Err_Host_Overflow;
 	}
@@ -57,16 +53,7 @@ XHCI_Transfer_Check ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		req->req_Public.io_Error = USB2Err_Host_HostError;
 	}
 
-	slot = req->req_HCD.XHCI.Slot;
-	ring = &slot->EndPoints[req->req_HCD.XHCI.EndPoint];
-	control = ( slot->Slot_ID << 24 ) | ( req->req_HCD.XHCI.EndPoint << 16 );
-
-	if ( ( ! XHCI_Command ( hn, 0, 0, 0, XHCI_TRB_TYPE ( XHCI_TRB_RESET_EP ) | control, NULL ) ) ||
-		( ! XHCI_Command ( hn, ( ring->Physical + ring->Enqueue * sizeof ( struct XHCI_TRB ) ) | ring->Cycle,
-		0, 0, XHCI_TRB_TYPE ( XHCI_TRB_SET_DEQUEUE ) | control, NULL ) ) )
-	{
-		USB2_HCD_RequestReset ( hn );
-	}
+	XHCI_Endpoint_Recover ( hn, req, completion );
 
 	return ( TRUE );
 }

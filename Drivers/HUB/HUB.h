@@ -92,7 +92,17 @@ struct intern
 
 #define HUB_DELAY_MS(x)				HUB_Wait_ms(usbbase,in,x)
 
-#define HUB_LEGACY( in ) ( (in)->HCDNode->hn_HCDType != HCDTYPE_XHCI )
+static inline U32
+HUB_Port_Is_Super( struct intern *in, const struct USB2_PortStatus *status )
+{
+	if ( in->Function->fkt_Tier )
+	{
+		return ( in->Function->fkt_Speed >= USBSPEED_Super );
+	}
+
+	return ( ( in->HCDNode->hn_HCDType == HCDTYPE_XHCI ) &&
+		( status->wPortStatus & PORTSTATF_Super_Speed ) );
+}
 
 enum HUB_AttachResult
 {
@@ -116,6 +126,7 @@ SEC_CODE U32 HUB__Port_Probe_Holds( struct USBBase *usbbase, struct intern *in, 
 SEC_CODE struct RealFunctionNode *HUB__Port_Function_Address( struct USBBase *usbbase, struct intern *in, U32 speed, U32 port, U32 *address );
 SEC_CODE U32 HUB__Port_Function_Configure( struct USBBase *usbbase, struct intern *in, struct RealFunctionNode *fn, U32 port, struct USB2_PortStatus *status );
 SEC_CODE void HUB__Port_Function_Discard( struct USBBase *usbbase, struct intern *in, struct RealFunctionNode *fn );
+SEC_CODE enum HUB_AttachResult HUB__Port_Attach_Super( struct USBBase *usbbase, struct intern *in, U32 port );
 SEC_CODE enum HUB_AttachResult HUB__Port_Attach( struct USBBase *usbbase, struct intern *in, U32 port );
 
 #define USB_HUB_MAX_DEPTH			5

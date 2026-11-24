@@ -47,6 +47,8 @@
 #define XHCI_STS_NOT_READY	  0x00000800UL
 #define XHCI_IMAN_PENDING	  0x00000001UL
 #define XHCI_IMAN_ENABLE	  0x00000002UL
+#define XHCI_STS_CONTROLLER_ERROR 0x00001000UL
+
 #define XHCI_ERDP_BUSY		  0x00000008UL
 
 #define XHCI_PORT_CONNECTED	  0x00000001UL
@@ -55,6 +57,8 @@
 #define XHCI_PORT_RESET		  0x00000010UL
 #define XHCI_PORT_POWER		  0x00000200UL
 #define XHCI_PORT_SPEED( x )  ( ( ( x ) >> 10 ) & 15 )
+#define XHCI_PORT_WARM_RESET 0x80000000UL
+#define XHCI_PORT_LINK_STATE( x ) ( ( ( x ) >> 5 ) & 15 )
 #define XHCI_PORT_CSC		  0x00020000UL
 #define XHCI_PORT_PEC		  0x00040000UL
 #define XHCI_PORT_OCC		  0x00100000UL
@@ -65,6 +69,12 @@
 #define XHCI_PORT_CHANGE_BITS                                                                                                   \
 	( XHCI_PORT_CSC | XHCI_PORT_PEC | XHCI_PORT_WRC | XHCI_PORT_OCC | XHCI_PORT_PRC | XHCI_PORT_PLC | XHCI_PORT_CEC )
 #define XHCI_PORT_WRITE_SAFE( x ) ( ( x ) & ~( XHCI_PORT_CHANGE_BITS | XHCI_PORT_ENABLED | XHCI_PORT_RESET | 0x80010000UL ) )
+
+#define XHCI_EP_DISABLED 0
+#define XHCI_EP_RUNNING  1
+#define XHCI_EP_HALTED   2
+#define XHCI_EP_STOPPED  3
+#define XHCI_EP_ERROR    4
 
 #define XHCI_TRB_CYCLE			  0x00000001UL
 #define XHCI_TRB_TOGGLE			  0x00000002UL
@@ -94,7 +104,16 @@
 #define XHCI_TRB_PORT_EVENT		  34
 
 #define XHCI_CC_SUCCESS			  1
+#define XHCI_CC_BABBLE 3
+#define XHCI_CC_TRB_ERROR 5
 #define XHCI_CC_SHORT_PACKET	  13
+#define XHCI_CC_USB_TRANSACTION 4
+#define XHCI_CC_STALL 6
+#define XHCI_CC_RING_UNDERRUN 14
+#define XHCI_CC_RING_OVERRUN 15
+#define XHCI_CC_MISSED_SERVICE 23
+#define XHCI_CC_ISOCH_BUFFER_OVERRUN 31
+#define XHCI_CC_SPLIT_TRANSACTION 36
 #define XHCI_CC_STOPPED			  26
 #define XHCI_TRB_SIA			  0x80000000UL
 
@@ -104,6 +123,8 @@ XHCI_Sync ( void )
 	__asm__ volatile ( "sync" ::: "memory" );
 }
 
+SEC_CODE S32 XHCI_Port_Protocol_Parse ( struct USB2_HCDNode * hn, U32 offset, U32 header, U32 limit );
+SEC_CODE S32 XHCI_Port_Clr_Super_Change ( struct USB2_HCDNode * hn, U32 port, U32 feature );
 SEC_CODE S32  XHCI_Chip_Preinit ( struct USB2_HCDNode * hn );
 SEC_CODE S32  XHCI_Chip_Reset ( struct USB2_HCDNode * hn );
 SEC_CODE S32  XHCI_Chip_Alloc ( struct USB2_HCDNode * hn );
@@ -121,6 +142,8 @@ SEC_CODE void XHCI_Transfer_Free ( struct USB2_HCDNode * hn, struct RealRequest 
 
 SEC_CODE S32				XHCI_Ring_Alloc ( struct USB2_HCDNode * hn, struct XHCI_Ring * ring );
 SEC_CODE void				XHCI_Ring_Free ( struct USB2_HCDNode * hn, struct XHCI_Ring * ring );
+SEC_CODE S32 XHCI_Clear_TT ( struct USB2_HCDNode * hn, struct RealRequest * req );
+SEC_CODE void XHCI_Ring_Publish ( struct XHCI_Ring * ring );
 SEC_CODE U32				XHCI_Ring_Queue ( struct XHCI_Ring * ring, U32 low, U32 high, U32 status, U32 control );
 SEC_CODE void				XHCI_Event_Poll ( struct USB2_HCDNode * hn );
 SEC_CODE S32				XHCI_Command ( struct USB2_HCDNode * hn, U32 low, U32 high, U32 status, U32 control, U32 * result );
@@ -135,6 +158,7 @@ SEC_CODE S32  XHCI_Endpoint_Ensure ( struct USB2_HCDNode * hn, struct XHCI_Slot 
 									 U32 direction );
 SEC_CODE S32  XHCI_Endpoint_Update0 ( struct USB2_HCDNode * hn, struct XHCI_Slot * slot, U32 packet );
 SEC_CODE S32  XHCI_Hub_Ensure ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn );
+SEC_CODE void XHCI_Endpoint_Recover ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 completion );
 SEC_CODE void XHCI_Endpoint_Stop ( struct USB2_HCDNode * hn, struct RealRequest * req );
 SEC_CODE S32  XHCI_Buffer_Add ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 offset, U32 length );
 

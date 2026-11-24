@@ -81,7 +81,8 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 
 	port = cursor->fkt_PortNr;
 
-	if ( ( ! port ) || ( port > state->Max_Ports ) )
+	if ( ( ! port ) || ( port > state->Max_Ports ) ||
+		( ! state->Port[port].Major ) || ( fn->fkt_Speed > USBSPEED_Super ) )
 	{
 		return ( NULL );
 	}
@@ -114,26 +115,15 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 	if ( parent->fkt_Tier == 0 )
 	{
 		speed = XHCI_PORT_SPEED ( PCI_READLONG ( state->Operational + XHCI_PORTSC ( port ) ) );
+
+		if ( state->Port[port].Speed[speed] != fn->fkt_Speed + 1 )
+		{
+			return ( NULL );
+		}
 	}
 	else
 	{
-		switch ( fn->fkt_Speed )
-		{
-			case USBSPEED_Low:
-				speed = 2;
-				break;
-			case USBSPEED_Full:
-				speed = 1;
-				break;
-			case USBSPEED_High:
-				speed = 3;
-				break;
-			case USBSPEED_Super:
-				speed = 4;
-				break;
-			default:
-				return ( NULL );
-		}
+		speed = state->Port[port].Speed_ID[fn->fkt_Speed];
 	}
 
 	if ( ! speed )
@@ -141,7 +131,8 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 		return ( NULL );
 	}
 
-	packet = ( speed >= 4 ) ? 512 : ( speed == 3 ) ? 64 : 8;
+	packet = ( fn->fkt_Speed == USBSPEED_Super ) ? 512 : ( fn->fkt_Speed == USBSPEED_High ) ? 64 : 8;
+
 	slot = MEM_ALLOCVEC ( sizeof ( *slot ), TRUE );
 
 	if ( ! slot )
@@ -173,7 +164,8 @@ XHCI_Slot_Create ( struct USB2_HCDNode * hn, struct RealFunctionNode * fn )
 	MEM_SET ( slot->Input, 0, 4096 );
 	MEM_SET ( slot->Output, 0, 4096 );
 
-	if ( ! XHCI_Command ( hn, 0, 0, 0, XHCI_TRB_TYPE ( XHCI_TRB_ENABLE_SLOT ), &slot_id ) )
+	if ( ! XHCI_Command ( hn, 0, 0, 0,
+		XHCI_TRB_TYPE ( XHCI_TRB_ENABLE_SLOT ) | ( (U32) state->Port[port].Slot_Type << 16 ), &slot_id ) )
 	{
 		goto failed;
 	}

@@ -23,13 +23,13 @@ XHCI_Port_Get_Status ( struct USB2_HCDNode * hn, U32 port )
 
 	state = hn->hn_HCD.XHCI.State;
 
-	if ( ( ! port ) || ( port > state->Max_Ports ) )
+	if ( ( ! port ) || ( port > state->Max_Ports ) || ( ! state->Port[port].Major ) )
 	{
 		return ( 0 );
 	}
 
 	status = PCI_READLONG ( state->Operational + XHCI_PORTSC ( port ) );
-	speed = XHCI_PORT_SPEED ( status );
+	speed = state->Port[port].Speed[XHCI_PORT_SPEED ( status )];
 	result = 0;
 
 	if ( status & XHCI_PORT_CONNECTED )
@@ -37,7 +37,8 @@ XHCI_Port_Get_Status ( struct USB2_HCDNode * hn, U32 port )
 		result |= HUBF_Status_Connection;
 	}
 
-	if ( status & XHCI_PORT_ENABLED )
+	if ( ( status & XHCI_PORT_ENABLED ) &&
+		( ( state->Port[port].Major == 2 ) || ( XHCI_PORT_LINK_STATE ( status ) == 0 ) ) )
 	{
 		result |= HUBF_Status_Enable;
 	}
@@ -47,7 +48,7 @@ XHCI_Port_Get_Status ( struct USB2_HCDNode * hn, U32 port )
 		result |= HUBF_Status_Over_Current;
 	}
 
-	if ( status & XHCI_PORT_RESET )
+	if ( status & ( XHCI_PORT_RESET | XHCI_PORT_WARM_RESET ) )
 	{
 		result |= HUBF_Status_Reset;
 	}
@@ -57,17 +58,17 @@ XHCI_Port_Get_Status ( struct USB2_HCDNode * hn, U32 port )
 		result |= HUBF_Status_Power;
 	}
 
-	if ( speed == 2 )
+	if ( speed == USBSPEED_Low + 1 )
 	{
 		result |= HUBF_Status_Low_Speed;
 	}
 
-	if ( speed == 3 )
+	if ( speed == USBSPEED_High + 1 )
 	{
 		result |= HUBF_Status_High_Speed;
 	}
 
-	if ( speed >= 4 )
+	if ( state->Port[port].Major == 3 )
 	{
 		result |= HUBF_Status_Super_Speed;
 	}
@@ -90,6 +91,24 @@ XHCI_Port_Get_Status ( struct USB2_HCDNode * hn, U32 port )
 	if ( ( status & XHCI_PORT_PRC ) || ( state->Port_Reset_Change[port] ) )
 	{
 		result |= HUBF_Chg_Reset;
+	}
+
+	if ( state->Port[port].Major == 3 )
+	{
+		if ( status & XHCI_PORT_WRC )
+		{
+			result |= HUBF_Chg_Warm_Reset;
+		}
+
+		if ( status & XHCI_PORT_PLC )
+		{
+			result |= HUBF_Chg_Link_State;
+		}
+
+		if ( status & XHCI_PORT_CEC )
+		{
+			result |= HUBF_Chg_Config_Error;
+		}
 	}
 
 	return ( result );

@@ -30,6 +30,8 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	U32	  offset;
 	U32	  size;
 	U32	  capacity;
+	U32	  packet_size;
+	U32	  last_burst;
 	U16 * lengths;
 
 	ep		  = req->req_EndPoint;
@@ -47,6 +49,7 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return ( TRUE );
 	}
 
+	packet_size = packet;
 	packet *= extra + 1;
 	capacity = packet;
 
@@ -92,6 +95,7 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	req->req_HCD.XHCI.Slot	   = slot;
 	req->req_HCD.XHCI.EndPoint = dci;
 	ring					   = &slot->EndPoints[dci];
+	req->req_HCD.XHCI.First_TRB = ring->Physical + ring->Enqueue * sizeof ( struct XHCI_TRB );
 
 	for ( index = 0, offset = 0; index < count; index++, offset += packet )
 	{
@@ -119,8 +123,10 @@ XHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 
 	for ( buffer = req->req_HCD.XHCI.Buffers; buffer; buffer = buffer->Next )
 	{
+		last_burst = ( buffer->Length - 1 ) / packet_size;
+
 		buffer->TRB_Physical	   = XHCI_Ring_Queue ( ring, buffer->Physical, 0, buffer->Length,
-													   XHCI_TRB_TYPE ( XHCI_TRB_ISOCH ) | XHCI_TRB_SIA | XHCI_TRB_IOC );
+													   XHCI_TRB_TYPE ( XHCI_TRB_ISOCH ) | XHCI_TRB_SIA | XHCI_TRB_IOC | ( last_burst << 16 ) );
 		req->req_HCD.XHCI.Last_TRB = buffer->TRB_Physical;
 	}
 

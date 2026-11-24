@@ -105,6 +105,18 @@ S32 err;
 				break;
 			}
 
+			case PORT_CLR_BH_RESET:
+			case PORT_CLR_LINK_STATE:
+			case PORT_CLR_CONFIG_ERROR:
+			{
+				if ( hn->HCD_Functions.Port_Clr_Super_Change )
+				{
+					err = hn->HCD_Functions.Port_Clr_Super_Change( hn, port, wValue );
+				}
+
+				break;
+			}
+
 			case PORT_CLR_ENABLE:
 			{
 //				err = PORT_CLEAR_ENABLE_CHANGE( port );

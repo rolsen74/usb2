@@ -67,6 +67,9 @@ struct myHUB_Cfg
 #define HUBF_Chg_Suspend				0x1000U
 #define HUBF_Chg_Over_Current			0x2000U
 #define HUBF_Chg_Reset					0x4000U
+#define HUBF_Chg_Warm_Reset				0x10000U
+#define HUBF_Chg_Link_State				0x20000U
+#define HUBF_Chg_Config_Error			0x40000U
 
 /***************************************************************************/
 // HUB Class Request Codes
@@ -119,6 +122,7 @@ enum
 	PORT_INDICATOR			= 22,	// Port status LEDs (optional)
 	PORT_CLR_LINK_STATE		= 25,
 	PORT_CLR_CONFIG_ERROR		= 26,
+	PORT_BH_RESET			= 28,
 	PORT_CLR_BH_RESET		= 29
 };
 
@@ -147,6 +151,7 @@ struct USB2_PortStatus
 #define PORTSTATF_Over_Current			0x0008U
 #define PORTSTATF_Reset					0x0010U
 #define PORTSTATF_Power					0x0100U
+#define PORTSTATF_SS_LINK_STATE		0x01e0U
 #define PORTSTATF_Power_SS				0x0200U		/* USB 3.0 only */
 #define PORTSTATF_Full_Speed			0x0000U
 #define PORTSTATF_Low_Speed				0x0200U

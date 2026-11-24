@@ -24,7 +24,7 @@ XHCI_Bulk_Add ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return;
 	}
 
-	XHCI_Sync ();
+	XHCI_Ring_Publish ( &req->req_HCD.XHCI.Slot->EndPoints[req->req_HCD.XHCI.EndPoint] );
 	PCI_WRITELONG ( state->Doorbells + req->req_HCD.XHCI.Slot->Slot_ID * 4, req->req_HCD.XHCI.EndPoint );
 }
 

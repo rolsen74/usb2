@@ -79,6 +79,7 @@ XHCI_Control_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	req->req_HCD.XHCI.Slot = slot;
 	req->req_HCD.XHCI.EndPoint = 1;
 	ring = &slot->EndPoints[1];
+	req->req_HCD.XHCI.First_TRB = ring->Physical + ring->Enqueue * sizeof ( struct XHCI_TRB );
 	packet = slot->EP0_Packet;
 	direction = req->req_Public.io_Command == CMD_READ;
 	status_direction = length ? ! direction : 1;

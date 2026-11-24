@@ -61,6 +61,7 @@ XHCI_Interrupt_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	req->req_HCD.XHCI.Slot	   = slot;
 	req->req_HCD.XHCI.EndPoint = dci;
 	ring					   = &slot->EndPoints[dci];
+	req->req_HCD.XHCI.First_TRB = ring->Physical + ring->Enqueue * sizeof ( struct XHCI_TRB );
 
 	for ( count = 0; count < length; count += 4096 )
 	{

@@ -52,7 +52,7 @@ U32 port;
 			| HUBF_Chg_Enable
 			| HUBF_Chg_Suspend
 			| HUBF_Chg_Over_Current
-			| HUBF_Chg_Reset );
+			| HUBF_Chg_Reset | HUBF_Chg_Warm_Reset | HUBF_Chg_Link_State | HUBF_Chg_Config_Error );
 
 		if ( ( changed ) || ( ( port < sizeof( hn->hn_RescanPort ) ) && ( hn->hn_RescanPort[port] ) ) )
 		{

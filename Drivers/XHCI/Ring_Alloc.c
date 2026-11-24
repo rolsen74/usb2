@@ -28,6 +28,7 @@ XHCI_Ring_Alloc ( struct USB2_HCDNode * hn, struct XHCI_Ring * ring )
 
 	ring->Physical = ( (struct Mem_FreeNode *)ring->TRBs )->mfn_Addr;
 	MEM_SET ( ring->TRBs, 0, 4096 );
+	ring->Unpublished = NULL;
 	ring->Enqueue = 0;
 	ring->Dequeue = 0;
 	ring->Cycle = 1;

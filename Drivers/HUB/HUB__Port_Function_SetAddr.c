@@ -105,11 +105,8 @@ S32 err;
 
 	if ( err != USB2Err_NoError )
 	{
-		if ( HUB_LEGACY( in ) )
-		{
-			usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu SET_ADDRESS failed (%ld), speed %lu\n",
-				in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, fn->fkt_PortNr, err, fn->fkt_Speed );
-		}
+		usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu SET_ADDRESS failed (%ld), speed %lu\n",
+			in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, fn->fkt_PortNr, err, fn->fkt_Speed );
 		USBDEBUG( "SetAddr - io_Error %ld ( FN: %p )", err, fn );
 		goto bailout;
 	}

@@ -35,6 +35,15 @@ XHCI_Chip_Stop ( struct USB2_HCDNode * hn )
 	{
 		if ( PCI_READLONG ( state->Operational + XHCI_USBSTS ) & XHCI_STS_HALTED )
 		{
+			if ( ( state->Iso_Empty_Ring ) || ( state->Iso_Missed_Service ) )
+			{
+				usbbase->usb_IExec->DebugPrintF ( "USB2: xHCI HCD %lu iso empty-ring %lu, missed service %lu\n",
+					hn->hn_HCDIndex, state->Iso_Empty_Ring, state->Iso_Missed_Service );
+
+				state->Iso_Empty_Ring = 0;
+				state->Iso_Missed_Service = 0;
+			}
+
 			return ( TRUE );
 		}
 

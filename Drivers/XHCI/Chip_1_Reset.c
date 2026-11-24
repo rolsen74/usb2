@@ -23,6 +23,21 @@ XHCI_Chip_Reset ( struct USB2_HCDNode * hn )
 
 	state = hn->hn_HCD.XHCI.State;
 	usbbase = hn->hn_USBBase;
+	for ( count = 0; count < 1000; count++ )
+	{
+		if ( ! ( PCI_READLONG ( state->Operational + XHCI_USBSTS ) & XHCI_STS_NOT_READY ) )
+		{
+			break;
+		}
+
+		HCD_WAIT_MS ( hn, 1 );
+	}
+
+	if ( count == 1000 )
+	{
+		return ( FALSE );
+	}
+
 	cmd = PCI_READLONG ( state->Operational + XHCI_USBCMD );
 	PCI_WRITELONG ( state->Operational + XHCI_USBCMD, cmd & ~XHCI_CMD_RUN );
 
