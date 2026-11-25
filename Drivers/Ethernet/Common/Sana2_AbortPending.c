@@ -9,7 +9,6 @@
 // --
 
 #include <interfaces/exec.h>
-#include "WirelessSana2.h"
 #include "Sana2Commands.h"
 
 // --

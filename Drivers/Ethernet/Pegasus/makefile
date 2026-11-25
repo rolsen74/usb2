@@ -8,4 +8,4 @@
 
 TARGET := eth_Pegasus.Driver
 
-include ../Common/Wired/Driver.mk
+include ../Common/Cable/Driver.mk

@@ -22,7 +22,7 @@ MAPFILE		:= $(TARGET).map
 # Compiler flags
 CFLAGS		:= -O2
 CFLAGS		+= -I.
-CFLAGS		+= -I../../../inc_Public -I../Common
+CFLAGS		+= -I../../../inc_Public -I../Common -I../Common/Wireless
 CFLAGS		+= -Iinc
 CFLAGS		+= -Isrc
 CFLAGS		+= -W
@@ -106,11 +106,15 @@ SRCS		+= $(wildcard $(addsuffix /*.c, $(SRCDIRS)))
 SRCS		:= $(sort $(SRCS))
 
 OBJS		:= $(patsubst %.c,$(OBJDIR)/%.o,$(SRCS))
-DEPS		:= $(patsubst %.c,$(OBJDIR)/%.d,$(SRCS))
 
-COMMON_SRCS	:= $(wildcard ../Common/EthClass_*.c ../Common/EthWireless_*.c ../Common/Sana2_*.c)
-OBJS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(COMMON_SRCS))
-DEPS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.d,$(COMMON_SRCS))
+ETHCLASS_SRCS	:= $(wildcard ../Common/EthClass_*.c)
+WIRELESS_SRCS	:= $(wildcard ../Common/Wireless/EthWireless_*.c)
+SANA2_SRCS	:= $(wildcard ../Common/Sana2_*.c)
+
+OBJS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(ETHCLASS_SRCS))
+OBJS		+= $(patsubst ../Common/Wireless/%.c,$(OBJDIR)/wireless/%.o,$(WIRELESS_SRCS))
+OBJS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(SANA2_SRCS))
+DEPS		:= $(OBJS:.o=.d)
 
 all: $(BINDIR)/$(TARGET)
 
@@ -129,7 +133,7 @@ $(BINDIR):
 
 ###########################################################################
 
-CLEANFILES	:= $(wildcard $(OBJDIR)/src/*.o $(OBJDIR)/src/*.d $(OBJDIR)/common/*.o $(OBJDIR)/common/*.d $(BINDIR)/$(TARGET) $(MAPFILE) usb2.map)
+CLEANFILES	:= $(wildcard $(OBJDIR)/src/*.o $(OBJDIR)/src/*.d $(OBJDIR)/common/*.o $(OBJDIR)/common/*.d $(OBJDIR)/wireless/*.o $(OBJDIR)/wireless/*.d $(BINDIR)/$(TARGET) $(MAPFILE) usb2.map)
 
 clean:
 	$(if $(CLEANFILES),$(RM) $(CLEANFILES))
@@ -160,5 +164,10 @@ $(OBJDIR)/%.o: %.c makefile
 ###########################################################################
 
 $(OBJDIR)/common/%.o: ../Common/%.c makefile
+	@$(MKDIR) $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
+$(OBJDIR)/wireless/%.o: ../Common/Wireless/%.c makefile
 	@$(MKDIR) $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@

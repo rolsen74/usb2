@@ -8,4 +8,4 @@
 
 TARGET := eth_AX88772.Driver
 
-include ../Common/Wired/Driver.mk
+include ../Common/Cable/Driver.mk

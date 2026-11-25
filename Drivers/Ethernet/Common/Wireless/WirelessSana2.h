@@ -12,6 +12,7 @@
 #define USB2_WIRELESS_SANA2_H
 
 #include <utility/tagitem.h>
+#include "Sana2Commands.h"
 
 // --
 
@@ -20,8 +21,6 @@
 #define S2_SETOPTIONS 0xc012
 #define S2_SETKEY 0xc013
 #define S2_GETNETWORKINFO 0xc014
-#define S2_READMGMT 0xc015
-#define S2_WRITEMGMT 0xc016
 #define S2_GETRADIOBANDS 0xc017
 #define S2_GETCRYPTTYPES 0xc018
 

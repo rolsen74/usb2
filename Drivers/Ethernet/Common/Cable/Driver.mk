@@ -22,7 +22,7 @@ MAPFILE		:= $(TARGET).map
 # Compiler flags
 CFLAGS		:= -O2
 CFLAGS		+= -I.
-CFLAGS		+= -I../../../inc_Public -I../Common -I../Common/Wired
+CFLAGS		+= -I../../../inc_Public -I../Common -I../Common/Cable
 CFLAGS		+= -Iinc
 CFLAGS		+= -Isrc
 CFLAGS		+= -W
@@ -112,9 +112,9 @@ COMMON_SRCS	:= $(wildcard ../Common/EthClass_*.c ../Common/Sana2_*.c)
 OBJS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(COMMON_SRCS))
 DEPS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.d,$(COMMON_SRCS))
 
-WIRED_SRCS	:= $(wildcard ../Common/Wired/*.c)
-OBJS		+= $(patsubst ../Common/Wired/%.c,$(OBJDIR)/wired/%.o,$(WIRED_SRCS))
-DEPS		+= $(patsubst ../Common/Wired/%.c,$(OBJDIR)/wired/%.d,$(WIRED_SRCS))
+CABLE_SRCS	:= $(wildcard ../Common/Cable/*.c)
+OBJS		+= $(patsubst ../Common/Cable/%.c,$(OBJDIR)/cable/%.o,$(CABLE_SRCS))
+DEPS		+= $(patsubst ../Common/Cable/%.c,$(OBJDIR)/cable/%.d,$(CABLE_SRCS))
 
 all: $(BINDIR)/$(TARGET)
 
@@ -133,7 +133,7 @@ $(BINDIR):
 
 ###########################################################################
 
-CLEANFILES	:= $(wildcard $(OBJDIR)/src/*.o $(OBJDIR)/src/*.d $(OBJDIR)/common/*.o $(OBJDIR)/common/*.d $(OBJDIR)/wired/*.o $(OBJDIR)/wired/*.d $(BINDIR)/$(TARGET) $(MAPFILE) usb2.map)
+CLEANFILES	:= $(wildcard $(OBJDIR)/src/*.o $(OBJDIR)/src/*.d $(OBJDIR)/common/*.o $(OBJDIR)/common/*.d $(OBJDIR)/cable/*.o $(OBJDIR)/cable/*.d $(BINDIR)/$(TARGET) $(MAPFILE) usb2.map)
 
 clean:
 	$(if $(CLEANFILES),$(RM) $(CLEANFILES))
@@ -157,17 +157,17 @@ strip:
 
 ###########################################################################
 
-$(OBJDIR)/%.o: %.c makefile ../Common/Wired/Driver.mk
+$(OBJDIR)/%.o: %.c makefile ../Common/Cable/Driver.mk
 	@$(MKDIR) $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 ###########################################################################
 
-$(OBJDIR)/common/%.o: ../Common/%.c makefile ../Common/Wired/Driver.mk
+$(OBJDIR)/common/%.o: ../Common/%.c makefile ../Common/Cable/Driver.mk
 	@$(MKDIR) $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 
-$(OBJDIR)/wired/%.o: ../Common/Wired/%.c makefile ../Common/Wired/Driver.mk
+$(OBJDIR)/cable/%.o: ../Common/Cable/%.c makefile ../Common/Cable/Driver.mk
 	@$(MKDIR) $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@

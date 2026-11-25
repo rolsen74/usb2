@@ -13,6 +13,10 @@
 
 #include <devices/sana2.h>
 
+// Shared packet cancellation also handles wireless management frames.
+#define S2_READMGMT 0xc015
+#define S2_WRITEMGMT 0xc016
+
 void Sana2_FreeList( struct List *list );
 void Sana2_TrackType( struct List *list, struct IOSana2Req *ioreq );
 void Sana2_AccountType( struct List *list, uint32 type, uint32 bytes, int receive, int dropped );
