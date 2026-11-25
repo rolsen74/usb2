@@ -48,7 +48,7 @@ Driver_Setup( struct devUnit *unit )
 		}
 	}
 
-	if ( ! RTL8152_SetMacAddress( unit, unit->unit_CurrentAddress ) )
+	if ( ! Wired_SetMacAddress( unit, unit->unit_CurrentAddress ) )
 	{
 		return ( FALSE );
 	}

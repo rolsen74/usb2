@@ -33,6 +33,7 @@
 #include "Types.h"
 #include "Debug.h"
 #include "Device.h"
+#include "WiredChip.h"
 #include "Unit.h"
 #include "Sana2Commands.h"
 

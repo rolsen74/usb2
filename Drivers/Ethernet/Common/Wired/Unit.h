@@ -6,8 +6,8 @@
 ** SPDX-License-Identifier: GPL-3.0-or-later
 */
 
-#ifndef RTL8152_UNIT_H
-#define RTL8152_UNIT_H
+#ifndef WIRED_UNIT_H
+#define WIRED_UNIT_H
 
 /**************************************************************************/
 
@@ -18,20 +18,13 @@ struct IONode
 	U32			    BufferSize;
 	int				Active;
 	int				AbortError;
+	U32 FrameLength;
 	U32 AbortWire;
 
 	struct IOSana2Req * Sana2IOReq;
 
 	struct USB2_IORequest *   USBRequest;
 };
-
-#define RTL8152_REQUEST_COUNT 3
-#define RTL8152_RX_BUFFER_SIZE 16384
-#define RTL8152_RX_DESCRIPTOR_SIZE 24
-#define RTL8152_TX_DESCRIPTOR_SIZE 8
-#define RTL8152_TX_BUFFER_SIZE ( ETHERNET_MTU + RTL8152_TX_DESCRIPTOR_SIZE )
-#define RTL8152_RX_LENGTH_MASK 0x7fff
-#define RTL8152_TX_SEGMENTS 0xc0000000U
 
 struct devUnit
 {
@@ -44,7 +37,7 @@ struct devUnit
 	struct List unit_Requests;
 	struct SignalSemaphore unit_DispatchLock;
 
-	uint16					unit_ChipVersion;
+	WIRED_CHIP_FIELDS
 
 	int					unit_Online;
 	int					unit_Configured;
@@ -103,12 +96,16 @@ struct devUnit
 /**************************************************************************/
 
 void UpdateThroughput( struct devUnit *unit, U32 sent, U32 received );
-S32 RTL8152_OpenLinkTimer( struct devUnit *unit );
-void RTL8152_CloseLinkTimer( struct devUnit *unit );
-void RTL8152_ArmLinkTimer( struct devUnit *unit );
-void RTL8152_UpdateLink( struct devUnit *unit );
+S32 Wired_OpenLinkTimer( struct devUnit *unit );
+void Wired_CloseLinkTimer( struct devUnit *unit );
+void Wired_ArmLinkTimer( struct devUnit *unit );
+void Wired_UpdateLink( struct devUnit *unit );
 
-S32 RTL8152_SetMacAddress( struct devUnit *unit, const U8 *address );
+S32 Wired_ControlRequest( struct devUnit *unit, U8 type, U8 request, U16 value, U16 index, U8 *data, U16 length );
+S32 Wired_SetMacAddress( struct devUnit *unit, const U8 *address );
+S32 Wired_PHYLink( struct devUnit *unit );
+S32 Wired_DecodeRX( struct devUnit *unit, U8 *buffer, U32 size );
+U32 Wired_FrameTX( struct devUnit *unit, U8 *buffer, U32 length );
 
 // --
 

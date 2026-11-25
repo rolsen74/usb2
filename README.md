@@ -58,6 +58,8 @@ usb2/
 │   │   ├── vid_PlayStationEye.Class
 │   │   ├── eth_RT2870.Class
 │   │   ├── eth_RT2870.Driver
+│   │   ├── eth_AX88772.Class
+│   │   ├── eth_AX88772.Driver
 │   │   ├── eth_RTL8152.Class
 │   │   ├── eth_RTL8152.Driver
 │   │   ├── eth_RTL8188EU.Class

@@ -30,12 +30,12 @@ EthClass_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *
 		return ( FALSE );
 	}
 
-	IExec->DebugPrintF( "RTL8152: probing %04lX:%04lX interface %lu\n",
+	IExec->DebugPrintF( WIRED_NAME ": probing %04lX:%04lX interface %lu\n",
 		(U32) msg->VendorID, (U32) msg->DeviceID, (U32) msg->Interface->IFC_Num );
 
 	if ( msg->Interface->IFC_Num != 0 )
 	{
-		IExec->DebugPrintF( "RTL8152: interface %lu skipped, only interface 0 is supported\n",
+		IExec->DebugPrintF( WIRED_NAME ": interface %lu skipped, only interface 0 is supported\n",
 			(U32) msg->Interface->IFC_Num );
 
 		return ( FALSE );
@@ -64,7 +64,7 @@ EthClass_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *
 		unit->unit_AcceptIO = TRUE;
 
 		registered = EthClass_Register( & port, & EthClass_Ops, unit,
-			& unit->unit_UnitNumber, USB2ETH_ADAPTER_RTL8152, msg );
+			& unit->unit_UnitNumber, WIRED_ADAPTER, msg );
 
 		if ( registered )
 		{

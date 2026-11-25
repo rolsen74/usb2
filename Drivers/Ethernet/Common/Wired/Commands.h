@@ -8,8 +8,8 @@
 
 // --
 
-#ifndef RTL8152_COMMANDS_H
-#define RTL8152_COMMANDS_H
+#ifndef WIRED_COMMANDS_H
+#define WIRED_COMMANDS_H
 
 // --
 

@@ -34,7 +34,7 @@ s2_ConfigInterface( struct devUnit *unit, struct IOSana2Req *ioreq )
     }
 
 	if ( ( ( unit->unit_ControlNeedsSetup ) && ( ! Driver_Setup( unit ) ) ) ||
-		( ! RTL8152_SetMacAddress( unit, ioreq->ios2_SrcAddr ) ) )
+		( ! Wired_SetMacAddress( unit, ioreq->ios2_SrcAddr ) ) )
 	{
 		ioreq->ios2_Req.io_Error = S2ERR_BAD_STATE;
 		ioreq->ios2_WireError = S2WERR_GENERIC_ERROR;
@@ -50,7 +50,7 @@ s2_ConfigInterface( struct devUnit *unit, struct IOSana2Req *ioreq )
 	unit->unit_Configured = TRUE;
 	unit->unit_Online = TRUE;
 
-	RTL8152_UpdateLink( unit );
+	Wired_UpdateLink( unit );
 
 	Schedule_RxIOReq( unit );
 

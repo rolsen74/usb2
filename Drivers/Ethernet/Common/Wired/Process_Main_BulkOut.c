@@ -55,13 +55,13 @@ Handle_BulkOutMessages( struct devUnit *unit )
 		else if ( ( usbio->io_Error == USB2Err_NoError ) && ( usbio->io_Actual == usbio->io_Length ) )
 		{
 			unit->unit_PacketsSent++;
-			frame = node->Buffer + RTL8152_TX_DESCRIPTOR_SIZE;
+			frame = node->Buffer + WIRED_TX_HEADER_SIZE;
 			type = ( (U32) frame[12] << 8 ) | frame[13];
 
 			Sana2_AccountType( & unit->unit_TrackedTypes, type,
-				usbio->io_Actual - RTL8152_TX_DESCRIPTOR_SIZE - 14, FALSE, FALSE );
+				node->FrameLength - 14, FALSE, FALSE );
 
-			UpdateThroughput( unit, usbio->io_Actual - RTL8152_TX_DESCRIPTOR_SIZE, 0 );
+			UpdateThroughput( unit, node->FrameLength, 0 );
 		}
 		else
 		{

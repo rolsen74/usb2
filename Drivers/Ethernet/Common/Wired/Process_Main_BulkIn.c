@@ -19,10 +19,6 @@ Handle_BulkInMessages( struct devUnit *unit )
 	struct USB2_IORequest *usbio;
 	struct IONode *node;
 
-	U8 *buffer;
-	U32 offset;
-	U32 length;
-
 	IUSB2 = unit->unit_IUSB2;
 
 	while(( usbio = (PTR) IExec->GetMsg( unit->unit_USBBulkIn->MsgPort ) ))
@@ -42,40 +38,25 @@ Handle_BulkInMessages( struct devUnit *unit )
 		else if ( ( ! node->AbortError ) && ( unit->unit_Online ) && ( unit->unit_LinkUp ) &&
 			( usbio->io_Error == USB2Err_NoError ) && ( usbio->io_Actual <= node->BufferSize ) )
 		{
-			buffer = node->Buffer;
-
-			for( offset = 0; usbio->io_Actual - offset >= RTL8152_RX_DESCRIPTOR_SIZE; )
+			if ( ! Wired_DecodeRX( unit, node->Buffer, usbio->io_Actual ) )
 			{
-				length = buffer[offset] | ( (U32) buffer[offset + 1] << 8 );
-				length &= RTL8152_RX_LENGTH_MASK;
-				offset += RTL8152_RX_DESCRIPTOR_SIZE;
+				unit->unit_BadData++;
 
-				if ( ( length < 18 ) || ( length > ETHERNET_MTU + 4 ) || ( length > usbio->io_Actual - offset ) )
-				{
-					unit->unit_BadData++;
-
-					SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
-
-					break;
-				}
-
-				ReadPacket( unit, buffer + offset, length - 4 );
-
-				offset = ( offset + length + 7 ) & ~7U;
-
-				if ( offset >= usbio->io_Actual )
-				{
-					break;
-				}
+				SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
 			}
 		}
-		else if ( ( ! node->AbortError ) && ( unit->unit_Online ) )
+		else
 		{
-			SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
+			WIRED_RESET_RX( unit );
 
-			if ( ( usbio->io_Error == USB2Err_Host_Stall ) && ( ! unit->unit_RxHalted ) )
+			if ( ( ! node->AbortError ) && ( unit->unit_Online ) )
 			{
-				unit->unit_RxHalted = ! IUSB2->USB2_EPRes_Destall( unit->unit_USBBulkIn );
+				SignalSanaEvent( unit, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
+
+				if ( ( usbio->io_Error == USB2Err_Host_Stall ) && ( ! unit->unit_RxHalted ) )
+				{
+					unit->unit_RxHalted = ! IUSB2->USB2_EPRes_Destall( unit->unit_USBBulkIn );
+				}
 			}
 		}
 

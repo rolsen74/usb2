@@ -8,8 +8,8 @@
 
 // --
 
-#ifndef RTL8152_DEBUG_H
-#define RTL8152_DEBUG_H
+#ifndef WIRED_DEBUG_H
+#define WIRED_DEBUG_H
 
 #include <proto/exec.h>
 #include "Types.h"

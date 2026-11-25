@@ -6,8 +6,8 @@
 ** SPDX-License-Identifier: GPL-3.0-or-later
 */
 
-#ifndef RTL8152_DEVICE_H
-#define RTL8152_DEVICE_H
+#ifndef WIRED_DEVICE_H
+#define WIRED_DEVICE_H
 
 #define ETHERNET_MTU        	1522
 #define ETHERNET_PAYLOAD_MTU	1500

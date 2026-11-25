@@ -69,7 +69,7 @@ ConfigureGigabitFIFO( struct devUnit *unit, U32 speed )
 	U32 timeout;
 
 	// Leave room in the transfer for the next frame and its aligned descriptor.
-	early_size = RTL8152_RX_BUFFER_SIZE - RTL8152_RMS - RTL8152_RX_DESCRIPTOR_SIZE - 8;
+	early_size = WIRED_RX_BUFFER_SIZE - RTL8152_RMS - RTL8152_RX_DESCRIPTOR_SIZE - 8;
 
 	myWrite4( unit, URE_PLA_RXFIFO_CTRL0, URE_MCU_TYPE_PLA, URE_RXFIFO_THR1_NORMAL );
 

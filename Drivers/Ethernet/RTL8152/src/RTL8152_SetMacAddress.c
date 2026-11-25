@@ -14,7 +14,7 @@
 // --
 
 S32
-RTL8152_SetMacAddress( struct devUnit *unit, const U8 *address )
+Wired_SetMacAddress( struct devUnit *unit, const U8 *address )
 {
 	S32 error;
 	S32 restore;

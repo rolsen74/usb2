@@ -62,7 +62,7 @@ s2_Online( struct devUnit *unit, struct IOSana2Req *ioreq )
 	unit->unit_RxRecovery = 0;
 	unit->unit_TxRecovery = 0;
 
-	RTL8152_UpdateLink( unit );
+	Wired_UpdateLink( unit );
 
 	Schedule_RxIOReq( unit );
 

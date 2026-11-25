@@ -20,7 +20,7 @@ U32 link_signal;
 
 	link_signal = 1UL << unit->unit_LinkPort->mp_SigBit;
 
-	RTL8152_ArmLinkTimer( unit );
+	Wired_ArmLinkTimer( unit );
 
 	while( unit->unit_Running == TRUE )
 	{
@@ -55,10 +55,10 @@ U32 link_signal;
 
 			if ( unit->unit_Configured )
 			{
-				RTL8152_UpdateLink( unit );
+				Wired_UpdateLink( unit );
 			}
 
-			RTL8152_ArmLinkTimer( unit );
+			Wired_ArmLinkTimer( unit );
 		}
 
 		/* Handle Messages from Network Stack */

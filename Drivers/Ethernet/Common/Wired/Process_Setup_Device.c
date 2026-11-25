@@ -24,7 +24,7 @@ unit_Process_InitUSB( struct devUnit *unit, struct USB2_DriverMessage *msg )
 
 	unit->unit_USBRegister = IUSB2->USB2_Reg_RegisterTags(
 		USB2Tag_Reg_DriverMessage, msg,
-		USB2Tag_Reg_Title, "RTL8152 Ethernet",
+		USB2Tag_Reg_Title, WIRED_NAME " Ethernet",
 		TAG_END );
 
 	if ( ( ! unit->unit_USBRegister ) || ( ! unit->unit_USBRegister->Res_Control ) ||
@@ -45,8 +45,8 @@ unit_Process_InitUSB( struct devUnit *unit, struct USB2_DriverMessage *msg )
 		USB2Tag_EPRes_InterfaceNr, unit->unit_USBInterface->IFC_Num,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
 		USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
-		USB2Tag_EPRes_NrOfIORequest, RTL8152_REQUEST_COUNT,
-		USB2Tag_EPRes_BufferSize, RTL8152_RX_BUFFER_SIZE,
+		USB2Tag_EPRes_NrOfIORequest, WIRED_RX_REQUEST_COUNT,
+		USB2Tag_EPRes_BufferSize, WIRED_RX_BUFFER_SIZE,
 		USB2Tag_EPRes_AllowShortPackets, TRUE,
 		TAG_END );
 
@@ -59,8 +59,8 @@ unit_Process_InitUSB( struct devUnit *unit, struct USB2_DriverMessage *msg )
 		USB2Tag_EPRes_InterfaceNr, unit->unit_USBInterface->IFC_Num,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_Out,
 		USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
-		USB2Tag_EPRes_NrOfIORequest, RTL8152_REQUEST_COUNT,
-		USB2Tag_EPRes_BufferSize, RTL8152_TX_BUFFER_SIZE,
+		USB2Tag_EPRes_NrOfIORequest, WIRED_TX_REQUEST_COUNT,
+		USB2Tag_EPRes_BufferSize, WIRED_TX_BUFFER_SIZE,
 		TAG_END );
 
 	if ( ! unit->unit_USBBulkOut )
@@ -68,7 +68,7 @@ unit_Process_InitUSB( struct devUnit *unit, struct USB2_DriverMessage *msg )
 		return ( FALSE );
 	}
 
-	for( index = 0; index < RTL8152_REQUEST_COUNT; index++ )
+	for( index = 0; index < WIRED_RX_REQUEST_COUNT; index++ )
 	{
 		node = AllocIONode( unit->unit_USBBulkIn, index );
 
@@ -78,7 +78,10 @@ unit_Process_InitUSB( struct devUnit *unit, struct USB2_DriverMessage *msg )
 		}
 
 		IExec->AddTail( & unit->unit_USBBulkInFreeList, & node->Node );
+	}
 
+	for( index = 0; index < WIRED_TX_REQUEST_COUNT; index++ )
+	{
 		node = AllocIONode( unit->unit_USBBulkOut, index );
 
 		if ( ! node )

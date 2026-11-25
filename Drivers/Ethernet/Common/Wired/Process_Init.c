@@ -23,23 +23,23 @@ int retval;
 
 	if ( unit_Process_InitMisc( unit ) == FALSE )
 	{
-		IExec->DebugPrintF( "RTL8152: could not initialize unit resources\n" );
+		IExec->DebugPrintF( WIRED_NAME ": could not initialize unit resources\n" );
 		goto bailout;
 	}
 
 	if ( unit_Process_InitUSB( unit, msg ) == FALSE )
 	{
-		IExec->DebugPrintF( "RTL8152: could not claim USB interface or allocate transfers\n" );
+		IExec->DebugPrintF( WIRED_NAME ": could not claim USB interface or allocate transfers\n" );
 		goto bailout;
 	}
 
 	if ( Driver_Setup( unit ) == FALSE )
 	{
-		IExec->DebugPrintF( "RTL8152: chip setup failed\n" );
+		IExec->DebugPrintF( WIRED_NAME ": chip setup failed\n" );
 		goto bailout;
 	}
 
-	IExec->DebugPrintF( "RTL8152: %s initialized\n", VERS );
+	IExec->DebugPrintF( WIRED_NAME ": %s initialized\n", VERS );
 
     retval = TRUE;
 

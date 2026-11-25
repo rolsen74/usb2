@@ -13,36 +13,6 @@
 
 // --
 
-static int
-ControlRequest( struct devUnit *unit, U8 type, U8 request, U16 value, U16 index, U8 *data, U16 length )
-{
-	struct USB2_SetupData *setup;
-	struct USB2_IORequest *ioreq;
-
-	ioreq = unit->unit_USBControlIOReq;
-	setup = unit->unit_USBRegister->Res_Control->SetupData;
-	setup->RequestType = type;
-	setup->RequestCode = request;
-	setup->Value = LE_SWAP16( value );
-	setup->Index = LE_SWAP16( index );
-	setup->Length = LE_SWAP16( length );
-	ioreq->io_Command = ( type & REQTYPE_Read ) ? CMD_READ : CMD_WRITE;
-	ioreq->io_Length = length;
-	ioreq->io_Data = data;
-	ioreq->io_SetupData = setup;
-	ioreq->io_SetupLength = sizeof( *setup );
-	ioreq->io_TimeOut = 1000000;
-
-	IExec->DoIO( (PTR) ioreq );
-
-	ioreq->io_Data = NULL;
-
-	return ( ioreq->io_Error ? ioreq->io_Error :
-		( ioreq->io_Actual == length ? 0 : IOERR_BADLENGTH ) );
-}
-
-// --
-
 int
 RTL8152_Control( struct devUnit *unit, U32 command, U16 address, U16 index, U8 *data, U16 length )
 {
@@ -55,7 +25,7 @@ RTL8152_Control( struct devUnit *unit, U32 command, U16 address, U16 index, U8 *
 
 	type = REQTYPE_Vendor | REQTYPE_Device | ( command == CMD_READ ? REQTYPE_Read : REQTYPE_Write );
 
-	unit->unit_USBControlError = ControlRequest( unit, type, 0x05, address, index, data, length );
+	unit->unit_USBControlError = Wired_ControlRequest( unit, type, 0x05, address, index, data, length );
 
 	if ( unit->unit_USBControlError )
 	{
@@ -90,7 +60,7 @@ RTL8152_ReportUSBConfiguration( struct devUnit *unit )
 	IExec->DebugPrintF( "RTL8152: USB controller type %lu, speed %lu, EP0 max packet %lu, interface %lu\n",
 		controller, speed, unit->unit_USBRegister->Res_Control->EndPointMax, unit->unit_USBInterface->IFC_Num );
 
-	error = ControlRequest( unit, REQTYPE_Read | REQTYPE_Standard | REQTYPE_Device,
+	error = Wired_ControlRequest( unit, REQTYPE_Read | REQTYPE_Standard | REQTYPE_Device,
 		REQCODE_Get_Configuration, 0, 0, & config, sizeof( config ) );
 
 	if ( error )

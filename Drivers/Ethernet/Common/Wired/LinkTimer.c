@@ -14,7 +14,7 @@
 // --
 
 S32
-RTL8152_OpenLinkTimer( struct devUnit *unit )
+Wired_OpenLinkTimer( struct devUnit *unit )
 {
 	unit->unit_LinkPort = IExec->AllocSysObjectTags( ASOT_PORT, TAG_END );
 
@@ -44,7 +44,7 @@ RTL8152_OpenLinkTimer( struct devUnit *unit )
 // --
 
 void
-RTL8152_ArmLinkTimer( struct devUnit *unit )
+Wired_ArmLinkTimer( struct devUnit *unit )
 {
 	unit->unit_LinkTimer->Request.io_Command = TR_ADDREQUEST;
 	unit->unit_LinkTimer->Time.Seconds = 0;
@@ -57,7 +57,7 @@ RTL8152_ArmLinkTimer( struct devUnit *unit )
 // --
 
 void
-RTL8152_CloseLinkTimer( struct devUnit *unit )
+Wired_CloseLinkTimer( struct devUnit *unit )
 {
 	struct IORequest *request;
 

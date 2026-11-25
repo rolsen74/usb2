@@ -23,6 +23,8 @@ AbortPacketIO( struct devUnit *unit, U32 wire )
 	lists[0] = & unit->unit_USBBulkInActiveList;
 	lists[1] = & unit->unit_USBBulkOutActiveList;
 
+	WIRED_RESET_RX( unit );
+
 	for( index = 0; index < 2; index++ )
 	{
 		node = (PTR) IExec->GetHead( lists[index] );

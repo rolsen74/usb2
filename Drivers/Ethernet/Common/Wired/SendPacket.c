@@ -22,7 +22,6 @@ SendPacket( struct devUnit *unit, struct IONode *node )
 	U32 length;
 	U32 header;
 	U32 type;
-	U32 options;
 
 	request = node->Sana2IOReq;
 	header = ( request->ios2_Req.io_Flags & SANA2IOF_RAW ) ? 0 : 14;
@@ -36,7 +35,7 @@ SendPacket( struct devUnit *unit, struct IONode *node )
 		return ( FALSE );
 	}
 
-	frame = node->Buffer + RTL8152_TX_DESCRIPTOR_SIZE;
+	frame = node->Buffer + WIRED_TX_HEADER_SIZE;
 	length = request->ios2_DataLength + header;
 
 	if ( ! Copy_From_Buffer( unit, request, frame + header ) )
@@ -60,19 +59,13 @@ SendPacket( struct devUnit *unit, struct IONode *node )
 		frame[13] = type;
 	}
 
-	options = length | RTL8152_TX_SEGMENTS;
-	node->Buffer[0] = options;
-	node->Buffer[1] = options >> 8;
-	node->Buffer[2] = options >> 16;
-	node->Buffer[3] = options >> 24;
-
-	memset( node->Buffer + 4, 0, 4 );
+	node->FrameLength = length;
 
 	request->ios2_WireError = 0;
 	usbio = node->USBRequest;
 	usbio->io_Command = CMD_WRITE;
 	usbio->io_Data = node->Buffer;
-	usbio->io_Length = length + RTL8152_TX_DESCRIPTOR_SIZE;
+	usbio->io_Length = Wired_FrameTX( unit, node->Buffer, length );
 	node->Active = TRUE;
 
 	IExec->SendIO( (PTR) usbio );
