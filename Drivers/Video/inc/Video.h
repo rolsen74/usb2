@@ -163,6 +163,7 @@ SEC_CODE U32 Video_Manager_Release( struct DeviceManagerInterface *Self );
 SEC_CODE S32 Video_Manager_Open( struct DeviceManagerInterface *Self, struct IORequest *ioreq, U32 unitnr, U32 flags );
 SEC_CODE PTR Video_Manager_Close( struct DeviceManagerInterface *Self, struct IORequest *ioreq );
 SEC_CODE PTR Video_Manager_Expunge( struct DeviceManagerInterface *Self );
+SEC_CODE void Video_EnumUnits( struct VideoBase *base, struct IOStdReq *request );
 SEC_CODE void Video_Manager_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq );
 SEC_CODE void Video_Manager_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq );
 

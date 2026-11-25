@@ -32,6 +32,7 @@ SEC_RODATA static const U16 AudioCommands[] =
 SEC_RODATA static const U16 VideoCommands[] =
 {
 	NSCMD_DEVICEQUERY,
+	USB2_CMD_ENUM_UNITS,
 	CMD_READ,
 	VIDEO_CMD_QUERY,
 	VIDEO_CMD_GET_MODE,
@@ -127,9 +128,12 @@ SEC_RODATA static const PTR Interfaces[] =
 // --
 
 SEC_CODE static struct USB2MediaDevice *
-Alloc( struct ExecIFace *IExec, STR name, STR id, U16 version, U16 revision, const U16 *commands )
+Alloc( struct USBBase *usbbase, STR name, STR id, U16 version, U16 revision, const U16 *commands )
 {
 	struct USB2MediaDevice *base;
+	struct ExecIFace *IExec;
+
+	IExec = usbbase->usb_IExec;
 
 	base = (PTR) IExec->CreateLibraryTags(
 		CLT_NoLegacyIFace, TRUE,
@@ -148,6 +152,7 @@ Alloc( struct ExecIFace *IExec, STR name, STR id, U16 version, U16 revision, con
 	base->Library.lib_Version = version;
 	base->Library.lib_Revision = revision;
 	base->Library.lib_IdString = id;
+	base->USB = usbbase;
 	base->IExec = IExec;
 	base->Commands = commands;
 	base->Audio = ( commands == AudioCommands );
@@ -168,14 +173,14 @@ MediaDevice_Create( struct USBBase *usbbase )
 
 	IExec = usbbase->usb_IExec;
 
-	audio = Alloc( IExec, AUDIO_DEVICE_NAME, AUDIO_DEVICE_ID, AUDIO_DEVICE_VERSION, AUDIO_DEVICE_REVISION, AudioCommands );
+	audio = Alloc( usbbase, AUDIO_DEVICE_NAME, AUDIO_DEVICE_ID, AUDIO_DEVICE_VERSION, AUDIO_DEVICE_REVISION, AudioCommands );
 
 	if ( ! audio )
 	{
 		return ( FALSE );
 	}
 
-	video = Alloc( IExec, VIDEO_DEVICE_NAME, VIDEO_DEVICE_ID, VIDEO_DEVICE_VERSION, VIDEO_DEVICE_REVISION, VideoCommands );
+	video = Alloc( usbbase, VIDEO_DEVICE_NAME, VIDEO_DEVICE_ID, VIDEO_DEVICE_VERSION, VIDEO_DEVICE_REVISION, VideoCommands );
 
 	if ( ! video )
 	{

@@ -8,6 +8,7 @@
 // --
 
 #include "inc/All.h"
+#include <interfaces/usb2units.h>
 
 // --
 
@@ -18,6 +19,28 @@ struct VideoUnit *unit;
 
 	base = (PTR) Self->Data.LibBase;
 	unit = (PTR) ioreq->io_Unit;
+	if ( ioreq->io_Command == USB2_CMD_ENUM_UNITS )
+	{
+		if ( ioreq->io_Message.mn_Length < sizeof( *ioreq ) )
+		{
+			ioreq->io_Error = IOERR_BADLENGTH;
+		}
+		else
+		{
+			ioreq->io_Error = 0;
+			ioreq->io_Actual = 0;
+
+			Video_EnumUnits( base, ioreq );
+		}
+
+		if ( ! ( ioreq->io_Flags & IOF_QUICK ) )
+		{
+			ReplyMsg( (PTR) ioreq );
+		}
+
+		return;
+	}
+
 	ioreq->io_Flags &= ~( IOF_QUICK | VIDEO_IO_ABORT );
 	ioreq->io_Error = 0;
 	ioreq->io_Actual = 0;

@@ -12,6 +12,8 @@
 #include <proto/dos.h>
 #include <exec/errors.h>
 #include <devices/usb2.h>
+#include <devices/usb2defaults.h>
+#include <interfaces/usb2media.h>
 #include <devices/timer.h>
 #include "../inc/VideoDevice.h"
 #include "Preview.h"
@@ -30,6 +32,35 @@ QueryCamera( struct IOStdReq *ioreq, struct VideoFormat *format )
 	ioreq->io_Length = sizeof( *format );
 
 	return ( DoIO( (PTR) ioreq ) );
+}
+
+// --
+
+static S32
+FindFirstCamera( struct IOStdReq *ioreq )
+{
+	struct USB2UnitInfo entries[VIDEO_MAX_UNITS];
+
+	S32 unit;
+
+	unit = -1;
+
+	if ( ! OpenDevice( VIDEO_DEVICE_NAME, USB2_MEDIA_QUERY_UNIT, (PTR) ioreq, 0 ) )
+	{
+		ioreq->io_Command = USB2_CMD_ENUM_UNITS;
+		ioreq->io_Offset = USB2_UNIT_LIST_VERSION;
+		ioreq->io_Data = entries;
+		ioreq->io_Length = sizeof( entries );
+
+		if ( ( ! DoIO( (PTR) ioreq ) ) && ( ioreq->io_Actual >= sizeof( entries[0] ) ) )
+		{
+			unit = entries[0].Number;
+		}
+
+		CloseDevice( (PTR) ioreq );
+	}
+
+	return ( unit );
 }
 
 // --
@@ -213,7 +244,20 @@ U32 camera;
 		FreeArgs( args );
 	}
 
-	if ( ( mode < 0 ) || ( unit < 0 ) || ( unit >= VIDEO_MAX_UNITS ) ||
+	if ( ( ! setunit ) && ( ! options[4] ) )
+	{
+		struct USB2Prefs prefs;
+
+		USB2_ReadPrefs( IDOS, & prefs );
+
+		if ( prefs.Units[USB2_DEFAULT_VIDEO] != USB2_UNIT_AUTOMATIC )
+		{
+			unit = prefs.Units[USB2_DEFAULT_VIDEO];
+			setunit = TRUE;
+		}
+	}
+
+	if ( ( mode < 0 ) || ( ( unit < 0 ) && ( unit != USB2_UNIT_FIRST || options[3] ) ) || ( unit >= VIDEO_MAX_UNITS ) ||
 		( ( options[1] ) && ( ( options[0] ) || ( setmode ) ) ) ||
 		( ( options[4] ) && ( ( options[0] ) || ( options[1] ) || ( setmode ) || ( setunit ) ) ) )
 	{
@@ -240,6 +284,18 @@ U32 camera;
 		FreeSysObject( ASOT_PORT, port );
 
 		return ( result );
+	}
+
+	if ( unit == USB2_UNIT_FIRST )
+	{
+		unit = FindFirstCamera( ioreq );
+
+		if ( unit < 0 )
+		{
+			Printf( "No first USB video unit is available.\n" );
+
+			goto cleanup;
+		}
 	}
 
 	if ( ( options[4] ) || ( ( ! options[0] ) && ( ! options[1] ) ) )

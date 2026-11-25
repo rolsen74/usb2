@@ -12,11 +12,13 @@
 #define STACK_MEDIADEVICE_H
 
 #include "usb2_all.h"
+#include <devices/usb2defaults.h>
 #include <interfaces/usb2media.h>
 
 struct USB2MediaDevice
 {
 	struct Library Library;
+	struct USBBase *USB;
 	struct ExecIFace *IExec;
 	struct SignalSemaphore Lock;
 	struct DeviceManagerInterface *Backend;

@@ -18,6 +18,8 @@ MediaDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request
 	struct USB2MediaDevice *base;
 	struct DeviceManagerInterface *backend;
 
+	struct USB2Prefs prefs;
+
 	base = (PTR) Self->Data.LibBase;
 	request->io_Unit = NULL;
 	request->io_Error = IOERR_OPENFAIL;
@@ -34,6 +36,20 @@ MediaDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request
 
 			if ( backend )
 			{
+				if ( ( ! base->Audio ) && ( number == USB2_DEFAULT_UNIT ) )
+				{
+					if ( base->IExec->FindTask( NULL )->tc_Node.ln_Type != NT_PROCESS )
+					{
+						request->io_Device = NULL;
+
+						return;
+					}
+
+					USB2_ReadPrefs( base->USB->usb_IDOS, & prefs );
+
+					number = ( prefs.Units[USB2_DEFAULT_VIDEO] == USB2_UNIT_FIRST ) ? USB2_FIRST_UNIT : (U32) MAX( 0, prefs.Units[USB2_DEFAULT_VIDEO] );
+				}
+
 				backend->Open( request, number, flags );
 			}
 		}

@@ -10,6 +10,7 @@
 
 #include "MediaDevice.h"
 #include "Drivers/Audio/inc/AudioDevice.h"
+#include "Drivers/Video/inc/VideoDevice.h"
 
 // --
 
@@ -53,6 +54,34 @@ MediaDevice_BeginIO( struct DeviceManagerInterface *Self, struct IORequest *requ
 			}
 		}
 		else if ( io->io_Offset == AUDIO_ENDPOINT_VERSION )
+		{
+			io->io_Error = 0;
+		}
+	}
+	else if ( ( ! base->Audio ) && ( request->io_Command == USB2_CMD_ENUM_UNITS ) )
+	{
+		struct IOStdReq *io;
+		struct Library *library;
+
+		io = (PTR) request;
+		io->io_Actual = 0;
+		io->io_Error = IOERR_NOCMD;
+
+		backend = MediaDevice_Backend( base );
+
+		if ( backend )
+		{
+			library = backend->Data.LibBase;
+
+			if ( ( library->lib_Version > VIDEO_DEVICE_VERSION ) ||
+				( ( library->lib_Version == VIDEO_DEVICE_VERSION ) && ( library->lib_Revision >= VIDEO_UNIT_LIST_REVISION ) ) )
+			{
+				backend->BeginIO( request );
+
+				return;
+			}
+		}
+		else if ( io->io_Offset == USB2_UNIT_LIST_VERSION )
 		{
 			io->io_Error = 0;
 		}

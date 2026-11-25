@@ -13,6 +13,10 @@ it and selects the first frame size by default. Applications can use
 captures one frame. Use `VIDEO_CMD_STOP` to discard buffered packets when
 pausing capture.
 
+The Sony PlayStation Eye (`1415:2000`) uses `vid_PlayStationEye.Class`
+with the same video driver. Its OV534/OV772x capture path offers bulk YUY2
+at 640 × 480 and 320 × 240, with 640 × 480 at 30 fps as the default.
+
 ## Build and install
 
 ```sh
@@ -21,7 +25,8 @@ make -C Drivers/Video/Test
 ```
 
 Install the matching USB2 stack, then copy `Drivers/Video/bin/cls_Video.Driver` and `Drivers/Video/cls_Video.Class` to
-`Libs:USB2` on AmigaOS 4. Run `USB2VideoTest` to open the settings window
+`Libs:USB2` on AmigaOS 4. Install `vid_PlayStationEye.Class` there for the
+PlayStation Eye. Run `USB2VideoTest` to open the settings window
 with **Video Capture**, **Audio Capture**, and **Audio Output** groups.
 Video Capture is checked when a camera is available. If multiple video units
 are available, use the **Camera** selector to update the modes and default
@@ -97,8 +102,9 @@ one as `RAM:usbvideo.jpg` (MJPEG) or `RAM:usbvideo.yuy2` (raw YUY2).
 Combine `MODE` and `SAVE` to capture in a selected mode.
 The driver allows ten seconds for an active read to produce a complete
 frame. A timed-out request reports zero frame bytes.
-If the tool cannot open a video unit, check that `cls_Video.Class` and `cls_Video.Driver`
-were installed before connecting the webcam, then reconnect it.
+If the tool cannot open a video unit, check that `cls_Video.Driver` and the
+class file for the camera are installed. Use `cls_Video.Class` for UVC or
+`vid_PlayStationEye.Class` for the PlayStation Eye, then reconnect the camera.
 
 ## Compatibility and validation
 

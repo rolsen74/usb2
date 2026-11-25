@@ -8,6 +8,7 @@
 // --
 
 #include "inc/All.h"
+#include <interfaces/usb2units.h>
 
 // --
 
@@ -16,12 +17,26 @@ SEC_CODE S32 Video_Manager_Open( struct DeviceManagerInterface *Self, struct IOR
 struct VideoBase *base;
 struct VideoUnit *unit;
 
+U32 index;
+
 	base = (PTR) Self->Data.LibBase;
 	unit = NULL;
 
 	ObtainSemaphore( & base->Semaphore );
 
-	if ( unitnr < VIDEO_MAX_UNITS )
+	if ( unitnr == USB2_FIRST_UNIT )
+	{
+		for( index = 0; index < VIDEO_MAX_UNITS; index++ )
+		{
+			if ( ( base->Units[index] ) && ( ! base->Units[index]->Detached ) )
+			{
+				unit = base->Units[index];
+
+				break;
+			}
+		}
+	}
+	else if ( unitnr < VIDEO_MAX_UNITS )
 	{
 		unit = base->Units[unitnr];
 	}

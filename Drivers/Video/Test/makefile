@@ -17,7 +17,7 @@ endif
 all: $(TARGET)
 
 SOURCES := VideoTest.c Preview.c PreviewAudio.c PreviewAvi.c PreviewRecording.c YUY2.c ../../Audio/Test/Wav.c
-HEADERS := Preview.h PreviewAudio.h PreviewAvi.h PreviewRecording.h ../inc/VideoDevice.h ../../Audio/inc/AudioDevice.h ../../Audio/Test/Wav.h
+HEADERS := ../../../inc_Public/devices/usb2defaults.h ../../../inc_Public/interfaces/usb2units.h Preview.h PreviewAudio.h PreviewAvi.h PreviewRecording.h ../inc/VideoDevice.h ../../Audio/inc/AudioDevice.h ../../Audio/Test/Wav.h
 
 $(TARGET): $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(SOURCES)
