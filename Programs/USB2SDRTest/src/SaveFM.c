@@ -18,12 +18,13 @@
 static S32
 WriteFM( const char *path, const U8 *pcm, U32 frames )
 {
-	U8 header[AUDIO_WAV_HEADER_SIZE];
+	U8 header[AUDIO_WAV_MAX_HEADER_SIZE];
+	U32 headerBytes;
 	BPTR file;
 	S32 written;
 	S32 closed;
 
-	Audio_Wav_Header( header, frames * 2, SDR_FM_AUDIO_RATE, 1 );
+	headerBytes = Audio_Wav_Header( header, frames * 2, SDR_FM_AUDIO_RATE, 1 );
 
 	file = Open( path, MODE_NEWFILE );
 
@@ -34,7 +35,7 @@ WriteFM( const char *path, const U8 *pcm, U32 frames )
 		return ( FALSE );
 	}
 
-	written = ( ( Write( file, header, sizeof( header ) ) == sizeof( header ) ) &&
+	written = ( ( Write( file, header, headerBytes ) == (S32) headerBytes ) &&
 		( Write( file, pcm, frames * 2 ) == (S32) ( frames * 2 ) ) );
 
 	closed = Close( file );

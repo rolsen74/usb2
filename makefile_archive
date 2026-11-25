@@ -65,7 +65,7 @@ build_video: | build_dir_tree
 	cd $(ROOTDIR)/Drivers/Video && \
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \
-	cp bin/cls_Video.Driver cls_Video.Class $(BINDIR)/usb2/Libs/USB2
+	cp bin/cls_Video.Driver cls_Video.Class vid_PlayStationEye.Class $(BINDIR)/usb2/Libs/USB2
 	cd $(ROOTDIR)/Drivers/Video/Test && \
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \

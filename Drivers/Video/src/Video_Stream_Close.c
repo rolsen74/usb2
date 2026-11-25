@@ -12,9 +12,11 @@
 
 // --
 
-SEC_CODE S32
+SEC_CODE S8
 Video_Stream_Close( struct VideoUnit *unit )
 {
+	S8 error;
+
 	if ( unit->Stream )
 	{
 		Video_Read_Stop( unit );
@@ -24,17 +26,37 @@ Video_Stream_Close( struct VideoUnit *unit )
 		unit->Stream = NULL;
 	}
 
+	if ( unit->USBDetached )
+	{
+		unit->OV534StopPending = FALSE;
+		unit->StreamAltActive = FALSE;
+
+		return ( USB2Err_Device_Detached );
+	}
+
+	if ( unit->OV534StopPending )
+	{
+		error = Video_OV534_Stop( unit );
+
+		if ( error )
+		{
+			DebugPrintF( "USB Video: PlayStation Eye stop failed, USB error %ld\n", (S32) error );
+
+			return ( unit->USBDetached ? USB2Err_Device_Detached : IOERR_OPENFAIL );
+		}
+	}
+
 	if ( unit->StreamAltActive )
 	{
 		if ( ! Video_Stream_SetAlt( unit, 0 ) )
 		{
-			return ( FALSE );
+			return ( IOERR_OPENFAIL );
 		}
 
 		unit->StreamAltActive = FALSE;
 	}
 
-	return ( TRUE );
+	return ( 0 );
 }
 
 // --

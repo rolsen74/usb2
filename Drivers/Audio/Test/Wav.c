@@ -14,6 +14,21 @@
 
 // --
 
+#define WAV_PCM 0x0001
+#define WAV_EXTENSIBLE 0xfffe
+#define WAV_PCM_FORMAT_SIZE 16
+#define WAV_EXTENSIBLE_FORMAT_SIZE 40
+#define WAV_EXTENSIBLE_EXTRA_SIZE 22
+
+// KSDATAFORMAT_SUBTYPE_PCM in RIFF byte order.
+static const U8 PCMSubtype[16] =
+{
+	0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00,
+	0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71
+};
+
+// --
+
 void
 Audio_WriteLE16( U8 *data, U32 value )
 {
@@ -32,34 +47,63 @@ Audio_WriteLE32( U8 *data, U32 value )
 
 // --
 
-void
+U32
+Audio_Wav_HeaderSize( U32 channels )
+{
+	return ( channels == 4 ? AUDIO_WAV_MAX_HEADER_SIZE : 44 );
+}
+
+// --
+
+U32
 Audio_Wav_Header( U8 *header, U32 length, U32 rate, U32 channels )
 {
-	header[0] = 'R';
-	header[1] = 'I';
-	header[2] = 'F';
-	header[3] = 'F';
-	Audio_WriteLE32( & header[4], 36 + length );
-	header[8] = 'W';
-	header[9] = 'A';
-	header[10] = 'V';
-	header[11] = 'E';
-	header[12] = 'f';
-	header[13] = 'm';
-	header[14] = 't';
-	header[15] = ' ';
-	Audio_WriteLE32( & header[16], 16 );
-	Audio_WriteLE16( & header[20], 1 );
+	U8 *data;
+	U32 size;
+	S32 extensible;
+
+	size = Audio_Wav_HeaderSize( channels );
+
+	extensible = ( channels == 4 );
+	data = header + size - 8;
+
+	memcpy( header, "RIFF", 4 );
+
+	Audio_WriteLE32( & header[4], size - 8 + length );
+
+	memcpy( header + 8, "WAVEfmt ", 8 );
+
+	Audio_WriteLE32( & header[16], extensible ? WAV_EXTENSIBLE_FORMAT_SIZE : WAV_PCM_FORMAT_SIZE );
+
+	Audio_WriteLE16( & header[20], extensible ? WAV_EXTENSIBLE : WAV_PCM );
+
 	Audio_WriteLE16( & header[22], channels );
+
 	Audio_WriteLE32( & header[24], rate );
+
 	Audio_WriteLE32( & header[28], rate * channels * 2 );
+
 	Audio_WriteLE16( & header[32], channels * 2 );
+
 	Audio_WriteLE16( & header[34], 16 );
-	header[36] = 'd';
-	header[37] = 'a';
-	header[38] = 't';
-	header[39] = 'a';
-	Audio_WriteLE32( & header[40], length );
+
+	if ( extensible )
+	{
+		Audio_WriteLE16( & header[36], WAV_EXTENSIBLE_EXTRA_SIZE );
+
+		Audio_WriteLE16( & header[38], 16 );
+
+		// The microphone array has no assigned speaker positions.
+		Audio_WriteLE32( & header[40], 0 );
+
+		memcpy( header + 44, PCMSubtype, sizeof( PCMSubtype ) );
+	}
+
+	memcpy( data, "data", 4 );
+
+	Audio_WriteLE32( data + 4, length );
+
+	return ( size );
 }
 
 // --
@@ -76,6 +120,37 @@ static U32
 ReadLE32( const U8 *data )
 {
 	return ( data[0] | ( (U32) data[1] << 8 ) | ( (U32) data[2] << 16 ) | ( (U32) data[3] << 24 ) );
+}
+
+// --
+
+static S32
+IsPCM16( const U8 *format, U32 size )
+{
+	U32 tag;
+	U32 extra;
+
+	if ( ( size < WAV_PCM_FORMAT_SIZE ) || ( ReadLE16( format + 14 ) != 16 ) )
+	{
+		return ( FALSE );
+	}
+
+	tag = ReadLE16( format );
+
+	if ( tag == WAV_PCM )
+	{
+		return ( TRUE );
+	}
+
+	if ( ( tag != WAV_EXTENSIBLE ) || ( size < WAV_EXTENSIBLE_FORMAT_SIZE ) )
+	{
+		return ( FALSE );
+	}
+
+	extra = ReadLE16( format + 16 );
+
+	return ( ( extra >= WAV_EXTENSIBLE_EXTRA_SIZE ) && ( extra <= size - 18 ) &&
+		( ReadLE16( format + 18 ) == 16 ) && ( ! memcmp( format + 24, PCMSubtype, sizeof( PCMSubtype ) ) ) );
 }
 
 // --
@@ -122,7 +197,7 @@ Audio_Wav_Parse( U8 *data, U32 length, struct AudioWav *wav )
 
 		if ( ( ! frameSize ) && ( ! memcmp( chunk, "fmt ", 4 ) ) )
 		{
-			if ( ( size < 16 ) || ( ReadLE16( chunk + 8 ) != 1 ) || ( ReadLE16( chunk + 22 ) != 16 ) )
+			if ( ! IsPCM16( chunk + 8, size ) )
 			{
 				return ( FALSE );
 			}
@@ -133,7 +208,7 @@ Audio_Wav_Parse( U8 *data, U32 length, struct AudioWav *wav )
 
 			frameSize = ReadLE16( chunk + 20 );
 
-			if ( ( ( wav->Channels != 1 ) && ( wav->Channels != 2 ) ) ||
+			if ( ( ( wav->Channels != 1 ) && ( wav->Channels != 2 ) && ( wav->Channels != 4 ) ) ||
 				( frameSize != wav->Channels * 2 ) || ( ! wav->Rate ) || ( wav->Rate > 0x00ffffff ) )
 			{
 				return ( FALSE );
@@ -174,6 +249,13 @@ SampleForChannel( const struct AudioWav *wav, U32 frame, U32 channel, U32 channe
 	sample = wav->Samples + frame * wav->Channels * 2;
 
 	left = (S16) ReadLE16( sample );
+
+	if ( wav->Channels == 4 )
+	{
+		// Monitor the microphone array without assigning its channels to speakers.
+		return ( ( left + (S16) ReadLE16( sample + 2 ) +
+			(S16) ReadLE16( sample + 4 ) + (S16) ReadLE16( sample + 6 ) ) / 4 );
+	}
 
 	if ( wav->Channels == 1 )
 	{

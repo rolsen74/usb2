@@ -19,6 +19,12 @@ Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode )
 
 	U32 speed;
 	U32 hcd;
+	S8 error;
+
+	if ( unit->USBDetached )
+	{
+		return ( FALSE );
+	}
 
 	msg = unit->StartMsg;
 	unit->Format = mode->Format;
@@ -30,6 +36,24 @@ Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode )
 	unit->StreamPacketSize = 0;
 	unit->IsoPacketCount = 0;
 	unit->StreamConfigured = FALSE;
+
+	if ( unit->OV534 )
+	{
+		unit->PayloadSize = VIDEO_OV534_READ_SIZE;
+
+		error = Video_OV534_Init( unit );
+
+		if ( error )
+		{
+			DebugPrintF( "USB Video: PlayStation Eye initialization failed, USB error %ld\n", (S32) error );
+
+			return ( FALSE );
+		}
+
+		unit->StreamConfigured = TRUE;
+
+		return ( TRUE );
+	}
 
 	if ( ! Video_Probe( unit ) )
 	{

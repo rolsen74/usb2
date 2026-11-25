@@ -34,7 +34,7 @@ AudioRequest( struct MsgPort *port )
 // --
 
 static S32
-QueryAudioFormat( struct IOStdReq *request, struct AudioFormat *format )
+QueryAudioFormat( struct IOStdReq *request, struct AudioFormat *format, S32 capture )
 {
 	request->io_Command = AUDIO_CMD_QUERY;
 	request->io_Data = format;
@@ -47,7 +47,8 @@ QueryAudioFormat( struct IOStdReq *request, struct AudioFormat *format )
 
 	return ( ( request->io_Actual == sizeof( *format ) ) &&
 		( format->Encoding == AUDIO_ENCODING_PCM_S16LE ) && ( format->BitsPerSample == 16 ) &&
-		( ( format->Channels == 1 ) || ( format->Channels == 2 ) ) &&
+		( ( format->Channels == 1 ) || ( format->Channels == 2 ) ||
+			( ( capture ) && ( format->Channels == 4 ) ) ) &&
 		( format->SampleRate ) && ( format->SampleRate <= 0x00ffffff ) );
 }
 
@@ -206,9 +207,10 @@ PreviewAudio_Find( struct PreviewAudioChoices *inputs, struct PreviewAudioChoice
 				continue;
 			}
 
-			if ( QueryAudioFormat( request, & format ) )
+			output = unit >= AUDIO_PLAYBACK_UNIT_BASE;
+
+			if ( QueryAudioFormat( request, & format, ! output ) )
 			{
-				output = unit >= AUDIO_PLAYBACK_UNIT_BASE;
 				choices = output ? outputs : inputs;
 				index = choices->Count++;
 				choices->Units[index] = unit;
@@ -321,7 +323,7 @@ OpenAudioStream( struct PreviewAudioStream *stream, struct MsgPort *port, U32 un
 		return ( FALSE );
 	}
 
-	if ( ! QueryAudioFormat( stream->Request, & stream->Format ) )
+	if ( ! QueryAudioFormat( stream->Request, & stream->Format, unit < AUDIO_PLAYBACK_UNIT_BASE ) )
 	{
 		CloseAudioStream( stream );
 
@@ -387,9 +389,10 @@ ValidInput( const struct PreviewAudioStream *input, S32 error, U32 bytes )
 static void
 FinishRecording( struct PreviewAudio *audio )
 {
-	U8 header[AUDIO_WAV_HEADER_SIZE];
+	U8 header[AUDIO_WAV_MAX_HEADER_SIZE];
 	S32 saved;
 	U32 end;
+	U32 headerBytes;
 
 	audio->Record = FALSE;
 
@@ -398,9 +401,10 @@ FinishRecording( struct PreviewAudio *audio )
 		return;
 	}
 
-	Audio_Wav_Header( header, audio->Written, audio->Input.Format.SampleRate, audio->Input.Format.Channels );
+	headerBytes = Audio_Wav_Header( header, audio->Written, audio->Input.Format.SampleRate,
+		audio->Input.Format.Channels );
 
-	end = AUDIO_WAV_HEADER_SIZE + audio->Written;
+	end = headerBytes + audio->Written;
 
 	if ( GetFileSize( audio->File ) != end )
 	{
@@ -409,7 +413,7 @@ FinishRecording( struct PreviewAudio *audio )
 
 	saved = ( GetFileSize( audio->File ) == end ) &&
 		( ChangeFilePosition( audio->File, 0, OFFSET_BEGINNING ) ) &&
-		( Write( audio->File, header, sizeof( header ) ) == sizeof( header ) );
+		( Write( audio->File, header, headerBytes ) == (S32) headerBytes );
 
 	if ( ! Close( audio->File ) )
 	{
@@ -587,6 +591,7 @@ PreviewAudio_Start( struct PreviewAudio *audio, const struct PreviewAudioChoices
 				request = (PTR) sink->Request;
 				sink->AHI = TRUE;
 				sink->Format = audio->Input.Format;
+				sink->Format.Channels = MIN( sink->Format.Channels, 2 );
 				request->ahir_Type = ( sink->Format.Channels == 1 ) ? AHIST_M16S : AHIST_S16S;
 				request->ahir_Frequency = sink->Format.SampleRate;
 				request->ahir_Volume = 0x10000;
@@ -650,14 +655,17 @@ PreviewAudio_Start( struct PreviewAudio *audio, const struct PreviewAudioChoices
 static void
 UpdateRecording( struct PreviewAudio *audio, U8 *buffer, U32 bytes )
 {
-	U8 header[AUDIO_WAV_HEADER_SIZE];
+	U8 header[AUDIO_WAV_MAX_HEADER_SIZE];
 	S32 written;
 	U32 frameBytes;
+	U32 headerBytes;
 
 	if ( ! audio->Record )
 	{
 		return;
 	}
+
+	headerBytes = Audio_Wav_HeaderSize( audio->Input.Format.Channels );
 
 	if ( ! audio->File )
 	{
@@ -665,9 +673,10 @@ UpdateRecording( struct PreviewAudio *audio, U8 *buffer, U32 bytes )
 
 		if ( audio->File )
 		{
-			Audio_Wav_Header( header, 0, audio->Input.Format.SampleRate, audio->Input.Format.Channels );
+			headerBytes = Audio_Wav_Header( header, 0, audio->Input.Format.SampleRate,
+				audio->Input.Format.Channels );
 
-			if ( Write( audio->File, header, sizeof( header ) ) != sizeof( header ) )
+			if ( Write( audio->File, header, headerBytes ) != (S32) headerBytes )
 			{
 				Close( audio->File );
 
@@ -689,7 +698,7 @@ UpdateRecording( struct PreviewAudio *audio, U8 *buffer, U32 bytes )
 	written = 0;
 	frameBytes = audio->Input.Format.Channels * 2;
 
-	if ( bytes <= ~0U - AUDIO_WAV_HEADER_SIZE - audio->Written )
+	if ( bytes <= ~0U - headerBytes - audio->Written )
 	{
 		written = Write( audio->File, buffer, bytes );
 
@@ -826,30 +835,32 @@ QueueMonitorAudio( struct PreviewAudio *audio, U8 *input, U32 bytes )
 	slot = ( audio->MonitorRead + audio->MonitorCount ) % PREVIEW_MONITOR_BUFFERS;
 	buffer = audio->MonitorBuffer + slot * audio->MonitorStride;
 
+	samples.Samples = input;
+	samples.Rate = audio->Input.Format.SampleRate;
+	samples.Channels = audio->Input.Format.Channels;
+	samples.Frames = bytes / ( samples.Channels * 2 );
+
+	frames = Audio_Wav_ConvertBlock( & audio->MonitorResampler, & samples, buffer,
+		output->Format.SampleRate, output->Format.Channels );
+
+	if ( ! frames )
+	{
+		return;
+	}
+
+	bytes = frames * output->Format.Channels * 2;
+
 	if ( output->AHI )
 	{
-		// USB input and WAV use little-endian PCM. AHI expects native signed words.
+		U8 sample;
+
+		// The converter produces little-endian PCM. AHI expects native words.
 		for ( index = 0; index < bytes; index += 2 )
 		{
-			buffer[index] = input[index + 1];
-			buffer[index + 1] = input[index];
+			sample = buffer[index];
+			buffer[index] = buffer[index + 1];
+			buffer[index + 1] = sample;
 		}
-	}
-	else
-	{
-		samples.Samples = input;
-		samples.Rate = audio->Input.Format.SampleRate;
-		samples.Channels = audio->Input.Format.Channels;
-		samples.Frames = bytes / ( samples.Channels * 2 );
-		frames = Audio_Wav_ConvertBlock( & audio->MonitorResampler, & samples, buffer,
-			output->Format.SampleRate, output->Format.Channels );
-
-		if ( ! frames )
-		{
-			return;
-		}
-
-		bytes = frames * output->Format.Channels * 2;
 	}
 
 	audio->MonitorLengths[slot] = bytes;

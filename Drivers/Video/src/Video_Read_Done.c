@@ -18,6 +18,7 @@ Video_Read_Done( struct VideoUnit *unit )
 
 	U32 length;
 	U32 count;
+	U32 offset;
 	S32 consumed;
 	S8 error;
 	U32 budget;
@@ -76,6 +77,11 @@ Video_Read_Done( struct VideoUnit *unit )
 			{
 				error = ioreq->io_Error;
 
+				if ( error == USB2Err_Device_Detached )
+				{
+					unit->USBDetached = TRUE;
+				}
+
 				Video_Read_Stop( unit );
 
 				if ( ( unit->StreamAlt ) || ( error != USB2Err_Host_Stall ) ||
@@ -127,6 +133,15 @@ Video_Read_Done( struct VideoUnit *unit )
 				consumed = Video_Read_Payload( unit,
 					(U8 *) ioreq->io_Data + unit->ReadPacket * unit->StreamPacketSize, length );
 			}
+		}
+		else if ( unit->OV534 )
+		{
+			// A bulk read can contain several independently headed OV534 payloads.
+			count = MAX( 1, ( ioreq->io_Actual + VIDEO_OV534_PAYLOAD_SIZE - 1 ) / VIDEO_OV534_PAYLOAD_SIZE );
+			offset = unit->ReadPacket * VIDEO_OV534_PAYLOAD_SIZE;
+			length = MIN( ioreq->io_Actual - offset, VIDEO_OV534_PAYLOAD_SIZE );
+
+			consumed = Video_Read_Payload( unit, (U8 *) ioreq->io_Data + offset, length );
 		}
 		else
 		{

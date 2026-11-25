@@ -248,6 +248,8 @@ U8 endpoints;
 
 	for( ;; )
 	{
+		length = 0;
+
 		if ( remaining )
 		{
 			length = data[0];
@@ -261,7 +263,8 @@ U8 endpoints;
 		if ( ( ! remaining ) || ( ( data[1] == DSCTYPE_Interface ) &&
 			( length >= sizeof( struct USB2_Interface_Desc ) ) ) )
 		{
-			if ( ( active ) && ( pcm ) && ( format ) && ( endpoint ) && ( channels ) )
+			if ( ( active ) && ( pcm ) && ( format ) && ( endpoint ) && ( channels ) &&
+				( ( channels <= 2 ) || ( endpoint & EPADR_Dir_Mask ) ) )
 			{
 				if ( uac2 )
 				{
@@ -335,7 +338,9 @@ U8 endpoints;
 				terminal = data[3];
 			}
 			else if ( ( data[2] == 0x02 ) && ( length >= 11 ) &&
-				( data[3] == 1 ) && ( data[4] >= 1 ) && ( data[4] <= 2 ) &&
+				( data[3] == 1 ) && ( data[4] >= 1 ) &&
+				( ( data[4] <= 2 ) || ( ( data[4] == 4 ) &&
+					( unit->StartMsg->VendorID == 0x1415 ) && ( unit->StartMsg->DeviceID == 0x2000 ) ) ) &&
 				( data[5] == 2 ) && ( data[6] == 16 ) &&
 				( length >= 8U + 3U * ( data[7] ? data[7] : 2 ) ) )
 			{

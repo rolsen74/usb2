@@ -12,38 +12,53 @@
 
 // --
 
-SEC_CODE S32
+SEC_CODE S8
 Video_Stream_Start( struct VideoUnit *unit )
 {
-	struct USB2_IORequest *request;
-
 	U32 bufferSize;
+	S8 error;
+
+	if ( unit->USBDetached )
+	{
+		return ( USB2Err_Device_Detached );
+	}
 
 	if ( unit->Stream )
 	{
-		return ( TRUE );
+		return ( 0 );
 	}
 
-	if ( ( ! unit->StreamConfigured ) || ( ( unit->StreamAltActive ) && ( ! Video_Stream_Close( unit ) ) ) )
+	if ( ! unit->StreamConfigured )
 	{
-		return ( FALSE );
+		return ( IOERR_OPENFAIL );
+	}
+
+	if ( ( unit->StreamAltActive ) || ( unit->OV534StopPending ) )
+	{
+		error = Video_Stream_Close( unit );
+
+		if ( error )
+		{
+			return ( error );
+		}
 	}
 
 	// Commit once at capture start, while the streaming interface is still idle.
-	if ( ! Video_Control( unit, REQTYPE_Write | REQTYPE_Class | REQTYPE_Interface,
-		0x01, 0x0200, unit->Commit, unit->ProbeLength ) )
+	if ( ( ! unit->OV534 ) &&
+		( ! Video_Control( unit, REQTYPE_Write | REQTYPE_Class | REQTYPE_Interface,
+			0x01, 0x0200, unit->Commit, unit->ProbeLength ) ) )
 	{
-		request = unit->Control->IORequests[0];
+		error = unit->Control->IORequests[0]->io_Error;
 
 		DebugPrintF( "USB Video: %04lx:%04lx unit %lu could not commit video mode, USB error %ld\n",
-			unit->Format.VendorID, unit->Format.DeviceID, unit->UnitNr, (S32) request->io_Error );
+			unit->Format.VendorID, unit->Format.DeviceID, unit->UnitNr, (S32) error );
 
-		if ( request->io_Error == USB2Err_Host_Stall )
+		if ( error == USB2Err_Host_Stall )
 		{
 			USB2_EPRes_Destall( unit->Control );
 		}
 
-		return ( FALSE );
+		return ( error == USB2Err_Device_Detached ? error : IOERR_OPENFAIL );
 	}
 
 	bufferSize = unit->PayloadSize;
@@ -52,7 +67,7 @@ Video_Stream_Start( struct VideoUnit *unit )
 	{
 		if ( ! Video_Stream_SetAlt( unit, unit->StreamAlt ) )
 		{
-			return ( FALSE );
+			return ( IOERR_OPENFAIL );
 		}
 
 		unit->StreamAltActive = TRUE;
@@ -72,12 +87,26 @@ Video_Stream_Start( struct VideoUnit *unit )
 	{
 		Video_Stream_Close( unit );
 
-		return ( FALSE );
+		return ( IOERR_OPENFAIL );
+	}
+
+	if ( unit->OV534 )
+	{
+		error = Video_OV534_Start( unit );
+
+		if ( error )
+		{
+			DebugPrintF( "USB Video: PlayStation Eye stream start failed, USB error %ld\n", (S32) error );
+
+			Video_Stream_Close( unit );
+
+			return ( unit->USBDetached ? USB2Err_Device_Detached : IOERR_OPENFAIL );
+		}
 	}
 
 	unit->FrameDiscard = TRUE;
 
-	return ( TRUE );
+	return ( 0 );
 }
 
 // --

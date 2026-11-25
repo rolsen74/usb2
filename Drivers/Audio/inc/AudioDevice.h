@@ -10,8 +10,8 @@
 
 #define AUDIO_DEVICE_NAME "usb2audio.device"
 #define AUDIO_DEVICE_VERSION 1
-#define AUDIO_DEVICE_REVISION 1
-#define AUDIO_DEVICE_ID AUDIO_DEVICE_NAME " 1.1 (23.11.2026)"
+#define AUDIO_DEVICE_REVISION 2
+#define AUDIO_DEVICE_ID AUDIO_DEVICE_NAME " 1.2 (25.11.2026)"
 #define AUDIO_CMD_QUERY 0x8000
 // CMD_SET_RATE takes one native U32 in Hz while no read or write is active.
 #define AUDIO_CMD_SET_RATE 0x8001

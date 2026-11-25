@@ -55,6 +55,7 @@ usb2/
 │   │   ├── cls_SmartCard.Driver
 │   │   ├── cls_Video.Class
 │   │   ├── cls_Video.Driver
+│   │   ├── vid_PlayStationEye.Class
 │   │   ├── eth_RT2870.Class
 │   │   ├── eth_RT2870.Driver
 │   │   ├── eth_RTL8152.Class

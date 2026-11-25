@@ -37,6 +37,7 @@ S32 notified;
 				if ( msg->nm_Command == USBNC_Detached )
 				{
 					notified = TRUE;
+					unit->USBDetached = TRUE;
 				}
 
 				ReplyMsg( (PTR) msg );

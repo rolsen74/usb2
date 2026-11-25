@@ -51,6 +51,7 @@ install: all
 ifeq ($(HOSTOS),AmigaOS)
 	copy $(BINDIR)/$(TARGET) Libs:USB2
 	copy cls_Video.Class Libs:USB2
+	copy vid_PlayStationEye.Class Libs:USB2
 else
-	@echo "Copy $(BINDIR)/$(TARGET) and cls_Video.Class to Libs:USB2 on AmigaOS."
+	@echo "Copy $(BINDIR)/$(TARGET), cls_Video.Class and vid_PlayStationEye.Class to Libs:USB2 on AmigaOS."
 endif

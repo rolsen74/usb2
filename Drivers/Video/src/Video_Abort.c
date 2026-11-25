@@ -14,6 +14,7 @@
 SEC_CODE void Video_Abort( struct VideoUnit *unit )
 {
 	U32 reset;
+	S8 error;
 
 	ObtainSemaphore( & unit->Base->Semaphore );
 
@@ -24,9 +25,9 @@ SEC_CODE void Video_Abort( struct VideoUnit *unit )
 
 	if ( reset )
 	{
-		Video_Stream_Close( unit );
+		error = Video_Stream_Close( unit );
 
-		Video_Read_Reply( unit, IOERR_ABORTED );
+		Video_Read_Reply( unit, error == USB2Err_Device_Detached ? error : IOERR_ABORTED );
 	}
 
 	if ( ( unit->ReadActive ) && ( unit->ReadActive->io_Flags & VIDEO_IO_ABORT ) )

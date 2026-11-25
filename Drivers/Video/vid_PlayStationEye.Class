@@ -1,0 +1,7 @@
+TYPE Interface
+TITLE "Sony PlayStation Eye"
+DRIVER "cls_Video.Driver"
+CLASS 0xFF
+SUBCLASS 0x00
+PROTOCOL 0x00
+DEVICE 0x1415:0x2000

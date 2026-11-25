@@ -51,7 +51,7 @@ Video_Open_Default( struct VideoUnit *unit, const struct VideoMode *preferred )
 
 		error = unit->Control->IORequests[0]->io_Error;
 
-		if ( ( error == USB2Err_Device_Detached ) || ( error == USB2Err_Host_Timeout ) ||
+		if ( ( unit->OV534 ) || ( error == USB2Err_Device_Detached ) || ( error == USB2Err_Host_Timeout ) ||
 			( error == USB2Err_Host_HostError ) || ( ++attempts == 4 ) )
 		{
 			break;
@@ -105,6 +105,7 @@ U32 index;
 	unit->StartMsg = msg;
 	unit->UnitNr = VIDEO_MAX_UNITS;
 	unit->InterfaceNr = msg->InterfaceDescriptor->InterfaceNumber;
+	unit->OV534 = ( msg->InterfaceDescriptor->InterfaceClass == USBCLASS_Vendor_Specific );
 
 	if ( ( ! Video_Find_Endpoint( unit ) ) || ( ! Video_Parse( unit, 0, & mode ) ) )
 	{
@@ -148,7 +149,7 @@ U32 index;
 	unit->TimerOpen = TRUE;
 	unit->Register = USB2_Reg_RegisterTags(
 		USB2Tag_Reg_DriverMessage, msg,
-		USB2Tag_Reg_Title, "USB Video",
+		USB2Tag_Reg_Title, unit->OV534 ? "PlayStation Eye Video" : "USB Video",
 		TAG_END
 	);
 

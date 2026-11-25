@@ -18,6 +18,13 @@ Video_Set_Mode( struct VideoUnit *unit, U32 number )
 	struct VideoMode requested;
 	struct VideoMode previous;
 
+	S8 error;
+
+	if ( unit->USBDetached )
+	{
+		return ( USB2Err_Device_Detached );
+	}
+
 	if ( unit->ReadActive )
 	{
 		return ( IOERR_UNITBUSY );
@@ -32,7 +39,8 @@ Video_Set_Mode( struct VideoUnit *unit, U32 number )
 		return ( IOERR_BADADDRESS );
 	}
 
-	if ( ( unit->StreamConfigured ) && ( ( ! unit->StreamAltActive ) || ( unit->Stream ) ) &&
+	if ( ( unit->StreamConfigured ) &&
+		( ( ( ! unit->StreamAltActive ) && ( ! unit->OV534StopPending ) ) || ( unit->Stream ) ) &&
 		( unit->FormatIndex == requested.FormatIndex ) &&
 		( unit->FrameIndex == requested.FrameIndex ) &&
 		( unit->Format.FrameInterval == requested.Format.FrameInterval ) )
@@ -44,9 +52,11 @@ Video_Set_Mode( struct VideoUnit *unit, U32 number )
 	previous.FormatIndex = unit->FormatIndex;
 	previous.FrameIndex = unit->FrameIndex;
 
-	if ( ! Video_Stream_Close( unit ) )
+	error = Video_Stream_Close( unit );
+
+	if ( error )
 	{
-		return ( IOERR_OPENFAIL );
+		return ( error );
 	}
 
 	if ( Video_Stream_Open( unit, & requested ) )
@@ -61,6 +71,11 @@ Video_Set_Mode( struct VideoUnit *unit, U32 number )
 		return ( 0 );
 	}
 
+	if ( unit->USBDetached )
+	{
+		return ( USB2Err_Device_Detached );
+	}
+
 	// Restore the previous stream if the camera rejects the new mode.
 	if ( ! Video_Stream_Open( unit, & previous ) )
 	{
@@ -69,7 +84,7 @@ Video_Set_Mode( struct VideoUnit *unit, U32 number )
 		unit->FrameIndex = previous.FrameIndex;
 	}
 
-	return ( IOERR_OPENFAIL );
+	return ( unit->USBDetached ? USB2Err_Device_Detached : IOERR_OPENFAIL );
 }
 
 // --

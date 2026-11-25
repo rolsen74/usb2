@@ -29,8 +29,8 @@
 
 #define VIDEO_DRIVER_NAME "cls_Video.Driver"
 #define VIDEO_DRIVER_VERSION 1
-#define VIDEO_DRIVER_REVISION 4
-#define VIDEO_DRIVER_ID VIDEO_DRIVER_NAME " 1.4 (25.11.2026)\r\n"
+#define VIDEO_DRIVER_REVISION 6
+#define VIDEO_DRIVER_ID VIDEO_DRIVER_NAME " 1.6 (25.11.2026)\r\n"
 
 #include "Video.h"
 

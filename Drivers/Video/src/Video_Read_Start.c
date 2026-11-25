@@ -39,8 +39,8 @@ U32 previous;
 		last = unit->Stream->IORequests[previous];
 
 		// Mark the new batch, leaving any retained packets before the gap usable.
-		if ( ( ! unit->ReadPending ) ||
-			( ( unit->ReadPending & ( 1U << previous ) ) && ( CheckIO( (PTR) last ) ) ) )
+		if ( ( ! unit->OV534 ) && ( ( ! unit->ReadPending ) ||
+			( ( unit->ReadPending & ( 1U << previous ) ) && ( CheckIO( (PTR) last ) ) ) ) )
 		{
 			unit->ReadGaps |= 1U << slot;
 		}

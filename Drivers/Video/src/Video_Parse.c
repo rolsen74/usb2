@@ -129,6 +129,11 @@ U8 index;
 U8 defaultFrame;
 U8 selectedDefault;
 
+	if ( unit->OV534 )
+	{
+		return ( Video_OV534_Mode( unit, number, mode ) );
+	}
+
 	config = (PTR) unit->StartMsg->ConfigDescriptors;
 
 	if ( ( ! config ) || ( config->Length < sizeof( struct USB2_Config_Desc ) ) ||

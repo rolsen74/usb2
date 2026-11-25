@@ -340,7 +340,7 @@ Audio_PlayWav( struct IOStdReq *ioreq, const struct AudioFormat *format, const c
 	if ( ( Read( file, data, (S32) size ) != (S32) size ) ||
 		( ! Audio_Wav_Parse( data, (U32) size, & wav ) ) )
 	{
-		Printf( "Could not read a mono or stereo PCM16 WAV from %s.\n", name );
+		Printf( "Could not read a mono, stereo, or four-channel PCM16 WAV from %s.\n", name );
 		goto free_data;
 	}
 
@@ -390,9 +390,10 @@ struct MsgPort *port;
 struct IOStdReq *ioreq;
 struct AudioFormat format;
 
-U8 header[AUDIO_WAV_HEADER_SIZE];
+U8 header[AUDIO_WAV_MAX_HEADER_SIZE];
 U8 *samples;
 U32 length;
+U32 headerBytes;
 BPTR file;
 S32 result;
 S32 playback;
@@ -461,7 +462,8 @@ S32 error;
 
 	if ( ( format.Encoding != AUDIO_ENCODING_PCM_S16LE ) || ( format.BitsPerSample != 16 ) ||
 		( ! format.SampleRate ) || ( format.SampleRate > 0x00ffffff ) ||
-		( ( format.Channels != 1 ) && ( format.Channels != 2 ) ) )
+		( ( format.Channels != 1 ) && ( format.Channels != 2 ) &&
+			( ( playback ) || ( format.Channels != 4 ) ) ) )
 	{
 		Printf( "The device did not report a supported PCM format.\n" );
 		goto close_device;
@@ -548,7 +550,7 @@ S32 error;
 
 	length = ioreq->io_Actual;
 
-	Audio_Wav_Header( header, length, format.SampleRate, format.Channels );
+	headerBytes = Audio_Wav_Header( header, length, format.SampleRate, format.Channels );
 
 	file = Open( "RAM:usb2audio.wav", MODE_NEWFILE );
 
@@ -558,7 +560,7 @@ S32 error;
 		goto free_samples;
 	}
 
-	if ( ( Write( file, header, sizeof( header ) ) == sizeof( header ) ) &&
+	if ( ( Write( file, header, headerBytes ) == (S32) headerBytes ) &&
 		( Write( file, samples, length ) == (S32) length ) )
 	{
 		Printf( "Saved %ld bytes to RAM:usb2audio.wav, peak %lu/32768\n",

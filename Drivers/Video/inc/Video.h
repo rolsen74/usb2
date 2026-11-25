@@ -12,12 +12,15 @@
 
 #define VIDEO_MAX_FRAME_SIZE ( 64U * 1024U * 1024U )
 #define VIDEO_READ_SIZE 65536
+#define VIDEO_OV534_READ_SIZE 16384
+#define VIDEO_OV534_PAYLOAD_SIZE 2048
 #define VIDEO_ISO_PACKETS 16
 #define VIDEO_ISO_MAX_PACKETS 256
 #define VIDEO_USB_READS 2
 #define VIDEO_IO_ABORT 0x80
 #define VIDEO_PAYLOAD_FID 0x01
 #define VIDEO_PAYLOAD_EOF 0x02
+#define VIDEO_PAYLOAD_PTS 0x04
 #define VIDEO_PAYLOAD_ERR 0x40
 
 struct VideoUnit;
@@ -91,6 +94,7 @@ struct VideoUnit
 	U32 StreamPacketSize;
 	U32 IsoPacketCount;
 	U32 ReadPacket;
+	U32 FramePTS;
 	U64 ProbeDeadline;
 	U16 IsoPacketLengths[VIDEO_USB_READS][VIDEO_ISO_MAX_PACKETS];
 	U8 Commit[48];
@@ -109,6 +113,9 @@ struct VideoUnit
 	U8 FrameDiscard;
 	U8 FrameReports;
 	U8 ProbeLength;
+	U8 OV534;
+	U8 OV534Initialized;
+	U8 OV534StopPending;
 	U8 ReadPending;
 	U8 ReadHead;
 	U8 ReadTail;
@@ -117,6 +124,7 @@ struct VideoUnit
 	U8 TimerOpen;
 	U8 ReadReset;
 	U8 Detached;
+	U8 USBDetached;
 	U8 Released;
 };
 
@@ -128,13 +136,19 @@ SEC_CODE void Video_Main( struct VideoUnit *unit );
 SEC_CODE S32 Video_Find_Endpoint( struct VideoUnit *unit );
 SEC_CODE S32 Video_Parse( struct VideoUnit *unit, U32 number, struct VideoMode *mode );
 SEC_CODE S32 Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode );
-SEC_CODE S32 Video_Stream_Start( struct VideoUnit *unit );
-SEC_CODE S32 Video_Stream_Close( struct VideoUnit *unit );
+SEC_CODE S8 Video_Stream_Start( struct VideoUnit *unit );
+SEC_CODE S8 Video_Stream_Close( struct VideoUnit *unit );
 SEC_CODE S8 Video_Set_Mode( struct VideoUnit *unit, U32 number );
 SEC_CODE S32 Video_Select_Stream( struct VideoUnit *unit, U32 payloadsize );
 SEC_CODE S32 Video_Probe( struct VideoUnit *unit );
 SEC_CODE S32 Video_Stream_SetAlt( struct VideoUnit *unit, U32 alt );
 SEC_CODE S32 Video_Control( struct VideoUnit *unit, U8 type, U8 code, U16 value, PTR data, U16 length );
+SEC_CODE S32 Video_Control_Index( struct VideoUnit *unit, U8 type, U8 code, U16 value, U16 index,
+	PTR data, U16 length, U32 timeout );
+SEC_CODE S8 Video_OV534_Init( struct VideoUnit *unit );
+SEC_CODE S32 Video_OV534_Mode( struct VideoUnit *unit, U32 number, struct VideoMode *mode );
+SEC_CODE S8 Video_OV534_Start( struct VideoUnit *unit );
+SEC_CODE S8 Video_OV534_Stop( struct VideoUnit *unit );
 SEC_CODE void Video_Read_Start( struct VideoUnit *unit );
 SEC_CODE void Video_Read_Done( struct VideoUnit *unit );
 SEC_CODE S32 Video_Read_Payload( struct VideoUnit *unit, U8 *data, U32 length );

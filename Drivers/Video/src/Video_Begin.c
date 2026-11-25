@@ -17,6 +17,7 @@ struct IOStdReq *ioreq;
 struct VideoMode mode;
 
 U32 budget;
+S8 error;
 
 	budget = 16;
 
@@ -74,12 +75,10 @@ U32 budget;
 		}
 		else if ( ioreq->io_Command == VIDEO_CMD_STOP )
 		{
-			if ( ! Video_Stream_Close( unit ) )
-			{
-				ioreq->io_Error = IOERR_OPENFAIL;
-			}
+			error = Video_Stream_Close( unit );
+			ioreq->io_Error = error;
 
-			Video_Read_Reply( unit, IOERR_ABORTED );
+			Video_Read_Reply( unit, error == USB2Err_Device_Detached ? error : IOERR_ABORTED );
 		}
 		else if ( ioreq->io_Command == CMD_READ )
 		{
@@ -91,9 +90,9 @@ U32 budget;
 			{
 				ioreq->io_Error = IOERR_BADLENGTH;
 			}
-			else if ( ! Video_Stream_Start( unit ) )
+			else if ( ( error = Video_Stream_Start( unit ) ) )
 			{
-				ioreq->io_Error = IOERR_OPENFAIL;
+				ioreq->io_Error = error;
 			}
 			else
 			{

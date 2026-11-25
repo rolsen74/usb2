@@ -50,9 +50,19 @@ Video_Find_Endpoint( struct VideoUnit *unit )
 		if ( ( desc[1] == DSCTYPE_Interface ) && ( length >= sizeof( struct USB2_Interface_Desc ) ) )
 		{
 			active = ( desc[2] == unit->InterfaceNr ) && ( ! desc[3] ) &&
-				( desc[5] == 0x0e ) && ( desc[6] == 0x02 );
+				( unit->OV534 ? ( desc[5] == USBCLASS_Vendor_Specific ) :
+					( ( desc[5] == USBCLASS_Video ) && ( desc[6] == 0x02 ) ) );
 		}
-		else if ( ( active ) && ( desc[1] == 0x24 ) && ( length >= 13 ) && ( desc[2] == 1 ) )
+		else if ( ( unit->OV534 ) && ( active ) && ( desc[1] == DSCTYPE_EndPoint ) &&
+			( length >= sizeof( struct USB2_EndPoint_Desc ) ) && ( desc[2] == 0x81 ) &&
+			( ( desc[3] & EPATT_Type_Mask ) == EPATT_Type_Bulk ) )
+		{
+			unit->VideoEndPoint = desc[2];
+			unit->BulkEndPoint = desc[2];
+
+			return ( TRUE );
+		}
+		else if ( ( ! unit->OV534 ) && ( active ) && ( desc[1] == 0x24 ) && ( length >= 13 ) && ( desc[2] == 1 ) )
 		{
 			if ( endpoint )
 			{

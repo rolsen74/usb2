@@ -17,9 +17,16 @@ struct VideoDriverBase *driver;
 struct VideoContext *ctx;
 struct VideoUnit *unit;
 
-	if ( ( ! msg ) || ( ! msg->InterfaceDescriptor ) ||
-		( msg->InterfaceDescriptor->InterfaceClass != 0x0e ) ||
-		( msg->InterfaceDescriptor->InterfaceSubClass != 0x02 ) )
+	if ( ( ! msg ) || ( ! msg->InterfaceDescriptor ) )
+	{
+		return ( FALSE );
+	}
+
+	if ( ! ( ( ( msg->InterfaceDescriptor->InterfaceClass == USBCLASS_Video ) &&
+		( msg->InterfaceDescriptor->InterfaceSubClass == 0x02 ) ) ||
+		( ( msg->VendorID == 0x1415 ) && ( msg->DeviceID == 0x2000 ) &&
+		( msg->InterfaceDescriptor->InterfaceClass == USBCLASS_Vendor_Specific ) &&
+		( msg->InterfaceDescriptor->InterfaceNumber == 0 ) ) ) )
 	{
 		return ( FALSE );
 	}
