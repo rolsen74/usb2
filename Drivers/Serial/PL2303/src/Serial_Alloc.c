@@ -69,7 +69,7 @@ PL2303HasBulkPair( struct USB2_DriverMessage *msg )
 // --
 
 SEC_CODE struct SerialUnit *
-Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg )
+Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg, S32 acm )
 {
 	struct SerialUnit *		unit;
 	struct USB2_Interface * data;
@@ -93,7 +93,7 @@ Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg )
 	}
 
 	unit->StartMsg = msg;
-	unit->ACM	   = ( msg->VendorID != SERIAL_PL2303_VENDOR ) || ( msg->DeviceID != SERIAL_PL2303_PRODUCT );
+	unit->ACM	   = acm;
 	control_nr	   = msg->InterfaceDescriptor->InterfaceNumber;
 	data_nr		   = control_nr;
 	alt			   = 0;

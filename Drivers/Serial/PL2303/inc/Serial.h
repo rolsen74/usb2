@@ -19,8 +19,8 @@
 
 #define SERIAL_DRIVER_NAME	   "ser_PL2303.Driver"
 #define SERIAL_DRIVER_VERSION  1
-#define SERIAL_DRIVER_REVISION 6
-#define SERIAL_DRIVER_ID	   SERIAL_DRIVER_NAME " 1.6 (24.11.2026)\r\n"
+#define SERIAL_DRIVER_REVISION 7
+#define SERIAL_DRIVER_ID	   SERIAL_DRIVER_NAME " 1.7 (25.11.2026)\r\n"
 
 #define SERIAL_RX_SIZE		   4096
 #define SERIAL_TX_CHUNK		   4096
@@ -143,7 +143,7 @@ struct SerialUnit
 // --
 
 SEC_CODE U32				 Serial_Entry ( struct USB2DriverIFace * Self, struct USB2_DriverMessage * msg );
-SEC_CODE struct SerialUnit * Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg );
+SEC_CODE struct SerialUnit * Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg, S32 acm );
 SEC_CODE void				 Serial_Free ( struct SerialContext * ctx, struct SerialUnit * unit );
 SEC_CODE void				 Serial_Main ( struct SerialContext * ctx, struct SerialUnit * unit );
 SEC_CODE S32				 Serial_Startup ( struct SerialContext * ctx, struct SerialUnit * unit );

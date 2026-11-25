@@ -1,7 +1,14 @@
-# PL2303 USB serial adapter
-# Device ID matching is performed by the USB2 stack before launching the driver.
-
 TYPE Interface
 TITLE "PL2303 Serial"
+ALIAS "pl2303"
 DRIVER "ser_PL2303.Driver"
+DEVICE 0x050d:0x0257 # Belkin F5U257 USB serial adapter
 DEVICE 0x067b:0x2303 # Prolific PL2303 USB serial adapter
+DEVICE 0x067b:0x2304 # Prolific PL2303TB
+DEVICE 0x067b:0x23a3 # Prolific PL2303GC
+DEVICE 0x067b:0x23b3 # Prolific PL2303GB
+DEVICE 0x067b:0x23c3 # Prolific PL2303GT
+DEVICE 0x067b:0x23d3 # Prolific PL2303GL
+DEVICE 0x067b:0x23e3 # Prolific PL2303GE
+DEVICE 0x067b:0x23f3 # Prolific PL2303GS
+DEVICE 0x2478:0x2008 # Tripp Lite USB serial adapter
