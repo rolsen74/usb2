@@ -9,6 +9,7 @@
 // --
 
 #include "inc/All.h"
+#include "inc/DescriptorFields.h"
 
 // --
 
@@ -92,8 +93,8 @@ Descriptor_Name( U32 type )
 		case DSCTYPE_OTG:                       return ( "OTG descriptor" );
 		case DSCTYPE_Debug:                     return ( "Debug descriptor" );
 		case DSCTYPE_Interface_Association:     return ( "Interface association" );
-		case 0x24:                              return ( "Class-specific interface descriptor" );
-		case 0x25:                              return ( "Class-specific endpoint descriptor" );
+		case DESC_CLASS_INTERFACE:                              return ( "Class-specific interface descriptor" );
+		case DESC_CLASS_ENDPOINT:                              return ( "Class-specific endpoint descriptor" );
 		case 0x29:                              return ( "Hub descriptor" );
 		case 0x2a:                              return ( "SuperSpeed hub descriptor" );
 		case 0x30:                              return ( "SuperSpeed endpoint companion" );
@@ -188,6 +189,133 @@ BCD( struct DescriptorOutput *out, const char *label, U32 value )
 	snprintf( version, sizeof( version ), "%X.%02X", (unsigned) ( value >> 8 ), (unsigned) ( value & 0xff ) );
 
 	Field( out, label, 2, value, version );
+}
+
+// --
+
+static void
+Descriptor_Value ( struct DescriptorOutput * out, const struct DescriptorField * field, const char * label, const U8 * data )
+{
+	U32	 index;
+	U32	 value;
+	char guid[37];
+
+	value = 0;
+
+	for ( index = 0; index < MIN ( field->Size, 4 ); index++ )
+	{
+		value |= (U32)data[index] << ( index * 8 );
+	}
+
+	switch ( field->Format )
+	{
+		case DESC_HEX:
+			Field ( out, label, field->Size, value, "" );
+			break;
+
+		case DESC_DECIMAL:
+			Decimal ( out, label, field->Size, value, "" );
+			break;
+
+		case DESC_BCD:
+			BCD ( out, label, value );
+			break;
+
+		case DESC_GUID:
+			snprintf ( guid, sizeof ( guid ), "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", (unsigned)value,
+					   (unsigned)Read_Word ( data + 4 ), (unsigned)Read_Word ( data + 6 ), (unsigned)data[8], (unsigned)data[9],
+					   (unsigned)data[10], (unsigned)data[11], (unsigned)data[12], (unsigned)data[13], (unsigned)data[14],
+					   (unsigned)data[15] );
+
+			out->Emit ( out->Target, out->Level, FALSE, label, "16", "", guid );
+			break;
+	}
+}
+
+// --
+
+U32
+Descriptor_Fields ( struct DescriptorOutput * out, const U8 * data, U32 length, U32 offset,
+					const struct DescriptorField * fields )
+{
+	for ( ; fields->Name; fields++ )
+	{
+		if ( fields->Size > length - offset )
+		{
+			Note ( out, fields->Name, "Truncated field" );
+
+			break;
+		}
+
+		Descriptor_Value ( out, fields, fields->Name, data + offset );
+
+		offset += fields->Size;
+	}
+
+	return ( offset );
+}
+
+// --
+
+U32
+Descriptor_List ( struct DescriptorOutput * out, const U8 * data, U32 length, U32 offset, const struct DescriptorField * field,
+				  U32 count )
+{
+	U32	 index;
+	char label[64];
+
+	for ( index = 0; ( index < count ) && ( field->Size <= length - offset ); index++ )
+	{
+		snprintf ( label, sizeof ( label ), "%s[%u]", field->Name, (unsigned)index );
+
+		Descriptor_Value ( out, field, label, data + offset );
+
+		offset += field->Size;
+	}
+
+	if ( index != count )
+	{
+		Note ( out, field->Name, "Truncated list" );
+	}
+
+	return ( offset );
+}
+
+// --
+
+static U32
+Class_Fields_Layout ( struct DescriptorOutput * out, const struct ClassDescriptor * layout, const U8 * data, U32 length )
+{
+	const struct DescriptorField * field;
+
+	U32 start;
+	U32 offset;
+	U32 fixed_end;
+
+	start = 2;
+
+	if ( ( data[1] == DESC_CLASS_INTERFACE ) || ( data[1] == DESC_CLASS_ENDPOINT ) )
+	{
+		Field ( out, "bDescriptorSubtype", 1, data[2], layout->Name );
+
+		start++;
+	}
+
+	offset = Descriptor_Fields ( out, data, length, start, layout->Fields );
+
+	fixed_end = start;
+
+	for ( field = layout->Fields; field->Name; field++ )
+	{
+		fixed_end += field->Size;
+	}
+
+	if ( ( layout->Tail ) && ( offset == fixed_end ) )
+	{
+		offset = layout->Tail ( out, data, length, offset );
+	}
+
+	return ( offset );
 }
 
 // --
@@ -434,7 +562,7 @@ Association_Fields( struct DescriptorOutput *out, const U8 *data )
 
 // --
 
-static void
+static U32
 HID_Fields( struct DescriptorOutput *out, const U8 *data, U32 length )
 {
 	U32 offset;
@@ -457,6 +585,8 @@ HID_Fields( struct DescriptorOutput *out, const U8 *data, U32 length )
 	{
 		Note( out, "Descriptor entries", "Truncated" );
 	}
+
+	return ( offset );
 }
 
 // --
@@ -464,7 +594,10 @@ HID_Fields( struct DescriptorOutput *out, const U8 *data, U32 length )
 static void
 Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 speed, S32 interface_only )
 {
+	const struct ClassDescriptor * layout;
+
 	const U8 *descriptor;
+	const U8 *	 interface;
 	const char *name;
 
 	U32 offset;
@@ -474,9 +607,9 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 	U32 child_level;
 	U32 first_interface;
 	U32 last_interface;
-	U32 interface_class;
 	U32 total;
 	U32 decoded;
+	S32	 endpoint;
 	S32 hid;
 	char title[96];
 	char description[64];
@@ -485,7 +618,8 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 	child_level = 1;
 	first_interface = 0;
 	last_interface = 0;
-	interface_class = 0;
+	interface		= NULL;
+	endpoint		= FALSE;
 
 	while( offset < size )
 	{
@@ -505,17 +639,21 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 
 		type = descriptor[1];
 
-		if ( ( interface_only ) && ( offset ) && ( ( type == DSCTYPE_Interface ) ||
-			( type == DSCTYPE_Interface_Association ) || ( type == DSCTYPE_Configuration ) ) )
+		if ( ( interface_only ) && ( offset )
+			 && ( ( type == DSCTYPE_Interface ) || ( type == DSCTYPE_Interface_Association ) || ( type == DSCTYPE_Configuration )
+				  || ( type == DSCTYPE_Other_Speed_Configuration ) ) )
 		{
 			return;
 		}
 
-		hid = ( type == 0x21 ) && ( interface_class == USBCLASS_HID );
+		hid = ( type == 0x21 ) && ( interface ) && ( interface[5] == USBCLASS_HID );
+
+		layout = Class_Descriptor ( interface, descriptor, length );
+
 		name = hid ? "HID descriptor" : Descriptor_Name( type );
 		level = child_level;
 
-		snprintf( title, sizeof( title ), "%s [0x%02X]", name, (unsigned) type );
+		snprintf ( title, sizeof ( title ), "%s [0x%02X]", layout ? layout->Name : name, (unsigned)type );
 
 		switch( type )
 		{
@@ -524,7 +662,8 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 				level = 0;
 				child_level = 1;
 				last_interface = 0;
-				interface_class = 0;
+				interface	   = NULL;
+				endpoint	   = FALSE;
 
 				if ( length >= 9 )
 				{
@@ -536,7 +675,8 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 				level = 1;
 				child_level = 2;
 				last_interface = 0;
-				interface_class = 0;
+				interface	   = NULL;
+				endpoint	   = FALSE;
 
 				if ( length >= 8 )
 				{
@@ -546,7 +686,8 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 				break;
 
 			case DSCTYPE_Interface:
-				interface_class = ( length >= 9 ) ? descriptor[5] : 0;
+				interface = ( length >= 9 ) ? descriptor : NULL;
+				endpoint  = FALSE;
 				level = interface_only ? 0 : 1;
 
 				if ( length >= 9 )
@@ -556,19 +697,34 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 						level++;
 					}
 
-					snprintf( title, sizeof( title ), "Interface %u, alternate %u",
-						(unsigned) descriptor[2], (unsigned) descriptor[3] );
+					snprintf ( title, sizeof ( title ), "Interface %u, alternate %u", (unsigned)descriptor[2],
+							   (unsigned)descriptor[3] );
 				}
 
 				child_level = level + 1;
 				break;
 
 			case DSCTYPE_EndPoint:
+				endpoint = ( length >= 7 );
+
 				if ( length >= 7 )
 				{
 					snprintf( title, sizeof( title ), "Endpoint 0x%02X %s", (unsigned) descriptor[2],
 						( descriptor[2] & EPADR_Dir_In ) ? "IN" : "OUT" );
 				}
+				break;
+
+			case DESC_CLASS_ENDPOINT:
+			case 0x30:
+			case 0x31:
+				if ( endpoint )
+				{
+					level++;
+				}
+				break;
+
+			case DESC_CLASS_INTERFACE:
+				endpoint = FALSE;
 				break;
 		}
 
@@ -582,12 +738,14 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 		{
 			Config_Fields( out, descriptor, speed );
 
+			decoded = 9;
+
 			total = Read_Word( descriptor + 2 );
 
 			if ( total > size - offset )
 			{
-				snprintf( description, sizeof( description ), "%u of %u bytes cached",
-					(unsigned) ( size - offset ), (unsigned) total );
+				snprintf ( description, sizeof ( description ), "%u of %u bytes cached", (unsigned)( size - offset ),
+						   (unsigned)total );
 
 				Note( out, "Configuration stream", description );
 			}
@@ -603,6 +761,13 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 			Endpoint_Fields( out, descriptor );
 
 			decoded = 7;
+
+			if ( ( length >= 9 ) && ( interface ) && ( interface[5] == USBCLASS_Audio )
+				 && ( ( interface[6] == 2 ) || ( interface[6] == 3 ) ) && ( interface[7] == 0 ) )
+			{
+				decoded = Descriptor_Fields ( out, descriptor, length, decoded,
+											  DESC_FIELDS ( DESC_BYTE ( bRefresh ), DESC_BITS ( bSynchAddress, 1 ) ) );
+			}
 		}
 		else if ( ( type == DSCTYPE_Interface_Association ) && ( length >= 8 ) )
 		{
@@ -610,7 +775,22 @@ Describe_Stream( struct DescriptorOutput *out, const U8 *data, U32 size, U32 spe
 		}
 		else if ( ( hid ) && ( length >= 6 ) )
 		{
-			HID_Fields( out, descriptor, length );
+			decoded = HID_Fields ( out, descriptor, length );
+		}
+		else if ( layout )
+		{
+			decoded = Class_Fields_Layout ( out, layout, descriptor, length );
+		}
+		else if ( type == 0x30 )
+		{
+			decoded = Descriptor_Fields (
+				out, descriptor, length, 2,
+				DESC_FIELDS ( DESC_BYTE ( bMaxBurst ), DESC_BITS ( bmAttributes, 1 ), DESC_WORD ( wBytesPerInterval ) ) );
+		}
+		else if ( type == 0x31 )
+		{
+			decoded = Descriptor_Fields ( out, descriptor, length, 2,
+										  DESC_FIELDS ( DESC_BITS ( wReserved, 2 ), DESC_LONG ( dwBytesPerInterval ) ) );
 		}
 
 		Raw_Bytes( out, descriptor, decoded, length );
