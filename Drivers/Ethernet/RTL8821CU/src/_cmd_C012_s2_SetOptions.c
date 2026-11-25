@@ -14,6 +14,42 @@
 
 // --
 
+static S32
+RecoverPipes( struct EthernetUnit *unit, struct USB2IFace *usb2 )
+{
+	U32 pipe;
+	U32 pipe_bit;
+
+	if ( unit->unit_RxStalled )
+	{
+		if ( ! usb2->USB2_EPRes_Destall( unit->unit_Bulk_In ) )
+		{
+			return ( FALSE );
+		}
+
+		unit->unit_RxStalled = FALSE;
+	}
+
+	for( pipe = 0; pipe < RTL8821CU_TX_PIPES; pipe++ )
+	{
+		pipe_bit = 1U << pipe;
+
+		if ( unit->unit_TxStalled & pipe_bit )
+		{
+			if ( ! usb2->USB2_EPRes_Destall( unit->unit_Bulk_Out[pipe] ) )
+			{
+				return ( FALSE );
+			}
+
+			unit->unit_TxStalled &= ~pipe_bit;
+		}
+	}
+
+	return ( TRUE );
+}
+
+// --
+
 void
 Cmd_SetOptions( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana2Req *ioreq )
 {
@@ -147,13 +183,6 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana
 		goto invalid;
 	}
 
-	if ( ! unit->unit_RadioInitialized )
-	{
-		ReportUnitOffline( unit, ioreq );
-
-		return;
-	}
-
 	if ( changed )
 	{
 		RTL8821CU_StopRX( unit );
@@ -164,8 +193,8 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana
 
 		memset( unit->unit_Keys, 0, sizeof( unit->unit_Keys ) );
 
-		if ( ( ( recover ) && ( unit->unit_RxStalled ) && ( ! usb2->USB2_EPRes_Destall( unit->unit_Bulk_In ) ) ) ||
-			( ( ( recover ) || ( channel != unit->unit_Channel ) ) && ( ! RTL8821CU_TuneRadio( unit, channel ) ) ) ||
+		if ( ( ( recover ) && ( ! RecoverPipes( unit, usb2 ) ) ) ||
+			( ( ( recover ) || ( channel != unit->unit_Channel ) ) && ( ! RTL8821CU_TuneRadio( unit, channel, TRUE ) ) ) ||
 			( ! RTL8821CU_SetAssociation( unit, bssid, aid ) ) )
 		{
 			unit->unit_RadioReady = FALSE;
@@ -184,8 +213,6 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana
 
 		if ( recover )
 		{
-			unit->unit_RxStalled = FALSE;
-
 			DebugPrintF( "RTL8821CU: radio recovered on channel %lu\n", channel );
 		}
 	}
@@ -203,14 +230,12 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana
 		Sana2_AbortPackets( & unit->unit_Pending, S2ERR_OUTOFSERVICE, S2WERR_UNIT_OFFLINE );
 	}
 
-	if ( aid )
+	if ( operational == TRUE )
 	{
 		unit->unit_ManualOffline = FALSE;
 	}
 
-	RTL8821CU_SetOnline( unit, ( unit->unit_Configured ) && ( unit->unit_TxReady ) && ( aid ) &&
-		( encryption == S2ENC_NONE ? ( ! unit->unit_RequireOperState || unit->unit_Operational ) :
-			( unit->unit_Operational && unit->unit_Keys[0].Active ) ) );
+	RTL8821CU_SetOnline( unit, ( ! unit->unit_ManualOffline ) && ( RTL8821CU_CanGoOnline( unit ) ) );
 
 	return;
 

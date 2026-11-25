@@ -47,59 +47,15 @@
 
 // --
 
-static U32
-CCKGain( U32 base )
-{
-	// rtw8821c_bb_pg_type0, path A, 1/2/5.5/11 Mbps in table order.
-	static const S32 rate_power[] = { 38, 36, 34, 32 };
-	// Lowest 20 MHz CCK limit across the upstream domains and channels 1-11.
-	static const S32 world_limit = 28;
-
-	U32 gain;
-	U32 rate;
-	S32 reference;
-	S32 limit;
-	S32 offset;
-	S32 index;
-
-	gain = 0;
-	reference = rate_power[3];
-	limit = world_limit - reference;
-
-	for( rate = 0; rate < sizeof( rate_power ) / sizeof( rate_power[0] ); rate++ )
-	{
-		offset = rate_power[rate] - reference;
-		index = (S32) base + ( offset < limit ? offset : limit );
-
-		if ( index < 0 )
-		{
-			index = 0;
-		}
-		else if ( index > 0x3f )
-		{
-			index = 0x3f;
-		}
-
-		gain |= (U32) index << ( rate * 8 );
-	}
-
-	return ( gain );
-}
-
-// --
-
 S32
-RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel )
+RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel, S32 enable_tx )
 {
 	static const U32 swings[] = { 0x200, 0x16a, 0x101, 0x0b6 };
 
 	struct USB2_EPResource *control;
 
-	U32 power;
-	U32 group;
 	U32 rfe;
 	U32 radio;
-	U32 gain;
 	S32 btg;
 
 	control = unit->unit_USB_Register->Res_Control;
@@ -113,28 +69,28 @@ RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel )
 	}
 
 	if ( ( ! RTL8821CU_WriteReg( control, 0x0522, 1, 0xff ) ) ||
-		( ! RTL8821CU_UpdateReg( control, 0x0808, 4, 0, 0x10000000 ) ) ||
+		( ! RTL8821CU_UpdateReg( control, 0x0808, 4, 0x10000000, 0x10000000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0454, 1, 0x80, 0 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0a80, 4, 0x0004ffff, btg ? 0xfc84 : 0x7532 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0a84, 4, 0x00ff0000, btg ? 0x000e0000 : 0x00120000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0814, 4, 0x0000fc00, 0x00003c00 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0c1c, 4, 0xffe00f00, swings[unit->unit_BBSwing / 3] << 21 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0860, 4, 0x1ffe0000, 0x12d40000 ) ) ||
-		( ! RTL8821CU_UpdateReg( control, 0x08ac, 4, 0x003003ff, 0x10010000 ) ) ||
-		( ! RTL8821CU_UpdateReg( control, 0x08c4, 4, 0, 0x40000000 ) ) ||
+		( ! RTL8821CU_UpdateReg( control, 0x08ac, 4, 0x103103ff, 0x10010000 ) ) ||
+		( ! RTL8821CU_UpdateReg( control, 0x08c4, 4, 0x40000000, 0x40000000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0668, 2, 0x0180, 0 ) ) ||
 		( ! RTL8821CU_WriteReg( control, 0x0483, 1, 0 ) ) ||
-		( ! RTL8821CU_UpdateReg( control, 0x1080, 4, 0, 0x00010000 ) ) ||
-		( ! RTL8821CU_UpdateReg( control, 0x0000, 4, 0, 0x04000000 ) ) ||
+		( ! RTL8821CU_UpdateReg( control, 0x1080, 4, 0x00010000, 0x00010000 ) ) ||
+		( ! RTL8821CU_UpdateReg( control, 0x0000, 4, 0x04000000, 0x04000000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0cb8, 4, 0x00f50000, btg ? 0x00010000 : 0x00700000 ) ) ||
-		( ! RTL8821CU_UpdateRF( control, 0xdf, 0, 0x40 ) ) ||
+		( ! RTL8821CU_UpdateRF( control, 0xdf, 0x40, 0x40 ) ) ||
 		( ! RTL8821CU_UpdateRF( control, 0x64, 0x0f, 0x0f ) ) ||
 		( ! RTL8821CU_UpdateRF( control, 0x18, 0x70fff, 0x0c00 | channel ) ) ||
 		( ! RTL8821CU_UpdateRF( control, 0xb8, 0x80000, 0 ) ) ||
-		( ! RTL8821CU_UpdateRF( control, 0xb8, 0, 0x80000 ) ) ||
+		( ! RTL8821CU_UpdateRF( control, 0xb8, 0x80000, 0x80000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0948, 4, 0x30000000, 0x20000000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x094c, 4, 0x30000000, 0x20000000 ) ) ||
-		( ! RTL8821CU_UpdateReg( control, 0x0c20, 4, 0, 0x80000000 ) ) ||
+		( ! RTL8821CU_UpdateReg( control, 0x0c20, 4, 0x80000000, 0x80000000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x08f0, 4, 0x80000000, 0 ) ) ||
 		( ! RTL8821CU_ReadReg( control, 0x2860, 4, & radio ) ) )
 	{
@@ -149,31 +105,10 @@ RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel )
 	}
 
 	unit->unit_Channel = channel;
-	group = channel <= 2 ? 0 : ( channel <= 5 ? 1 : ( channel <= 8 ? 2 : 3 ) );
-	power = unit->unit_CCKPower[group];
 
-	if ( power > 0x3f )
-	{
-		DebugPrintF( "RTL8821CU: channel %lu receive-only, invalid CCK power index $%02lx\n",
-			(U32) channel, power );
+	DebugPrintF( "RTL8821CU: channel %lu at 20 MHz, RF $%05lx\n", (U32) channel, radio & 0x000fffff );
 
-		return ( TRUE );
-	}
-
-	gain = CCKGain( power );
-
-	if ( ( ! RTL8821CU_WriteReg( control, 0x1d00, 4, gain ) ) ||
-		( ! RTL8821CU_WriteReg( control, 0x0522, 1, 0 ) ) )
-	{
-		return ( FALSE );
-	}
-
-	unit->unit_TxReady = TRUE;
-
-	DebugPrintF( "RTL8821CU: channel %lu at 20 MHz, RF $%05lx, CCK power index $%02lx\n",
-		(U32) channel, radio & 0x000fffff, gain & 0xff );
-
-	return ( TRUE );
+	return ( ( ! enable_tx ) || ( RTL8821CU_SetTxPower( unit ) ) );
 }
 
 // --

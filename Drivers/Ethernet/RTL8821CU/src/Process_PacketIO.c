@@ -16,6 +16,24 @@
 // --
 
 static void
+RadioOffline( struct EthernetUnit *unit, U32 event )
+{
+	RTL8821CU_StopRX( unit );
+
+	unit->unit_RadioReady = FALSE;
+	unit->unit_TxReady = FALSE;
+	unit->unit_Operational = FALSE;
+
+	RTL8821CU_SetOnline( unit, FALSE );
+
+	Sana2_AbortPackets( & unit->unit_Pending, S2ERR_OUTOFSERVICE, S2WERR_UNIT_OFFLINE );
+
+	Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE | event );
+}
+
+// --
+
+static void
 PollReceive( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 {
 	struct USB2_EPResource *resource;
@@ -52,17 +70,10 @@ PollReceive( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 			if ( ( unit->unit_RxStalled ) || ( ! usb2->USB2_EPRes_Destall( resource ) ) )
 			{
 				unit->unit_RxStalled = TRUE;
-				unit->unit_RadioReady = FALSE;
-				unit->unit_TxReady = FALSE;
-				unit->unit_Operational = FALSE;
-
-				RTL8821CU_SetOnline( unit, FALSE );
 
 				DebugPrintF( "RTL8821CU: bulk receive stalled, radio offline\n" );
 
-				Sana2_AbortPackets( & unit->unit_Pending, S2ERR_OUTOFSERVICE, S2WERR_UNIT_OFFLINE );
-
-				Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
+				RadioOffline( unit, S2EVENT_RX );
 
 				return;
 			}
@@ -99,6 +110,8 @@ Transmit( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana2Req *
 	U32 length;
 	U32 payload;
 	U32 type;
+	U32 pipe;
+	U32 pipe_bit;
 	S32 management;
 	S32 error;
 
@@ -112,7 +125,9 @@ Transmit( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana2Req *
 		return;
 	}
 
-	resource = unit->unit_Bulk_Out[management ? RTL8821CU_TX_MANAGEMENT : RTL8821CU_TX_BEST_EFFORT];
+	pipe = management ? RTL8821CU_TX_MANAGEMENT : RTL8821CU_TX_BEST_EFFORT;
+	pipe_bit = 1U << pipe;
+	resource = unit->unit_Bulk_Out[pipe];
 	ioreq = resource->IORequests[0];
 	buffer = resource->Buffers[0];
 
@@ -144,13 +159,26 @@ Transmit( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana2Req *
 
 		if ( error == USB2Err_Host_Stall )
 		{
-			usb2->USB2_EPRes_Destall( resource );
+			if ( ( unit->unit_TxStalled & pipe_bit ) || ( ! usb2->USB2_EPRes_Destall( resource ) ) )
+			{
+				unit->unit_TxStalled |= pipe_bit;
+
+				DebugPrintF( "RTL8821CU: bulk transmit pipe %lu stalled, radio offline\n", pipe );
+
+				RadioOffline( unit, S2EVENT_TX );
+
+				return;
+			}
+
+			unit->unit_TxStalled |= pipe_bit;
 		}
 
 		Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_HARDWARE );
 
 		return;
 	}
+
+	unit->unit_TxStalled &= ~pipe_bit;
 
 	if ( management )
 	{

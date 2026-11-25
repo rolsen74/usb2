@@ -33,6 +33,8 @@ RTL8821CU_SetAssociation( struct EthernetUnit *unit, U8 *bssid, U16 aid )
 	memcpy( unit->unit_BSSID, bssid, RTL8821CU_ADDR_SIZE );
 
 	unit->unit_AssocID = aid;
+	unit->unit_BeaconAge = 0;
+	unit->unit_BeaconLimit = RTL8821CU_BEACON_TIMEOUT;
 
 	return ( TRUE );
 }

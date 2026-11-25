@@ -13,6 +13,18 @@
 
 // --
 
+S32
+RTL8821CU_CanGoOnline( const struct EthernetUnit *unit )
+{
+	return ( ( unit->unit_Configured ) && ( unit->unit_RadioReady ) && ( unit->unit_TxReady ) &&
+		( unit->unit_AssocID ) &&
+		( unit->unit_Encryption == S2ENC_CCMP ?
+			( unit->unit_Operational && unit->unit_Keys[0].Active ) :
+			( ! unit->unit_RequireOperState || unit->unit_Operational ) ) );
+}
+
+// --
+
 void
 RTL8821CU_SetOnline( struct EthernetUnit *unit, S32 online )
 {

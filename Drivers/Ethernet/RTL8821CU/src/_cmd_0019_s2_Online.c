@@ -25,9 +25,7 @@ Cmd_Online( struct EthernetUnit *unit, struct IOSana2Req *ioreq )
 		return;
 	}
 
-	if ( ( ! unit->unit_RadioReady ) || ( ! unit->unit_TxReady ) || ( ! unit->unit_AssocID ) ||
-		( ( unit->unit_RequireOperState ) && ( ! unit->unit_Operational ) ) ||
-		( ( unit->unit_Encryption == S2ENC_CCMP ) && ( ! unit->unit_Keys[0].Active ) ) )
+	if ( ! RTL8821CU_CanGoOnline( unit ) )
 	{
 		ReportUnitOffline( unit, ioreq );
 

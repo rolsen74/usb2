@@ -9,6 +9,7 @@
 // --
 
 #include "All.h"
+#include "Radio.h"
 
 // --
 
@@ -22,6 +23,24 @@ static void
 ReceiveManagement( struct EthernetUnit *unit, const U8 *frame, U32 length )
 {
 	struct IOSana2Req *ioreq;
+
+	U32 interval;
+	U32 ticks;
+
+	if ( ( frame[0] == 0x80 ) && ( length >= BEACON_HEADER_LENGTH ) && ( unit->unit_AssocID ) &&
+		( ! memcmp( frame + 10, unit->unit_BSSID, RTL8821CU_ADDR_SIZE ) ) &&
+		( ! memcmp( frame + 16, unit->unit_BSSID, RTL8821CU_ADDR_SIZE ) ) )
+	{
+		interval = frame[32] | ( (U32) frame[33] << 8 );
+		ticks = ( interval * 1024 + 1000000 / TICKS_PER_SECOND - 1 ) / ( 1000000 / TICKS_PER_SECOND );
+		unit->unit_BeaconAge = 0;
+		unit->unit_BeaconLimit = 10 * ticks;
+
+		if ( unit->unit_BeaconLimit < RTL8821CU_BEACON_TIMEOUT )
+		{
+			unit->unit_BeaconLimit = RTL8821CU_BEACON_TIMEOUT;
+		}
+	}
 
 	if ( ( ! unit->unit_BeaconReceived ) && ( frame[0] == 0x80 ) && ( length >= BEACON_HEADER_LENGTH ) )
 	{

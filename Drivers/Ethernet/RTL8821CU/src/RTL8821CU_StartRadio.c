@@ -45,7 +45,7 @@ RTL8821CU_StartRadio( struct EthernetUnit *unit )
 		( ! RTL8821CU_WriteReg( control, 0x06a2, 2, 0 ) ) ||
 		( ! RTL8821CU_WriteReg( control, 0x06a4, 2, 0 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0440, 4, 0x000fffff, 1 ) ) ||
-		( ! RTL8821CU_TuneRadio( unit, 1 ) ) )
+		( ! RTL8821CU_TuneRadio( unit, 1, FALSE ) ) )
 	{
 		DebugPrintF( "RTL8821CU: radio setup failed\n" );
 
@@ -56,6 +56,11 @@ RTL8821CU_StartRadio( struct EthernetUnit *unit )
 	{
 		DebugPrintF( "RTL8821CU: RF calibration failed\n" );
 
+		return ( FALSE );
+	}
+
+	if ( ! RTL8821CU_SetTxPower( unit ) )
+	{
 		return ( FALSE );
 	}
 

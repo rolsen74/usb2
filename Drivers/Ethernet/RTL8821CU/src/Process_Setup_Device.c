@@ -82,15 +82,21 @@ Process_Setup_Device( struct EthernetUnit *unit, struct USB2_DriverMessage *msg 
 
 	unit->unit_FirmwareRunning = RTL8821CU_LoadFirmware( unit );
 
-	unit->unit_AddressValid = RTL8821CU_ReadStationAddress( unit );
-
-	if ( ( unit->unit_FirmwareRunning ) && ( unit->unit_AddressValid ) )
+	if ( ! unit->unit_FirmwareRunning )
 	{
-		unit->unit_RadioInitialized = RTL8821CU_StartRadio( unit );
-		unit->unit_RadioReady = unit->unit_RadioInitialized;
+		return ( FALSE );
 	}
 
-	return ( TRUE );
+	unit->unit_AddressValid = RTL8821CU_ReadStationAddress( unit );
+
+	if ( ! unit->unit_AddressValid )
+	{
+		return ( FALSE );
+	}
+
+	unit->unit_RadioReady = RTL8821CU_StartRadio( unit );
+
+	return ( unit->unit_RadioReady );
 }
 
 // --

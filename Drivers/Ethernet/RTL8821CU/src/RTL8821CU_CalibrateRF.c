@@ -103,7 +103,9 @@ RTL8821CU_CalibrateRF( struct EthernetUnit *unit )
 
 	DebugPrintF( "RTL8821CU: firmware RF calibration timed out\n" );
 
-	return ( RTL8821CU_UpdateRF( control, 0x08, 0x000fffff, 0 ) );
+	RTL8821CU_UpdateRF( control, 0x08, 0x000fffff, 0 );
+
+	return ( FALSE );
 }
 
 // --

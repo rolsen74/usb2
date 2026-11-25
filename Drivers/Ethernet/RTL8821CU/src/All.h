@@ -91,9 +91,10 @@ struct EthernetUnit
 	struct TimeVal unit_LastStart;
 	struct RTL8821CU_Key unit_Keys[4];
 	U16 unit_AssocID;
+	U32 unit_BeaconAge;
+	U32 unit_BeaconLimit;
 	U8 unit_Channel;
 	U8 unit_Encryption;
-	U8 unit_RadioInitialized;
 	U8 unit_RadioReady;
 	U8 unit_TxReady;
 	U8 unit_Configured;
@@ -111,6 +112,7 @@ struct EthernetUnit
 	U8 unit_Online;
 	U8 unit_RxPending;
 	U8 unit_RxStalled;
+	U8 unit_TxStalled;
 	U8 unit_AddressValid;
 	U8 unit_Detached;
 	U8 unit_Exclusive;

@@ -35,7 +35,6 @@ Process_Main ( struct EthernetUnit * unit, struct USB2IFace * usb2 )
 	struct USB2_Register *		reg;
 
 	S32 detached;
-	U32 wait_ticks;
 	S32 start;
 
 	reg		 = unit->unit_USB_Register;
@@ -76,8 +75,9 @@ Process_Main ( struct EthernetUnit * unit, struct USB2IFace * usb2 )
 
 		Process_PacketIO ( unit, usb2 );
 
-		wait_ticks = unit->unit_RadioInitialized ? 1 : 10;
-		start = unit->unit_StartAuto && unit->unit_TxReady && ! unit->unit_AssocID;
+		RTL8821CU_CheckLink ( unit );
+
+		start = unit->unit_StartAuto && unit->unit_RadioReady && unit->unit_TxReady && ! unit->unit_AssocID;
 		unit->unit_StartAuto = FALSE;
 
 		ReleaseSemaphore ( &unit->unit_CommandLock );
@@ -87,7 +87,7 @@ Process_Main ( struct EthernetUnit * unit, struct USB2IFace * usb2 )
 			Wireless_StartAuto( USB2WIFI_RTL8821CU, unit->unit_UnitNr );
 		}
 
-		Delay ( wait_ticks );
+		Delay ( 1 );
 	}
 }
 

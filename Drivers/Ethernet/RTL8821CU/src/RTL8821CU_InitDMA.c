@@ -89,22 +89,23 @@ RTL8821CU_InitDMA( struct USB2_EPResource *control, U32 max_packet )
 		( RTL8821CU_WriteReg( control, 0x0238, 2, QUEUE_PAGES ) ) &&
 		( RTL8821CU_WriteReg( control, 0x023c, 2, 0 ) ) &&
 		( RTL8821CU_WriteReg( control, 0x0240, 2, PUBLIC_PAGES ) ) &&
-		( RTL8821CU_UpdateReg( control, REG_RQPN_CTRL_2, 4, 0, 0x80000000 ) ) &&
+		( RTL8821CU_UpdateReg( control, REG_RQPN_CTRL_2, 4, 0x80000000, 0x80000000 ) ) &&
 		( RTL8821CU_WriteReg( control, 0x0204, 2, TX_BOUNDARY ) ) &&
 		( RTL8821CU_WriteReg( control, 0x0206, 2, TX_BOUNDARY ) ) &&
 		( RTL8821CU_WriteReg( control, 0x0424, 2, TX_BOUNDARY ) ) &&
 		( RTL8821CU_WriteReg( control, 0x0456, 2, TX_BOUNDARY ) ) &&
-		( RTL8821CU_UpdateReg( control, 0x0422, 1, 0, 0x10 ) ) &&
+		( RTL8821CU_UpdateReg( control, 0x0422, 1, 0x10, 0x10 ) ) &&
 		( RTL8821CU_WriteReg( control, 0x011c, 4, RX_BOUNDARY ) ) &&
-		( RTL8821CU_UpdateReg( control, 0x0208, 1, 0xf0, 0x31 ) ) &&
+		( RTL8821CU_UpdateReg( control, 0x0208, 1, 0xf0, 0x30 ) ) &&
 		( RTL8821CU_WriteReg( control, 0x020b, 1, 3 ) ) &&
+		( RTL8821CU_UpdateReg( control, 0x0208, 1, 1, 1 ) ) &&
 		( RTL8821CU_PollReg( control, 0x0208, 1, 1, 0 ) ) &&
 		( RTL8821CU_WriteReg( control, REG_CR + 3, 1, 0 ) ) &&
 		( RTL8821CU_UpdateReg( control, 0x0244, 4, 0x0003ffff, H2C_START ) ) &&
 		( RTL8821CU_UpdateReg( control, 0x024c, 4, 0x0003ffff, H2C_START ) ) &&
 		( RTL8821CU_UpdateReg( control, 0x0248, 4, 0x0003ffff, H2C_END ) ) &&
-		( RTL8821CU_UpdateReg( control, 0x0254, 1, 3, 5 ) ) &&
-		( RTL8821CU_UpdateReg( control, 0x020d, 1, 0, 0x82 ) ) &&
+		( RTL8821CU_UpdateReg( control, 0x0254, 1, 7, 5 ) ) &&
+		( RTL8821CU_UpdateReg( control, 0x020d, 1, 0x82, 0x82 ) ) &&
 		( RTL8821CU_WriteReg( control, RXDMA_MODE, 1, RXDMA_BURST_MODE | burst ) ) );
 }
 
