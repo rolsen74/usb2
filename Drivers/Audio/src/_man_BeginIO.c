@@ -33,6 +33,18 @@ struct AudioUnit *unit;
 		return;
 	}
 
+	if ( ioreq->io_Command == AUDIO_CMD_ENUM_ENDPOINTS )
+	{
+		Audio_EndpointList( base, ioreq );
+
+		if ( ! ( ioreq->io_Flags & IOF_QUICK ) )
+		{
+			ReplyMsg( (PTR) ioreq );
+		}
+
+		return;
+	}
+
 	ioreq->io_Flags &= ~( IOF_QUICK | AUDIO_IO_ABORT );
 	ioreq->io_Error = 0;
 	ioreq->io_Actual = 0;
@@ -42,7 +54,7 @@ struct AudioUnit *unit;
 
 	if ( ( ! unit ) || ( unit->Detached ) )
 	{
-		ioreq->io_Error = IOERR_UNITBUSY;
+		ioreq->io_Error = unit ? USB2Err_Device_Detached : IOERR_OPENFAIL;
 		ReleaseSemaphore( & base->Semaphore );
 		ReplyMsg( (PTR) ioreq );
 

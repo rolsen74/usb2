@@ -17,6 +17,10 @@
 // Open this unit with an IOStdReq for NSCMD_DEVICEQUERY without hardware.
 #define USB2_MEDIA_QUERY_UNIT 0xffffffffUL
 
+#define USB2_MEDIA_INTERFACE "main"
+#define USB2_MEDIA_INTERFACE_VERSION 1
+
+// Obtain "main" on usb2audio.device or usb2video.device, opened on the query unit.
 // The registered backend and its manager must remain resident.
 struct USB2MediaIFace
 {

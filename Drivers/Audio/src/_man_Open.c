@@ -16,17 +16,55 @@ SEC_CODE S32 Audio_Manager_Open( struct DeviceManagerInterface *Self, struct IOR
 struct AudioBase *base;
 struct AudioUnit *unit;
 
+S32 error;
+U32 index;
+
 	base = (PTR) Self->Data.LibBase;
 	unit = NULL;
+	error = 0;
 
 	ObtainSemaphore( & base->Semaphore );
 
-	if ( unitnr < AUDIO_MAX_UNITS )
+	if ( unitnr == USB2_MEDIA_QUERY_UNIT )
+	{
+		ioreq->io_Unit = NULL;
+	}
+	else if ( unitnr == AUDIO_UNIT_ENDPOINT )
+	{
+		error = Audio_EndpointOpen( base, ioreq, & unit );
+	}
+	else if ( unitnr == AUDIO_UNIT_FIRST_OUTPUT )
+	{
+		for( index = AUDIO_PLAYBACK_UNIT_BASE; index < AUDIO_MAX_UNITS; index++ )
+		{
+			unit = base->Units[index];
+
+			if ( ( unit ) && ( ! unit->Detached ) &&
+				( unit->Endpoint.DefaultFormat.Encoding == AUDIO_ENCODING_PCM_S16LE ) &&
+				( ( unit->Endpoint.DefaultFormat.Channels == 1 ) || ( unit->Endpoint.DefaultFormat.Channels == 2 ) ) )
+			{
+				break;
+			}
+
+			unit = NULL;
+		}
+	}
+	else if ( unitnr < AUDIO_MAX_UNITS )
 	{
 		unit = base->Units[unitnr];
 	}
 
-	if ( ( ! unit ) || ( unit->Detached ) )
+	if ( error )
+	{
+		ioreq->io_Error = error;
+		ioreq->io_Device = NULL;
+	}
+	else if ( unitnr == USB2_MEDIA_QUERY_UNIT )
+	{
+		base->Library.lib_OpenCnt++;
+		ioreq->io_Error = 0;
+	}
+	else if ( ( ! unit ) || ( unit->Detached ) )
 	{
 		AUDIO_TRACE( "open unit %lu: no registered stream\n", unitnr );
 

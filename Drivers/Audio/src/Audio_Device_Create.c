@@ -32,7 +32,12 @@ PublishMediaDevice( struct Library *backend )
 		return ( TRUE );
 	}
 
-	media = (PTR) GetInterface( (PTR) request.io_Device, "media", 1, NULL );
+	media = (PTR) GetInterface( (PTR) request.io_Device, USB2_MEDIA_INTERFACE, USB2_MEDIA_INTERFACE_VERSION, NULL );
+
+	if ( ! media )
+	{
+		media = (PTR) GetInterface( (PTR) request.io_Device, "media", 1, NULL );
+	}
 
 	if ( media )
 	{

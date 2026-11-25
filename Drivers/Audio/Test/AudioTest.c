@@ -383,30 +383,141 @@ close_file:
 
 // --
 
+static S32
+Audio_List( struct IOStdReq *ioreq )
+{
+	struct AudioEndpoint *entries;
+	struct AudioEndpoint *entry;
+
+	U32 index;
+	U32 count;
+	U32 rate;
+	S32 result;
+
+	entries = AllocVecTags( AUDIO_MAX_UNITS * sizeof( *entries ), TAG_END );
+
+	if ( ! entries )
+	{
+		return ( RETURN_FAIL );
+	}
+
+	result = RETURN_FAIL;
+	ioreq->io_Command = AUDIO_CMD_ENUM_ENDPOINTS;
+	ioreq->io_Data = entries;
+	ioreq->io_Length = AUDIO_MAX_UNITS * sizeof( *entries );
+	ioreq->io_Offset = AUDIO_ENDPOINT_VERSION;
+
+	if ( DoIO( (PTR) ioreq ) )
+	{
+		Printf( "Audio endpoint query failed: %ld\n", (S32) ioreq->io_Error );
+	}
+	else
+	{
+		count = ioreq->io_Actual / sizeof( *entries );
+
+		if ( ! count )
+		{
+			Printf( "No audio endpoints attached.\n" );
+		}
+
+		for( index = 0; index < count; index++ )
+		{
+			entry = & entries[index];
+
+			Printf( "%s  %s  %lu channel(s), %lu-bit PCM  %s\n",
+				entry->Direction == AUDIO_ENDPOINT_INPUT ? "Input " : "Output",
+				entry->Name, entry->DefaultFormat.Channels, entry->DefaultFormat.BitsPerSample,
+				entry->Flags & AUDIO_ENDPOINT_BUSY ? "busy" : "available" );
+
+			Printf( "  ID %s, unit %lu, rates", entry->ID[0] ? entry->ID : "(unavailable)", entry->LegacyUnit );
+
+			if ( entry->RateCount )
+			{
+				for( rate = 0; rate < entry->RateCount; rate++ )
+				{
+					Printf( " %lu", entry->Rates[rate] );
+				}
+			}
+			else
+			{
+				Printf( " %lu-%lu", entry->MinimumRate, entry->MaximumRate );
+			}
+
+			Printf( " Hz\n" );
+		}
+
+		result = RETURN_OK;
+	}
+
+	FreeVec( entries );
+
+	return ( result );
+}
+
+// --
+
 int
 main( int argc, char **argv )
 {
 struct MsgPort *port;
+struct AudioEndpointRequest *request;
 struct IOStdReq *ioreq;
 struct AudioFormat format;
 
 U8 header[AUDIO_WAV_MAX_HEADER_SIZE];
 U8 *samples;
+const char *endpoint;
+const char *wav;
+U32 unit;
 U32 length;
 U32 headerBytes;
 BPTR file;
 S32 result;
 S32 playback;
 S32 check;
+S32 list;
 S32 error;
 
 	result = RETURN_FAIL;
-	playback = ( ( argc == 2 ) || ( argc == 3 ) ) && ( ! strcmp( argv[1], "PLAY" ) );
-	check = ( argc == 2 ) && ( ! strcmp( argv[1], "CHECK" ) );
+	endpoint = NULL;
+	wav = NULL;
+	playback = FALSE;
+	check = FALSE;
+	list = FALSE;
 
-	if ( ( argc > 1 ) && ( ! playback ) && ( ! check ) )
+	if ( ( ( argc == 2 ) || ( argc == 3 ) ) && ( ! strcmp( argv[1], "PLAY" ) ) )
 	{
-		Printf( "Usage: USB2AudioTest [PLAY [WAV file]|CHECK]\n" );
+		playback = TRUE;
+		wav = ( argc == 3 ) ? argv[2] : NULL;
+	}
+	else if ( ( ( argc == 3 ) || ( argc == 4 ) ) && ( ! strcmp( argv[1], "OUTPUT" ) ) )
+	{
+		playback = TRUE;
+		endpoint = argv[2];
+		wav = ( argc == 4 ) ? argv[3] : NULL;
+	}
+	else if ( ( argc == 3 ) && ( ! strcmp( argv[1], "INPUT" ) ) )
+	{
+		endpoint = argv[2];
+	}
+	else if ( ( argc == 2 ) && ( ! strcmp( argv[1], "CHECK" ) ) )
+	{
+		check = TRUE;
+	}
+	else if ( ( argc == 2 ) && ( ! strcmp( argv[1], "LIST" ) ) )
+	{
+		list = TRUE;
+	}
+	else if ( argc > 1 )
+	{
+		Printf( "Usage: USB2AudioTest [LIST|PLAY [WAV file]|CHECK|INPUT ID|OUTPUT ID [WAV file]]\n" );
+
+		return ( result );
+	}
+
+	if ( ( endpoint ) && ( strlen( endpoint ) >= AUDIO_ENDPOINT_ID_SIZE ) )
+	{
+		Printf( "Audio endpoint ID is too long.\n" );
 
 		return ( result );
 	}
@@ -423,31 +534,48 @@ S32 error;
 		return ( result );
 	}
 
-	ioreq = (PTR) AllocSysObjectTags( ASOT_IOREQUEST,
-		ASOIOR_Size, sizeof( struct IOStdReq ),
+	request = (PTR) AllocSysObjectTags( ASOT_IOREQUEST,
+		ASOIOR_Size, sizeof( *request ),
 		ASOIOR_ReplyPort, port,
 		TAG_END );
 
-	if ( ! ioreq )
+	if ( ! request )
 	{
 		FreeSysObject( ASOT_PORT, port );
 
 		return ( result );
 	}
 
-	error = OpenDevice( AUDIO_DEVICE_NAME, playback ? AUDIO_PLAYBACK_UNIT_BASE : 0, (PTR) ioreq, 0 );
+	ioreq = & request->IO;
+	unit = playback ? AUDIO_PLAYBACK_UNIT_BASE : 0;
+
+	if ( list )
+	{
+		unit = USB2_MEDIA_QUERY_UNIT;
+	}
+	else if ( endpoint )
+	{
+		unit = AUDIO_UNIT_ENDPOINT;
+		request->Version = AUDIO_ENDPOINT_VERSION;
+		request->Direction = playback ? AUDIO_ENDPOINT_OUTPUT : AUDIO_ENDPOINT_INPUT;
+
+		strcpy( request->ID, endpoint );
+	}
+
+	error = OpenDevice( AUDIO_DEVICE_NAME, unit, (PTR) ioreq, 0 );
 
 	if ( error )
 	{
-		Printf( "Could not open %s unit %ld (error %ld).\n", AUDIO_DEVICE_NAME,
-			(S32) ( playback ? AUDIO_PLAYBACK_UNIT_BASE : 0 ), error );
-
-		if ( playback )
-		{
-			Printf( "PLAY requires a supported USB audio output. The webcam microphone is a capture device.\n" );
-		}
+		Printf( "Could not open %s (error %ld).\n", AUDIO_DEVICE_NAME, error );
 
 		goto cleanup;
+	}
+
+	if ( list )
+	{
+		result = Audio_List( ioreq );
+
+		goto close_device;
 	}
 
 	ioreq->io_Command = AUDIO_CMD_QUERY;
@@ -479,9 +607,9 @@ S32 error;
 		goto close_device;
 	}
 
-	if ( ( playback ) && ( argc == 3 ) )
+	if ( wav )
 	{
-		result = Audio_PlayWav( ioreq, & format, argv[2] );
+		result = Audio_PlayWav( ioreq, & format, wav );
 		goto close_device;
 	}
 

@@ -25,6 +25,7 @@ SEC_RODATA static const U16 AudioCommands[] =
 	AUDIO_CMD_SET_GAIN,
 	AUDIO_CMD_CHECK_RATE,
 	AUDIO_CMD_QUEUE_WRITE,
+	AUDIO_CMD_ENUM_ENDPOINTS,
 	0
 };
 
@@ -98,18 +99,28 @@ SEC_RODATA static const PTR BackendVectors[] =
 	(PTR) -1
 };
 
-SEC_RODATA static const struct TagItem BackendTags[] =
+SEC_RODATA static const struct TagItem MainTags[] =
+{
+	{ MIT_Name, (Tag) USB2_MEDIA_INTERFACE },
+	{ MIT_VectorTable, (Tag) BackendVectors },
+	{ MIT_Version, USB2_MEDIA_INTERFACE_VERSION },
+	{ TAG_END, 0 }
+};
+
+// Older audio and video class drivers still request "media".
+SEC_RODATA static const struct TagItem LegacyTags[] =
 {
 	{ MIT_Name, (Tag) "media" },
 	{ MIT_VectorTable, (Tag) BackendVectors },
-	{ MIT_Version, 1 },
+	{ MIT_Version, USB2_MEDIA_INTERFACE_VERSION },
 	{ TAG_END, 0 }
 };
 
 SEC_RODATA static const PTR Interfaces[] =
 {
 	(PTR) ManagerTags,
-	(PTR) BackendTags,
+	(PTR) MainTags,
+	(PTR) LegacyTags,
 	NULL
 };
 
@@ -139,6 +150,7 @@ Alloc( struct ExecIFace *IExec, STR name, STR id, U16 version, U16 revision, con
 	base->Library.lib_IdString = id;
 	base->IExec = IExec;
 	base->Commands = commands;
+	base->Audio = ( commands == AudioCommands );
 
 	IExec->InitSemaphore( & base->Lock );
 

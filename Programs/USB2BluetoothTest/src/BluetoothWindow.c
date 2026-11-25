@@ -50,7 +50,6 @@ enum BTWindowGadget
 	GADGET_SCAN,
 	GADGET_SEND,
 	GADGET_PLAY,
-	GADGET_AHI,
 	GADGET_CANCEL,
 	GADGET_COUNT,
 };
@@ -211,7 +210,6 @@ BuildControls( struct BTWindow *gui, Object *layout, ULONG unit )
 	return ( ( gui->Gadgets[GADGET_CHANNEL] ) && ( group ) &&
 		( AddButton( gui, group, GADGET_SEND, "_Send file" ) ) &&
 		( AddButton( gui, group, GADGET_PLAY, "_Play WAV" ) ) &&
-		( AddButton( gui, group, GADGET_AHI, "Use for _AHI" ) ) &&
 		( AddButton( gui, group, GADGET_CANCEL, "_Stop" ) ) );
 }
 
@@ -370,38 +368,6 @@ GetPeerAddress( struct BTWindow *gui, char *formatted )
 	FormatAddress( formatted, bytes );
 
 	return ( TRUE );
-}
-
-// --
-
-static void
-UseForAHI( struct BTWindow *gui )
-{
-	char address[18];
-	char setting[32];
-	ULONG unit;
-	LONG length;
-
-	if ( ! GetPeerAddress( gui, address ) )
-	{
-		return;
-	}
-
-	unit = 0;
-
-	GetAttr( INTEGER_Number, gui->Gadgets[GADGET_UNIT], & unit );
-
-	length = snprintf( setting, sizeof( setting ), "%lu %s", (unsigned long) unit, address );
-
-	if ( ( length < 0 ) || ( (ULONG) length >= sizeof( setting ) ) ||
-		( ! SetVar( "Bluetooth2-AHI", setting, length, GVF_GLOBAL_ONLY ) ) )
-	{
-		ShowStatus( gui, "USB2 Bluetooth - Could not set the AHI speaker" );
-
-		return;
-	}
-
-	ShowStatus( gui, "USB2 Bluetooth - AHI speaker set for this session" );
 }
 
 // --
@@ -570,9 +536,6 @@ RunWindow( struct BTWindow *gui, Object *object )
 					break;
 				case GADGET_PLAY:
 					StartAction( gui, BT_WINDOW_PLAY );
-					break;
-				case GADGET_AHI:
-					UseForAHI( gui );
 					break;
 			}
 		}

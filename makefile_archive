@@ -130,8 +130,8 @@ build_audio: | build_dir_tree
 	$(MAKE) -C AHI BINDIR=bin clean && \
 	$(MAKE) -C AHI BINDIR=bin && \
 	cp bin/cls_Audio.Driver cls_Audio.Class $(BINDIR)/usb2/Libs/USB2 && \
-	cp AHI/bin/usb2.audio AHI/bin/bluetooth2.audio $(BINDIR)/usb2/Devs/AHI && \
-	cp AHI/bin/USB2 AHI/bin/Bluetooth2 $(BINDIR)/usb2/Devs/AudioModes
+	cp AHI/bin/usb2.audio $(BINDIR)/usb2/Devs/AHI && \
+	cp AHI/bin/USB2 $(BINDIR)/usb2/Devs/AudioModes
 	cd $(ROOTDIR)/Drivers/Audio/Test && \
 	$(MAKE) -f makefile clean && \
 	$(MAKE) -f makefile && \

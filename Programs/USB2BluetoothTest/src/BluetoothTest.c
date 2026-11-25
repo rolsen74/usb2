@@ -15,7 +15,7 @@
 // --
 
 static const char version[] __attribute__((used)) =
-	"\0$VER: USB2BluetoothTest 0.22 (21.11.2026)";
+	"\0$VER: USB2BluetoothTest 0.23 (25.11.2026)";
 
 // --
 

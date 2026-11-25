@@ -22,10 +22,8 @@ Experimental USB host stack for AmigaOS 4. Includes UHCI, OHCI, EHCI, and experi
 usb2/
 ├── Devs/
 │   ├── AHI/
-│   │   ├── bluetooth2.audio
 │   │   └── usb2.audio
 │   ├── AudioModes/
-│   │   ├── Bluetooth2
 │   │   └── USB2
 │   ├── Firmware/
 │   │   ├── rt2870.bin

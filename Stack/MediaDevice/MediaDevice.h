@@ -21,6 +21,7 @@ struct USB2MediaDevice
 	struct SignalSemaphore Lock;
 	struct DeviceManagerInterface *Backend;
 	const U16 *Commands;
+	BOOL Audio;
 };
 
 // --

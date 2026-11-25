@@ -210,9 +210,6 @@ Look for the `Bluetooth2 A2DP:` line in serial output after playback.
 It compares the audio duration with the controller send time and reports
 late packets and peak lag in milliseconds.
 
-For application audio, select a speaker and click **Use for AHI**, then
-follow the [Bluetooth AHI setup](AHI.md#bluetooth-speaker-playback).
-
 ## Monitor a Classic Bluetooth keyboard or mouse
 
 Monitoring requires Bluetooth2 1.21, Bluetooth.Driver 1.17, and

@@ -21,13 +21,14 @@ struct AudioUnit *unit;
 
 	ObtainSemaphore( & base->Semaphore );
 
+	base->Library.lib_OpenCnt--;
+	ioreq->io_Device = NULL;
+
 	if ( unit )
 	{
 		unit->ResetStream = TRUE;
 		unit->OpenCount--;
-		base->Library.lib_OpenCnt--;
 		ioreq->io_Unit = NULL;
-		ioreq->io_Device = NULL;
 
 		if ( ( unit->Released ) && ( ! unit->OpenCount ) )
 		{

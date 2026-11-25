@@ -16,9 +16,64 @@ static struct RealFunctionNode *Find_Function( struct USBBase *usbbase, USB2_ID 
 
 // --
 
+SEC_CODE static S32
+PortPath( struct RealFunctionNode *fn, struct USB2_PortPath *path )
+{
+	struct USB2_HCDNode *hn;
+	struct PCIDevice *pci;
+
+	U8 ports[USB2_PORT_PATH_DEPTH];
+	U8 bus;
+	U8 device;
+	U8 function;
+	U8 depth;
+	U8 index;
+
+	hn = fn->fkt_HCD;
+	depth = 0;
+
+	while( fn->fkt_Parent )
+	{
+		if ( ( depth == USB2_PORT_PATH_DEPTH ) || ( ! fn->fkt_PortNr ) || ( fn->fkt_PortNr > 255 ) )
+		{
+			return ( FALSE );
+		}
+
+		ports[depth++] = fn->fkt_PortNr;
+		fn = fn->fkt_Parent;
+	}
+
+	if ( ( ! hn ) || ( ! depth ) || ( fn->fkt_Tier != 0 ) )
+	{
+		return ( FALSE );
+	}
+
+	pci = hn->hn_PCIDevice;
+	path->IsPCI = ( pci != NULL );
+	path->Controller = hn->hn_PCIDevIOBase;
+	path->Depth = depth;
+
+	if ( pci )
+	{
+		pci->GetAddress( & bus, & device, & function );
+
+		path->Controller = ( (U32) bus << 16 ) | ( (U32) device << 8 ) | function;
+	}
+
+	for( index = 0; index < depth; index++ )
+	{
+		path->Ports[index] = ports[depth - index - 1];
+	}
+
+	return ( TRUE );
+}
+
+// --
+
 SEC_CODE static U32 _main_Attr_Get( struct USB2IFace *Self, USB2_ID id, U32 tag, PTR buffer, U32 buffersize )
 {
 struct RealFunctionNode *fn;
+struct USB2_PortPath path;
 struct USBBase *usbbase;
 U32 value;
 U32 len;
@@ -123,6 +178,20 @@ PTR mem;
 				value = fn->fkt_HCD->hn_HCDType;
 				len = sizeof( value );
 				mem = &value;
+			}
+			break;
+		}
+
+		case USB2Tag_Attr_PortPath:
+		{
+			path = (struct USB2_PortPath) { 0 };
+
+			fn = Find_Function( usbbase, id );
+
+			if ( ( fn ) && ( PortPath( fn, & path ) ) )
+			{
+				len = sizeof( path );
+				mem = & path;
 			}
 			break;
 		}

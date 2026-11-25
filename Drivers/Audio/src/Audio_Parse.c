@@ -121,6 +121,58 @@ Audio_Rate_Valid( struct AudioUnit *unit, U32 sample_rate )
 
 // --
 
+SEC_CODE void
+Audio_EndpointRates( struct AudioUnit *unit )
+{
+	struct AudioEndpoint *endpoint;
+
+	const U8 *format;
+	U32 count;
+	U32 index;
+	U32 rate;
+	U32 limit;
+
+	endpoint = & unit->Endpoint;
+	format = unit->RateDescriptor;
+
+	if ( ( unit->Protocol == AUDIO_PROTOCOL_UAC2 ) || ( ! unit->FrequencyControl ) )
+	{
+		endpoint->Rates[0] = unit->Format.SampleRate;
+		endpoint->RateCount = 1;
+
+		return;
+	}
+
+	count = MIN( format[7], AUDIO_ENDPOINT_MAX_RATES );
+
+	if ( ! count )
+	{
+		limit = (U64) ( unit->PacketBytes / ( unit->Format.Channels * 2 ) ) * 1000000U / unit->IntervalUS;
+
+		endpoint->MinimumRate = Audio_Rate24( format + 8 );
+
+		endpoint->MinimumRate = MAX( endpoint->MinimumRate, ( 1000000U + unit->IntervalUS - 1 ) / unit->IntervalUS );
+
+		endpoint->MaximumRate = Audio_Rate24( format + 11 );
+
+		endpoint->MaximumRate = MIN( endpoint->MaximumRate, limit );
+
+		return;
+	}
+
+	for( index = 0; index < count; index++ )
+	{
+		rate = Audio_Rate24( format + 8 + 3 * index );
+
+		if ( Audio_Rate_Valid( unit, rate ) )
+		{
+			endpoint->Rates[endpoint->RateCount++] = rate;
+		}
+	}
+}
+
+// --
+
 static U32
 Audio_ProbeClock( struct AudioUnit *unit, U32 config_size, U8 terminal, U8 endpoint )
 {

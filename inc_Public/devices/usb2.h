@@ -813,6 +813,18 @@ enum USB2HCDType
 #define USB2Tag_Attr_ProductStr				 ( USB2Tag_Dummy + 260 ) // [G.] Raw USB string descriptor
 #define USB2Tag_Attr_SerialStr				 ( USB2Tag_Dummy + 261 ) // [G.] Raw USB string descriptor
 #define USB2Tag_Attr_HCDType				 ( USB2Tag_Dummy + 262 ) // [G.] U32, enum USB2HCDType
+#define USB2Tag_Attr_PortPath				 ( USB2Tag_Dummy + 263 ) // [G.] struct USB2_PortPath
+
+#define USB2_PORT_PATH_DEPTH 7
+
+struct USB2_PortPath
+{
+	U32 Controller;
+	U8 IsPCI;
+	U8 Depth;
+	U8 Ports[USB2_PORT_PATH_DEPTH]; // Root port first.
+};
+
 
 // -- + --
 // --

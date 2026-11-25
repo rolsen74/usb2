@@ -16,6 +16,8 @@ SEC_CODE void Audio_Free( struct AudioUnit *unit )
 struct IOStdReq *ioreq;
 struct AudioBase *base;
 
+S32 error;
+
 	if ( ! unit )
 	{
 		return;
@@ -24,14 +26,15 @@ struct AudioBase *base;
 	base = unit->Base;
 
 	ObtainSemaphore( & base->Semaphore );
+	error = unit->Detached ? USB2Err_Device_Detached : IOERR_ABORTED;
 	unit->Detached = TRUE;
 	ReleaseSemaphore( & base->Semaphore );
 
 	Audio_Read_Stop( unit );
 
-	Audio_Write_Stop( unit, IOERR_ABORTED );
+	Audio_Write_Stop( unit, error );
 
-	Audio_Read_Reply( unit, IOERR_ABORTED );
+	Audio_Read_Reply( unit, error );
 
 	if ( ( unit->ActiveAlt ) && ( unit->Register ) )
 	{
@@ -51,7 +54,7 @@ struct AudioBase *base;
 	{
 		while(( ioreq = (PTR) GetMsg( unit->BeginPort ) ))
 		{
-			ioreq->io_Error = IOERR_ABORTED;
+			ioreq->io_Error = error;
 			ReplyMsg( (PTR) ioreq );
 		}
 	}

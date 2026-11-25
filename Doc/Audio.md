@@ -3,7 +3,10 @@
 The stack registers `usb2audio.device` at startup. The Audio class driver
 adds stream units when compatible USB hardware attaches. Applications can
 open `USB2_MEDIA_QUERY_UNIT` and issue `NSCMD_DEVICEQUERY` without a stream
-attached. The driver supports USB Audio Class 1.0 mono and stereo PCM16.
+attached. The driver supports USB Audio Class 1.0 mono and stereo PCM16,
+plus the PlayStation Eye's four-channel 16 kHz microphone. Capture retains
+all four channels in an extensible PCM WAV. `USB2VideoTest` mixes the microphone
+channels for monitoring.
 Capture units start at 0 and playback units
 start at 16. Use `AUDIO_CMD_QUERY` to get the selected format. `CMD_READ`
 and `CMD_WRITE` transfer interleaved little-endian PCM in whole sample frames.
@@ -38,8 +41,8 @@ times out after ten seconds and can be interrupted with Ctrl+C. Run
 `USB2AudioTest PLAY` to play a short test tone on a supported USB output
 or `USB2AudioTest PLAY RAM:usb2audio.wav` to play back the recording.
 
-File playback accepts mono or stereo PCM16 WAV and converts it to the output
-unit's sample rate and channel count. Both the file and converted samples
+File playback accepts mono, stereo, or four-channel PCM16 WAV and converts it
+to the output unit's sample rate and channel count. Both the file and converted samples
 must fit in their respective 32 MiB buffers.
 If capture unit 0 will not open, `USB2AudioTest CHECK` reports the driver
 paths, the loaded driver version, and whether the audio device is registered.
@@ -67,6 +70,30 @@ produce a short write (`-43`). The completed byte count excludes missed
 samples. The USB AHI player continues with the next buffer after a short
 write. The stack can schedule two audio transfers on the same endpoint on
 EHCI and OHCI. High-speed xHCI capture uses at most 254 intervals per request.
+
+## Select an input or output
+
+`USB2AudioTest LIST` shows the attached streams, their IDs, channels, rates,
+and whether each is busy. To test a specific stream, run
+`USB2AudioTest INPUT <ID>` or `USB2AudioTest OUTPUT <ID> [WAV file]`.
+See [AHI playback](AHI.md) to set a default output.
+
+Applications can use `<devices/usb2audio.h>`. Open `USB2_MEDIA_QUERY_UNIT`
+with an `IOStdReq` and issue `AUDIO_CMD_ENUM_ENDPOINTS`. Set `io_Offset` to
+`AUDIO_ENDPOINT_VERSION` and pass an array of `AudioEndpoint` records via
+`io_Data` and `io_Length`. The command returns the required byte count in
+`io_Actual`, including zero with no hardware attached. On a short buffer,
+it returns `IOERR_BADLENGTH` without copying a partial list. Rates describe
+the stream's selected USB alternate setting. Use `AUDIO_CMD_QUERY` on an
+open stream for its current format.
+
+Open `AUDIO_UNIT_ENDPOINT` with an `AudioEndpointRequest` containing the
+ID, direction, and version to reserve that stream. IDs based on a serial
+number work across port changes. If the serial is missing or duplicated,
+the ID identifies the physical USB port path. An ID may be empty if the
+stack cannot establish a stable identity. Existing numeric units remain
+available. When a device is detached, its old open request reports
+`USB2Err_Device_Detached`. Reopen the endpoint after it reconnects.
 
 ## USB Audio Class 2.0
 

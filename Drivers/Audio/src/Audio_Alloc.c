@@ -161,6 +161,8 @@ U32 confirmations;
 		goto bailout;
 	}
 
+	Audio_EndpointInit( unit );
+
 	ObtainSemaphore( & base->Semaphore );
 
 	index = ( unit->EndPoint & EPADR_Dir_Mask ) ? 0 : AUDIO_PLAYBACK_UNIT_BASE;
@@ -172,6 +174,7 @@ U32 confirmations;
 		{
 			base->Units[index] = unit;
 			unit->UnitNr = index;
+			unit->Endpoint.LegacyUnit = index;
 			break;
 		}
 	}

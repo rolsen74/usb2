@@ -5,13 +5,8 @@
 ** SPDX-License-Identifier: GPL-3.0-or-later
 */
 
-#ifdef BLUETOOTH_AHI
-#define AHI_DRIVER "bluetooth2"
-#define AHI_MODE_NAME "Bluetooth2: A2DP stereo playback"
-#else
 #define AHI_DRIVER "usb2"
 #define AHI_MODE_NAME "USB2: 16-bit stereo playback"
-#endif
 
 	.section .rodata
 	.ascii "FORM"
