@@ -60,6 +60,8 @@ usb2/
 │   │   ├── eth_RT2870.Driver
 │   │   ├── eth_AX88772.Class
 │   │   ├── eth_AX88772.Driver
+│   │   ├── eth_Pegasus.Class
+│   │   ├── eth_Pegasus.Driver
 │   │   ├── eth_RTL8152.Class
 │   │   ├── eth_RTL8152.Driver
 │   │   ├── eth_RTL8188EU.Class

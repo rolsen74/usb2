@@ -35,6 +35,13 @@ Handle_BulkOutMessages( struct devUnit *unit )
 		node->Sana2IOReq = NULL;
 		node->Active = FALSE;
 
+#ifdef WIRED_TRACE_BULK
+		if ( ! node->AbortError )
+		{
+			WIRED_TRACE_BULK( unit, usbio, FALSE );
+		}
+#endif
+
 		if ( usbio->io_Error == USB2Err_Device_Detached )
 		{
 			unit->unit_Running = FALSE;

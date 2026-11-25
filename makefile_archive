@@ -8,7 +8,7 @@ BINDIR				:= $(ROOTDIR)/_Data
 all: build_all
 
 .PHONY: all build_all build_dir_tree build_stack build_printer build_video build_sdr_test build_bluetooth_test \
-	build_ptp build_serial build_smartcard build_audio build_prefs build_ax88772 build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer \
+	build_ptp build_serial build_smartcard build_audio build_prefs build_ax88772 build_pegasus build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer \
 	build_rtl8811au build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_archive
 
 ###########################################################################
@@ -152,6 +152,11 @@ build_ax88772: | build_dir_tree
 	$(MAKE) -C Drivers/Ethernet/AX88772 strip
 	cp Drivers/Ethernet/AX88772/bin/eth_AX88772.Driver Drivers/Ethernet/AX88772/eth_AX88772.Class $(BINDIR)/usb2/Libs/USB2
 
+build_pegasus: | build_dir_tree
+	$(MAKE) -C Drivers/Ethernet/Pegasus
+	$(MAKE) -C Drivers/Ethernet/Pegasus strip
+	cp Drivers/Ethernet/Pegasus/bin/eth_Pegasus.Driver Drivers/Ethernet/Pegasus/eth_Pegasus.Class $(BINDIR)/usb2/Libs/USB2
+
 ###########################################################################
 
 build_rtl8152: | build_dir_tree
@@ -275,7 +280,7 @@ build_wireless_manager: | build_dir_tree
 ###########################################################################
 
 build_archive: build_stack build_printer build_video build_sdr_test build_bluetooth_test build_ptp build_serial build_smartcard build_audio build_prefs \
-	build_ax88772 build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_rtl8811au build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
+	build_ax88772 build_pegasus build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_rtl8811au build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
 	@echo "Building Archive"
 	@rm -f usb2.lha
 	cd "$(BINDIR)" && lha a "$(ROOTDIR)/usb2.lha" usb2

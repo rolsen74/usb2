@@ -28,6 +28,16 @@ s2_Offline( struct devUnit *unit, struct IOSana2Req *ioreq )
 
 	AbortPacketIO( unit, S2WERR_UNIT_OFFLINE );
 
+#ifdef WIRED_STOP_TRAFFIC
+	unit->unit_LinkUp = FALSE;
+
+	if ( ! WIRED_STOP_TRAFFIC( unit ) )
+	{
+		ioreq->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
+		ioreq->ios2_WireError = S2WERR_GENERIC_ERROR;
+	}
+#endif
+
 	AbortAll( unit, NULL, S2WERR_UNIT_OFFLINE );
 
 	SignalSanaEvent( unit, S2EVENT_OFFLINE );

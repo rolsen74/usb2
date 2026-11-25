@@ -29,6 +29,13 @@ Handle_BulkInMessages( struct devUnit *unit )
 
 		node->Active = FALSE;
 
+#ifdef WIRED_TRACE_BULK
+		if ( ! node->AbortError )
+		{
+			WIRED_TRACE_BULK( unit, usbio, TRUE );
+		}
+#endif
+
 		if ( usbio->io_Error == USB2Err_Device_Detached )
 		{
 			unit->unit_Running = FALSE;

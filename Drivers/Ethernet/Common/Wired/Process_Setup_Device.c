@@ -61,6 +61,9 @@ unit_Process_InitUSB( struct devUnit *unit, struct USB2_DriverMessage *msg )
 		USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
 		USB2Tag_EPRes_NrOfIORequest, WIRED_TX_REQUEST_COUNT,
 		USB2Tag_EPRes_BufferSize, WIRED_TX_BUFFER_SIZE,
+#ifdef WIRED_TX_TIMEOUT
+		USB2Tag_EPRes_TimeOut, WIRED_TX_TIMEOUT,
+#endif
 		TAG_END );
 
 	if ( ! unit->unit_USBBulkOut )

@@ -66,6 +66,10 @@ ReadPacket( struct devUnit *unit, U8 *data, U32 length )
 	result = Sana2_DeliverReads( & unit->unit_RxList, data, length, packet_type, flags,
 		TRUE, TRUE, FilterRead, CopyRead, ReplySanaRequest, unit );
 
+#ifdef WIRED_TRACE_RX_DELIVERY
+	WIRED_TRACE_RX_DELIVERY( unit, packet_type, result );
+#endif
+
 	if ( ! ( result & SANA2_RX_TYPED ) )
 	{
 		unit->unit_UnknownTypesReceived++;

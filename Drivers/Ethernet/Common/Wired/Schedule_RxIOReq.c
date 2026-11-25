@@ -34,6 +34,10 @@ struct IONode *node;
 		usbio->io_Length	= node->BufferSize;
 		node->Active = TRUE;
 
+#ifdef WIRED_TRACE_RX_START
+		WIRED_TRACE_RX_START( unit, usbio );
+#endif
+
 		IExec->SendIO( (APTR) usbio );
 
 		IExec->AddTail( & unit->unit_USBBulkInActiveList, & node->Node );

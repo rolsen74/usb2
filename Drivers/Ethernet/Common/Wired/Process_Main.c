@@ -42,6 +42,13 @@ U32 link_signal;
 
 		if ( ( ! unit->unit_Running ) || ( mask & SIGBREAKF_CTRL_C ) )
 		{
+#ifdef WIRED_STOP_TRAFFIC
+			if ( ( unit->unit_Running ) && ( ! WIRED_STOP_TRAFFIC( unit ) ) )
+			{
+				WIRED_STOP_TRAFFIC( unit );
+			}
+#endif
+
 			unit->unit_Running = FALSE;
 
 			break;

@@ -70,6 +70,9 @@ Wired_UpdateLink( struct devUnit *unit )
 
 		if ( connected )
 		{
+			unit->unit_RxRecovery = 0;
+			unit->unit_TxRecovery = 0;
+
 			SignalSanaEvent( unit, S2EVENT_CONNECT );
 
 			Schedule_RxIOReq( unit );
