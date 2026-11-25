@@ -125,7 +125,7 @@ Raw_Bytes( struct DescriptorOutput *out, const U8 *data, U32 start, U32 length )
 	U32 used;
 	char label[24];
 	char size[12];
-	char value[3 * 16];
+	char description[3 * 16];
 
 	for( offset = start; offset < length; offset += count )
 	{
@@ -136,20 +136,20 @@ Raw_Bytes( struct DescriptorOutput *out, const U8 *data, U32 start, U32 length )
 		{
 			if ( index )
 			{
-				value[used++] = ' ';
+				description[used++] = ' ';
 			}
 
-			value[used++] = hex[data[offset + index] >> 4];
-			value[used++] = hex[data[offset + index] & 15];
+			description[used++] = hex[data[offset + index] >> 4];
+			description[used++] = hex[data[offset + index] & 15];
 		}
 
-		value[used] = '\0';
+		description[used] = '\0';
 
 		snprintf( label, sizeof( label ), "Raw +0x%04X", (unsigned) offset );
 
 		snprintf( size, sizeof( size ), "%u", (unsigned) count );
 
-		out->Emit( out->Target, out->Level, FALSE, label, size, value, "" );
+		out->Emit( out->Target, out->Level, FALSE, label, size, "", description );
 	}
 }
 
@@ -198,6 +198,7 @@ Describe_String( struct DescriptorOutput *out, USB2_ID id, U32 tag, U8 index,
 {
 	U32 length;
 	U8 data[255];
+	char description[129];
 
 	if ( ! index )
 	{
@@ -206,7 +207,14 @@ Describe_String( struct DescriptorOutput *out, USB2_ID id, U32 tag, U8 index,
 
 	Section( out, 0, title );
 
-	Decimal( out, "String index", 1, index, value );
+	description[0] = '\0';
+
+	if ( value[0] )
+	{
+		snprintf( description, sizeof( description ), "\"%.*s\"", (int) sizeof( description ) - 3, value );
+	}
+
+	Decimal( out, "String index", 1, index, description );
 
 	length = USB2_Attr_Get( id, tag, data, sizeof( data ) );
 
