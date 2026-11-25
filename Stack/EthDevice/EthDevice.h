@@ -45,6 +45,7 @@ SEC_CODE void EthDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOR
 SEC_CODE void EthDevice_AbortIO( struct DeviceManagerInterface *Self, struct IORequest *request );
 SEC_CODE S32 EthDevice_KnowsCommand( const U16 *commands, U16 command );
 SEC_CODE void EthDevice_Query( struct IOStdReq *request, const U16 *commands );
+SEC_CODE void EthDevice_Sana2Query( struct USBBase *usbbase, struct IOSana2Req *request );
 SEC_CODE struct USB2EthUnit *EthDevice_Register( struct USB2EthIFace *Self,
 	const struct USB2EthOps *ops, PTR adapter, ULONG *number );
 SEC_CODE void EthDevice_Unregister( struct USB2EthIFace *Self, struct USB2EthUnit *unit );

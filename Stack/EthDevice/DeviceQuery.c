@@ -73,3 +73,49 @@ EthDevice_Query( struct IOStdReq *request, const U16 *commands )
 }
 
 // --
+
+SEC_CODE void
+EthDevice_Sana2Query( struct USBBase *usbbase, struct IOSana2Req *request )
+{
+	static const struct Sana2DeviceQuery info =
+	{
+		.AddrFieldSize = 48,
+		.MTU = 1500,
+		.HardwareType = S2WireType_Ethernet,
+		.RawMTU = 1514
+	};
+
+	struct Sana2DeviceQuery *query;
+
+	query = request->ios2_StatData;
+	request->ios2_Req.io_Error = 0;
+	request->ios2_WireError = 0;
+
+	if ( ! query )
+	{
+		request->ios2_Req.io_Error = S2ERR_BAD_ARGUMENT;
+		request->ios2_WireError = S2WERR_NULL_POINTER;
+
+		return;
+	}
+
+	if ( query->SizeAvailable < offsetof( struct Sana2DeviceQuery, AddrFieldSize ) )
+	{
+		request->ios2_Req.io_Error = S2ERR_BAD_ARGUMENT;
+		request->ios2_WireError = S2WERR_BAD_STATDATA;
+
+		return;
+	}
+
+	query->SizeSupplied = query->SizeAvailable;
+
+	if ( query->SizeSupplied > sizeof( info ) )
+	{
+		query->SizeSupplied = sizeof( info );
+	}
+
+	MEM_COPY( (PTR) & info.DevQueryFormat, & query->DevQueryFormat,
+		query->SizeSupplied - offsetof( struct Sana2DeviceQuery, DevQueryFormat ) );
+}
+
+// --

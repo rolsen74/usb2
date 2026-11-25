@@ -47,6 +47,10 @@ EthDevice_BeginIO( struct DeviceManagerInterface *Self, struct IORequest *reques
 
 		return;
 	}
+	else if ( request->io_Command == S2_DEVICEQUERY )
+	{
+		EthDevice_Sana2Query( base->USB, (PTR) request );
+	}
 	else if ( EthDevice_KnowsCommand( commands, request->io_Command ) )
 	{
 		((struct IOSana2Req *) request)->ios2_WireError = detached ? S2WERR_UNIT_DISCONNECTED : S2WERR_UNIT_OFFLINE;
