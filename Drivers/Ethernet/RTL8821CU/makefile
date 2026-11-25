@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-TARGET := eth_RTL8821.Driver
+TARGET := eth_RTL8821CU.Driver
 OBJDIR := obj
 BINDIR := bin
 

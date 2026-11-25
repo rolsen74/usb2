@@ -11,7 +11,7 @@
 #ifndef RTL8821CU_VERSION_H
 #define RTL8821CU_VERSION_H
 
-#define DEVNAME	 "eth_RTL8821.Driver"
+#define DEVNAME	 "eth_RTL8821CU.Driver"
 #define VERSION	 1
 #define REVISION 1
 #define VSTRING	 DEVNAME " 1.01 (25.11.2026)"

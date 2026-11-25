@@ -13,7 +13,7 @@
 ###########################################################################
 
 # Target binary and install path
-TARGET		:= eth_RTL8188.Driver
+TARGET		:= eth_RTL8188EU.Driver
 OBJDIR		:= obj
 BINDIR		:= bin
 INSTALLDIR	:= libs:usb2/
@@ -139,10 +139,10 @@ clean:
 
 install:
 ifeq ($(HOSTOS),AmigaOS)
-	$(COPY) $(BINDIR)/$(TARGET) eth_RTL8188.Class $(INSTALLDIR)
+	$(COPY) $(BINDIR)/$(TARGET) eth_RTL8188EU.Class $(INSTALLDIR)
 else
 	@echo "Install is AmigaOS-oriented. On Linux, copy manually to target media:"
-	@echo "  $(COPY) $(BINDIR)/$(TARGET) eth_RTL8188.Class <your-amiga-volume>/Libs/USB2/"
+	@echo "  $(COPY) $(BINDIR)/$(TARGET) eth_RTL8188EU.Class <your-amiga-volume>/Libs/USB2/"
 endif
 
 ###########################################################################

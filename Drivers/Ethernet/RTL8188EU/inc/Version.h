@@ -13,7 +13,7 @@
 
 // --
 
-#define DEVNAME		"eth_RTL8188.Driver"
+#define DEVNAME		"eth_RTL8188EU.Driver"
 
 #define VERSION		1
 #define REVISION	18

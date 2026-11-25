@@ -59,10 +59,10 @@ usb2/
 │   │   ├── eth_RT2870.Driver
 │   │   ├── eth_RTL8152.Class
 │   │   ├── eth_RTL8152.Driver
-│   │   ├── eth_RTL8188.Class
-│   │   ├── eth_RTL8188.Driver
-│   │   ├── eth_RTL8821.Class
-│   │   ├── eth_RTL8821.Driver
+│   │   ├── eth_RTL8188EU.Class
+│   │   ├── eth_RTL8188EU.Driver
+│   │   ├── eth_RTL8821CU.Class
+│   │   ├── eth_RTL8821CU.Driver
 │   │   ├── eth_SiS163U.Class
 │   │   ├── eth_SiS163U.Driver
 │   │   ├── ser_PL2303.Class

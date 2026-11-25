@@ -115,7 +115,7 @@ Unit 0 is the default. Association and data transfer are still in development.
 ## Saved profiles and startup
 
 Install `usb2wifi.library` 1.27 or later in `LIBS:`.
-Starting with `eth_RTL8188.Driver` 1.14 and `eth_RT2870.Driver` 1.31, Wi-Fi
+Starting with RTL8188EU driver version 1.14 and RT2870 driver version 1.31, Wi-Fi
 setup starts when the adapter registers with `usb2ethernet.device`.
 The library connects without a window if its saved `ETH:` record has
 autoconnect enabled and the login succeeds. If no profile matches, autoconnect
