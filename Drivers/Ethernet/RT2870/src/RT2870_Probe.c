@@ -17,11 +17,12 @@
 #define RT2870_ASIC_VERSION		0x1000
 #define RT2870_EEPROM_MAC		0x0004
 #define RT2870_READY_ATTEMPTS	50
+#define RT2860D_ASIC_VERSION	0x28600101
 
 // --
 
 S32
-RT2870_Probe( struct EthernetUnit *unit )
+RT2870_Probe( struct EthernetUnit *unit, const struct USB2_DriverMessage *msg )
 {
 	struct USB2_EPResource *control;
 
@@ -63,7 +64,15 @@ RT2870_Probe( struct EthernetUnit *unit )
 		return ( FALSE );
 	}
 
-	USBINFO( "RT2870: 07D1:3C09 MAC/BBP $%04lx revision $%04lx", version >> 16, version & 0xffff );
+	USBINFO( "RT2870: %04lX:%04lX MAC/BBP $%04lx revision $%04lx",
+		(U32) msg->VendorID, (U32) msg->DeviceID, version >> 16, version & 0xffff );
+
+	if ( version != RT2860D_ASIC_VERSION )
+	{
+		USBERROR( "RT2870: unsupported ASIC $%08lx, expected $%08lx", version, (U32) RT2860D_ASIC_VERSION );
+
+		return ( FALSE );
+	}
 
 	for( offset = 0; offset < sizeof( unit->unit_StationAddress ); offset += 2 )
 	{
@@ -93,7 +102,7 @@ RT2870_Probe( struct EthernetUnit *unit )
 
 	if ( RT2870_LoadFirmware( control, version >> 16 ) )
 	{
-		unit->unit_RxCheckReady = RT2870_InitBaseband( control, version );
+		unit->unit_RxCheckReady = RT2870_InitBaseband( control );
 	}
 
 	return ( unit->unit_RxCheckReady );

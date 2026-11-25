@@ -31,7 +31,6 @@
 #define RT2870_EEPROM_NIC_CONFIG	0x0034
 #define RT2870_EEPROM_BBP_BASE		0x00f0
 #define RT2870_EEPROM_BBP_WORDS		16
-#define RT2860D_ASIC_VERSION		0x28600101
 #define RT2860D_BBP_VERIFY_REGISTER	84
 
 // --
@@ -182,6 +181,13 @@ ConfigureBaseband( struct USB2_EPResource *control )
 		(U32) antenna, (U32) ( ( antenna >> 8 ) & 0xf ),
 		(U32) ( ( antenna >> 4 ) & 0xf ), (U32) ( antenna & 0xf ) );
 
+	if ( ( antenna & 0x0fff ) != 0x0122 )
+	{
+		USBERROR( "RT2870: unsupported RF configuration, expected 2T2R RF2820" );
+
+		return ( FALSE );
+	}
+
 	for( index = 0; index < sizeof( RT2860DBaseband ) / sizeof( RT2860DBaseband[0] ); index++ )
 	{
 		reg = RT2860DBaseband[index].reg;
@@ -259,13 +265,6 @@ ConfigureBaseband( struct USB2_EPResource *control )
 	USBINFO( "RT2870: BBP configured, %lu EEPROM overrides, register 84 verified as $%02lx",
 		overrides, (U32) value );
 
-	if ( ( antenna & 0x0fff ) != 0x0122 )
-	{
-		USBINFO( "RT2870: RF channel test requires a 2T2R RF2820 configuration" );
-
-		return ( FALSE );
-	}
-
 	error = ConfigureReceiveGain( control );
 
 	if ( error )
@@ -281,7 +280,7 @@ ConfigureBaseband( struct USB2_EPResource *control )
 // --
 
 S32
-RT2870_InitBaseband( struct USB2_EPResource *control, U32 asicVersion )
+RT2870_InitBaseband( struct USB2_EPResource *control )
 {
 	U32 attempt;
 	U32 csr;
@@ -346,7 +345,7 @@ RT2870_InitBaseband( struct USB2_EPResource *control, U32 asicVersion )
 		{
 			USBINFO( "RT2870: BBP register 0 revision $%02lx", (U32) revision );
 
-			return ( ( asicVersion == RT2860D_ASIC_VERSION ) && ConfigureBaseband( control ) );
+			return ( ConfigureBaseband( control ) );
 		}
 	}
 

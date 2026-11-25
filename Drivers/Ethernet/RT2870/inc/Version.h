@@ -16,9 +16,9 @@
 #define DEVNAME		"eth_RT2870.Driver"
 
 #define VERSION		1
-#define REVISION	35
-#define DATE		"24.11.2026"
-#define VERS		DEVNAME " 1.35"
+#define REVISION	36
+#define DATE		"25.11.2026"
+#define VERS		DEVNAME " 1.36"
 #define VSTRING		VERS " (" DATE ")\r\n"
 #define VERSTAG		"\0$VER: " VERS " (" DATE ")"
 

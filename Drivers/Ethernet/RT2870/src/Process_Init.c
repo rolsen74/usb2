@@ -29,7 +29,7 @@ Process_Init( struct EthernetUnit *unit, struct USB2_DriverMessage *msg )
 
 	unit->unit_USB_Register = reg;
 
-	return ( RT2870_Probe( unit ) );
+	return ( RT2870_Probe( unit, msg ) );
 }
 
 // --
