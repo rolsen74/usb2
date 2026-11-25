@@ -4,4 +4,4 @@
 TYPE Interface
 TITLE "PL2303 Serial"
 DRIVER "ser_PL2303.Driver"
-DEVICE 0x067b:0x2303
+DEVICE 0x067b:0x2303 # Prolific PL2303 USB serial adapter

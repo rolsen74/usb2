@@ -2,7 +2,7 @@ TYPE Interface
 TITLE "RTL8152"
 DRIVER "eth_RTL8152.Driver"
 CLASS 0xff
-DEVICE 0x0bda:0x8050
-DEVICE 0x0bda:0x8053
-DEVICE 0x0bda:0x8152
-DEVICE 0x0bda:0x8153
+DEVICE 0x0bda:0x8050 # Realtek RTL8050 USB Ethernet
+DEVICE 0x0bda:0x8053 # Realtek RTL8053 USB Gigabit Ethernet
+DEVICE 0x0bda:0x8152 # Realtek RTL8152 USB Ethernet
+DEVICE 0x0bda:0x8153 # Realtek RTL8153 USB Gigabit Ethernet
