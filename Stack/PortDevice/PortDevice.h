@@ -17,6 +17,7 @@
 #include <devices/serial.h>
 #include <devices/parallel.h>
 #include <devices/newstyle.h>
+#include <devices/usb2defaults.h>
 #include <interfaces/usb2port.h>
 
 // --
@@ -59,6 +60,7 @@ SEC_CODE S32 PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequ
 SEC_CODE PTR PortDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request );
 SEC_CODE void PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *request );
 SEC_CODE void PortDevice_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *request );
+SEC_CODE void PortDevice_EnumUnits( struct USB2PortDevice *base, struct IOStdReq *request );
 SEC_CODE void PortDevice_Query( struct USB2PortDevice *base, struct IOStdReq *request );
 SEC_CODE struct USB2PortUnit *PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
 SEC_CODE void PortDevice_Unregister( struct USB2PortIFace *Self, struct USB2PortUnit *unit );

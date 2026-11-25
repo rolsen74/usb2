@@ -14,7 +14,7 @@
 
 #ifndef USB2WIFI_EMBEDDED
 static const char version[] __attribute__((used)) =
-	"\0$VER: USB2WirelessManager 0.41 (23.11.2026)";
+	"\0$VER: USB2WirelessManager 0.42 (25.11.2026)";
 #endif
 
 // --
@@ -243,43 +243,6 @@ Run_Wireless( struct Wireless *wireless, U32 channel, U32 maxChannel, S32 open, 
 // --
 
 #ifndef USB2WIFI_EMBEDDED
-static S32
-EditProfiles( void )
-{
-	struct Library *base;
-	struct USB2WiFiIFace *wifi;
-
-	S32 result;
-
-	base = OpenLibrary( USB2WIFI_NAME, USB2WIFI_VERSION );
-	result = RETURN_FAIL;
-
-	if ( ( base ) && ( ( base->lib_Version > USB2WIFI_VERSION ) || ( base->lib_Revision >= USB2WIFI_EDITOR_REVISION ) ) )
-	{
-		wifi = (struct USB2WiFiIFace *)GetInterface( base, "main", 1, NULL );
-
-		if ( wifi )
-		{
-			result = wifi->EditProfiles();
-
-			DropInterface( (struct Interface *)wifi );
-		}
-	}
-	else
-	{
-		fprintf( stderr, "Install LIBS:%s 1.24 or later.\n", USB2WIFI_NAME );
-	}
-
-	if ( base )
-	{
-		CloseLibrary( base );
-	}
-
-	return ( result );
-}
-
-// --
-
 int
 main( int argc, char **argv __attribute__((unused)) )
 {
@@ -297,7 +260,10 @@ main( int argc, char **argv __attribute__((unused)) )
 
 	if ( argc <= 1 )
 	{
-		return ( EditProfiles() );
+		Printf( "Usage: USB2WirelessManager SSID [options], AUTO, SETUP, or SCAN.\n"
+			"Edit saved Wi-Fi profiles in USB2Prefs under Ethernet.\n" );
+
+		return ( RETURN_FAIL );
 	}
 
 	memset( values, 0, sizeof( values ) );

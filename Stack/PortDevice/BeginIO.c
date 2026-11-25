@@ -31,6 +31,20 @@ PortDevice_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *reques
 		goto reply;
 	}
 
+	if ( request->io_Command == USB2_CMD_ENUM_UNITS )
+	{
+		if ( request->io_Message.mn_Length < sizeof( *request ) )
+		{
+			request->io_Error = IOERR_BADLENGTH;
+		}
+		else
+		{
+			PortDevice_EnumUnits( base, request );
+		}
+
+		goto reply;
+	}
+
 	if ( request->io_Message.mn_Length >= sizeof( *request ) )
 	{
 		request->io_Actual = 0;

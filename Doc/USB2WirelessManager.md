@@ -124,15 +124,15 @@ picker opens. Networks appear as they are found. With the matching stack and
 `usb2wifi.library` 1.30, the picker and password window show the adapter's
 `.Class` title.
 
-Run `USB2WirelessManager` with no arguments to open the profile editor.
+Open **Ethernet** in [USB2Prefs](USB2Prefs.md) to edit Wi-Fi profiles.
 Use the **SSIDs** and **Devices** tabs to add, remove, or edit entries.
 Double-clicking an entry opens its editor. To remove an SSID referenced
 by a device, change or remove that device's entry first.
 **Use** writes the edits to `ENV:usb2wifi` for this boot. **Save** writes
 them to both `ENV:usb2wifi` and `ENVARC:usb2wifi` so they survive a reboot.
-**Cancel** and the window close button discard unsaved changes. The editor
-requires manager 0.34 or later. To open the picker explicitly, end any active connection
-on that adapter and use `SETUP`.
+**Cancel** and the window close button discard unsaved changes. To open the
+connection picker explicitly, end any active connection on that adapter
+and use `SETUP`.
 
 ```text
 USB2WirelessManager SETUP

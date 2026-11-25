@@ -18,13 +18,11 @@ make -C Drivers/Audio/AHI
 The mode file uses local ID `0x7f000001`. If that ID is already in use, rebuild
 with `make -C Drivers/Audio/AHI MODE_ID=...` using a free mode ID.
 
-Run `USB2AudioTest LIST` to find the output ID. Use
-`SetEnv USB2-AudioDefault <ID>` to select it. Use `automatic` to open the
-first available compatible USB output or `first` to select the lowest
-registered compatible output. AHI fails to open a specific output if it is
-unavailable or busy. An existing allocation keeps its output until closed.
-Copy `ENV:USB2-AudioDefault` to `ENVARC:USB2-AudioDefault` to keep the
-selection across reboots.
+Open the **Audio** page in [USB2Prefs](USB2Prefs.md) to select the
+default output. **Auto** opens the first available compatible USB output.
+**First** uses the lowest registered compatible output. **Custom** uses
+the output chosen in the list. First and Custom fail when the chosen
+output is busy. An existing allocation keeps its output until closed.
 
 AHI recording is unsupported. Mode loading and playback on physical AmigaOS 4
 hardware remain unverified.

@@ -8,6 +8,7 @@
 
 // --
 
+#include <devices/usb2defaults.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
 #include "BluetoothTest.h"
@@ -15,7 +16,7 @@
 // --
 
 static const char version[] __attribute__((used)) =
-	"\0$VER: USB2BluetoothTest 0.23 (25.11.2026)";
+	"\0$VER: USB2BluetoothTest 0.25 (25.11.2026)";
 
 // --
 
@@ -291,7 +292,18 @@ main( void )
 		return ( RETURN_FAIL );
 	}
 
-	unit = options[0] ? *(const LONG *) options[0] : 0;
+	if ( options[0] )
+	{
+		unit = *(const LONG *) options[0];
+	}
+	else
+	{
+		struct USB2Prefs prefs;
+
+		USB2_ReadPrefs( IDOS, & prefs );
+
+		unit = ( prefs.Units[USB2_DEFAULT_BLUETOOTH] == USB2_UNIT_FIRST ) ? (LONG) USB2_FIRST_UNIT : MAX( 0, prefs.Units[USB2_DEFAULT_BLUETOOTH] );
+	}
 	discovery = options[1];
 
 	address = (const char *) options[2];

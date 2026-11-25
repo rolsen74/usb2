@@ -24,12 +24,17 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 	struct USB2EthUnit *unit;
 	struct ExecIFace *IExec;
 	struct USBBase *usbbase;
+	struct USB2Prefs prefs;
 	#ifdef USB2_BIND_DEBUG
 	struct Task *caller;
 	#endif
 
 	S32 error;
+	S32 follow_default;
+	S32 select_adapter;
+	S32 first;
 	U32 poll;
+	U32 index;
 	#ifdef USB2_BIND_DEBUG
 	S32 trace;
 	#endif
@@ -38,6 +43,9 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 	usbbase = base->USB;
 	IExec = usbbase->usb_IExec;
 	error = IOERR_OPENFAIL;
+	follow_default = ( number == USB2_DEFAULT_UNIT );
+	select_adapter = FALSE;
+	first = FALSE;
 
 	if ( request->io_Message.mn_Length < sizeof( struct IORequest ) )
 	{
@@ -69,6 +77,11 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 	}
 	#endif
 
+	if ( ( follow_default ) && ( IExec->FindTask( NULL )->tc_Node.ln_Type != NT_PROCESS ) )
+	{
+		goto bailout;
+	}
+
 	if ( ! USB2_FullBoot_Wait( usbbase ) )
 	{
 		if ( ( number == 0 ) && ( usbbase->usb_FullBootState == USB2_FullBoot_Failed ) )
@@ -88,6 +101,20 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 		goto bailout;
 	}
 
+	if ( follow_default )
+	{
+		USB2_ReadPrefs( usbbase->usb_IDOS, & prefs );
+
+		select_adapter = ( prefs.Ethernet[0] ) && ( MISC_STRICASECOMPARE( prefs.Ethernet, USB2_PREF_AUTO ) );
+
+		if ( select_adapter )
+		{
+			first = ! MISC_STRICASECOMPARE( prefs.Ethernet, USB2_PREF_FIRST );
+		}
+
+		number = 0;
+	}
+
 	IExec->ObtainSemaphore( & base->OpenLock );
 
 	if ( ( number >= USB2_ETH_MAX_UNITS ) || ( request->io_Message.mn_Length < sizeof( struct IOSana2Req ) ) )
@@ -95,9 +122,31 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 		goto unlock;
 	}
 
-	// The Full Boot pass starts class drivers, which register their units asynchronously.
-	for ( poll = 0; ( poll < ETH_OPEN_WAIT_POLLS ) && ( ! base->Units[number] ); poll++ )
+	// Class drivers register asynchronously after Full Boot.
+	for( poll = 0; ; poll++ )
 	{
+		unit = base->Units[number];
+
+		if ( select_adapter )
+		{
+			for( index = 0; index < USB2_ETH_MAX_UNITS; index++ )
+			{
+				unit = base->Units[index];
+
+				if ( ( unit ) && ( ( first ) || ( ! MISC_STRICASECOMPARE( unit->Info.Driver, prefs.Ethernet ) ) ) )
+				{
+					break;
+				}
+
+				unit = NULL;
+			}
+		}
+
+		if ( ( unit ) || ( poll == ETH_OPEN_WAIT_POLLS ) )
+		{
+			break;
+		}
+
 		IExec->ReleaseSemaphore( & base->OpenLock );
 
 		#ifdef USB2_BIND_DEBUG
@@ -120,9 +169,7 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 		IExec->ObtainSemaphore( & base->OpenLock );
 	}
 
-	unit = base->Units[number];
-
-	if ( ( ! unit ) && ( number == 0 ) )
+	if ( ( ! unit ) && ( number == 0 ) && ( ! follow_default ) )
 	{
 		goto metadata;
 	}

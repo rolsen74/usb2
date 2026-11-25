@@ -15,6 +15,7 @@
 SEC_RODATA static const U16 SerialCommands[] =
 {
 	NSCMD_DEVICEQUERY,
+	USB2_CMD_ENUM_UNITS,
 	CMD_RESET,
 	CMD_READ,
 	CMD_WRITE,
@@ -31,12 +32,14 @@ SEC_RODATA static const U16 SerialCommands[] =
 SEC_RODATA static const U16 ParallelCommands[] =
 {
 	NSCMD_DEVICEQUERY,
+	USB2_CMD_ENUM_UNITS,
 	0
 };
 
 SEC_RODATA static const U16 PrinterCommands[] =
 {
 	NSCMD_DEVICEQUERY,
+	USB2_CMD_ENUM_UNITS,
 	CMD_WRITE,
 	PDCMD_QUERY,
 	0

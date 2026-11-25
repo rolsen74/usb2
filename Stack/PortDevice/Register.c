@@ -57,7 +57,7 @@ Register( struct USB2PortDevice *base, struct MsgPort *begin, struct MsgPort *ab
 		index++;
 	}
 
-	if ( index == USB2_PORT_BACKEND_UNIT )
+	if ( index == USB2_DEFAULT_UNIT )
 	{
 		IExec->ReleaseSemaphore( & base->Lock );
 

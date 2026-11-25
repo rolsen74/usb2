@@ -4,6 +4,8 @@ Use `Stack/` as the main reference for coding style. Match the surrounding code 
 
 ## File layout
 
+- Save generated EGM Markdown reports and drafts in the repository's `bin/` directory.
+- Sort `DEVICE` entries in `.Class` files numerically by vendor ID and then product ID. Keep comments with their entries.
 - Put the implementation in the file named for its operation. `Stack/` commonly uses `Alloc.c`, `Free.c`, `Lock.c`, `Valid.c`, and similar small files. For host controllers, put transfer construction in `*_Build.c`, queue insertion in `*_Add.c`, unlinking in `*_Remove.c`, and result accounting in `*_Length.c`. Do not collect these implementations in a central `Core.c` or leave operation files as forwarding wrappers.
 - Keep shared helpers in their own files only when more than one operation uses them. Check the local `.h` file and `usb2_all.h` for existing declarations and macros before adding new ones.
 - Some source files deliberately `#include` nearby `.c` files. Follow the existing build arrangement and avoid defining the same function in two compilation units.

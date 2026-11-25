@@ -19,7 +19,6 @@ enum EditorClass
 	EDITOR_LIST,
 	EDITOR_TABS,
 	EDITOR_BUTTON,
-	EDITOR_SPACE,
 	EDITOR_STRING,
 	EDITOR_CHECK,
 	EDITOR_CHOOSER,
@@ -29,8 +28,7 @@ enum EditorClass
 
 enum EditorButton
 {
-	EDITOR_SAVE = 1,
-	EDITOR_USE,
+	EDITOR_USE = 2,
 	EDITOR_CANCEL,
 	EDITOR_NETWORKS,
 	EDITOR_ADAPTERS,
@@ -48,6 +46,7 @@ struct ProfileEditor
 	Class *PageClass;
 	struct ListBrowserIFace *ListBrowser;
 	struct Screen *Screen;
+	U32 GadgetBase;
 	struct ProfileDatabase Database;
 };
 

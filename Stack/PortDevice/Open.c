@@ -84,12 +84,16 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 	struct USBBase *usbbase;
 	struct USB2PortUnit *unit;
 	struct ExecIFace *IExec;
+	struct USB2Prefs prefs;
+	enum USB2DefaultDevice preference;
 
 	S32 wait_error;
 	U8 shared;
 	U32 poll;
 	U32 size;
 	S32 metadata;
+	S32 default_open;
+	S32 first;
 
 	base = (PTR) Self->Data.LibBase;
 	IExec = base->IExec;
@@ -105,6 +109,7 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 		default: size = sizeof( struct IOStdReq ); break;
 	}
 
+	default_open = ( number == USB2_DEFAULT_UNIT );
 	metadata = ( number == USB2_PORT_BACKEND_UNIT ) ||
 		( ( number == 0 ) && ( request->io_Message.mn_Length >= sizeof( struct IOStdReq ) ) &&
 			( request->io_Message.mn_Length < size ) );
@@ -116,13 +121,36 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 		return ( request->io_Error );
 	}
 
+	if ( default_open )
+	{
+		switch( base->Type )
+		{
+			case PORT_SERIAL: preference = USB2_DEFAULT_SERIAL; break;
+			case PORT_PARALLEL: preference = USB2_DEFAULT_PARALLEL; break;
+			default: preference = USB2_DEFAULT_PRINTER; break;
+		}
+
+		if ( ( IExec->FindTask( NULL )->tc_Node.ln_Type != NT_PROCESS ) || ( ! USB2_FullBoot_Wait( usbbase ) ) )
+		{
+			request->io_Device = NULL;
+
+			return ( request->io_Error );
+		}
+
+		USB2_ReadPrefs( usbbase->usb_IDOS, & prefs );
+
+		number = ( prefs.Units[preference] == USB2_UNIT_FIRST ) ? USB2_FIRST_UNIT : (U32) MAX( 0, prefs.Units[preference] );
+	}
+
 	// Unit 0 also serves discovery callers before the first backend registers.
-	if ( ( number != 0 ) && ( ! metadata ) && ( ! USB2_FullBoot_Wait( usbbase ) ) )
+	if ( ( number != 0 ) && ( ! metadata ) && ( ! default_open ) && ( ! USB2_FullBoot_Wait( usbbase ) ) )
 	{
 		request->io_Device = NULL;
 
 		return ( request->io_Error );
 	}
+
+	first = ( default_open ) && ( number == USB2_FIRST_UNIT );
 
 	IExec->ObtainSemaphore( & base->Lock );
 
@@ -132,12 +160,12 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 		{
 			unit = base->Units;
 
-			while( ( unit ) && ( unit->Number < number ) )
+			while( ( unit ) && ( first ? ( ! unit->BeginPort || unit->Quiescing ) : ( unit->Number < number ) ) )
 			{
 				unit = unit->Next;
 			}
 
-			if ( ( ( unit ) && ( unit->Number == number ) ) || ( number == 0 ) || ( poll == 30 ) )
+			if ( ( ( unit ) && ( ( first ) || ( unit->Number == number ) ) ) || ( number == 0 ) || ( poll == 30 ) )
 			{
 				break;
 			}
@@ -163,11 +191,11 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 			}
 		}
 
-		if ( ( ! unit ) || ( unit->Number != number ) )
+		if ( ( ! unit ) || ( ( ! first ) && ( unit->Number != number ) ) )
 		{
 			unit = NULL;
 
-			if ( number == 0 )
+			if ( ( number == 0 ) && ( ! default_open ) )
 			{
 				goto opened;
 			}

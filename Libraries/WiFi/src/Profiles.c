@@ -707,5 +707,10 @@ const APTR WiFiVectors[] = //
 		WiFi_EditProfiles,	   //
 		WiFi_StartPromptForUnit, //
 		WiFi_ClaimRegistration, //
+		WiFi_AddProfilePanel, //
+		WiFi_HandleProfilePanel, //
+		WiFi_ApplyProfilePanel, //
+		WiFi_FreeProfilePanel, //
+		WiFi_AddProfilePanelWithDefaults, //
 		(APTR)-1			   //
 	};

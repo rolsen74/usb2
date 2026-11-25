@@ -27,6 +27,8 @@
 #define USB2WIFI_EDITOR_REVISION 24
 #define USB2WIFI_TITLED_PROMPT_REVISION 30
 #define USB2WIFI_REGISTRATION_REVISION 44
+#define USB2WIFI_PANEL_REVISION 47
+#define USB2WIFI_DEFAULT_TAB_REVISION 49
 #define USB2WIFI_RTL8188 0
 #define USB2WIFI_RT2870 1
 #define USB2WIFI_RTL8811AU 2
@@ -73,6 +75,9 @@ struct USB2WiFiPrompt
 	char Password[64];
 };
 
+struct USB2WiFiPanel;
+struct Window;
+
 struct USB2WiFiIFace
 {
 	struct InterfaceData Data;
@@ -93,10 +98,25 @@ struct USB2WiFiIFace
 	int32_t APICALL (*StartAuto)( struct USB2WiFiIFace *self, uint32_t adapter, uint32_t unit );
 	int32_t APICALL (*SetupRetry)( struct USB2WiFiIFace *self, struct USB2WiFiProfile *profile,
 		uint32_t adapter, uint32_t unit, uint32_t *action );
+	// Retired standalone editor. Use the embedded panel methods below.
 	int32_t APICALL (*EditProfiles)( struct USB2WiFiIFace *self );
 	int32_t APICALL (*StartPromptForUnit)( struct USB2WiFiIFace *self, struct USB2WiFiPrompt *prompt,
 		uint32_t adapter, uint32_t unit );
 	int32_t APICALL (*ClaimRegistration)( struct USB2WiFiIFace *self, uint32_t adapter, uint32_t unit, uint32_t registration );
+
+	// Keep the library and panel alive until after the parent layout is disposed.
+	// Reserve 16 gadget IDs starting at gadgetBase for the embedded editor.
+	struct USB2WiFiPanel *APICALL (*AddProfilePanel)( struct USB2WiFiIFace *self, APTR layout, uint32_t gadgetBase );
+	void APICALL (*HandleProfilePanel)( struct USB2WiFiIFace *self, struct USB2WiFiPanel *panel,
+		struct Window *window, uint32_t gadget );
+	// Returns OK when written, MISSING when unchanged, or ERROR on failure.
+	int32_t APICALL (*ApplyProfilePanel)( struct USB2WiFiIFace *self, struct USB2WiFiPanel *panel,
+		struct Window *window, int32_t permanent );
+	void APICALL (*FreeProfilePanel)( struct USB2WiFiIFace *self, struct USB2WiFiPanel *panel );
+
+	// Consumes defaultPage on success or failure. On success, it is the first tab.
+	struct USB2WiFiPanel *APICALL (*AddProfilePanelWithDefaults)( struct USB2WiFiIFace *self,
+		APTR layout, APTR defaultPage, uint32_t gadgetBase );
 };
 
 #endif

@@ -8,7 +8,7 @@ BINDIR				:= $(ROOTDIR)/_Data
 all: build_all
 
 .PHONY: all build_all build_dir_tree build_stack build_printer build_video build_sdr_test build_bluetooth_test \
-	build_ptp build_serial build_smartcard build_audio build_ax88772 build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer \
+	build_ptp build_serial build_smartcard build_audio build_prefs build_ax88772 build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_analyzer \
 	build_rtl8811au build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager build_archive
 
 ###########################################################################
@@ -27,6 +27,7 @@ build_dir_tree:
 	mkdir -p $(BINDIR)/usb2/Devs/Networks
 	mkdir -p $(BINDIR)/usb2/Libs/USB2
 	mkdir -p $(BINDIR)/usb2/Kickstart
+	mkdir -p $(BINDIR)/usb2/Prefs
 	mkdir -p $(BINDIR)/usb2/Tools
 	# File pickers need a file for devices registered by usb2.kmod.
 	printf '\n' > "$(BINDIR)/usb2/Devs/usb2audio.device"
@@ -137,6 +138,12 @@ build_audio: | build_dir_tree
 	$(MAKE) -f makefile && \
 	cp USB2AudioTest $(BINDIR)/usb2/Tools
 	@echo "Audio done"
+
+###########################################################################
+
+build_prefs: | build_dir_tree
+	$(MAKE) -C Programs/USB2Prefs
+	cp Programs/USB2Prefs/bin/USB2Prefs $(BINDIR)/usb2/Prefs/USB2
 
 ###########################################################################
 
@@ -267,7 +274,7 @@ build_wireless_manager: | build_dir_tree
 
 ###########################################################################
 
-build_archive: build_stack build_printer build_video build_sdr_test build_bluetooth_test build_ptp build_serial build_smartcard build_audio \
+build_archive: build_stack build_printer build_video build_sdr_test build_bluetooth_test build_ptp build_serial build_smartcard build_audio build_prefs \
 	build_ax88772 build_rtl8152 build_rtl8188 build_sis163u build_rt2870 build_rtl8821cu build_rtl8811au build_analyzer build_wifi build_wpa build_wpa2 build_wpa3 build_wireless_manager
 	@echo "Building Archive"
 	@rm -f usb2.lha

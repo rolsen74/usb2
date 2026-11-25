@@ -48,6 +48,15 @@ struct USB2EthAdapterInfo
 	char Alias[USB2ETH_TITLE_SIZE];
 };
 
+#define USB2_ETH_CMD_ENUM_ADAPTERS 0x8011
+#define USB2_ETH_ADAPTER_LIST_VERSION 1 // io_Offset
+
+struct USB2EthAdapterEntry
+{
+	ULONG Number;
+	struct USB2EthAdapterInfo Info;
+};
+
 /*
  * Open USB2_ETH_BACKEND_UNIT with an IORequest and obtain "main" v1.
  * Register assigns the lowest free number. Call Unregister after stopping

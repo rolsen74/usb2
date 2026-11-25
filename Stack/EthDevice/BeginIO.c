@@ -37,6 +37,17 @@ EthDevice_BeginIO( struct DeviceManagerInterface *Self, struct IORequest *reques
 	{
 		EthDevice_Query( (PTR) request, commands );
 	}
+	else if ( request->io_Command == USB2_ETH_CMD_ENUM_ADAPTERS )
+	{
+		if ( request->io_Message.mn_Length < sizeof( struct IOStdReq ) )
+		{
+			request->io_Error = IOERR_BADLENGTH;
+		}
+		else
+		{
+			EthDevice_EnumAdapters( base, (PTR) request );
+		}
+	}
 	else if ( request->io_Message.mn_Length < sizeof( struct IOSana2Req ) )
 	{
 		request->io_Error = EthDevice_KnowsCommand( commands, request->io_Command ) ? IOERR_BADLENGTH : IOERR_NOCMD;

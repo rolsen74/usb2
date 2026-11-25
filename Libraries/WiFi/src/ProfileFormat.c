@@ -1219,7 +1219,7 @@ SaveProfileEdit( const char *original, U32 originalLength, char *edited, S32 per
 
 // --
 enum ProfileEditResult
-WiFi_SaveProfileEdit( const struct ProfileDatabase *db, const char *original, U32 originalLength, S32 permanent )
+WiFi_SaveProfileEdit( const struct ProfileDatabase *db, char **original, U32 *originalLength, S32 permanent )
 {
 	char *text;
 	enum ProfileEditResult result;
@@ -1231,9 +1231,19 @@ WiFi_SaveProfileEdit( const struct ProfileDatabase *db, const char *original, U3
 		return ( PROFILE_EDIT_ERROR );
 	}
 
-	result = SaveProfileEdit( original, originalLength, text, permanent );
+	result = SaveProfileEdit( *original, *originalLength, text, permanent );
 
-	WiFi_FreeProfileText( text, strlen( text ) );
+	if ( result == PROFILE_EDIT_SAVED )
+	{
+		WiFi_FreeProfileText( *original, *originalLength );
+
+		*original = text;
+		*originalLength = strlen( text );
+	}
+	else
+	{
+		WiFi_FreeProfileText( text, strlen( text ) );
+	}
 
 	return ( result );
 }

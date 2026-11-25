@@ -12,12 +12,9 @@
 #include "ProfileFormat.h"
 #include "ProfileEditor.h"
 
-#include <classes/window.h>
 #include <gadgets/clicktab.h>
 #include <gadgets/layout.h>
 #include <gadgets/listbrowser.h>
-#include <gadgets/space.h>
-#include <images/bevel.h>
 #include <interfaces/layout.h>
 #include <stdio.h>
 
@@ -32,6 +29,17 @@ struct EditorLists
 	Object *NetworkBrowser;
 	Object *AdapterBrowser;
 	Object *Tabs;
+	U32 FirstProfileTab;
+};
+
+struct USB2WiFiPanel
+{
+	struct ProfileEditor Editor;
+	struct EditorLists Lists;
+	struct ClassLibrary *Bases[EDITOR_CLASSES];
+	char *Original;
+	U32 OriginalLength;
+	S32 Dirty;
 };
 
 static const struct TagItem FixedHeight[] = { { CHILD_WeightedHeight, 0 }, { TAG_END, 0 } };
@@ -86,7 +94,7 @@ BuildPage( const struct ProfileEditor *editor, struct List *rows, struct ColumnI
 	}
 
 	*browser = WiFi_AddEditorChild( page, NewObject( editor->Classes[EDITOR_LIST], NULL,
-		GA_ID, adapter ? EDITOR_ADAPTERS : EDITOR_NETWORKS, GA_RelVerify, TRUE, LISTBROWSER_ShowSelected, TRUE,
+		GA_ID, editor->GadgetBase + ( adapter ? EDITOR_ADAPTERS : EDITOR_NETWORKS ), GA_RelVerify, TRUE, LISTBROWSER_ShowSelected, TRUE,
 		LISTBROWSER_ColumnTitles, TRUE, LISTBROWSER_ColumnInfo, columns, LISTBROWSER_Labels, rows,
 		LISTBROWSER_Selected, -1, LISTBROWSER_MinVisible, 5, TAG_END ), NULL );
 
@@ -98,9 +106,9 @@ BuildPage( const struct ProfileEditor *editor, struct List *rows, struct ColumnI
 	edit = adapter ? EDITOR_EDIT_ADAPTER : EDITOR_EDIT_NETWORK;
 
 	if ( ( ! *browser ) || ( ! buttons )
-		|| ( ! WiFi_AddEditorChild( buttons, WiFi_EditorButton( editor, add, "Add" ), NULL ) )
-		|| ( ! WiFi_AddEditorChild( buttons, WiFi_EditorButton( editor, remove, "Remove" ), NULL ) )
-		|| ( ! WiFi_AddEditorChild( buttons, WiFi_EditorButton( editor, edit, "Edit" ), NULL ) ) )
+		|| ( ! WiFi_AddEditorChild( buttons, WiFi_EditorButton( editor, editor->GadgetBase + add, "Add" ), NULL ) )
+		|| ( ! WiFi_AddEditorChild( buttons, WiFi_EditorButton( editor, editor->GadgetBase + remove, "Remove" ), NULL ) )
+		|| ( ! WiFi_AddEditorChild( buttons, WiFi_EditorButton( editor, editor->GadgetBase + edit, "Edit" ), NULL ) ) )
 	{
 		DisposeObject( page );
 
@@ -113,9 +121,9 @@ BuildPage( const struct ProfileEditor *editor, struct List *rows, struct ColumnI
 // --
 
 static S32
-BuildTabs( const struct ProfileEditor *editor, struct EditorLists *lists, Object *layout )
+BuildTabs( const struct ProfileEditor *editor, struct EditorLists *lists, Object *layout, Object *defaults )
 {
-	static const char *const tabs[] = { "SSIDs", "Devices", NULL };
+	static const char *const tabs[] = { "Default", "SSIDs", "Devices", NULL };
 	static const struct ColumnInfo networkColumns[] = { { 80, "SSID", 0 }, { 20, "Hidden", 0 }, { -1, NULL, 0 } };
 	static const struct ColumnInfo adapterColumns[] = { { 31, "Adapter name", 0 }, { 23, "MAC or unit", 0 },
 		{ 30, "SSID", 0 }, { 16, "Autoconnect", 0 }, { -1, NULL, 0 } };
@@ -125,6 +133,10 @@ BuildTabs( const struct ProfileEditor *editor, struct EditorLists *lists, Object
 	Object *pages;
 	Object *object;
 
+	networks = NULL;
+	adapters = NULL;
+	lists->FirstProfileTab = defaults ? 1 : 0;
+
 	memcpy( lists->NetworkColumns, networkColumns, sizeof( networkColumns ) );
 
 	memcpy( lists->AdapterColumns, adapterColumns, sizeof( adapterColumns ) );
@@ -133,30 +145,26 @@ BuildTabs( const struct ProfileEditor *editor, struct EditorLists *lists, Object
 
 	if ( ! networks )
 	{
-		return ( FALSE );
+		goto failed;
 	}
 
 	adapters = BuildPage( editor, &lists->Adapters, lists->AdapterColumns, TRUE, &lists->AdapterBrowser );
 
 	if ( ! adapters )
 	{
-		DisposeObject( networks );
-
-		return ( FALSE );
+		goto failed;
 	}
 
-	pages = NewObject( editor->PageClass, NULL, PAGE_Add, networks, PAGE_Add, adapters, TAG_END );
+	pages = NewObject( editor->PageClass, NULL, defaults ? PAGE_Add : TAG_IGNORE, defaults,
+		PAGE_Add, networks, PAGE_Add, adapters, TAG_END );
 
 	if ( ! pages )
 	{
-		DisposeObject( adapters );
-
-		DisposeObject( networks );
-
-		return ( FALSE );
+		goto failed;
 	}
 
-	object = NewObject( editor->Classes[EDITOR_TABS], NULL, GA_Text, tabs, CLICKTAB_PageGroup, pages, TAG_END );
+	object = NewObject( editor->Classes[EDITOR_TABS], NULL,
+		GA_Text, tabs + ( defaults ? 0 : 1 ), CLICKTAB_Current, 0, CLICKTAB_PageGroup, pages, TAG_END );
 
 	if ( ! object )
 	{
@@ -168,42 +176,24 @@ BuildTabs( const struct ProfileEditor *editor, struct EditorLists *lists, Object
 	lists->Tabs = WiFi_AddEditorChild( layout, object, NULL );
 
 	return ( lists->Tabs != NULL );
-}
 
-// --
-
-static S32
-BuildFooter( const struct ProfileEditor *editor, Object *layout )
-{
-	static const char *const labels[] = { "_Save", "_Use", "_Cancel" };
-
-	Object *row;
-	U32 index;
-
-	if ( ! WiFi_AddEditorChild( layout, NewObject( editor->Classes[EDITOR_SPACE], NULL,
-		SPACE_MinHeight, 3, SPACE_BevelStyle, BVS_SBAR_VERT, TAG_END ), FixedHeight ) )
+failed:
+	if ( adapters )
 	{
-		return ( FALSE );
+		DisposeObject( adapters );
 	}
 
-	row = WiFi_AddEditorChild( layout, NewObject( editor->Classes[EDITOR_LAYOUT], NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ, LAYOUT_EvenSize, TRUE,
-		LAYOUT_SpaceInner, TRUE, LAYOUT_InnerSpacing, 12, TAG_END ), FixedHeight );
-
-	if ( ! row )
+	if ( networks )
 	{
-		return ( FALSE );
+		DisposeObject( networks );
 	}
 
-	for ( index = 0; index < sizeof( labels ) / sizeof( *labels ); index++ )
+	if ( defaults )
 	{
-		if ( ! WiFi_AddEditorChild( row, WiFi_EditorButton( editor, EDITOR_SAVE + index, labels[index] ), NULL ) )
-		{
-			return ( FALSE );
-		}
+		DisposeObject( defaults );
 	}
 
-	return ( TRUE );
+	return ( FALSE );
 }
 
 // --
@@ -277,9 +267,19 @@ RefreshRows( const struct ProfileEditor *editor, struct EditorLists *lists, stru
 
 	SetAttrs( lists->AdapterBrowser, LISTBROWSER_Labels, &lists->Adapters, LISTBROWSER_Selected, -1, TAG_END );
 
-	RefreshGList( (struct Gadget *)( active ? lists->AdapterBrowser : lists->NetworkBrowser ), window, NULL, 1 );
+	if ( window )
+	{
+		if ( active >= lists->FirstProfileTab )
+		{
+			RefreshGList( (struct Gadget *)( active == lists->FirstProfileTab ?
+				lists->NetworkBrowser : lists->AdapterBrowser ), window, NULL, 1 );
+		}
 
-	SetWindowTitles( window, complete ? "USB2 Wi-Fi Profiles" : "Wi-Fi Profiles - could not display all entries", (CONST_STRPTR)-1 );
+		if ( ! complete )
+		{
+			SetWindowTitles( window, "Wi-Fi Profiles - could not display all entries", (CONST_STRPTR)-1 );
+		}
+	}
 }
 
 // --
@@ -426,16 +426,18 @@ HandleEntry( struct ProfileEditor *editor, struct EditorLists *lists, struct Win
 // --
 
 static S32
-SaveEditor( const struct ProfileDatabase *db, struct Window *window, const char *original, U32 originalLength, S32 permanent )
+SaveEditor( struct USB2WiFiPanel *panel, struct Window *window, S32 permanent )
 {
 	enum ProfileEditResult result;
 
-	result = WiFi_SaveProfileEdit( db, original, originalLength, permanent );
+	result = WiFi_SaveProfileEdit( &panel->Editor.Database, &panel->Original, &panel->OriginalLength, permanent );
 
 	switch ( result )
 	{
 		case PROFILE_EDIT_SAVED:
 		{
+			panel->Dirty = FALSE;
+
 			return ( TRUE );
 		}
 
@@ -467,207 +469,233 @@ SaveEditor( const struct ProfileDatabase *db, struct Window *window, const char 
 
 // --
 
-S32
-WiFi_EditProfiles( struct USB2WiFiIFace *self __attribute__((unused)) )
+static void
+FreePanel( struct USB2WiFiPanel *panel )
+{
+	struct ProfileEditor *editor;
+
+	U32 index;
+
+	editor = &panel->Editor;
+
+	if ( editor->ListBrowser )
+	{
+		editor->ListBrowser->FreeListBrowserList( &panel->Lists.Networks );
+
+		editor->ListBrowser->FreeListBrowserList( &panel->Lists.Adapters );
+
+		DropInterface( (struct Interface *)editor->ListBrowser );
+	}
+
+	for( index = EDITOR_CLASSES; index; index-- )
+	{
+		if ( panel->Bases[index - 1] )
+		{
+			CloseClass( panel->Bases[index - 1] );
+		}
+	}
+
+	if ( editor->Screen )
+	{
+		UnlockPubScreen( NULL, editor->Screen );
+	}
+
+	WiFi_FreeProfiles( &editor->Database );
+
+	WiFi_FreeProfileText( panel->Original, panel->OriginalLength );
+
+	FreeVec( panel );
+}
+
+// --
+
+static struct USB2WiFiPanel *
+AllocPanel( U32 gadgetBase )
 {
 	static const char *const classNames[EDITOR_CLASSES] =
 	{
 		"window.class", "gadgets/layout.gadget", "gadgets/listbrowser.gadget", "gadgets/clicktab.gadget",
-		"gadgets/button.gadget", "gadgets/space.gadget", "gadgets/string.gadget", "gadgets/checkbox.gadget",
+		"gadgets/button.gadget", "gadgets/string.gadget", "gadgets/checkbox.gadget",
 		"gadgets/chooser.gadget", "images/label.image"
 	};
 
-	struct ProfileEditor editor;
-	struct EditorLists lists;
-	struct ClassLibrary *bases[EDITOR_CLASSES];
+	struct USB2WiFiPanel *panel;
+	struct ProfileEditor *editor;
 	struct LayoutIFace *layoutInterface;
-	struct Window *window;
 
-	Object *object;
-	Object *layout;
-	char *original;
-	U32 originalLength;
 	U32 index;
-	U32 event;
-	U32 gadget;
-	ULONG mask;
-	U16 code;
-	S32 result;
 
-	memset( &editor, 0, sizeof( editor ) );
+	panel = AllocVecTags( sizeof( *panel ), AVT_ClearWithValue, 0, TAG_END );
 
-	memset( &lists, 0, sizeof( lists ) );
+	if ( ! panel )
+	{
+		return ( NULL );
+	}
 
-	memset( bases, 0, sizeof( bases ) );
+	editor = &panel->Editor;
+	editor->GadgetBase = gadgetBase;
 
-	NewList( &lists.Networks );
+	NewList( &panel->Lists.Networks );
 
-	NewList( &lists.Adapters );
+	NewList( &panel->Lists.Adapters );
 
-	object = NULL;
-	layout = NULL;
-	result = RETURN_FAIL;
-	mask = 0;
-
-	if ( WiFi_LoadProfileEdit( &editor.Database, &original, &originalLength ) == USB2WIFI_ERROR )
+	if ( WiFi_LoadProfileEdit( &editor->Database, &panel->Original, &panel->OriginalLength ) == USB2WIFI_ERROR )
 	{
 		FPrintf( ErrorOutput(), "Could not read ENV:usb2wifi. Check the SSID and ETH records.\n" );
 
-		goto done;
+		goto failed;
 	}
 
 	if ( ! WiFi_ObtainIntuition() )
 	{
-		goto done;
+		goto failed;
 	}
 
-	editor.Screen = LockPubScreen( NULL );
+	editor->Screen = LockPubScreen( NULL );
 
-	if ( ! editor.Screen )
+	if ( ! editor->Screen )
 	{
-		goto done;
+		goto failed;
 	}
 
-	for ( index = 0; index < EDITOR_CLASSES; index++ )
+	for( index = 0; index < EDITOR_CLASSES; index++ )
 	{
-		bases[index] = OpenClass( classNames[index], 50, &editor.Classes[index] );
+		panel->Bases[index] = OpenClass( classNames[index], 50, &editor->Classes[index] );
 
-		if ( ! bases[index] )
+		if ( ! panel->Bases[index] )
 		{
-			FPrintf( ErrorOutput(), "Could not open %s.\n", classNames[index] );
-
-			goto done;
+			goto failed;
 		}
 	}
 
-	editor.ListBrowser = (struct ListBrowserIFace *)GetInterface( (struct Library *)bases[EDITOR_LIST], "main", 1, NULL );
+	editor->ListBrowser = (APTR)GetInterface( (APTR)panel->Bases[EDITOR_LIST], "main", 1, NULL );
 
-	if ( ! editor.ListBrowser )
+	if ( ! editor->ListBrowser )
 	{
-		goto done;
+		goto failed;
 	}
 
-	layoutInterface = (struct LayoutIFace *)GetInterface( (struct Library *)bases[EDITOR_LAYOUT], "main", 1, NULL );
+	layoutInterface = (APTR)GetInterface( (APTR)panel->Bases[EDITOR_LAYOUT], "main", 1, NULL );
 
 	if ( ! layoutInterface )
 	{
-		goto done;
+		goto failed;
 	}
 
-	editor.PageClass = layoutInterface->PAGE_GetClass();
+	editor->PageClass = layoutInterface->PAGE_GetClass();
 
-	DropInterface( (struct Interface *)layoutInterface );
+	DropInterface( (APTR)layoutInterface );
 
-	if ( ! editor.PageClass )
+	if ( editor->PageClass )
 	{
-		goto done;
+		return ( panel );
 	}
 
-	object = NewObject( editor.Classes[EDITOR_WINDOW], NULL, WA_PubScreen, editor.Screen, WA_Title, "USB2 Wi-Fi Profiles",
-		WA_Width, editor.Screen->Width < 660 ? editor.Screen->Width : 660,
-		WA_Height, editor.Screen->Height < 350 ? editor.Screen->Height : 350,
-		WA_DragBar, TRUE, WA_DepthGadget, TRUE, WA_CloseGadget, TRUE, WA_SizeGadget, TRUE,
-		WA_Activate, TRUE, WA_AutoAdjust, TRUE, WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP,
-		WINDOW_Position, WPOS_CENTERSCREEN, TAG_END );
+failed:
+	FreePanel( panel );
 
-	layout = NewObject( editor.Classes[EDITOR_LAYOUT], NULL, LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_SpaceInner, TRUE, LAYOUT_SpaceOuter, TRUE, TAG_END );
+	return ( NULL );
+}
 
-	if ( ( ! object ) || ( ! layout ) || ( ! BuildTabs( &editor, &lists, layout ) ) || ( ! BuildFooter( &editor, layout ) ) )
+// --
+
+static struct USB2WiFiPanel *
+AddPanel( Object *layout, Object *defaults, U32 gadgetBase )
+{
+	struct USB2WiFiPanel *panel;
+
+	panel = NULL;
+
+	if ( ( layout ) && ( gadgetBase ) && ( gadgetBase <= 65519 ) )
 	{
-		goto done;
+		panel = AllocPanel( gadgetBase );
 	}
 
-	SetAttrs( object, WINDOW_Layout, layout, TAG_END );
-
-	layout = NULL;
-
-	window = (struct Window *)IDoMethod( object, WM_OPEN, NULL );
-
-	if ( ( ! window ) || ( ! GetAttr( WINDOW_SigMask, object, &mask ) ) || ( ! mask ) )
+	if ( ! panel )
 	{
-		goto done;
-	}
-
-	RefreshRows( &editor, &lists, window );
-
-	result = RETURN_OK;
-
-	while ( ! ( Wait( mask | SIGBREAKF_CTRL_C ) & SIGBREAKF_CTRL_C ) )
-	{
-		while ( ( event = IDoMethod( object, WM_HANDLEINPUT, &code ) ) != WMHI_LASTMSG )
+		if ( defaults )
 		{
-			if ( ( event & WMHI_CLASSMASK ) == WMHI_CLOSEWINDOW )
-			{
-				goto done;
-			}
-
-			if ( ( event & WMHI_CLASSMASK ) != WMHI_GADGETUP )
-			{
-				continue;
-			}
-
-			gadget = event & WMHI_GADGETMASK;
-
-			if ( gadget == EDITOR_CANCEL )
-			{
-				goto done;
-			}
-
-			if ( ( gadget == EDITOR_USE ) || ( gadget == EDITOR_SAVE ) )
-			{
-				if ( SaveEditor( &editor.Database, window, original, originalLength, gadget == EDITOR_SAVE ) )
-				{
-					goto done;
-				}
-			}
-			else if ( ( gadget >= EDITOR_NETWORKS ) && ( gadget <= EDITOR_EDIT_ADAPTER )
-				&& ( HandleEntry( &editor, &lists, window, gadget ) ) )
-			{
-				RefreshRows( &editor, &lists, window );
-			}
+			DisposeObject( defaults );
 		}
+
+		return ( NULL );
 	}
 
-done:
-
-	if ( object )
+	if ( ! BuildTabs( &panel->Editor, &panel->Lists, layout, defaults ) )
 	{
-		DisposeObject( object );
+		FreePanel( panel );
+
+		return ( NULL );
 	}
 
-	if ( layout )
+	RefreshRows( &panel->Editor, &panel->Lists, NULL );
+
+	return ( panel );
+}
+
+// --
+
+struct USB2WiFiPanel * APICALL
+WiFi_AddProfilePanel( struct USB2WiFiIFace *self __attribute__((unused)), APTR layout, U32 gadgetBase )
+{
+	return ( AddPanel( layout, NULL, gadgetBase ) );
+}
+
+// --
+
+struct USB2WiFiPanel * APICALL
+WiFi_AddProfilePanelWithDefaults( struct USB2WiFiIFace *self __attribute__((unused)),
+	APTR layout, APTR defaultPage, U32 gadgetBase )
+{
+	return ( AddPanel( layout, defaultPage, gadgetBase ) );
+}
+
+// --
+
+void APICALL
+WiFi_HandleProfilePanel( struct USB2WiFiIFace *self __attribute__((unused)), struct USB2WiFiPanel *panel,
+	struct Window *window, U32 gadget )
+{
+	gadget -= panel->Editor.GadgetBase;
+
+	if ( ( gadget >= EDITOR_NETWORKS ) && ( gadget <= EDITOR_EDIT_ADAPTER ) &&
+		( HandleEntry( &panel->Editor, &panel->Lists, window, gadget ) ) )
 	{
-		DisposeObject( layout );
-	}
+		panel->Dirty = TRUE;
 
-	if ( editor.ListBrowser )
+		RefreshRows( &panel->Editor, &panel->Lists, window );
+	}
+}
+
+// --
+
+S32 APICALL
+WiFi_ApplyProfilePanel( struct USB2WiFiIFace *self __attribute__((unused)), struct USB2WiFiPanel *panel,
+	struct Window *window, S32 permanent )
+{
+	if ( ( ! panel->Dirty ) && ( ( ! permanent ) || ( ! panel->Original ) ) )
 	{
-		editor.ListBrowser->FreeListBrowserList( &lists.Networks );
-
-		editor.ListBrowser->FreeListBrowserList( &lists.Adapters );
-
-		DropInterface( (struct Interface *)editor.ListBrowser );
+		return ( USB2WIFI_MISSING );
 	}
 
-	for ( index = EDITOR_CLASSES; index; index-- )
-	{
-		if ( bases[index - 1] )
-		{
-			CloseClass( bases[index - 1] );
-		}
-	}
+	return ( SaveEditor( panel, window, permanent ) ? USB2WIFI_OK : USB2WIFI_ERROR );
+}
 
-	if ( editor.Screen )
-	{
-		UnlockPubScreen( NULL, editor.Screen );
-	}
+// --
 
-	WiFi_FreeProfiles( &editor.Database );
+void APICALL
+WiFi_FreeProfilePanel( struct USB2WiFiIFace *self __attribute__((unused)), struct USB2WiFiPanel *panel )
+{
+	FreePanel( panel );
+}
 
-	WiFi_FreeProfileText( original, originalLength );
+// --
 
-	return ( result );
+S32 APICALL
+WiFi_EditProfiles( struct USB2WiFiIFace *self __attribute__((unused)) )
+{
+	// Keep the retired standalone editor's interface slot callable.
+	return ( RETURN_FAIL );
 }
 
 // --

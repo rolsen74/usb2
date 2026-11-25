@@ -46,6 +46,14 @@ S32 WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 set
 void WiFi_CloseIntuition( void );
 S32 WiFi_ObtainIntuition( void );
 S32 APICALL WiFi_EditProfiles( struct USB2WiFiIFace *self );
+struct USB2WiFiPanel *APICALL WiFi_AddProfilePanel( struct USB2WiFiIFace *self, APTR layout, U32 gadgetBase );
+void APICALL WiFi_HandleProfilePanel( struct USB2WiFiIFace *self, struct USB2WiFiPanel *panel,
+	struct Window *window, U32 gadget );
+S32 APICALL WiFi_ApplyProfilePanel( struct USB2WiFiIFace *self, struct USB2WiFiPanel *panel,
+	struct Window *window, S32 permanent );
+void APICALL WiFi_FreeProfilePanel( struct USB2WiFiIFace *self, struct USB2WiFiPanel *panel );
+struct USB2WiFiPanel *APICALL WiFi_AddProfilePanelWithDefaults( struct USB2WiFiIFace *self,
+	APTR layout, APTR defaultPage, U32 gadgetBase );
 S32 APICALL WiFi_Setup( struct USB2WiFiIFace *self, struct USB2WiFiProfile *profile, U32 adapter, U32 unit, U32 *action );
 S32 APICALL WiFi_SetupRetry( struct USB2WiFiIFace *self, struct USB2WiFiProfile *profile, U32 adapter, U32 unit, U32 *action );
 S32 APICALL WiFi_StartPrompt( struct USB2WiFiIFace *self, struct USB2WiFiPrompt *prompt );

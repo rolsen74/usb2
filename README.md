@@ -16,6 +16,8 @@ Experimental USB host stack for AmigaOS 4. Includes UHCI, OHCI, EHCI, and experi
 2. Copy the archive's `Devs/` and `Libs/` contents to `DEVS:` and `LIBS:`, keeping their subdirectories.
 3. Reboot. Run the utilities from `Tools/`. For networking, select `usb2ethernet.device` and the unit assigned to your adapter.
 
+Copy `Prefs/USB2` to `SYS:Prefs/USB2` to set default units and edit Wi-Fi profiles. [USB2Prefs guide](Doc/USB2Prefs.md)
+
 ## Archive layout
 
 ```text
@@ -72,6 +74,8 @@ usb2/
 │   ├── usb2wpa.library
 │   ├── usb2wpa2.library
 │   └── usb2wpa3.library
+├── Prefs/
+│   └── USB2
 └── Tools/
     ├── USB2Analyzer
     ├── USB2AudioTest

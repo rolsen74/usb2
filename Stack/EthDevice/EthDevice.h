@@ -13,6 +13,7 @@
 
 #include "usb2_all.h"
 #include <devices/newstyle.h>
+#include <devices/usb2defaults.h>
 #include <interfaces/usb2eth.h>
 
 // --
@@ -44,6 +45,7 @@ SEC_CODE PTR EthDevice_Close( struct DeviceManagerInterface *Self, struct IORequ
 SEC_CODE void EthDevice_BeginIO( struct DeviceManagerInterface *Self, struct IORequest *request );
 SEC_CODE void EthDevice_AbortIO( struct DeviceManagerInterface *Self, struct IORequest *request );
 SEC_CODE S32 EthDevice_KnowsCommand( const U16 *commands, U16 command );
+SEC_CODE void EthDevice_EnumAdapters( struct USB2EthDevice *base, struct IOStdReq *request );
 SEC_CODE void EthDevice_Query( struct IOStdReq *request, const U16 *commands );
 SEC_CODE void EthDevice_Sana2Query( struct USBBase *usbbase, struct IOSana2Req *request );
 SEC_CODE struct USB2EthUnit *EthDevice_Register( struct USB2EthIFace *Self,
