@@ -11,6 +11,7 @@
 #include "usb2_all.h"
 #include "Stack/PortDevice/PortDevice.h"
 #include "Stack/EthDevice/EthDevice.h"
+#include "Stack/MediaDevice/MediaDevice.h"
 
 // --
 
@@ -441,6 +442,11 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 	IExec->AddDevice ( (PTR)ethernet );
 
 	IExec->DebugPrintF ( "USB2 Ethernet: " USB2_ETH_DEVICE " ready\n" );
+
+	if ( ! MediaDevice_Create ( usbbase ) )
+	{
+		IExec->DebugPrintF ( "USB2: could not register USB audio and video devices\n" );
+	}
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
 

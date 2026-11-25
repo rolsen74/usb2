@@ -29,6 +29,8 @@ build_dir_tree:
 	mkdir -p $(BINDIR)/usb2/Kickstart
 	mkdir -p $(BINDIR)/usb2/Tools
 	# File pickers need a file for devices registered by usb2.kmod.
+	printf '\n' > "$(BINDIR)/usb2/Devs/usb2audio.device"
+	printf '\n' > "$(BINDIR)/usb2/Devs/usb2video.device"
 	printf '\n' > "$(BINDIR)/usb2/Devs/usb2parallel.device"
 	printf '\n' > "$(BINDIR)/usb2/Devs/usb2serial.device"
 	printf '\n' > "$(BINDIR)/usb2/Devs/usb2printer.device"

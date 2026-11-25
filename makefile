@@ -135,7 +135,7 @@ MSD_DEBUG	?= 1
 
 ###########################################################################
 
-SRCDIRS		:= Stack/PortDevice Stack/EthDevice
+SRCDIRS		:= Stack/PortDevice Stack/EthDevice Stack/MediaDevice
 
 ifeq ($(DRV_MSD),1)
 SRCDIRS		+= Drivers/MSD

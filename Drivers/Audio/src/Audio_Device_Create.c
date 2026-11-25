@@ -8,6 +8,7 @@
 // --
 
 #include "inc/All.h"
+#include "../../Media/PublishDevice.h"
 
 // --
 
@@ -74,9 +75,18 @@ struct AudioBase *base;
 
 	base->Context = ctx;
 	InitSemaphore( & base->Semaphore );
+
+	if ( ! PublishMediaDevice( & base->Library ) )
+	{
+		DeleteLibrary( (PTR) base );
+
+		ReleaseSemaphore( & ctx->Lock );
+
+		return ( FALSE );
+	}
+
 	ctx->Device = base;
 
-	AddDevice( (PTR) base );
 	ReleaseSemaphore( & ctx->Lock );
 
 	return ( TRUE );

@@ -1,8 +1,10 @@
 # USB Video (Experimental)
 
-The external Video driver matches USB Video Class (UVC)
-VideoStreaming interfaces (class `0x0E`, subclass `0x02`). It exposes frame
-capture through `usb2video.device` and supports MJPEG and raw YUY2 over bulk
+The stack registers `usb2video.device` at startup. Applications can open
+`USB2_MEDIA_QUERY_UNIT` and issue `NSCMD_DEVICEQUERY` without a camera.
+The Video class driver matches USB Video Class (UVC) VideoStreaming
+interfaces (class `0x0E`, subclass `0x02`) and adds capture units when
+compatible cameras attach. It supports MJPEG and raw YUY2 over bulk
 and isochronous IN endpoints. The driver prefers MJPEG when the camera offers
 it and selects the first frame size by default. Applications can use
 `VIDEO_CMD_GET_MODE` to enumerate the camera's supported capture settings and
@@ -18,7 +20,7 @@ make -C Drivers/Video
 make -C Drivers/Video/Test
 ```
 
-Install `Drivers/Video/bin/cls_Video.Driver` and `Drivers/Video/cls_Video.Class` in
+Install the matching USB2 stack, then copy `Drivers/Video/bin/cls_Video.Driver` and `Drivers/Video/cls_Video.Class` to
 `Libs:USB2` on AmigaOS 4. Run `USB2VideoTest` to open the settings window
 with **Video Capture**, **Audio Capture**, and **Audio Output** groups.
 Video Capture is checked when a camera is available. If multiple video units

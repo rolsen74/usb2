@@ -1,7 +1,10 @@
 # USB Audio (Experimental)
 
-The Audio driver exposes `usb2audio.device` for USB Audio
-Class 1.0 mono and stereo PCM16. Capture units start at 0 and playback units
+The stack registers `usb2audio.device` at startup. The Audio class driver
+adds stream units when compatible USB hardware attaches. Applications can
+open `USB2_MEDIA_QUERY_UNIT` and issue `NSCMD_DEVICEQUERY` without a stream
+attached. The driver supports USB Audio Class 1.0 mono and stereo PCM16.
+Capture units start at 0 and playback units
 start at 16. Use `AUDIO_CMD_QUERY` to get the selected format. `CMD_READ`
 and `CMD_WRITE` transfer interleaved little-endian PCM in whole sample frames.
 `AUDIO_CMD_QUEUE_WRITE` accepts up to two playback requests and replies in
@@ -24,7 +27,7 @@ make -C Drivers/Audio
 make -C Drivers/Audio/Test
 ```
 
-Install the current USB2 stack and copy `cls_Audio.Driver` and `cls_Audio.Class` to
+Install the matching USB2 stack and copy `cls_Audio.Driver` and `cls_Audio.Class` to
 `LIBS:USB2/`. Reboot after installing `cls_Audio.Class` so the USB2 stack
 loads the class rule at startup. The archive places `USB2AudioTest` in
 `Tools/`. Stop the webcam preview before testing the microphone on the same
