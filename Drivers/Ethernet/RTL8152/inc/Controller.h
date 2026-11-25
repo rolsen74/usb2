@@ -31,6 +31,39 @@
 // PLA_RSTTALLY
 #define URE_TALLY_RESET			0x0001
 
+// RTL8153B
+#define URE_CHIP_VER_6000		0x40
+#define URE_CHIP_VER_6010		0x80
+#define RTL8153B_CHIP(unit)		( (unit)->unit_ChipVersion & ( URE_CHIP_VER_6000 | URE_CHIP_VER_6010 ) )
+
+#define URE_PLA_SUSPEND_FLAG		0xd38a
+#define URE_PLA_INDICATE_FLAG		0xd38c
+#define URE_PLA_EXTRA_STATUS		0xd398
+#define URE_PLA_CONFIG34		0xe820
+#define URE_LINK_CHG_EVENT		0x01
+#define URE_UPCOMING_RUNTIME_D3		0x01
+#define URE_LINK_CHANGE_FLAG		0x0100
+#define URE_LINK_OFF_WAKE_EN		0x0008
+#define URE_USB_MSC_TIMER		0xcbfc
+#define URE_USB_LPM_CONFIG		0xcfd8
+#define URE_USB_RX_EARLY_SIZE		0xd42e
+#define URE_USB_RX_EXTRA_AGG_TMR		0xd432
+#define URE_USB_UPT_RXDMA_OWN		0xd437
+#define URE_USB_BMU_RESET		0xd4b0
+#define URE_USB_U1U2_TIMER		0xd4da
+#define URE_LPM_U1U2_EN			0x0001
+#define URE_UPS_EN			0x0010
+#define URE_USP_PREWAKE			0x0020
+#define URE_BMU_RESET_EP_IN		0x01
+#define URE_BMU_RESET_EP_OUT		0x02
+#define URE_RX_THR_B			0x00010001
+#define URE_OWN_UPDATE			0x01
+#define URE_OWN_CLEAR			0x02
+#define URE_RX_VLAN_8153B		0x00c0
+#define URE_PLA_MCU_SPDWN_EN		0x4000
+#define URE_PHY_STAT_EXT_INIT		2
+#define URE_MTPS_JUMBO			192
+
 // OCP_EEE_CONFIG1
 #define EEE_10_CAP				0x2000
 #define EEE_NWAY_EN				0x1000
@@ -85,6 +118,8 @@ enum
 	SPEED_100,
 	SPEED_1000,
 };
+
+S32 RTL8153_Init( struct devUnit *unit );
 
 // --
 

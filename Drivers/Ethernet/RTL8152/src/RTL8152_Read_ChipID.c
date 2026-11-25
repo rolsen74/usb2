@@ -45,8 +45,6 @@ U32 attempt;
 		goto bailout;
 	}
 
-	// I guess 0x4xxx is 8152 and 0x5xxx is 8153
-
 	switch( val & URE_VERSION_MASK )
 	{
 		case 0x4c00:
@@ -103,12 +101,25 @@ U32 attempt;
 			break;
 		}
 
+		case 0x6000:
+		case 0x6010:
+		{
+			unit->unit_ChipVersion = ( val & URE_VERSION_MASK ) == 0x6000 ?
+				URE_CHIP_VER_6000 : URE_CHIP_VER_6010;
+			unit->unit_Support_GMII = TRUE;
+			break;
+		}
+
 		default:
 		{
-			IExec->DebugPrintF( "Unknown Chip Version (0x%02lx)\n", val & URE_VERSION_MASK );
+			IExec->DebugPrintF( "RTL8152: unsupported chip revision $%04lx\n", (U32) ( val & URE_VERSION_MASK ) );
 			goto bailout;
 		}
 	}
+
+	IExec->DebugPrintF( "RTL8152: %s chip revision $%04lx\n",
+		RTL8153B_CHIP( unit ) ? "RTL8153B" : ( unit->unit_Support_GMII ? "RTL8153" : "RTL8152" ),
+		(U32) ( val & URE_VERSION_MASK ) );
 
 	retval = TRUE;
 

@@ -86,7 +86,7 @@ uint16 gbcr;
 		    if ( Duplex )
 		    {
 			    anar |= ADVERTISE_10HALF | ADVERTISE_10FULL | ADVERTISE_100HALF | ADVERTISE_100FULL;
-			    gbcr |= ADVERTISE_1000HALF | ADVERTISE_1000FULL;
+			    gbcr |= ADVERTISE_1000FULL;
 		    }
 		    else
 		    {
@@ -117,6 +117,12 @@ uint16 gbcr;
 	if ( myWriteMDIO( unit, MII_ADVERTISE, anar ) )
 	{
 		return ( FALSE );
+	}
+
+	// A Gigabit PHY has already been configured during initialization.
+	if ( unit->unit_Support_GMII )
+	{
+		return ( ! myWriteMDIO( unit, MII_BMCR, bmcr ) );
 	}
 
 	if ( myWriteMDIO( unit, MII_BMCR, bmcr | BMCR_RESET ) )

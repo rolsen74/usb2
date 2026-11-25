@@ -20,17 +20,32 @@ Driver_Setup( struct devUnit *unit )
 	U32 accept;
 	U8 command;
 
-	if ( ( ! myReadChipID( unit ) ) || ( unit->unit_Support_GMII ) ||
-		( ! RTL8152_GetMacAddress( unit ) ) )
+	if ( ! myReadChipID( unit ) )
 	{
 		return ( FALSE );
 	}
 
-	RTL8152_Init( unit );
-
-	if ( ! RTL8152_Up( unit ) )
+	if ( unit->unit_Support_GMII )
 	{
-		return ( FALSE );
+		if ( ( ! RTL8153_Init( unit ) ) || ( ! RTL8152_GetMacAddress( unit ) ) ||
+			( ! RTL8152_Exit_OOB( unit ) ) )
+		{
+			return ( FALSE );
+		}
+	}
+	else
+	{
+		if ( ! RTL8152_GetMacAddress( unit ) )
+		{
+			return ( FALSE );
+		}
+
+		RTL8152_Init( unit );
+
+		if ( ! RTL8152_Up( unit ) )
+		{
+			return ( FALSE );
+		}
 	}
 
 	if ( ! RTL8152_SetMacAddress( unit, unit->unit_CurrentAddress ) )
@@ -38,7 +53,7 @@ Driver_Setup( struct devUnit *unit )
 		return ( FALSE );
 	}
 
-	if ( ! RTL8152_SetSpeed( unit, TRUE, SPEED_100, TRUE ) )
+	if ( ! RTL8152_SetSpeed( unit, TRUE, unit->unit_Support_GMII ? SPEED_1000 : SPEED_100, TRUE ) )
 	{
 		return ( FALSE );
 	}

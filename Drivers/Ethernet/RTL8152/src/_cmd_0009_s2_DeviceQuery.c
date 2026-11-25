@@ -17,11 +17,13 @@ void
 s2_DeviceQuery( struct devUnit *unit, struct IOSana2Req *ioreq )
 {
 	struct Sana2DeviceQuery *s2_query;
-	static const struct Sana2DeviceQuery info =
+	struct Sana2DeviceQuery info;
+
+	info = (struct Sana2DeviceQuery)
 	{
 		.AddrFieldSize = 48,
 		.MTU = ETHERNET_PAYLOAD_MTU,
-		.BPS = 100000000,
+		.BPS = unit->unit_Support_GMII ? 1000000000UL : 100000000UL,
 		.HardwareType = S2WireType_Ethernet,
 		.RawMTU = ETHERNET_MTU
 	};
