@@ -82,6 +82,7 @@ usb2/
     ├── USB2Analyzer
     ├── USB2AudioTest
     ├── USB2BluetoothTest
+    ├── USB2DVBTest
     ├── USB2SDRTest
     ├── USB2SerialMonitor
     ├── USB2SmartCardTest
