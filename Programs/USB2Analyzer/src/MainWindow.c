@@ -1043,8 +1043,19 @@ Handle_Capture_Checkbox ( void )
 
 		GetListBrowserNodeAttrs ( row, LBNA_UserData, &node, LBNA_Checked, &checked, TAG_END );
 
-		if ( ( ! node ) || ( ( node->Type == TYPE_FUNCTION ) && ( ! node->Port ) )
-			 || ( ( checked != 0 ) == Capture_Is_Checked ( node ) ) )
+		if ( ! node )
+		{
+			if ( checked )
+			{
+				Build_Device_Tree ();
+
+				return;
+			}
+
+			continue;
+		}
+
+		if ( ( checked != 0 ) == Capture_Is_Checked ( node ) )
 		{
 			continue;
 		}
@@ -1241,7 +1252,7 @@ Add_Connected_Row ( struct USB2_FktNode * node, U32 level, U32 flags, const char
 	extra	   = NULL;
 	driverText = "";
 
-	if ( ! ( flags & LBFLG_HASCHILDREN ) )
+	if ( ( ! ( flags & LBFLG_HASCHILDREN ) ) && ( ( node->Type == TYPE_INTERFACE ) || ( node->Port ) ) )
 	{
 		tag = ( node->Type == TYPE_INTERFACE ) ? USB2Tag_Attr_DriverTitles : USB2Tag_Attr_DriverTitleSummary;
 
@@ -1414,7 +1425,7 @@ Build_Device_Tree ( void )
 
 		if ( ( ConnectedDevices ) && ( n ) )
 		{
-			if ( ! Build_Connected_Ports ( n ) )
+			if ( ( ! Add_Connected_Row ( n, 2, 0, "Root HUB", "" ) ) || ( ! Build_Connected_Ports ( n ) ) )
 			{
 				break;
 			}
@@ -1501,7 +1512,7 @@ Build_Device_TreeNode ( struct List * l, U32 g, struct USB2_FktNode * n, STR nam
 		}
 
 		guinode = AllocListBrowserNode ( 3, LBNA_UserData, n, LBNA_Column, 0, LBNCA_CopyText, TRUE, LBNCA_Text, namebuf,
-										 LBNA_CheckBox, n->Port != 0, LBNA_Checked, ( n->Port ) && Capture_Is_Checked ( n ),
+										 LBNA_CheckBox, TRUE, LBNA_Checked, Capture_Is_Checked ( n ),
 										 LBNA_Generation, g, LBNA_Flags, LBFLG_HASCHILDREN, LBNA_Column, 1, LBNCA_CopyText, TRUE,
 										 LBNCA_Text, id, LBNA_Column, 2, LBNCA_Text, "HUB Class",
 										 //				LBNA_CheckBox,		TRUE,
@@ -1537,9 +1548,8 @@ Build_Device_TreeNode ( struct List * l, U32 g, struct USB2_FktNode * n, STR nam
 				sprintf ( &namebuf[pos], "Empty" );
 
 				guinode = AllocListBrowserNode ( 3, LBNA_Column, 0, LBNCA_CopyText, TRUE, LBNCA_Text, namebuf, LBNA_Generation,
-												 g + 1, LBNA_Flags, 0, LBNA_Column, 2, LBNCA_Text, "Function",
-												 //						LBNA_CheckBox,		TRUE,
-												 TAG_END );
+												 g + 1, LBNA_Flags, LBFLG_READONLY, LBNA_CheckBox, TRUE, LBNA_Checked, FALSE,
+												 LBNA_Column, 2, LBNCA_Text, "Function", TAG_END );
 
 				if ( ! guinode )
 				{
@@ -1579,7 +1589,7 @@ Build_Device_TreeNode ( struct List * l, U32 g, struct USB2_FktNode * n, STR nam
 		snprintf ( &namebuf[pos], 256 - pos, "%s", n->ProductStr[0] ? n->ProductStr : "USB Device" );
 
 		guinode = AllocListBrowserNode ( 3, LBNA_UserData, n, LBNA_Column, 0, LBNCA_CopyText, TRUE, LBNCA_Text, namebuf,
-										 LBNA_CheckBox, n->Port != 0, LBNA_Checked, ( n->Port ) && Capture_Is_Checked ( n ),
+										 LBNA_CheckBox, TRUE, LBNA_Checked, Capture_Is_Checked ( n ),
 										 LBNA_Generation, g, LBNA_Flags, IsListEmpty ( &n->Header ) ? 0 : LBFLG_HASCHILDREN,
 										 LBNA_Column, 1, LBNCA_CopyText, TRUE, LBNCA_Text, id, LBNA_Column, 2, LBNCA_Text,
 										 "Function",

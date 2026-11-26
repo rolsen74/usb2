@@ -19,9 +19,9 @@
 
 #define PRGNAME	 "USB2Analyzer"
 #define VERSION	 1
-#define REVISION 41
+#define REVISION 42
 #define DATE	 "26.11.2026" // dd.mm.yyyy
-#define VERS	 PRGNAME " 1.41"
+#define VERS	 PRGNAME " 1.42"
 #define VSTRING	 VERS " (" DATE ")\r\n"
 #define VERSTAG	 "\0$VER: " VERS " (" DATE ")"
 
