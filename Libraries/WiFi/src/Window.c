@@ -504,7 +504,7 @@ BuildControls( struct WiFiControls *controls, const struct USB2WiFiProfile *prof
 
 		controls->SSID = AddControl( controls, NewObject( controls->StringInput, NULL,
 			GA_ID, WIFI_SSID, GA_RelVerify, TRUE, GA_TabCycle, TRUE, STRINGA_MaxChars, 33, STRINGA_MinVisible, 22,
-			STRINGA_TextVal, ssid, TAG_END ), "SSID", FALSE );
+			STRINGA_TextVal, ssid, TAG_END ), "SSID", TRUE );
 
 		if ( ( ! controls->Networks ) || ( ! controls->SSID ) )
 		{
@@ -517,7 +517,7 @@ BuildControls( struct WiFiControls *controls, const struct USB2WiFiProfile *prof
 		STRINGA_MaxChars, sizeof( controls->PasswordBuffer ), STRINGA_MinVisible, 22,
 		STRINGA_HookType, SHK_PASSWORD, STRINGA_Buffer, controls->PasswordBuffer,
 		STRINGA_UndoBuffer, controls->UndoBuffer, STRINGA_WorkBuffer, controls->WorkBuffer,
-		STRINGA_TextVal, "", STRINGA_DisablePopup, TRUE, STRINGA_AllowMarking, FALSE, TAG_END ), "Password", ! setup );
+		STRINGA_TextVal, "", STRINGA_DisablePopup, TRUE, STRINGA_AllowMarking, FALSE, TAG_END ), "Password", TRUE );
 
 	if ( ! controls->Password )
 	{
@@ -530,7 +530,7 @@ BuildControls( struct WiFiControls *controls, const struct USB2WiFiProfile *prof
 	}
 
 	button = AddControl( controls, NewObject( controls->Classes[WIFI_BUTTON], NULL,
-		GA_Text, "Connect", GA_ID, WIFI_CONNECT, GA_RelVerify, TRUE, TAG_END ), NULL, FALSE );
+		GA_Text, "Connect", GA_ID, WIFI_CONNECT, GA_RelVerify, TRUE, TAG_END ), NULL, TRUE );
 
 	return ( button != NULL );
 }
@@ -1124,6 +1124,7 @@ WiFi_Window( struct USB2WiFiProfile *profile, U32 adapter, U32 unit, S32 setup, 
 	object = NewObject( controls.Classes[WIFI_WINDOW], NULL,
 		WA_PubScreen, screen, WA_Title, title, WA_Activate, TRUE, WA_DragBar, TRUE,
 		WA_CloseGadget, TRUE, WA_DepthGadget, TRUE, WA_AutoAdjust, TRUE,
+		WA_SizeGadget, setup,
 		WA_InnerWidth, width < 440 ? width : 440,
 		WA_InnerHeight, height < preferredHeight ? height : preferredHeight,
 		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_RAWKEY,

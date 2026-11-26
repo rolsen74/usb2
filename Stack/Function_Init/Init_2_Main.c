@@ -39,11 +39,11 @@ __myMain ( struct USBBase * usbbase, PTR userdata, PTR in UNUSED )
 	struct USB2_ConfigNode *  config;
 	struct FunctionInit *	  init;
 
-	U32						  cfgval;
-	S32						  success;
+	U32 cfgval;
+	S32 success;
 
-	init = userdata;
-	fn = init->fn;
+	init	= userdata;
+	fn		= init->fn;
 	success = FALSE;
 
 #ifdef DO_INFO
@@ -118,6 +118,14 @@ __myMain ( struct USBBase * usbbase, PTR userdata, PTR in UNUSED )
 	{
 		USBERROR ( "Error: Get Full Device Descriptor" );
 		goto bailout;
+	}
+
+	if ( fn->fkt_Parent )
+	{
+		usbbase->usb_IExec->DebugPrintF ( "USB Add : %04lX:%04lX addr %lu (HCD %lu hub %lu port %lu speed %lu)\n",
+										  (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID ),
+										  (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID ), fn->fkt_Address,
+										  fn->fkt_HCD->hn_HCDIndex, fn->fkt_Parent->fkt_Address, fn->fkt_PortNr, fn->fkt_Speed );
 	}
 
 	USBDEBUG ( "VendorID..: $%04lx", LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID ) );

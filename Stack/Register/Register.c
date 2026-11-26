@@ -77,9 +77,10 @@ LockPublishedFunction ( struct USBBase * usbbase, const struct USB2_Function * f
 	{
 		fn = node->un_Data;
 
-		if ( ( fn ) && ( ( &fn->fkt_Public == function ) || ( ( id ) && ( fn->fkt_Initialized ) && ( fn->fkt_NotifyID == *id ) ) )
-			 && ( fn->fkt_ControlEndPoint ) && ( ! fn->fkt_Detach )
-			 && ( ! fn->fkt_FreeMe ) && ( FUNCTION_LOCK ( fn ) == LSTAT_Okay ) )
+		if ( ( fn )
+			 && ( ( &fn->fkt_Public == function ) || ( ( id ) && ( fn->fkt_Initialized ) && ( fn->fkt_NotifyID == *id ) ) )
+			 && ( fn->fkt_ControlEndPoint ) && ( ! fn->fkt_Detach ) && ( ! fn->fkt_FreeMe )
+			 && ( FUNCTION_LOCK ( fn ) == LSTAT_Okay ) )
 		{
 			break;
 		}
@@ -123,18 +124,18 @@ struct USB2_ConfigNode *cn;
 	//	USBERROR( "USB2 Stack : __Register_RegisterList" );
 
 	//	timeout	= 10 * 1000000;	// 10 sec timeout
-	timeout	  = 500000; // 0.5 sec timeout
-	reg		  = NULL;
-	msg		  = NULL;
-	fn		  = NULL;
-	ih		  = NULL;
-	ifc		  = NULL;
-	function  = NULL;
-	pinned_fn = NULL;
-	ifc_id	  = NULL;
+	timeout		= 500000; // 0.5 sec timeout
+	reg			= NULL;
+	msg			= NULL;
+	fn			= NULL;
+	ih			= NULL;
+	ifc			= NULL;
+	function	= NULL;
+	pinned_fn	= NULL;
+	ifc_id		= NULL;
 	function_id = NULL;
-	pinned	  = NULL;
-	error	  = TRUE;
+	pinned		= NULL;
+	error		= TRUE;
 	//	dev		= FALSE;
 	title = NULL;
 
@@ -144,50 +145,50 @@ struct USB2_ConfigNode *cn;
 		{
 			case USB2Tag_Reg_DriverMessage:
 			{
-				msg		 = (PTR)tag->ti_Data;
-				function = NULL;
-				ifc		 = NULL;
-				ifc_id	 = NULL;
+				msg			= (PTR)tag->ti_Data;
+				function	= NULL;
+				ifc			= NULL;
+				ifc_id		= NULL;
 				function_id = NULL;
 				break;
 			}
 
 			case USB2Tag_Reg_Function:
 			{
-				msg		 = NULL;
-				function = (PTR)tag->ti_Data;
-				ifc		 = NULL;
-				ifc_id	 = NULL;
+				msg			= NULL;
+				function	= (PTR)tag->ti_Data;
+				ifc			= NULL;
+				ifc_id		= NULL;
 				function_id = NULL;
 				break;
 			}
 
 			case USB2Tag_Reg_FunctionID:
 			{
-				msg		 = NULL;
-				function = NULL;
-				ifc		 = NULL;
-				ifc_id	 = NULL;
+				msg			= NULL;
+				function	= NULL;
+				ifc			= NULL;
+				ifc_id		= NULL;
 				function_id = (PTR)tag->ti_Data;
 				break;
 			}
 
 			case USB2Tag_Reg_Interface:
 			{
-				msg		 = NULL;
-				function = NULL;
-				ifc		 = (PTR)tag->ti_Data;
-				ifc_id	 = NULL;
+				msg			= NULL;
+				function	= NULL;
+				ifc			= (PTR)tag->ti_Data;
+				ifc_id		= NULL;
 				function_id = NULL;
 				break;
 			}
 
 			case USB2Tag_Reg_InterfaceID:
 			{
-				msg		 = NULL;
-				function = NULL;
-				ifc		 = NULL;
-				ifc_id	 = (PTR)tag->ti_Data;
+				msg			= NULL;
+				function	= NULL;
+				ifc			= NULL;
+				ifc_id		= (PTR)tag->ti_Data;
 				function_id = NULL;
 				break;
 			}
@@ -227,7 +228,7 @@ struct USB2_ConfigNode *cn;
 	{
 		pinned_fn = LockPublishedFunction ( usbbase, function, function_id );
 
-		fn		  = pinned_fn;
+		fn = pinned_fn;
 	}
 
 	if ( ( ! msg ) && ( ! fn ) && ( ! ih ) )
@@ -413,6 +414,29 @@ struct USB2_ConfigNode *cn;
 	}
 
 	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
+
+	if ( ( ! error ) && ( msg ) && ( fn->fkt_Tier ) )
+	{
+		const char * name;
+
+		name = msg->ClassDriver ? msg->ClassDriver : msg->ClassTitle;
+
+		if ( ih )
+		{
+			usbbase->usb_IExec->DebugPrintF ( "USB Bind: %04lX:%04lX if %lu -> %s\n", (U32)msg->VendorID, (U32)msg->DeviceID,
+											  ih->ih_Number,
+											  name	  ? name
+											  : title ? title
+													  : "USB driver" );
+		}
+		else
+		{
+			usbbase->usb_IExec->DebugPrintF ( "USB Bind: %04lX:%04lX -> %s\n", (U32)msg->VendorID, (U32)msg->DeviceID,
+											  name	  ? name
+											  : title ? title
+													  : "USB driver" );
+		}
+	}
 
 bailout:
 

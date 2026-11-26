@@ -144,14 +144,6 @@ HUB__Port_Function_Configure( struct USBBase *usbbase, struct intern *in, struct
 
 	if ( published )
 	{
-		if ( fn->fkt_DeviceDescriptor )
-		{
-			usbbase->usb_IExec->DebugPrintF( "USB HUB: HCD %lu hub %lu port %lu enumerated %04lx:%04lx at address %lu, speed %lu\n",
-				in->HCDNode->hn_HCDIndex, in->Function->fkt_Address, port,
-				(U32) LE_SWAP16( fn->fkt_DeviceDescriptor->VendorID ),
-				(U32) LE_SWAP16( fn->fkt_DeviceDescriptor->DeviceID ), fn->fkt_Address, fn->fkt_Speed );
-		}
-
 		FUNCTION_BIND( fn, fn->fkt_DriverASync );
 	}
 	else
