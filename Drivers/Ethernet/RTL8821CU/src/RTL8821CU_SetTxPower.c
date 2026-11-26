@@ -114,7 +114,7 @@ RTL8821CU_SetTxPower( struct EthernetUnit *unit )
 	gain = CCKGain( power );
 
 	if ( ( ! RTL8821CU_WriteReg( control, 0x1d00, 4, gain ) ) ||
-		( ! RTL8821CU_WriteReg( control, 0x0522, 1, 0 ) ) )
+		( ! RTL8821CU_WriteReg( control, REG_TXPAUSE, 2, 0 ) ) )
 	{
 		return ( FALSE );
 	}

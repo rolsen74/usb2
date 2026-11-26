@@ -56,6 +56,7 @@ struct BufferManagement
 {
 	struct Node bm_Node;
 	struct Hook *bm_CopyHook;
+	struct Hook *bm_PacketHook;
 	PTR bm_CopyToBuff;
 	PTR bm_CopyFromBuff;
 	struct List bm_Multicast;
@@ -75,10 +76,10 @@ struct EthernetUnit
 {
 	struct Unit unit_Unit;
 	ULONG unit_UnitNr;
+	struct TimerIFace *unit_Timer;
 	struct USB2_Register *unit_USB_Register;
 	struct USB2_EPResource *unit_Bulk_In;
 	struct USB2_EPResource *unit_Bulk_Out[RTL8821CU_TX_PIPES];
-	struct USB2_EPResource *unit_Interrupt_In;
 	struct SignalSemaphore unit_CommandLock;
 	struct List unit_Openers;
 	struct List unit_Pending;
@@ -102,6 +103,11 @@ struct EthernetUnit
 	U8 unit_RequireOperState;
 	U8 unit_ManualOffline;
 	U8 unit_StartAuto;
+	U8 unit_Handshake;
+	U16 unit_EAPOLLength;
+	U8 unit_EAPOLHeader[RTL8821CU_WLAN_HEADER];
+	U8 unit_EAPOL[RTL8821CU_MTU];
+	U8 unit_TxQueued;
 	U8 unit_BeaconReceived;
 	U8 unit_RFOption;
 	U8 unit_Cut;
@@ -121,11 +127,14 @@ struct EthernetUnit
 S32 Process_Setup_Device( struct EthernetUnit *unit, struct USB2_DriverMessage *msg );
 void Process_Free( struct EthernetUnit *unit, struct USB2IFace *usb2 );
 void Process_PacketIO( struct EthernetUnit *unit, struct USB2IFace *usb2 );
+S32 RTL8821CU_AdapterPresent( struct USB2IFace *usb2, USB2_ID id );
+void RTL8821CU_Detach( struct EthernetUnit *unit );
 void RTL8821CU_StopRX( struct EthernetUnit *unit );
 void RTL8821CU_ChecksumTX( U8 *descriptor );
 U32 RTL8821CU_BuildTX( struct EthernetUnit *unit, struct IOSana2Req *ioreq, U8 *buffer, U32 *type, U32 *payload );
 void RTL8821CU_DecodeRX( struct EthernetUnit *unit, U8 *buffer, U32 length );
 void RTL8821CU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length );
+void RTL8821CU_DeliverEAPOL( struct EthernetUnit *unit );
 S32 RTL8821CU_CopyPacket( struct IOSana2Req *ioreq, PTR to, PTR from, U32 length, S32 rx );
 S32 RTL8821CU_SameAddress( const U8 *left, const U8 *right );
 S32 RTL8821CU_HasMulticast( struct EthernetUnit *unit, const U8 *address );

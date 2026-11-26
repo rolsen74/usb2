@@ -35,6 +35,13 @@ RTL8821CU_StartRadio( struct EthernetUnit *unit )
 		return ( FALSE );
 	}
 
+	if ( ! RTL8821CU_InitCoexistence( unit ) )
+	{
+		DebugPrintF( "RTL8821CU: Bluetooth/Wi-Fi arbitration setup failed\n" );
+
+		return ( FALSE );
+	}
+
 	// Use software CCMP and receive management frames before association.
 	if ( ( ! RTL8821CU_RegisterIO( control, CMD_WRITE, 0x0610, unit->unit_StationAddress, RTL8821CU_ADDR_SIZE ) ) ||
 		( ! RTL8821CU_WriteReg( control, 0x060f, 1, 0 ) ) ||
@@ -44,8 +51,11 @@ RTL8821CU_StartRadio( struct EthernetUnit *unit )
 		( ! RTL8821CU_WriteReg( control, 0x06a0, 2, 0xffff ) ) ||
 		( ! RTL8821CU_WriteReg( control, 0x06a2, 2, 0 ) ) ||
 		( ! RTL8821CU_WriteReg( control, 0x06a4, 2, 0 ) ) ||
+		( ! RTL8821CU_WriteReg( control, REG_HWSEQ_CTRL, 1, 0x7f ) ) ||
+		( ! RTL8821CU_WriteReg( control, REG_PRECNT_CTRL, 2, 0x09e4 ) ) ||
+		( ! RTL8821CU_WriteReg( control, REG_ACKTO_CCK, 1, 0x40 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0440, 4, 0x000fffff, 1 ) ) ||
-		( ! RTL8821CU_TuneRadio( unit, 1, FALSE ) ) )
+		( ! RTL8821CU_TuneRadio( unit, 1 ) ) )
 	{
 		DebugPrintF( "RTL8821CU: radio setup failed\n" );
 

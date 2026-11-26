@@ -58,6 +58,8 @@ Open_Adapter( APTR adapter, struct IOSana2Req *request, ULONG flags )
 		opener->bm_CopyToBuff = (PTR) GetTagData( S2_CopyToBuff, 0, request->ios2_BufferManagement );
 
 		opener->bm_CopyFromBuff = (PTR) GetTagData( S2_CopyFromBuff, 0, request->ios2_BufferManagement );
+
+		opener->bm_PacketHook = (PTR) GetTagData( S2_PacketFilter, 0, request->ios2_BufferManagement );
 	}
 
 	AddTail( & unit->unit_Openers, & opener->bm_Node );

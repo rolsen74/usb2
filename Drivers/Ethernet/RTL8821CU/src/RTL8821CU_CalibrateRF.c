@@ -21,6 +21,7 @@
 #define H2C_PHY_INFO 0x11
 #define RF_IQK_STATUS 0x2820
 #define RF_IQK_DONE 0x000abcde
+#define BB_IQK_RESULT 0x1bf0
 
 // --
 
@@ -78,7 +79,7 @@ RTL8821CU_CalibrateRF( struct EthernetUnit *unit )
 
 	if ( ( ! SendCalibrationCommand( unit, H2C_GENERAL_INFO, 12, 0, RTL8821CU_FW_TX_OFFSET_PAGES << 16 ) ) ||
 		( ! SendCalibrationCommand( unit, H2C_PHY_INFO, 16, 1, phy ) ) ||
-		( ! RTL8821CU_UpdateRF( control, 0x08, 0x000fffff, 0 ) ) ||
+		( ! RTL8821CU_UpdateRF( unit, 0x08, 0x000fffff, 0 ) ) ||
 		( ! SendCalibrationCommand( unit, H2C_IQK, 9, 2, 0 ) ) )
 	{
 		return ( FALSE );
@@ -93,9 +94,15 @@ RTL8821CU_CalibrateRF( struct EthernetUnit *unit )
 
 		if ( ( status & 0x000fffff ) == RF_IQK_DONE )
 		{
-			DebugPrintF( "RTL8821CU: firmware RF calibration complete\n" );
+			if ( ( ! RTL8821CU_UpdateRF( unit, 0x08, 0x000fffff, 0 ) ) ||
+				( ! RTL8821CU_ReadReg( control, BB_IQK_RESULT, 4, & status ) ) )
+			{
+				return ( FALSE );
+			}
 
-			return ( RTL8821CU_UpdateRF( control, 0x08, 0x000fffff, 0 ) );
+			DebugPrintF( "RTL8821CU: firmware IQK complete, failure mask $%02lx\n", status & 0xff );
+
+			return ( TRUE );
 		}
 
 		Delay( 1 );
@@ -103,7 +110,7 @@ RTL8821CU_CalibrateRF( struct EthernetUnit *unit )
 
 	DebugPrintF( "RTL8821CU: firmware RF calibration timed out\n" );
 
-	RTL8821CU_UpdateRF( control, 0x08, 0x000fffff, 0 );
+	RTL8821CU_UpdateRF( unit, 0x08, 0x000fffff, 0 );
 
 	return ( FALSE );
 }

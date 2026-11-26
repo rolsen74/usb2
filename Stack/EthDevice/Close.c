@@ -24,7 +24,6 @@ EthDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request 
 	base = (PTR) Self->Data.LibBase;
 	IExec = base->USB->usb_IExec;
 	unit = NULL;
-	destroy = FALSE;
 
 	IExec->ObtainSemaphore( & base->OpenLock );
 
@@ -36,28 +35,28 @@ EthDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request 
 		base->Library.lib_OpenCnt--;
 		request->io_Unit = NULL;
 		request->io_Device = NULL;
-
-		if ( unit )
-		{
-			destroy = ( ! --unit->Opens ) && ( unit->Detached );
-		}
 	}
 
 	IExec->ReleaseSemaphore( & base->RouteLock );
+
+	IExec->ReleaseSemaphore( & base->OpenLock );
 
 	if ( unit )
 	{
 		unit->Ops->Close( unit->Adapter, (PTR) request );
 
+		IExec->ObtainSemaphore( & base->OpenLock );
+
+		// Keep the last open reference until the adapter callback returns.
+		destroy = ( ! --unit->Opens ) && ( ! unit->Opening ) && ( unit->Detached );
+
+		IExec->ReleaseSemaphore( & base->OpenLock );
+
 		if ( destroy )
 		{
-			unit->Ops->Destroy( unit->Adapter );
-
-			IExec->FreeVec( unit );
+			EthDevice_DestroyUnit( IExec, unit );
 		}
 	}
-
-	IExec->ReleaseSemaphore( & base->OpenLock );
 
 	return ( NULL );
 }

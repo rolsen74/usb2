@@ -1687,7 +1687,7 @@ ApplyTable( struct EthernetUnit *unit, const U32 *table, U32 count, enum PHYTabl
 					continue;
 				}
 
-				okay = RTL8821CU_UpdateRF( control, address, 0x000fffff, value );
+				okay = RTL8821CU_UpdateRF( unit, address, 0x000fffff, value );
 			}
 			else
 			{

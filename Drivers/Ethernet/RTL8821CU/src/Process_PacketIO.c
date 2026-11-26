@@ -23,6 +23,8 @@ RadioOffline( struct EthernetUnit *unit, U32 event )
 	unit->unit_RadioReady = FALSE;
 	unit->unit_TxReady = FALSE;
 	unit->unit_Operational = FALSE;
+	unit->unit_Handshake = FALSE;
+	unit->unit_EAPOLLength = 0;
 
 	RTL8821CU_SetOnline( unit, FALSE );
 
@@ -63,6 +65,8 @@ PollReceive( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 		}
 		else if ( error == USB2Err_Device_Detached )
 		{
+			RTL8821CU_Detach( unit );
+
 			return;
 		}
 		else if ( error == USB2Err_Host_Stall )
@@ -86,6 +90,11 @@ PollReceive( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 		{
 			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_RX | S2EVENT_HARDWARE );
 		}
+	}
+
+	if ( ! unit->unit_RadioReady )
+	{
+		return;
 	}
 
 	ioreq->io_Command = CMD_READ;
@@ -135,6 +144,11 @@ Transmit( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana2Req *
 
 	if ( ! length )
 	{
+		if ( sana->ios2_WireError == S2WERR_BUFF_ERROR )
+		{
+			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_TX | S2EVENT_BUFF );
+		}
+
 		return;
 	}
 
@@ -142,13 +156,27 @@ Transmit( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana2Req *
 	ioreq->io_Data = buffer;
 	ioreq->io_Length = length;
 	ioreq->io_TimeOut = 500000;
+	// Management and best-effort traffic use the high and low page queues.
+	unit->unit_TxQueued |= management ? 1U : 2U;
 
 	error = DoIO( (PTR) ioreq );
 
+	if ( ( management ) && ( buffer[RTL8821CU_TX_DESC_SIZE] == 0xb0 ) )
+	{
+		DebugPrintF( "RTL8821CU: authentication TX USB %ld, %lu/%lu bytes on pipe %lu\n",
+			error, ioreq->io_Actual, length, pipe );
+	}
+
+	if ( ( ! management ) && ( type == RTL8821CU_EAPOL ) && ( unit->unit_Handshake ) )
+	{
+		DebugPrintF( "RTL8821CU: EAPOL TX %lu bytes, USB error %ld\n", payload, error );
+	}
+
 	if ( error == USB2Err_Device_Detached )
 	{
-		sana->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
-		sana->ios2_WireError = S2WERR_UNIT_DISCONNECTED;
+		RTL8821CU_Detach( unit );
+
+		ReportUnitOffline( unit, sana );
 
 		return;
 	}
@@ -203,7 +231,14 @@ Process_PacketIO( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 
 	if ( unit->unit_RadioReady )
 	{
+		RTL8821CU_DeliverEAPOL( unit );
+
 		PollReceive( unit, usb2 );
+	}
+
+	if ( unit->unit_Detached )
+	{
+		return;
 	}
 
 	for( sana = (PTR) GetHead( & unit->unit_Pending ); sana; sana = (PTR) GetSucc( (PTR) sana ) )

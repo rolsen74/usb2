@@ -63,18 +63,6 @@ Process_Setup_Device( struct EthernetUnit *unit, struct USB2_DriverMessage *msg 
 		}
 	}
 
-	unit->unit_Interrupt_In = usb2->USB2_EPRes_ObtainTags( unit->unit_USB_Register,
-		USB2Tag_EPRes_InterfaceNr, RTL8821CU_INTERFACE,
-		USB2Tag_EPRes_EndPointNr, 0x87,
-		USB2Tag_EPRes_BufferSize, USB2Val_BufferSize_MaxPacketSize,
-		USB2Tag_EPRes_AllowShortPackets, TRUE,
-		TAG_END );
-
-	if ( ! unit->unit_Interrupt_In )
-	{
-		return ( FALSE );
-	}
-
 	if ( ! RTL8821CU_Probe( unit ) )
 	{
 		return ( FALSE );

@@ -25,6 +25,7 @@ struct USB2EthUnit
 	U32 Number;
 	ULONG RegistrationID;
 	U32 Opens;
+	U32 Opening;
 	U8 Detached;
 	struct USB2EthAdapterInfo Info;
 };
@@ -51,6 +52,7 @@ SEC_CODE void EthDevice_Sana2Query( struct USBBase *usbbase, struct IOSana2Req *
 SEC_CODE struct USB2EthUnit *EthDevice_Register( struct USB2EthIFace *Self,
 	const struct USB2EthOps *ops, PTR adapter, ULONG *number );
 SEC_CODE void EthDevice_Unregister( struct USB2EthIFace *Self, struct USB2EthUnit *unit );
+SEC_CODE void EthDevice_DestroyUnit( struct ExecIFace *IExec, struct USB2EthUnit *unit );
 SEC_CODE struct USB2EthUnit *EthDevice_RegisterAdapter( struct USB2EthIFace *Self,
 	const struct USB2EthOps *ops, PTR adapter, ULONG *number, ULONG type );
 SEC_CODE ULONG EthDevice_GetAdapter( struct USB2EthIFace *Self, const struct IORequest *request, ULONG number );

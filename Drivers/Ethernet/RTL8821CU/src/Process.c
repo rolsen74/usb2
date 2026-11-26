@@ -12,18 +12,44 @@
 #include "EthClass.h"
 #include "Radio.h"
 #include "WiFiCommand.h"
+#include <devices/timer.h>
+#include <interfaces/timer.h>
 #include <usb2wifi.h>
 
 // --
 
-static S32
-AdapterPresent ( struct USB2IFace * usb2, USB2_ID id )
+S32
+RTL8821CU_AdapterPresent ( struct USB2IFace * usb2, USB2_ID id )
 {
 	struct USB2_Function copy;
 
 	return ( usb2->USB2_Fkt_FindTags ( USB2Tag_Find_VendorID, RTL8821CU_VENDOR_ID, USB2Tag_Find_DeviceID, RTL8821CU_PRODUCT_ID,
 									   USB2Tag_Find_FunctionID, &id, USB2Tag_Find_Copy, &copy, TAG_END )
 			 == &copy );
+}
+
+// --
+
+// Called with the command semaphore held.
+void
+RTL8821CU_Detach ( struct EthernetUnit * unit )
+{
+	if ( unit->unit_Detached )
+	{
+		return;
+	}
+
+	unit->unit_Detached = TRUE;
+	unit->unit_Handshake = FALSE;
+	unit->unit_EAPOLLength = 0;
+
+	RTL8821CU_SetOnline ( unit, FALSE );
+
+	memset ( unit->unit_Keys, 0, sizeof ( unit->unit_Keys ) );
+
+	Sana2_SignalEvent ( &unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE );
+
+	Sana2_AbortPending ( &unit->unit_Pending, NULL, NULL, S2ERR_OUTOFSERVICE, S2WERR_UNIT_DISCONNECTED );
 }
 
 // --
@@ -40,7 +66,7 @@ Process_Main ( struct EthernetUnit * unit, struct USB2IFace * usb2 )
 	reg		 = unit->unit_USB_Register;
 	detached = FALSE;
 
-	while ( ! ( SetSignal ( 0, SIGBREAKF_CTRL_C ) & SIGBREAKF_CTRL_C ) )
+	for ( ;; )
 	{
 		while ( ( notice = (PTR)GetMsg ( reg->Stack_MsgPort ) ) )
 		{
@@ -53,20 +79,28 @@ Process_Main ( struct EthernetUnit * unit, struct USB2IFace * usb2 )
 		}
 
 		// USB2 can omit detach notifications while a registration holds the function.
-		if ( ( detached ) || ( ! AdapterPresent ( usb2, reg->FKT_ID ) ) )
+		if ( ( detached ) || ( ! RTL8821CU_AdapterPresent ( usb2, reg->FKT_ID ) ) )
 		{
 			ObtainSemaphore ( &unit->unit_CommandLock );
 
-			unit->unit_Detached = TRUE;
-			RTL8821CU_SetOnline( unit, FALSE );
-
-			memset( unit->unit_Keys, 0, sizeof( unit->unit_Keys ) );
-
-			Sana2_SignalEvent ( &unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE );
-
-			Sana2_AbortPending ( &unit->unit_Pending, NULL, NULL, S2ERR_OUTOFSERVICE, S2WERR_UNIT_DISCONNECTED );
+			RTL8821CU_Detach ( unit );
 
 			ReleaseSemaphore ( &unit->unit_CommandLock );
+
+			return;
+		}
+
+		if ( SetSignal ( 0, SIGBREAKF_CTRL_C ) & SIGBREAKF_CTRL_C )
+		{
+			// Hub removal marks the function detached before signalling this task.
+			if ( ! RTL8821CU_AdapterPresent ( usb2, reg->FKT_ID ) )
+			{
+				ObtainSemaphore ( &unit->unit_CommandLock );
+
+				RTL8821CU_Detach ( unit );
+
+				ReleaseSemaphore ( &unit->unit_CommandLock );
+			}
 
 			return;
 		}
@@ -75,10 +109,21 @@ Process_Main ( struct EthernetUnit * unit, struct USB2IFace * usb2 )
 
 		Process_PacketIO ( unit, usb2 );
 
+		if ( unit->unit_Detached )
+		{
+			ReleaseSemaphore ( &unit->unit_CommandLock );
+
+			return;
+		}
+
 		RTL8821CU_CheckLink ( unit );
 
-		start = unit->unit_StartAuto && unit->unit_RadioReady && unit->unit_TxReady && ! unit->unit_AssocID;
-		unit->unit_StartAuto = FALSE;
+		start = unit->unit_StartAuto && unit->unit_RadioReady && ! unit->unit_AssocID;
+
+		if ( start )
+		{
+			unit->unit_StartAuto = FALSE;
+		}
 
 		ReleaseSemaphore ( &unit->unit_CommandLock );
 
@@ -102,6 +147,7 @@ EthClass_Entry ( struct USB2DriverIFace * Self UNUSED, struct USB2_DriverMessage
 {
 	struct EthernetUnit * unit;
 	struct EthClassPort	  port;
+	struct TimeRequest	  timer;
 
 	S32 registered;
 
@@ -114,6 +160,30 @@ EthClass_Entry ( struct USB2DriverIFace * Self UNUSED, struct USB2_DriverMessage
 
 	if ( ! unit )
 	{
+		return ( FALSE );
+	}
+
+	memset ( &timer, 0, sizeof ( timer ) );
+
+	timer.Request.io_Message.mn_Length = sizeof ( timer );
+
+	if ( OpenDevice ( TIMERNAME, UNIT_MICROHZ, &timer.Request, 0 ) )
+	{
+		DebugPrintF ( "RTL8821CU: could not open timer.device\n" );
+
+		FreeVec ( unit );
+
+		return ( FALSE );
+	}
+
+	unit->unit_Timer = (PTR)GetInterface ( (PTR)timer.Request.io_Device, "main", 1, NULL );
+
+	if ( ! unit->unit_Timer )
+	{
+		CloseDevice ( &timer.Request );
+
+		FreeVec ( unit );
+
 		return ( FALSE );
 	}
 
@@ -139,6 +209,10 @@ EthClass_Entry ( struct USB2DriverIFace * Self UNUSED, struct USB2_DriverMessage
 	}
 
 	Process_Free ( unit, msg->IUSB2 );
+
+	DropInterface ( (PTR)unit->unit_Timer );
+
+	CloseDevice ( &timer.Request );
 
 	if ( registered )
 	{

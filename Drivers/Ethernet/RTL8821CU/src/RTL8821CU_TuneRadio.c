@@ -48,7 +48,7 @@
 // --
 
 S32
-RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel, S32 enable_tx )
+RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel )
 {
 	static const U32 swings[] = { 0x200, 0x16a, 0x101, 0x0b6 };
 
@@ -68,7 +68,7 @@ RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel, S32 enable_tx )
 		return ( FALSE );
 	}
 
-	if ( ( ! RTL8821CU_WriteReg( control, 0x0522, 1, 0xff ) ) ||
+	if ( ( ! RTL8821CU_WriteReg( control, REG_TXPAUSE, 1, 0xff ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0808, 4, 0x10000000, 0x10000000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0454, 1, 0x80, 0 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0a80, 4, 0x0004ffff, btg ? 0xfc84 : 0x7532 ) ) ||
@@ -83,11 +83,11 @@ RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel, S32 enable_tx )
 		( ! RTL8821CU_UpdateReg( control, 0x1080, 4, 0x00010000, 0x00010000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0000, 4, 0x04000000, 0x04000000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0cb8, 4, 0x00f50000, btg ? 0x00010000 : 0x00700000 ) ) ||
-		( ! RTL8821CU_UpdateRF( control, 0xdf, 0x40, 0x40 ) ) ||
-		( ! RTL8821CU_UpdateRF( control, 0x64, 0x0f, 0x0f ) ) ||
-		( ! RTL8821CU_UpdateRF( control, 0x18, 0x70fff, 0x0c00 | channel ) ) ||
-		( ! RTL8821CU_UpdateRF( control, 0xb8, 0x80000, 0 ) ) ||
-		( ! RTL8821CU_UpdateRF( control, 0xb8, 0x80000, 0x80000 ) ) ||
+		( ! RTL8821CU_UpdateRF( unit, 0xdf, 0x40, 0x40 ) ) ||
+		( ! RTL8821CU_UpdateRF( unit, 0x64, 0x0f, 0x0f ) ) ||
+		( ! RTL8821CU_UpdateRF( unit, 0x18, 0x70fff, 0x0c00 | channel ) ) ||
+		( ! RTL8821CU_UpdateRF( unit, 0xb8, 0x80000, 0 ) ) ||
+		( ! RTL8821CU_UpdateRF( unit, 0xb8, 0x80000, 0x80000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0948, 4, 0x30000000, 0x20000000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x094c, 4, 0x30000000, 0x20000000 ) ) ||
 		( ! RTL8821CU_UpdateReg( control, 0x0c20, 4, 0x80000000, 0x80000000 ) ) ||
@@ -99,7 +99,8 @@ RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel, S32 enable_tx )
 
 	if ( ( radio & 0x70fff ) != ( 0x0c00U | channel ) )
 	{
-		DebugPrintF( "RTL8821CU: channel %lu RF readback $%08lx\n", (U32) channel, radio );
+		DebugPrintF( "RTL8821CU: channel %lu RF readback $%08lx (expected $%05lx with mask $70fff)\n",
+			(U32) channel, radio, 0x0c00U | channel );
 
 		return ( FALSE );
 	}
@@ -108,7 +109,7 @@ RTL8821CU_TuneRadio( struct EthernetUnit *unit, U8 channel, S32 enable_tx )
 
 	DebugPrintF( "RTL8821CU: channel %lu at 20 MHz, RF $%05lx\n", (U32) channel, radio & 0x000fffff );
 
-	return ( ( ! enable_tx ) || ( RTL8821CU_SetTxPower( unit ) ) );
+	return ( TRUE );
 }
 
 // --

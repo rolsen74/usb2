@@ -27,6 +27,18 @@ ReceiveManagement( struct EthernetUnit *unit, const U8 *frame, U32 length )
 	U32 interval;
 	U32 ticks;
 
+	// The manager currently negotiates OPEN and WPA2 without protected management.
+	if ( ( ( frame[0] == 0xa0 ) || ( frame[0] == 0xc0 ) ) && ( length >= 26 ) &&
+		( unit->unit_AssocID ) && ( ! ( frame[1] & 0xc7 ) ) && ( ! ( frame[22] & 0x0f ) ) &&
+		( RTL8821CU_SameAddress( frame + 4, unit->unit_StationAddress ) ) &&
+		( RTL8821CU_SameAddress( frame + 10, unit->unit_BSSID ) ) &&
+		( RTL8821CU_SameAddress( frame + 16, unit->unit_BSSID ) ) )
+	{
+		DebugPrintF( "RTL8821CU: AP ended association, reason %lu\n", (U32) frame[24] | ( (U32) frame[25] << 8 ) );
+
+		RTL8821CU_DropLink( unit );
+	}
+
 	if ( ( frame[0] == 0x80 ) && ( length >= BEACON_HEADER_LENGTH ) && ( unit->unit_AssocID ) &&
 		( ! memcmp( frame + 10, unit->unit_BSSID, RTL8821CU_ADDR_SIZE ) ) &&
 		( ! memcmp( frame + 16, unit->unit_BSSID, RTL8821CU_ADDR_SIZE ) ) )

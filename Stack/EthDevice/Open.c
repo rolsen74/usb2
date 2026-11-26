@@ -33,6 +33,7 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 	S32 follow_default;
 	S32 select_adapter;
 	S32 first;
+	S32 destroy;
 	U32 poll;
 	U32 index;
 	#ifdef USB2_BIND_DEBUG
@@ -176,7 +177,16 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 
 	if ( unit )
 	{
+		// Keep the selected unit alive while the adapter acquires its own lock.
+		unit->Opening++;
+
+		IExec->ReleaseSemaphore( & base->OpenLock );
+
 		error = unit->Ops->Open( unit->Adapter, (PTR) request, flags );
+
+		IExec->ObtainSemaphore( & base->OpenLock );
+
+		unit->Opening--;
 
 		if ( ! error )
 		{
@@ -189,6 +199,17 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 			request->io_Message.mn_Node.ln_Type = NT_REPLYMSG;
 
 			IExec->ReleaseSemaphore( & base->RouteLock );
+		}
+
+		destroy = ( unit->Detached ) && ( ! unit->Opens ) && ( ! unit->Opening );
+
+		if ( destroy )
+		{
+			IExec->ReleaseSemaphore( & base->OpenLock );
+
+			EthDevice_DestroyUnit( IExec, unit );
+
+			goto bailout;
 		}
 	}
 

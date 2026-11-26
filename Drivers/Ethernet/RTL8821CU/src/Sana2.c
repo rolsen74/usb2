@@ -107,6 +107,8 @@ Sana2BeginIO( struct EthernetUnit *unit, struct IOSana2Req *sana )
 
 		case S2_OFFLINE:
 			unit->unit_ManualOffline = TRUE;
+			unit->unit_Handshake = FALSE;
+			unit->unit_EAPOLLength = 0;
 
 			RTL8821CU_SetOnline( unit, FALSE );
 

@@ -66,6 +66,8 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana
 	S32 changed;
 	S32 aid_set;
 	S32 recover;
+	S32 handshake;
+	S32 keep_receive;
 
 	tags = ioreq->ios2_Data;
 	channel = unit->unit_Channel;
@@ -185,20 +187,55 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana
 
 	if ( changed )
 	{
-		RTL8821CU_StopRX( unit );
+		handshake = ( encryption == S2ENC_CCMP ) && ( memcmp( bssid, empty, sizeof( bssid ) ) );
+		keep_receive = ( ! recover ) && ( handshake ) && ( unit->unit_Handshake ) &&
+			( ! unit->unit_AssocID ) && ( aid ) && ( channel == unit->unit_Channel ) &&
+			( ! memcmp( bssid, unit->unit_BSSID, sizeof( bssid ) ) );
+
+		if ( ! RTL8821CU_DrainTX( unit ) )
+		{
+			if ( ! RTL8821CU_AdapterPresent( usb2, unit->unit_USB_Register->FKT_ID ) )
+			{
+				RTL8821CU_Detach( unit );
+			}
+
+			ioreq->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
+			ioreq->ios2_WireError = unit->unit_Detached ? S2WERR_UNIT_DISCONNECTED : S2WERR_RCVREL_HDW_ERR;
+
+			return;
+		}
+
+		if ( ! keep_receive )
+		{
+			RTL8821CU_StopRX( unit );
+
+			unit->unit_EAPOLLength = 0;
+		}
 
 		RTL8821CU_SetOnline( unit, FALSE );
 
 		unit->unit_Operational = FALSE;
+		unit->unit_Handshake = FALSE;
 
 		memset( unit->unit_Keys, 0, sizeof( unit->unit_Keys ) );
 
 		if ( ( ( recover ) && ( ! RecoverPipes( unit, usb2 ) ) ) ||
-			( ( ( recover ) || ( channel != unit->unit_Channel ) ) && ( ! RTL8821CU_TuneRadio( unit, channel, TRUE ) ) ) ||
-			( ! RTL8821CU_SetAssociation( unit, bssid, aid ) ) )
+			( ( ( recover ) || ( channel != unit->unit_Channel ) ) && ( ! RTL8821CU_TuneRadio( unit, channel ) ) ) ||
+			( ! RTL8821CU_SetAssociation( unit, bssid, aid, ( aid ) || ( handshake ) ) ) ||
+			( ! RTL8821CU_SetTxPower( unit ) ) )
 		{
+			if ( ! RTL8821CU_AdapterPresent( usb2, unit->unit_USB_Register->FKT_ID ) )
+			{
+				RTL8821CU_Detach( unit );
+
+				ReportUnitOffline( unit, ioreq );
+
+				return;
+			}
+
 			unit->unit_RadioReady = FALSE;
 			unit->unit_TxReady = FALSE;
+			unit->unit_EAPOLLength = 0;
 			ioreq->ios2_Req.io_Error = S2ERR_OUTOFSERVICE;
 			ioreq->ios2_WireError = S2WERR_RCVREL_HDW_ERR;
 
@@ -210,6 +247,12 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana
 		}
 
 		unit->unit_RadioReady = TRUE;
+		unit->unit_Handshake = handshake;
+
+		if ( ( handshake ) && ( aid ) )
+		{
+			DebugPrintF( "RTL8821CU: associated, AID %lu, waiting for WPA2 keys\n", aid );
+		}
 
 		if ( recover )
 		{
@@ -233,6 +276,8 @@ Cmd_SetOptions( struct EthernetUnit *unit, struct USB2IFace *usb2, struct IOSana
 	if ( operational == TRUE )
 	{
 		unit->unit_ManualOffline = FALSE;
+		unit->unit_Handshake = FALSE;
+		unit->unit_EAPOLLength = 0;
 	}
 
 	RTL8821CU_SetOnline( unit, ( ! unit->unit_ManualOffline ) && ( RTL8821CU_CanGoOnline( unit ) ) );

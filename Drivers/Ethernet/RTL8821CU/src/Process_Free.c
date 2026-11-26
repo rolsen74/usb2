@@ -23,6 +23,7 @@ Process_Free( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 	attached = ! unit->unit_Detached;
 	unit->unit_Detached = TRUE;
 	unit->unit_Online = FALSE;
+	unit->unit_Handshake = FALSE;
 
 	memset( unit->unit_Keys, 0, sizeof( unit->unit_Keys ) );
 
@@ -40,13 +41,6 @@ Process_Free( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 		}
 
 		unit->unit_FirmwareRunning = FALSE;
-	}
-
-	if ( unit->unit_Interrupt_In )
-	{
-		usb2->USB2_EPRes_Release( unit->unit_Interrupt_In );
-
-		unit->unit_Interrupt_In = NULL;
 	}
 
 	for( index = 0; index < RTL8821CU_TX_PIPES; index++ )

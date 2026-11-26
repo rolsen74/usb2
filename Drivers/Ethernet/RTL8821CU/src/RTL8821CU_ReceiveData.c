@@ -15,14 +15,23 @@
 
 static S32
 CompleteRead( struct EthernetUnit *unit, struct IOSana2Req *ioreq, const U8 *frame,
-	const U8 *payload, U32 length, U16 type, U8 flags )
+	const U8 *payload, U32 length, U16 type, U8 flags, struct Hook *filter )
 {
 	static const U8 empty[SANA2_MAX_ADDR_BYTES] = { 0 };
 
 	U8 ethernet[RTL8821CU_MTU + RTL8821CU_ETH_HEADER];
+	U8 oldDestination[SANA2_MAX_ADDR_BYTES];
+	U8 oldSource[SANA2_MAX_ADDR_BYTES];
+	U32 oldLength;
+	U8 oldFlags;
 	S32 copied;
 
-	Remove( (PTR) ioreq );
+	oldLength = ioreq->ios2_DataLength;
+	oldFlags = ioreq->ios2_Req.io_Flags;
+
+	memcpy( oldDestination, ioreq->ios2_DstAddr, sizeof( oldDestination ) );
+
+	memcpy( oldSource, ioreq->ios2_SrcAddr, sizeof( oldSource ) );
 
 	CopyMem( (PTR) empty, ioreq->ios2_DstAddr, sizeof( empty ) );
 
@@ -52,9 +61,24 @@ CompleteRead( struct EthernetUnit *unit, struct IOSana2Req *ioreq, const U8 *fra
 		length += 2;
 	}
 
-	ioreq->ios2_PacketType = type;
 	ioreq->ios2_DataLength = length;
 	ioreq->ios2_Req.io_Flags = ( ioreq->ios2_Req.io_Flags & ~( SANA2IOF_BCAST | SANA2IOF_MCAST ) ) | flags;
+
+	if ( ( filter ) && ( ! CallHookPkt( filter, ioreq, (PTR) payload ) ) )
+	{
+		ioreq->ios2_DataLength = oldLength;
+		ioreq->ios2_Req.io_Flags = oldFlags;
+
+		memcpy( ioreq->ios2_DstAddr, oldDestination, sizeof( oldDestination ) );
+
+		memcpy( ioreq->ios2_SrcAddr, oldSource, sizeof( oldSource ) );
+
+		return ( -1 );
+	}
+
+	Remove( (PTR) ioreq );
+
+	ioreq->ios2_PacketType = type;
 
 	copied = RTL8821CU_CopyPacket( ioreq, ioreq->ios2_Data, (PTR) payload, length, TRUE );
 
@@ -70,6 +94,68 @@ CompleteRead( struct EthernetUnit *unit, struct IOSana2Req *ioreq, const U8 *fra
 	ReplyMsg( (PTR) ioreq );
 
 	return ( copied );
+}
+
+// --
+
+static void
+CacheEAPOL( struct EthernetUnit *unit, const U8 *frame, const U8 *payload, U32 length )
+{
+	if ( ( ! unit->unit_Handshake ) || ( length < 4 ) || ( length > sizeof( unit->unit_EAPOL ) ) ||
+		( ! RTL8821CU_SameAddress( frame + 16, unit->unit_BSSID ) ) )
+	{
+		return;
+	}
+
+	memcpy( unit->unit_EAPOLHeader, frame, sizeof( unit->unit_EAPOLHeader ) );
+
+	memcpy( unit->unit_EAPOL, payload, length );
+
+	unit->unit_EAPOLLength = length;
+
+	DebugPrintF( "RTL8821CU: queued early EAPOL RX (%lu bytes)\n", length );
+}
+
+// --
+
+void
+RTL8821CU_DeliverEAPOL( struct EthernetUnit *unit )
+{
+	struct IOSana2Req *ioreq;
+	struct BufferManagement *opener;
+
+	U32 length;
+	S32 copied;
+
+	length = unit->unit_EAPOLLength;
+
+	if ( ( ! length ) || ( ! unit->unit_AssocID ) || ( ! unit->unit_Handshake ) )
+	{
+		return;
+	}
+
+	for( ioreq = (PTR) GetHead( & unit->unit_Pending ); ioreq; ioreq = (PTR) GetSucc( (PTR) ioreq ) )
+	{
+		if ( ( ioreq->ios2_Req.io_Command != CMD_READ ) || ( ioreq->ios2_PacketType != RTL8821CU_EAPOL ) ||
+			( ! RTL8821CU_DataAllowed( unit, ioreq ) ) )
+		{
+			continue;
+		}
+
+		opener = ioreq->ios2_BufferManagement;
+
+		copied = CompleteRead( unit, ioreq, unit->unit_EAPOLHeader, unit->unit_EAPOL, length,
+			RTL8821CU_EAPOL, 0, opener->bm_PacketHook );
+
+		if ( copied >= 0 )
+		{
+			unit->unit_EAPOLLength = 0;
+
+			DebugPrintF( "RTL8821CU: delivered early EAPOL RX (%lu bytes)\n", length );
+
+			return;
+		}
+	}
 }
 
 // --
@@ -97,8 +183,12 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 	orphan = NULL;
 	delivered = FALSE;
 
-	if ( ( ! unit->unit_AssocID ) || ( unit->unit_ManualOffline ) ||
-		( length < header + RTL8821CU_LLC_HEADER ) || ( ( frame[0] & 0x7f ) != 0x08 ) ||
+	if ( ( ( ! unit->unit_AssocID ) || ( unit->unit_ManualOffline ) ) && ( ! unit->unit_Handshake ) )
+	{
+		return;
+	}
+
+	if ( ( length < header + RTL8821CU_LLC_HEADER ) || ( ( frame[0] & 0x7f ) != 0x08 ) ||
 		( ( frame[1] & 7 ) != 2 ) || ( frame[22] & 0x0f ) ||
 		( ! RTL8821CU_SameAddress( frame + 10, unit->unit_BSSID ) ) )
 	{
@@ -154,7 +244,8 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 		return;
 	}
 
-	eapol_only = ( ! unit->unit_Online ) || ( ( unit->unit_Encryption == S2ENC_CCMP ) && ( ! protected ) );
+	eapol_only = ( ! unit->unit_Online ) || ( unit->unit_ManualOffline ) ||
+		( ( unit->unit_Encryption == S2ENC_CCMP ) && ( ! protected ) );
 
 	if ( ( eapol_only ) && ( ( type != RTL8821CU_EAPOL ) || ( flags ) ) )
 	{
@@ -162,12 +253,25 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 	}
 
 	length -= header + RTL8821CU_LLC_HEADER;
+
+	if ( ! unit->unit_AssocID )
+	{
+		if ( ( ! protected ) && ( type == RTL8821CU_EAPOL ) )
+		{
+			CacheEAPOL( unit, frame, snap + RTL8821CU_LLC_HEADER, length );
+		}
+
+		return;
+	}
+
 	unit->unit_PacketsRx++;
 
 	Sana2_UpdateThroughput( & unit->unit_Pending, 0, length + RTL8821CU_ETH_HEADER );
 
 	for( opener = (PTR) GetHead( & unit->unit_Openers ); opener; opener = (PTR) GetSucc( & opener->bm_Node ) )
 	{
+		copied = FALSE;
+
 		for( ioreq = (PTR) GetHead( & unit->unit_Pending ); ioreq; ioreq = (PTR) GetSucc( (PTR) ioreq ) )
 		{
 			if ( ioreq->ios2_BufferManagement != opener )
@@ -177,7 +281,17 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 
 			if ( ( ioreq->ios2_Req.io_Command == CMD_READ ) && ( ioreq->ios2_PacketType == type ) )
 			{
-				break;
+				copied = CompleteRead( unit, ioreq, frame, snap + RTL8821CU_LLC_HEADER,
+					length, type, flags, opener->bm_PacketHook );
+
+				if ( copied >= 0 )
+				{
+					delivered = TRUE;
+
+					break;
+				}
+
+				copied = FALSE;
 			}
 
 			if ( ( ! eapol_only ) && ( ! orphan ) && ( ioreq->ios2_Req.io_Command == S2_READORPHAN ) )
@@ -186,16 +300,21 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 			}
 		}
 
-		copied = FALSE;
-
-		if ( ioreq )
-		{
-			copied = CompleteRead( unit, ioreq, frame, snap + RTL8821CU_LLC_HEADER, length, type, flags );
-
-			delivered = TRUE;
-		}
-
 		Sana2_AccountType( & opener->bm_TrackedTypes, type, length, TRUE, ! copied );
+	}
+
+	if ( ( type == RTL8821CU_EAPOL ) && ( unit->unit_Handshake ) )
+	{
+		if ( delivered )
+		{
+			unit->unit_EAPOLLength = 0;
+
+			DebugPrintF( "RTL8821CU: EAPOL RX %lu bytes\n", length );
+		}
+		else if ( ( ! protected ) && ( ! flags ) )
+		{
+			CacheEAPOL( unit, frame, snap + RTL8821CU_LLC_HEADER, length );
+		}
 	}
 
 	if ( ! delivered )
@@ -204,7 +323,7 @@ RTL8821CU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length )
 
 		if ( orphan )
 		{
-			CompleteRead( unit, orphan, frame, snap + RTL8821CU_LLC_HEADER, length, type, flags );
+			CompleteRead( unit, orphan, frame, snap + RTL8821CU_LLC_HEADER, length, type, flags, NULL );
 		}
 	}
 }
