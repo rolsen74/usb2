@@ -15,23 +15,7 @@
 void
 RTL8821CU_StopRX( struct EthernetUnit *unit )
 {
-	struct IORequest *ioreq;
-
-	if ( ! unit->unit_RxPending )
-	{
-		return;
-	}
-
-	ioreq = (PTR) unit->unit_Bulk_In->IORequests[0];
-
-	if ( ! CheckIO( ioreq ) )
-	{
-		AbortIO( ioreq );
-	}
-
-	WaitIO( ioreq );
-
-	unit->unit_RxPending = FALSE;
+	Wireless_StopRX( unit->unit_Bulk_In, &unit->unit_RxPending );
 }
 
 // --

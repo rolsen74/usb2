@@ -32,8 +32,8 @@ struct AX88772Rx
 #define WIRED_ADAPTER USB2ETH_ADAPTER_AX88772
 #define WIRED_NAME "AX88772"
 
-// A frame can cross a transfer boundary. Keep its RX completions in wire order.
-#define WIRED_RX_REQUEST_COUNT 1
+// Frames can span transfers. The shared RX loop decodes replies in endpoint order.
+#define WIRED_RX_REQUEST_COUNT 3
 #define WIRED_TX_REQUEST_COUNT 3
 #define WIRED_RX_BUFFER_SIZE 2048
 #define WIRED_TX_HEADER_SIZE 4

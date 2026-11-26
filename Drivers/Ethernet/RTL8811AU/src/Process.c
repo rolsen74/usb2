@@ -108,6 +108,7 @@ EthClass_Entry( struct USB2DriverIFace *self UNUSED, struct USB2_DriverMessage *
 				USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
 				USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
 				USB2Tag_EPRes_BufferSize, 16384,
+				USB2Tag_EPRes_NrOfIORequest, WIRELESS_RX_REQUEST_COUNT,
 				USB2Tag_EPRes_AllowShortPackets, TRUE,
 				TAG_END );
 

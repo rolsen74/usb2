@@ -14,11 +14,11 @@
 // --
 
 #define VERSION		1
-#define REVISION	4
-#define DATE		"25.11.2026"
-#define VERS		"eth_Pegasus.Driver 1.4"
-#define VSTRING		"eth_Pegasus.Driver 1.4 (25.11.2026)\r\n"
-#define VERSTAG		"\0$VER: eth_Pegasus.Driver 1.4 (25.11.2026)"
+#define REVISION	5
+#define DATE		"26.11.2026"
+#define VERS		"eth_Pegasus.Driver 1.5"
+#define VSTRING		"eth_Pegasus.Driver 1.5 (26.11.2026)\r\n"
+#define VERSTAG		"\0$VER: eth_Pegasus.Driver 1.5 (26.11.2026)"
 #define DEVNAME		"eth_Pegasus.Driver"
 
 // --

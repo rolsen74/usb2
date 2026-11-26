@@ -44,24 +44,16 @@ PollReceive( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 	S32 error;
 
 	resource = unit->unit_Bulk_In;
-	ioreq = resource->IORequests[0];
 
-	if ( unit->unit_RxPending )
+	while( ( ioreq = Wireless_TakeRX( resource, &unit->unit_RxPending ) ) )
 	{
-		if ( ! CheckIO( (PTR) ioreq ) )
-		{
-			return;
-		}
-
-		error = WaitIO( (PTR) ioreq );
-
-		unit->unit_RxPending = FALSE;
+		error = ioreq->io_Error;
 
 		if ( ( ! error ) && ( ioreq->io_Actual <= resource->BufferSize ) )
 		{
 			unit->unit_RxStalled = FALSE;
 
-			RTL8821CU_DecodeRX( unit, resource->Buffers[0], ioreq->io_Actual );
+			RTL8821CU_DecodeRX( unit, ioreq->io_Data, ioreq->io_Actual );
 		}
 		else if ( error == USB2Err_Device_Detached )
 		{
@@ -71,6 +63,8 @@ PollReceive( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 		}
 		else if ( error == USB2Err_Host_Stall )
 		{
+			RTL8821CU_StopRX( unit );
+
 			if ( ( unit->unit_RxStalled ) || ( ! usb2->USB2_EPRes_Destall( resource ) ) )
 			{
 				unit->unit_RxStalled = TRUE;
@@ -97,13 +91,7 @@ PollReceive( struct EthernetUnit *unit, struct USB2IFace *usb2 )
 		return;
 	}
 
-	ioreq->io_Command = CMD_READ;
-	ioreq->io_Data = resource->Buffers[0];
-	ioreq->io_Length = resource->BufferSize;
-	ioreq->io_TimeOut = 0;
-	unit->unit_RxPending = TRUE;
-
-	SendIO( (PTR) ioreq );
+	Wireless_SubmitRX( resource, &unit->unit_RxPending );
 }
 
 // --

@@ -40,6 +40,7 @@ Process_Setup_Device( struct EthernetUnit *unit, struct USB2_DriverMessage *msg 
 		USB2Tag_EPRes_InterfaceNr, RTL8821CU_INTERFACE,
 		USB2Tag_EPRes_EndPointNr, 0x84,
 		USB2Tag_EPRes_BufferSize, RTL8821CU_RX_BUFFER_SIZE,
+		USB2Tag_EPRes_NrOfIORequest, WIRELESS_RX_REQUEST_COUNT,
 		USB2Tag_EPRes_AllowShortPackets, TRUE,
 		TAG_END );
 

@@ -19,6 +19,7 @@
 #include <devices/newstyle.h>
 #include <devices/usb2wireless.h>
 #include "Sana2Commands.h"
+#include "Wireless_ReceiveQueue.h"
 #include "WirelessSana2.h"
 #include "WirelessCrypto.h"
 
@@ -94,6 +95,7 @@ struct EthernetUnit
 	U8 unit_Exclusive;
 	U8 unit_Configured;
 	U8 unit_Detached;
+	U32 unit_RxPending;
 	U8 unit_RadioReady;
 	U8 unit_BeaconReceived;
 };

@@ -40,7 +40,6 @@ S32 RTL8811AU_SetAssociation( struct EthernetUnit *unit, U8 *bssid, U16 aid );
 void RTL8811AU_SetOnline( struct EthernetUnit *unit, S32 online );
 S32 RTL8811AU_DataAllowed( const struct EthernetUnit *unit, const struct IOSana2Req *ioreq );
 void RTL8811AU_DecodeRX( struct EthernetUnit *unit, U8 *data, U32 length );
-void RTL8811AU_StopRX( struct USB2_IORequest *ioreq );
 void RTL8811AU_ReceiveData( struct EthernetUnit *unit, U8 *frame, U32 length );
 void RTL8811AU_Transmit( struct EthernetUnit *unit, struct IOSana2Req *ioreq );
 void RTL8811AU_AccountType( struct EthernetUnit *unit, U32 type, U32 length, S32 receive, S32 dropped );
@@ -48,7 +47,7 @@ S32 RTL8811AU_CopyPacket( struct EthernetUnit *unit, struct IOSana2Req *ioreq, P
 S32 RTL8811AU_ProtectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 type );
 S32 RTL8811AU_UnprotectData( struct EthernetUnit *unit, U8 *frame, U32 *length, U32 header );
 void Cmd_SetOptions( struct EthernetUnit *unit, const struct RTL8811AU_Board *board, struct IOSana2Req *ioreq,
-	struct USB2_EPResource *rx, struct USB2_IORequest **active );
+	struct USB2_EPResource *rx );
 S32 Process_Main( struct EthernetUnit *unit, struct USB2_Register *reg, struct USB2_EPResource *rx, const struct RTL8811AU_Board *board );
 
 #endif

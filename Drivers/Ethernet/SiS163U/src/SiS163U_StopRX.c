@@ -15,20 +15,7 @@
 void
 SiS163U_StopRX( struct EthernetUnit *unit )
 {
-	struct IORequest *usbio;
-
-	if ( ! unit->unit_RxActive )
-	{
-		return;
-	}
-
-	usbio = (PTR) unit->unit_Bulk_Rx_Resource->IORequests[0];
-
-	AbortIO( usbio );
-
-	WaitIO( usbio );
-
-	unit->unit_RxActive = FALSE;
+	Wireless_StopRX( unit->unit_Bulk_Rx_Resource, &unit->unit_RxActive );
 }
 
 // --

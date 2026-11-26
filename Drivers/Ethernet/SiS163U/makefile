@@ -108,7 +108,7 @@ SRCS		:= $(sort $(SRCS))
 OBJS		:= $(patsubst %.c,$(OBJDIR)/%.o,$(SRCS))
 
 ETHCLASS_SRCS	:= $(wildcard ../Common/EthClass_*.c)
-WIRELESS_SRCS	:= $(wildcard ../Common/Wireless/EthWireless_*.c)
+WIRELESS_SRCS	:= $(wildcard ../Common/Wireless/EthWireless_*.c ../Common/Wireless/Wireless_ReceiveQueue.c)
 SANA2_SRCS	:= $(wildcard ../Common/Sana2_*.c)
 
 OBJS		+= $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(ETHCLASS_SRCS))

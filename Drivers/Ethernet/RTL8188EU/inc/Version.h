@@ -16,9 +16,9 @@
 #define DEVNAME		"eth_RTL8188EU.Driver"
 
 #define VERSION		1
-#define REVISION	18
-#define DATE		"24.11.2026"
-#define VERS		DEVNAME " 1.18"
+#define REVISION	19
+#define DATE		"26.11.2026"
+#define VERS		DEVNAME " 1.19"
 #define VSTRING		VERS " (" DATE ")\r\n"
 #define VERSTAG		"\0$VER: " VERS " (" DATE ")"
 

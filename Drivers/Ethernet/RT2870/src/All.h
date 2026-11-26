@@ -10,6 +10,7 @@
 #include <devices/newstyle.h>
 #include <devices/sana2.h>
 #include "Sana2Commands.h"
+#include "Wireless_ReceiveQueue.h"
 #include <devices/usb2rt2870.h>
 #include <exec/emulation.h>
 #include <dos/dostags.h>
@@ -107,7 +108,7 @@ struct EthernetUnit
 	U8 unit_TKIPRxReports;
 	U8 unit_TKIPRxFailures;
 	U8 unit_TKIPEAPOLReports;
-	S32 unit_ReceivePending;
+	U32 unit_ReceivePending;
 	S32 unit_TransmitEnabled;
 	S32 unit_DataSent;
 	S32 unit_DataReceived;

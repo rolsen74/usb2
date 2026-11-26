@@ -23,18 +23,16 @@ RTL8188EU_CompleteRX( struct EthernetUnit *unit )
 
 	ObtainSemaphore( & unit->unit_CommandLock );
 
-	usbio = (PTR) GetMsg( resource->MsgPort );
-
-	if ( usbio )
+	while( ( usbio = Wireless_TakeRX( resource, &unit->unit_RxActive ) ) )
 	{
-		unit->unit_RxActive = FALSE;
-
 		if ( ( usbio->io_Error == USB2Err_NoError ) && ( usbio->io_Actual <= resource->BufferSize ) )
 		{
 			RTL8188EU_DecodeRX( unit, usbio->io_Data, usbio->io_Actual );
 		}
 		else if ( usbio->io_Error == USB2Err_Host_Stall )
 		{
+			RTL8188EU_StopRX( unit );
+
 			USB2_EPRes_Destall( resource );
 		}
 		else
@@ -54,10 +52,12 @@ RTL8188EU_CompleteRX( struct EthernetUnit *unit )
 			Sana2_SignalEvent( & unit->unit_Pending, S2EVENT_ERROR | S2EVENT_HARDWARE );
 
 			Sana2_AbortPending( & unit->unit_Pending, NULL, NULL, IOERR_ABORTED, 0 );
-		}
 
-		RTL8188EU_SubmitRX( unit );
+			RTL8188EU_StopRX( unit );
+		}
 	}
+
+	RTL8188EU_SubmitRX( unit );
 
 	ReleaseSemaphore( & unit->unit_CommandLock );
 }

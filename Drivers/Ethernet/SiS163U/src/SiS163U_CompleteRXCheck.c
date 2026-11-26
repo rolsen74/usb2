@@ -60,6 +60,8 @@ AdvanceRXCheck( struct EthernetUnit *unit )
 	U32 channel;
 	S32 error;
 
+	SiS163U_StopRX( unit );
+
 	channel = unit->unit_Channel;
 
 	if ( channel == SIS163U_CHANNEL_MAX )
@@ -92,7 +94,7 @@ AdvanceRXCheck( struct EthernetUnit *unit )
 
 // --
 
-static void
+static S32
 CompleteMgmtRead( struct EthernetUnit *unit, struct USB2_IORequest *usbio )
 {
 	struct IOSana2Req *ioreq;
@@ -153,43 +155,33 @@ CompleteMgmtRead( struct EthernetUnit *unit, struct USB2_IORequest *usbio )
 
 			ioreq = SiS163U_FindMgmtRead( unit );
 		}
+	}
 
-		if ( ioreq )
-		{
-			SiS163U_SubmitRXCheck( unit );
-		}
+	if ( ! ioreq )
+	{
+		SiS163U_StopRX( unit );
 	}
 
 	ReleaseSemaphore( & unit->unit_CommandLock );
+
+	return ( ioreq != NULL );
 }
 
 // --
 
-void
-SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
+static S32
+CompleteRX( struct EthernetUnit *unit, struct USB2_IORequest *usbio )
 {
 	struct USB2_EPResource *resource;
-	struct USB2_IORequest *usbio;
 
 	const U8 *frame;
 	U32 length;
 
 	resource = unit->unit_Bulk_Rx_Resource;
 
-	usbio = (PTR) GetMsg( resource->MsgPort );
-
-	if ( ! usbio )
-	{
-		return;
-	}
-
-	unit->unit_RxActive = FALSE;
-
 	if ( unit->unit_ManualScan )
 	{
-		CompleteMgmtRead( unit, usbio );
-
-		return;
+		return ( CompleteMgmtRead( unit, usbio ) );
 	}
 
 	if ( ( usbio->io_Error == USB2Err_Host_Timeout ) && ( ! usbio->io_Actual ) )
@@ -204,15 +196,17 @@ SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
 
 		AdvanceRXCheck( unit );
 
-		return;
+		return ( FALSE );
 	}
 
 	if ( ( usbio->io_Error ) || ( usbio->io_Actual > resource->BufferSize ) )
 	{
+		SiS163U_StopRX( unit );
+
 		USBINFO( "SiS163U: receive check ended, USB error %ld, %lu bytes after %lu completed reads",
 			(S32) usbio->io_Error, usbio->io_Actual, unit->unit_RxCheckReads );
 
-		return;
+		return ( FALSE );
 	}
 
 	unit->unit_RxCheckReads++;
@@ -229,9 +223,11 @@ SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
 	if ( ( length >= IEEE80211_SCAN_FRAME_MIN_SIZE ) &&
 		( ( frame[0] == IEEE80211_BEACON ) || ( frame[0] == IEEE80211_PROBE_RESPONSE ) ) )
 	{
+		SiS163U_StopRX( unit );
+
 		USBINFO( "SiS163U: received a scan frame on channel %lu, %lu bytes", (U32) unit->unit_Channel, length );
 
-		return;
+		return ( FALSE );
 	}
 
 	if ( unit->unit_RxCheckReads == SIS163U_RX_CHECK_READS )
@@ -241,7 +237,30 @@ SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
 
 		AdvanceRXCheck( unit );
 
+		return ( FALSE );
+	}
+
+	return ( TRUE );
+}
+
+// --
+
+void
+SiS163U_CompleteRXCheck( struct EthernetUnit *unit )
+{
+	struct USB2_IORequest *request;
+
+	if ( ! unit->unit_RxActive )
+	{
 		return;
+	}
+
+	while( ( request = Wireless_TakeRX( unit->unit_Bulk_Rx_Resource, &unit->unit_RxActive ) ) )
+	{
+		if ( ! CompleteRX( unit, request ) )
+		{
+			return;
+		}
 	}
 
 	SiS163U_SubmitRXCheck( unit );

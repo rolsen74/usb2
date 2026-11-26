@@ -16,7 +16,7 @@
 
 void
 Cmd_SetOptions( struct EthernetUnit *unit, const struct RTL8811AU_Board *board, struct IOSana2Req *ioreq,
-	struct USB2_EPResource *rx, struct USB2_IORequest **active )
+	struct USB2_EPResource *rx )
 {
 	static const U8 empty[6] = { 0 };
 
@@ -157,12 +157,7 @@ Cmd_SetOptions( struct EthernetUnit *unit, const struct RTL8811AU_Board *board, 
 
 	if ( changed )
 	{
-		if ( *active )
-		{
-			RTL8811AU_StopRX( *active );
-
-			*active = NULL;
-		}
+		Wireless_StopRX( rx, &unit->unit_RxPending );
 
 		RTL8811AU_SetOnline( unit, FALSE );
 

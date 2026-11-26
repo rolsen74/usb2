@@ -54,7 +54,6 @@ RT2870_StopBeacon( struct EthernetUnit *unit, S32 detached )
 {
 	struct USB2_EPResource *bulk;
 	struct USB2_EPResource *control;
-	struct USB2_IORequest *request;
 
 	unit->unit_EAPOLLength = 0;
 	unit->unit_AssocID = 0;
@@ -88,19 +87,7 @@ RT2870_StopBeacon( struct EthernetUnit *unit, S32 detached )
 		return;
 	}
 
-	if ( unit->unit_ReceivePending )
-	{
-		request = bulk->IORequests[0];
-
-		if ( ! CheckIO( (PTR) request ) )
-		{
-			AbortIO( (PTR) request );
-		}
-
-		WaitIO( (PTR) request );
-
-		unit->unit_ReceivePending = FALSE;
-	}
+	Wireless_StopRX( bulk, &unit->unit_ReceivePending );
 
 	control = unit->unit_USB_Register->Res_Control;
 
@@ -147,7 +134,6 @@ RT2870_StartReceive( struct EthernetUnit *unit )
 	struct USB2_Register *reg;
 	struct USB2_EPResource *bulk;
 	struct USB2_EPResource *control;
-	struct USB2_IORequest *request;
 
 	U32 index;
 	U32 clock;
@@ -163,7 +149,7 @@ RT2870_StartReceive( struct EthernetUnit *unit )
 
 	bulk = USB2_EPRes_ObtainTags( reg, USB2Tag_EPRes_InterfaceNr, 0,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_In, USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
-		USB2Tag_EPRes_NrOfIORequest, 1, USB2Tag_EPRes_BufferSize, RT2870_RX_BUFFER_SIZE,
+		USB2Tag_EPRes_NrOfIORequest, WIRELESS_RX_REQUEST_COUNT, USB2Tag_EPRes_BufferSize, RT2870_RX_BUFFER_SIZE,
 		USB2Tag_EPRes_AllowShortPackets, TRUE, USB2Tag_EPRes_TimeOut, RT2870_RX_TIMEOUT, TAG_END );
 
 	if ( ! bulk )
@@ -221,11 +207,6 @@ RT2870_StartReceive( struct EthernetUnit *unit )
 		return ( error );
 	}
 
-	request = bulk->IORequests[0];
-	request->io_Command = CMD_READ;
-	request->io_Data = bulk->Buffers[0];
-	request->io_Length = bulk->BufferSize;
-
 	USBINFO( "RT2870: channel %lu scan started, bulk IN max packet %lu", (U32) unit->unit_Channel, bulk->EndPointMax );
 
 	return ( 0 );
@@ -249,36 +230,35 @@ RT2870_ReadBeacon( struct EthernetUnit *unit )
 	}
 
 	bulk = unit->unit_BeaconResource;
-	request = bulk->IORequests[0];
-
-	if ( unit->unit_ReceivePending )
+	while( ( request = Wireless_TakeRX( bulk, &unit->unit_ReceivePending ) ) )
 	{
-		if ( ! CheckIO( (PTR) request ) )
+		error = request->io_Error;
+
+		if ( error == USB2Err_Host_Timeout )
 		{
-			return ( 0 );
+			unit->unit_BeaconTimeouts++;
+
+			continue;
 		}
-
-		error = WaitIO( (PTR) request );
-
-		unit->unit_ReceivePending = FALSE;
 
 		if ( error == USB2Err_Host_Stall )
 		{
+			Wireless_StopRX( bulk, &unit->unit_ReceivePending );
+
 			unit->unit_RxHalted = ! USB2_EPRes_Destall( bulk );
 		}
-	}
 
-	if ( error == USB2Err_Host_Timeout )
-	{
-		unit->unit_BeaconTimeouts++;
-	}
-	else if ( ( ! error ) && ( request->io_Actual ) )
-	{
+		if ( error )
+		{
+			return ( error );
+		}
+
 		if ( request->io_Actual > bulk->BufferSize )
 		{
-			error = USB2Err_Host_Overflow;
+			return ( USB2Err_Host_Overflow );
 		}
-		else
+
+		if ( request->io_Actual )
 		{
 			unit->unit_BeaconReads++;
 			unit->unit_BeaconBytes += request->io_Actual;
@@ -287,17 +267,9 @@ RT2870_ReadBeacon( struct EthernetUnit *unit )
 		}
 	}
 
-	if ( ( ( ! error ) || ( error == USB2Err_Host_Timeout ) ) && ( unit->unit_BeaconResource ) )
-	{
-		request->io_Actual = 0;
-		unit->unit_ReceivePending = TRUE;
+	Wireless_SubmitRX( bulk, &unit->unit_ReceivePending );
 
-		SendIO( (PTR) request );
-
-		return ( 0 );
-	}
-
-	return ( error );
+	return ( 0 );
 }
 
 // --

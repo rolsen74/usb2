@@ -26,7 +26,7 @@ OBJECTS := $(patsubst src/%.c,$(OBJDIR)/%.o,$(SOURCES))
 OBJECTS += $(patsubst ../Common/%.c,$(OBJDIR)/common/%.o,$(wildcard ../Common/Sana2_*.c ../Common/EthClass_*.c))
 
 OBJECTS += $(addprefix $(OBJDIR)/wireless/,Wireless_AESBlock.o Wireless_AESExpand.o Wireless_AESSubstitute.o Wireless_CCMP.o)
-OBJECTS += $(addprefix $(OBJDIR)/wireless/,Wireless_StartAuto.o Wireless_StartPassword.o)
+OBJECTS += $(addprefix $(OBJDIR)/wireless/,Wireless_StartAuto.o Wireless_StartPassword.o Wireless_ReceiveQueue.o)
 
 .PHONY: all clean
 

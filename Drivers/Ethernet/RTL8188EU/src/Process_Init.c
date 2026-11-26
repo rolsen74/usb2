@@ -41,7 +41,7 @@ Process_Init( struct EthernetUnit *unit, struct USB2_DriverMessage *msg )
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_In,
 		USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
 		USB2Tag_EPRes_BufferSize, 4096,
-		USB2Tag_EPRes_NrOfIORequest, 1,
+		USB2Tag_EPRes_NrOfIORequest, WIRELESS_RX_REQUEST_COUNT,
 		USB2Tag_EPRes_AllowShortPackets, TRUE,
 		TAG_END );
 

@@ -52,7 +52,7 @@ Process_Init( struct EthernetUnit *unit, struct USB2_DriverMessage *msg )
 
 	unit->unit_Bulk_Rx_Resource = USB2_EPRes_ObtainTags( reg, USB2Tag_EPRes_InterfaceNr, 0,
 		USB2Tag_EPRes_EPDirection, EPADR_Dir_In, USB2Tag_EPRes_EPType, EPATT_Type_Bulk,
-		USB2Tag_EPRes_NrOfIORequest, 1, USB2Tag_EPRes_BufferSize, SIS163U_RX_BUFFER_SIZE,
+		USB2Tag_EPRes_NrOfIORequest, WIRELESS_RX_REQUEST_COUNT, USB2Tag_EPRes_BufferSize, SIS163U_RX_BUFFER_SIZE,
 		USB2Tag_EPRes_AllowShortPackets, TRUE, USB2Tag_EPRes_TimeOut, 400000, TAG_END );
 
 	unit->unit_Bulk_Tx_Resource = USB2_EPRes_ObtainTags( reg, USB2Tag_EPRes_InterfaceNr, 0,

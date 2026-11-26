@@ -23,6 +23,7 @@
 #include <devices/newstyle.h>
 #include <devices/sana2.h>
 #include "Sana2Commands.h"
+#include "Wireless_ReceiveQueue.h"
 #include <devices/usb2wireless.h>
 #include <exec/emulation.h>
 #include <dos/dostags.h>
@@ -96,7 +97,7 @@ struct EthernetUnit
 	U8								unit_StationAddressValid;
 	U8								unit_CrystalCap;
 	U8								unit_RadioReady;
-	U8								unit_RxActive;
+	U32								unit_RxActive;
 	U8								unit_FirmwareRunning;
 	U8								unit_Detached;
 };

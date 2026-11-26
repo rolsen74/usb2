@@ -16,25 +16,12 @@
 
 // --
 
-static void
-SubmitRX( struct USB2_EPResource *rx, struct USB2_IORequest *ioreq )
-{
-	ioreq->io_Command = CMD_READ;
-	ioreq->io_Data = rx->Buffers[0];
-	ioreq->io_Length = rx->BufferSize;
-	ioreq->io_TimeOut = 0;
-
-	SendIO( (PTR) ioreq );
-}
-
-// --
-
 static S32
 CompleteRX( struct EthernetUnit *unit, struct USB2_EPResource *rx, struct USB2_IORequest *ioreq )
 {
 	S32 error;
 
-	error = WaitIO( (PTR) ioreq );
+	error = ioreq->io_Error;
 
 	if ( ( ! error ) && ( ioreq->io_Actual > ioreq->io_Length ) )
 	{
@@ -46,11 +33,16 @@ CompleteRX( struct EthernetUnit *unit, struct USB2_EPResource *rx, struct USB2_I
 		return ( TRUE );
 	}
 
-	if ( ( error == USB2Err_Host_Stall ) && ( unit->unit_USB2->USB2_EPRes_Destall( rx ) ) )
+	if ( error == USB2Err_Host_Stall )
 	{
-		DebugPrintF( "RTL8811AU: bulk receive stall cleared\n" );
+		Wireless_StopRX( rx, &unit->unit_RxPending );
 
-		return ( TRUE );
+		if ( unit->unit_USB2->USB2_EPRes_Destall( rx ) )
+		{
+			DebugPrintF( "RTL8811AU: bulk receive stall cleared\n" );
+
+			return ( TRUE );
+		}
 	}
 
 	ObtainSemaphore( & unit->unit_CommandLock );
@@ -82,10 +74,9 @@ CompleteRX( struct EthernetUnit *unit, struct USB2_EPResource *rx, struct USB2_I
 
 static void
 ProcessCommands( struct EthernetUnit *unit, const struct RTL8811AU_Board *board,
-	struct USB2_EPResource *rx, struct USB2_IORequest **active )
+	struct USB2_EPResource *rx )
 {
 	struct IOSana2Req *ioreq;
-	struct USB2_IORequest *usbio;
 
 	S32 start;
 
@@ -110,15 +101,11 @@ ProcessCommands( struct EthernetUnit *unit, const struct RTL8811AU_Board *board,
 			case S2_SETOPTIONS:
 				Remove( (PTR) ioreq );
 
-				Cmd_SetOptions( unit, board, ioreq, rx, active );
+				Cmd_SetOptions( unit, board, ioreq, rx );
 
-				if ( ( rx ) && ( ! *active ) && ( unit->unit_RadioReady ) )
+				if ( ( rx ) && ( unit->unit_RadioReady ) )
 				{
-					usbio = rx->IORequests[0];
-
-					SubmitRX( rx, usbio );
-
-					*active = usbio;
+					Wireless_SubmitRX( rx, &unit->unit_RxPending );
 				}
 
 				goto reply;
@@ -177,21 +164,18 @@ Process_Main( struct EthernetUnit *unit, struct USB2_Register *reg,
 
 	S32 detached;
 
-	ioreq = NULL;
 	detached = FALSE;
 	usb2 = unit->unit_USB2;
 
 	if ( rx )
 	{
-		ioreq = rx->IORequests[0];
-
 		ObtainSemaphore( & unit->unit_CommandLock );
 
 		unit->unit_RadioReady = TRUE;
 
 		ReleaseSemaphore( & unit->unit_CommandLock );
 
-		SubmitRX( rx, ioreq );
+		Wireless_SubmitRX( rx, &unit->unit_RxPending );
 
 		DebugPrintF( "RTL8811AU: listening for beacons on channel 1\n" );
 	}
@@ -214,27 +198,30 @@ Process_Main( struct EthernetUnit *unit, struct USB2_Register *reg,
 			break;
 		}
 
-		if ( ( ioreq ) && ( CheckIO( (PTR) ioreq ) ) )
+		if ( rx )
 		{
-			if ( CompleteRX( unit, rx, ioreq ) )
+			while( ( ioreq = Wireless_TakeRX( rx, &unit->unit_RxPending ) ) )
 			{
-				SubmitRX( rx, ioreq );
+				if ( ! CompleteRX( unit, rx, ioreq ) )
+				{
+					Wireless_StopRX( rx, &unit->unit_RxPending );
+
+					break;
+				}
 			}
-			else
+
+			if ( unit->unit_RadioReady )
 			{
-				ioreq = NULL;
+				Wireless_SubmitRX( rx, &unit->unit_RxPending );
 			}
 		}
 
-		ProcessCommands( unit, board, rx, & ioreq );
+		ProcessCommands( unit, board, rx );
 
 		Delay( 1 );
 	}
 
-	if ( ioreq )
-	{
-		RTL8811AU_StopRX( ioreq );
-	}
+	Wireless_StopRX( rx, &unit->unit_RxPending );
 
 	return ( detached );
 }

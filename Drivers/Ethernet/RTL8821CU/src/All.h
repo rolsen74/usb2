@@ -20,6 +20,7 @@
 #include <devices/newstyle.h>
 #include <devices/sana2.h>
 #include "Sana2Commands.h"
+#include "Wireless_ReceiveQueue.h"
 #include <devices/usb2wireless.h>
 
 // --
@@ -116,7 +117,7 @@ struct EthernetUnit
 	U8 unit_CCKPower[4];
 	U8 unit_FirmwareRunning;
 	U8 unit_Online;
-	U8 unit_RxPending;
+	U32 unit_RxPending;
 	U8 unit_RxStalled;
 	U8 unit_TxStalled;
 	U8 unit_AddressValid;

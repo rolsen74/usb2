@@ -9,6 +9,7 @@
 #include <devices/newstyle.h>
 #include <devices/sana2.h>
 #include "Sana2Commands.h"
+#include "Wireless_ReceiveQueue.h"
 #include <dos/dostags.h>
 #include <stddef.h>
 #include <string.h>
@@ -48,7 +49,7 @@ struct EthernetUnit
 	struct USB2_EPResource *unit_Bulk_Rx_Resource;
 	struct USB2_EPResource *unit_Bulk_Tx_Resource;
 	U32 unit_RxCheckReads;
-	S32 unit_RxActive;
+	U32 unit_RxActive;
 	S32 unit_RxReady;
 	S32 unit_ManualScan;
 	struct SignalSemaphore unit_CommandLock;
