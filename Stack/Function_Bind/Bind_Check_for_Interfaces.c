@@ -158,15 +158,13 @@ _Check_Interface ( struct USBBase * usbbase, struct RealFunctionNode * fn, struc
 			if ( ( wanted == DriverMatch_ID ) && ( fdn->fdn_Driver_Filename ) )
 			{
 				usbbase->usb_IExec->DebugPrintF (
-					"USB2 bind: '%s' ID match, interface %lu %02lX/%02lX/%02lX, filter %lX/%lX/%lX\n", fdn->fdn_Driver_Filename,
+					"USB Bind: '%s' ID match, interface %lu %02lX/%02lX/%02lX, filter %lX/%lX/%lX\n", fdn->fdn_Driver_Filename,
 					(U32)ifcdsc->InterfaceNumber, (U32)ifcdsc->InterfaceClass, (U32)ifcdsc->InterfaceSubClass,
 					(U32)ifcdsc->InterfaceProtocol, (U32)fdn->fdn_Class, (U32)fdn->fdn_SubClass, (U32)fdn->fdn_Protocol );
 			}
 #endif
 
-			if ( ( ( fdn->fdn_Class != ifcdsc->InterfaceClass ) && ( fdn->fdn_Class != FDCLASS_Any ) )
-				 || ( ( fdn->fdn_SubClass != ifcdsc->InterfaceSubClass ) && ( fdn->fdn_SubClass != FDSUBCLASS_Any ) )
-				 || ( ( fdn->fdn_Protocol != ifcdsc->InterfaceProtocol ) && ( fdn->fdn_Protocol != FDPROTOCOL_Any ) ) )
+			if ( ! Match_Driver_Class ( fdn, ifcdsc->InterfaceClass, ifcdsc->InterfaceSubClass, ifcdsc->InterfaceProtocol ) )
 			{
 				continue;
 			}
@@ -176,12 +174,12 @@ _Check_Interface ( struct USBBase * usbbase, struct RealFunctionNode * fn, struc
 #ifdef USB2_BIND_DEBUG
 			if ( fdn->fdn_Driver_Filename )
 			{
-				usbbase->usb_IExec->DebugPrintF ( "USB2 bind: '%s' interface %lu start result $%08lX\n",
-												  fdn->fdn_Driver_Filename, (U32)ifcdsc->InterfaceNumber, (U32)stat );
+				usbbase->usb_IExec->DebugPrintF ( "USB Bind: '%s' interface %lu start result $%08lX\n", fdn->fdn_Driver_Filename,
+												  (U32)ifcdsc->InterfaceNumber, (U32)stat );
 			}
 			else if ( ( fdn->fdn_Entry ) && ( fdn->fdn_Title ) )
 			{
-				usbbase->usb_IExec->DebugPrintF ( "USB2 bind: '%s' %04lX:%04lX interface %lu start result $%08lX\n",
+				usbbase->usb_IExec->DebugPrintF ( "USB Bind: '%s' %04lX:%04lX interface %lu start result $%08lX\n",
 												  fdn->fdn_Title, (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID ),
 												  (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID ),
 												  (U32)ifcdsc->InterfaceNumber, (U32)stat );

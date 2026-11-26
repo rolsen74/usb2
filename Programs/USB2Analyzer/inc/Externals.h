@@ -43,6 +43,7 @@ extern U32 Prefs_WindowBits;
 // --
 // USB.c
 extern U32				USBNotifyBit;
+extern U32				WindowTimerMask;
 
 // --
 // USB2Analyzer.c

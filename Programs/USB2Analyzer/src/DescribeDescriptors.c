@@ -204,7 +204,7 @@ BCD ( struct DescriptorOutput * out, const char * label, U32 value )
 		return;
 	}
 
-	snprintf ( version, sizeof ( version ), "%X.%02X", (unsigned)( value >> 8 ), (unsigned)( value & 0xff ) );
+	snprintf ( version, sizeof ( version ), "v%X.%02X", (unsigned)( value >> 8 ), (unsigned)( value & 0xff ) );
 
 	Field ( out, label, 2, value, version );
 }

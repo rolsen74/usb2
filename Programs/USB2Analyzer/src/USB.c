@@ -21,16 +21,17 @@ static struct MsgPort *		USBNotifyMsgPort		= NULL;
 static PTR					USBHCDNotify			= NULL;
 static PTR					USBFktNotify			= NULL;
 static PTR					USBIfcNotify			= NULL;
+static PTR					USBIONotify				= NULL;
 U32							USBNotifyBit			= 0;
 // --
 
-static S32 Handle_Notify_HCD( struct USB2_NotifyMessage *msg );
-static S32 Handle_Notify_Function( struct USB2_NotifyMessage *msg );
-static S32 Handle_Notify_Interface( struct USB2_NotifyMessage *msg );
+static S32 Handle_Notify_HCD( struct USB2_NotifyMessage *msg, struct List *removed );
+static S32 Handle_Notify_Function( struct USB2_NotifyMessage *msg, struct List *removed );
+static S32 Handle_Notify_Interface( struct USB2_NotifyMessage *msg, struct List *removed );
 
 // --
 
-S32 USB_Setup( void )
+S32 USB_Setup( S32 capture )
 {
 S32 retval;
 
@@ -111,6 +112,12 @@ S32 retval;
 		goto bailout;
 	}
 
+	if ( ( capture ) && ( ( USB2Base->dd_Library.lib_Version > 1 ) ||
+		( USB2Base->dd_Library.lib_Revision >= 123 ) ) )
+	{
+		USBIONotify = USB2_Notify_Add( USBNT_IORequest, USBNotifyMsgPort );
+	}
+
 	retval = TRUE;
 
 bailout:
@@ -120,9 +127,59 @@ bailout:
 
 // --
 
+S32
+USB_Has_Capture( void )
+{
+	return ( USBIONotify != NULL );
+}
+
+// --
+
+S32
+USB_Has_Active_IO( void )
+{
+	return ( ( USB2Base->dd_Library.lib_Version > 1 ) || ( USB2Base->dd_Library.lib_Revision >= 124 ) );
+}
+
+// --
+
+void
+USB_Get_Stack_Version( U16 *version, U16 *revision )
+{
+	*version = USB2Base->dd_Library.lib_Version;
+	*revision = USB2Base->dd_Library.lib_Revision;
+}
+
+// --
+
+S32
+USB_Set_Capture_Filter( const struct USB2_IOCaptureTarget *targets, U32 count )
+{
+	struct USB2_IOCaptureFilter filter;
+
+	if ( ! USBIONotify )
+	{
+		return ( FALSE );
+	}
+
+	filter.Subscription = USBIONotify;
+	filter.Count = count;
+	filter.Targets = targets;
+
+	return ( USB2_Attr_Set( 0, USB2Tag_Attr_IOCaptureFilter, &filter, sizeof( filter ) ) == sizeof( filter ) );
+}
+
+// --
+
 void USB_Cleanup( void )
 {
 PTR msg;
+
+	if ( USBIONotify )
+	{
+		USB2_Notify_Remove( USBIONotify );
+		USBIONotify = NULL;
+	}
 
 	if ( USBIfcNotify )
 	{
@@ -183,9 +240,17 @@ PTR msg;
 void Handle_Notify( void )
 {
 struct USB2_NotifyMessage *msg;
+struct USB2_FktNode *node;
+struct List removed;
+struct List capture;
+
 S32 rebuild;
 
 	rebuild = FALSE;
+
+	NewList( &removed );
+
+	NewList( &capture );
 
 	while(( msg = (PTR) GetMsg( USBNotifyMsgPort )))
 	{
@@ -193,20 +258,27 @@ S32 rebuild;
 		{
 			case USBNT_HCD:
 			{
-				rebuild |= Handle_Notify_HCD( msg );
+				rebuild |= Handle_Notify_HCD( msg, &removed );
 				break;
 			}
 
 			case USBNT_Function:
 			{
-				rebuild |= Handle_Notify_Function( msg );
+				rebuild |= Handle_Notify_Function( msg, &removed );
 				break;
 			}
 
 			case USBNT_Interface:
 			{
-				rebuild |= Handle_Notify_Interface( msg );
+				rebuild |= Handle_Notify_Interface( msg, &removed );
 				break;
+			}
+
+			case USBNT_IORequest:
+			{
+				AddTail( &capture, &msg->nm_Message.mn_Node );
+
+				continue;
 			}
 
 			default:
@@ -222,6 +294,23 @@ S32 rebuild;
 	if ( ( rebuild ) && ( Main_WinObject ) )
 	{
 		Build_Device_Tree();
+	}
+
+	// The old list browser rows borrow these nodes until the tree is rebuilt.
+	while( ( node = (PTR) RemHead( &removed ) ) )
+	{
+		FktNode_Delete( node );
+	}
+
+	// Keep the capture messages outstanding until this batch is displayed.
+	if ( ! IsListEmpty( &capture ) )
+	{
+		Show_IO_Capture( &capture );
+
+		while( ( msg = (PTR) RemHead( &capture ) ) )
+		{
+			ReplyMsg( &msg->nm_Message );
+		}
 	}
 }
 
@@ -240,7 +329,7 @@ static STR HCDNames[HCDTYPE_Last] =
 	[HCDTYPE_SAM460]	= "OHCI",	// SAM460 Onboard OHCI controller
 };
 
-static S32 Handle_Notify_HCD( struct USB2_NotifyMessage *msg )
+static S32 Handle_Notify_HCD( struct USB2_NotifyMessage *msg, struct List *removed )
 {
 struct USB2_FktNode *node;
 STR name;
@@ -278,6 +367,7 @@ S32 rebuild;
 			}
 
 			node->Name = name;
+			node->HCDType = msg->nm_Data.nm_HCD.nm_Type;
 
 			// --
 
@@ -308,7 +398,7 @@ S32 rebuild;
 			{
 				Remove( (PTR) node );
 
-				FktNode_Delete( node );
+				AddTail( removed, &node->Node );
 
 				rebuild = TRUE;
 			}
@@ -371,7 +461,7 @@ Read_Device_String( USB2_ID id, U32 tag, STR text, U32 size )
 
 // --
 
-static S32 Handle_Notify_Function( struct USB2_NotifyMessage *msg )
+static S32 Handle_Notify_Function( struct USB2_NotifyMessage *msg, struct List *removed )
 {
 struct USB2_HUB_Desc HUBDsc;
 struct USB2_FktNode *parent;
@@ -410,6 +500,7 @@ S32 rebuild;
 			}
 
 			node->Port	= msg->nm_Data.nm_Function.nm_PortNr;
+			node->HCD_ID = msg->nm_Data.nm_Function.nm_HCD_ID;
 
 			// --
 
@@ -587,7 +678,7 @@ S32 rebuild;
 
 			Remove( (PTR) node );
 
-			FktNode_Delete( node );
+			AddTail( removed, &node->Node );
 
 			rebuild = TRUE;
 			break;
@@ -604,7 +695,7 @@ S32 rebuild;
 
 // --
 
-static S32
+static void
 Select_Interface_Descriptor( struct USB2_FktNode *node, struct USB2_FktNode *parent,
 	const struct USB2_NotifyMessage *msg )
 {
@@ -618,6 +709,12 @@ Select_Interface_Descriptor( struct USB2_FktNode *node, struct USB2_FktNode *par
 	dsc = (PTR) parent->CfgDesc;
 	length = parent->CfgSize;
 	number = ~0U;
+	node->IfcDesc = NULL;
+	node->IfcSize = 0;
+	node->Config = msg->nm_Data.nm_Interface.nm_Config_Nr;
+	node->InterfaceNumber = msg->nm_Data.nm_Interface.nm_Interface_Nr;
+	node->Speed = parent->Speed;
+	node->FunctionID = parent->ID;
 
 	while ( ( dsc ) && ( length >= 2 ) )
 	{
@@ -634,33 +731,29 @@ Select_Interface_Descriptor( struct USB2_FktNode *node, struct USB2_FktNode *par
 		}
 		else if ( ( dsc->DescriptorType == DSCTYPE_Interface ) &&
 			( dsc->Length >= sizeof( *interface ) ) &&
-			( number == msg->nm_Data.nm_Interface.nm_Config_Nr ) )
+			( number == node->Config ) )
 		{
 			interface = (PTR) dsc;
 
-			if ( ( interface->InterfaceNumber == msg->nm_Data.nm_Interface.nm_Interface_Nr ) &&
+			if ( ( interface->InterfaceNumber == node->InterfaceNumber ) &&
 				( interface->AlternateSetting == msg->nm_Data.nm_Interface.nm_Interface_AltNr ) )
 			{
 				node->IfcDesc = interface;
 				node->IfcSize = length;
-				node->Config = number;
-				node->Speed = parent->Speed;
 
-				return ( TRUE );
+				return;
 			}
 		}
 
 		length -= dsc->Length;
 		dsc = (PTR) ( (U8 *) dsc + dsc->Length );
 	}
-
-	return ( FALSE );
 }
 
 // --
 
 static S32
-Handle_Notify_Interface( struct USB2_NotifyMessage *msg )
+Handle_Notify_Interface( struct USB2_NotifyMessage *msg, struct List *removed )
 {
 	struct USB2_FktNode *parent;
 	struct USB2_FktNode *node;
@@ -676,7 +769,7 @@ Handle_Notify_Interface( struct USB2_NotifyMessage *msg )
 
 		Remove( (PTR) node );
 
-		FktNode_Delete( node );
+		AddTail( removed, &node->Node );
 
 		return ( TRUE );
 	}
@@ -695,7 +788,9 @@ Handle_Notify_Interface( struct USB2_NotifyMessage *msg )
 
 	if ( node )
 	{
-		return ( Select_Interface_Descriptor( node, parent, msg ) );
+		Select_Interface_Descriptor( node, parent, msg );
+
+		return ( TRUE );
 	}
 
 	node = FktNode_Alloc( TYPE_INTERFACE, msg->nm_ID );
@@ -705,12 +800,7 @@ Handle_Notify_Interface( struct USB2_NotifyMessage *msg )
 		return ( FALSE );
 	}
 
-	if ( ! Select_Interface_Descriptor( node, parent, msg ) )
-	{
-		FktNode_Delete( node );
-
-		return ( FALSE );
-	}
+	Select_Interface_Descriptor( node, parent, msg );
 
 	AddTail( & parent->Header, (PTR) node );
 

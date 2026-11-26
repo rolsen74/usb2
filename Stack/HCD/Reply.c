@@ -56,6 +56,11 @@ __HCD_Reply ( struct USBBase * usbbase UNUSED, struct RealRequest * ioreq )
 		ioreq->req_PublicStat	  = IORS_User;
 		ioreq->req_AbortRequested = FALSE;
 
+		if ( usbbase->usb_Notify_IOWatchers )
+		{
+			USB2_Notify_IORequest ( usbbase, ioreq );
+		}
+
 		IOREQUEST_UNLOCK ( ioreq );
 
 		usbbase->usb_IExec->ReplyMsg ( (PTR)&ioreq->req_Public );

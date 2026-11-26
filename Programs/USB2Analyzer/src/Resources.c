@@ -17,6 +17,7 @@
 struct Library *				AslBase				= NULL;
 struct Library *				ButtonBase			= NULL;
 struct Library *				ChooserBase			= NULL;
+struct Library *				ClickTabBase		= NULL;
 // struct Library *				CyberGfxBase		= NULL;
 // struct Library *				DOSBase				= NULL;
 struct Library *				GfxBase				= NULL;
@@ -34,6 +35,7 @@ struct Library *				WindowBase			= NULL;
 
 Class *							ButtonClass			= NULL;
 Class *						ChooserClass		= NULL;
+Class *						ClickTabClass		= NULL;
 Class *						LabelClass			= NULL;
 Class *							LayoutClass			= NULL;
 Class *							ListBrowserClass	= NULL;
@@ -105,7 +107,7 @@ static struct OpenStruct OpenList[] =
 	{ OT_Library,		"asl.library",					50,		& AslBase,			NULL },
 	// { OT_Library,		"cybergraphics.library",	42,		& CyberGfxBase,		NULL },
 	// { OT_Library,		"dos.library",				50,		& DOSBase,			NULL },
-	// { OT_Library,		"graphics.library",			50,		& GfxBase,			NULL },
+	{ OT_Library,		"graphics.library",				50,		& GfxBase,			NULL },
 	{ OT_Library,		"intuition.library",			54,		& IntuitionBase,	NULL },
 	// { OT_Library,		"Picasso96API.library",		50,		& P96Base,			NULL },
 	// { OT_Library,		"utility.library",			50,		& UtilityBase,		NULL },
@@ -116,7 +118,7 @@ static struct OpenStruct OpenList[] =
 	{ OT_Interface,		"main",							1,		& AslBase,			& IAsl },
 	// { OT_Interface,		"main",						1,		& CyberGfxBase,		& ICyberGfx },
 	// { OT_Interface,		"main",						1,		& DOSBase,			& IDOS },
-	// { OT_Interface,		"main",						1,		& GfxBase,			& IGraphics },
+	{ OT_Interface,		"main",							1,		& GfxBase,			& IGraphics },
 	{ OT_Interface,		"main",							1,		& IntuitionBase,	& IIntuition },
 	// { OT_Interface,		"main",						1,		& P96Base,			& IP96 },
 	// { OT_Interface,		"main",						1,		& UtilityBase,		& IUtility },
@@ -124,6 +126,7 @@ static struct OpenStruct OpenList[] =
 	// -- Note: Intuition must be opened before OT classes
 	{ OT_Class,			"gadgets/button.gadget",		50,		& ButtonBase,		& ButtonClass },
 	{ OT_Class,			"gadgets/chooser.gadget",	50,		& ChooserBase,		& ChooserClass },
+	{ OT_Class,			"gadgets/clicktab.gadget",	50,		& ClickTabBase,		& ClickTabClass },
 	{ OT_Class,			"gadgets/layout.gadget",		50,		& LayoutBase,		& LayoutClass },
 	{ OT_Class,			"gadgets/listbrowser.gadget",	50,		& ListBrowserBase,	& ListBrowserClass },
 	// { OT_Class,			"gadgets/slider.gadget",	50,		& SliderBase,		& SliderClass },

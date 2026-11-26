@@ -132,6 +132,11 @@ struct RealRequest
 	} req_HCD;
 };
 
+const struct USB2_InterfaceHeader *USB2_IORequest_Interface( const struct RealRequest *ioreq );
+void USB2_IORequest_Describe( const struct RealRequest *ioreq, const struct USB2_InterfaceHeader *interface,
+	struct USB2_IORequestInfo *info );
+U32 USB2_IORequest_Snapshot( struct USBBase *usbbase, struct USB2_ActiveIORequest *buffer, U32 bytes );
+
 /***************************************************************************/
 
 #endif // INC_PRIVATE_REQUEST_H

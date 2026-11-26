@@ -36,7 +36,7 @@ __myTask_Def_Free ( struct USBBase * usbbase, struct intern * in )
 
 		while ( ( msg = MSGPORT_GETMSG ( &in->Notify_ReplyMsgPort ) ) )
 		{
-			MEMORY_FREE ( MEMID_NotifyMessage, msg, 0 );
+			USB2_Notify_Free ( usbbase, (PTR)msg );
 		}
 
 		MSGPORT_FREE ( &in->Notify_ReplyMsgPort );

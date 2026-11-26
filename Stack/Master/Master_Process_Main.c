@@ -122,7 +122,7 @@ __myProcess_Main ( struct USBBase * usbbase, struct intern * in )
 					break;
 				}
 
-				MEMORY_FREE ( MEMID_NotifyMessage, msg, 0 );
+				USB2_Notify_Free ( usbbase, msg );
 			}
 		}
 		if ( ( mask & SIGBREAKF_CTRL_E ) && ( ! in->Stopping ) && ( ! in->LauncherStarted ) )

@@ -25,13 +25,24 @@ enum
 	TYPE_LAST
 };
 
+enum CaptureSelection
+{
+	CAPTURE_INHERIT,
+	CAPTURE_ON,
+	CAPTURE_OFF
+};
+
 // --
 
 struct USB2_FktNode
 {
 	struct Node						Node;
 	USB2_ID							ID;
+	USB2_ID							HCD_ID;
+	USB2_ID							FunctionID; // Parent of an interface
+	enum CaptureSelection			Capture;
 	U32								Type;
+	U32								HCDType;
 	STR								Name;
 	U32								Port;		// Port Nr 1-xx
 	U32								Ports;		// Valid for HUB Class
@@ -50,6 +61,7 @@ struct USB2_FktNode
 
 	struct USB2_Interface_Desc *	IfcDesc;
 	S32								IfcSize;
+	U32								InterfaceNumber;
 
 	struct USB2_Device_Desc			DevDsc;
 };

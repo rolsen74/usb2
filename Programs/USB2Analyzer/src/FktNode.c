@@ -12,6 +12,33 @@
 
 // --
 
+void
+FktNode_Format_Interface( const struct USB2_FktNode *node, STR label, U32 size )
+{
+	const struct USB2_Interface_Desc *descriptor;
+
+	const char *name;
+
+	descriptor = node->IfcDesc;
+	name = NULL;
+
+	if ( descriptor )
+	{
+		name = GetClassName( descriptor->InterfaceClass, descriptor->InterfaceSubClass, descriptor->InterfaceProtocol );
+	}
+
+	if ( name )
+	{
+		snprintf( label, size, "Interface %u - %s", (unsigned) node->InterfaceNumber, name );
+	}
+	else
+	{
+		snprintf( label, size, "Interface %u", (unsigned) node->InterfaceNumber );
+	}
+}
+
+// --
+
 struct USB2_FktNode *FktNode_Alloc( U32 type, USB2_ID id )
 {
 struct USB2_FktNode *n;

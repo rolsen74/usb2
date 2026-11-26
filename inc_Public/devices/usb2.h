@@ -526,6 +526,38 @@ enum USB2_DriverStat
 
 /***************************************************************************/
 
+enum USB2_IORequestState
+{
+	USB2IO_Completed,
+	USB2IO_Pending,
+	USB2IO_Queued,
+	USB2IO_Processing,
+	USB2IO_Active
+};
+
+struct USB2_IORequestInfo
+{
+	U32 nm_Sequence;
+	U32 nm_HCD_Index;
+	U32 nm_Length;
+	U32 nm_Actual;
+	U16 nm_VendorID;
+	U16 nm_ProductID;
+	U16 nm_IOCommand;
+	S8	nm_Error;
+	U8	nm_Address;
+	U8	nm_EndPoint;
+	U8	nm_EndPointType;
+	U16 nm_Interface; // 0xffff for device-level requests
+	U16 nm_State;	  // enum USB2_IORequestState
+};
+
+struct USB2_ActiveIORequest
+{
+	USB2_ID					  FunctionID;
+	struct USB2_IORequestInfo Info;
+};
+
 struct USB2_NotifyMessage
 {
 	struct Message nm_Message;
@@ -562,6 +594,8 @@ struct USB2_NotifyMessage
 		{
 			PTR nm_Data;
 		} nm_Promote;
+
+		struct USB2_IORequestInfo nm_IORequest;
 	} nm_Data;
 };
 
@@ -571,6 +605,7 @@ enum USBNotifyTypes
 	USBNT_HCD,
 	USBNT_Function,
 	USBNT_Interface,
+	USBNT_IORequest,
 	USBNT_Last
 };
 
@@ -582,6 +617,7 @@ enum USBNotifyCommand
 	USBNC_FullBooted,
 	USBNC_Detached,
 	USBNC_Promote,
+	USBNC_Completed,
 	USBNC_Last
 };
 
@@ -814,97 +850,63 @@ enum USB2HCDType
 #define USB2Tag_Attr_SerialStr				 ( USB2Tag_Dummy + 261 ) // [G.] Raw USB string descriptor
 #define USB2Tag_Attr_HCDType				 ( USB2Tag_Dummy + 262 ) // [G.] U32, enum USB2HCDType
 #define USB2Tag_Attr_PortPath				 ( USB2Tag_Dummy + 263 ) // [G.] struct USB2_PortPath
+// Function ID. Returns required bytes including NUL, or 0 if unavailable.
+// A sufficiently large buffer receives comma-separated driver names.
+#define USB2Tag_Attr_DriverMatches			 ( USB2Tag_Dummy + 264 ) // [G.] char[]
+// Same buffer contract as DriverMatches. Function IDs report device-wide
+// titles, interface IDs report titles for that interface's active setting.
+#define USB2Tag_Attr_DriverTitles			 ( USB2Tag_Dummy + 265 ) // [G.] char[]
+// Function ID. Same buffer contract, with titles for all matching driver types.
+#define USB2Tag_Attr_DriverTitleSummary		 ( USB2Tag_Dummy + 266 ) // [G.] char[]
+
+// For a USBNT_IORequest subscription. Interface rules override function rules,
+// and function rules override HCD rules.
+// With no matching rule, capture is disabled. The stack copies the target list.
+#define USB2Tag_Attr_IOCaptureFilter		 ( USB2Tag_Dummy + 267 ) // [S.] struct USB2_IOCaptureFilter
+// Stack-wide snapshot (ID 0). Returns required bytes and copies only whole records.
+#define USB2Tag_Attr_ActiveIORequests		 ( USB2Tag_Dummy + 268 ) // [G.] struct USB2_ActiveIORequest[]
+#define USB2Tag_Attr_StackInfo				 ( USB2Tag_Dummy + 269 ) // [G.] struct USB2_StackInfo (ID 0)
+
+enum USB2_StackState
+{
+	USB2_STACK_STARTING,
+	USB2_STACK_READY,
+	USB2_STACK_FAILED
+};
+
+struct USB2_StackInfo
+{
+	U32 State; // enum USB2_StackState
+	U32 UptimeSeconds;
+};
+
+struct USB2_IOCaptureTarget
+{
+	USB2_ID ID;
+	U32		Enabled;
+};
+
+struct USB2_IOCaptureFilter
+{
+	PTR									Subscription;
+	U32									Count;
+	const struct USB2_IOCaptureTarget * Targets;
+};
 
 #define USB2_PORT_PATH_DEPTH 7
 
 struct USB2_PortPath
 {
 	U32 Controller;
-	U8 IsPCI;
-	U8 Depth;
-	U8 Ports[USB2_PORT_PATH_DEPTH]; // Root port first.
+	U8	IsPCI;
+	U8	Depth;
+	U8	Ports[USB2_PORT_PATH_DEPTH]; // Root port first.
 };
-
 
 // -- + --
 // --
 
-#if 0
-#define USB2Tag_HCD_Index				 ( USB2Tag_Dummy + 3 ) // v1.1  - U32
-
-#define USB2Tag_FKT_DeviceDescriptor	 ( USB2Tag_Dummy + 4 ) // v1.1  - struct USB2_Device_Desc
-
-#define USB2Tag_FKT_HUBDescriptor		 ( USB2Tag_Dummy + 5 ) // v1.1  - struct USB2_HUB_Desc
-
-#define USB2Tag_FKT_ConfigDescriptor	 ( USB2Tag_Dummy + 6 ) // v1.1  - struct USB2_Config_Desc + [Data]
-
-#define USB2Tag_FKT_ConfigDescriptorSize ( USB2Tag_Dummy + 7 ) // v1.1  - U32 *
-#endif
-
-#if 0
-#define USB2Tag_ShortPackets	( USB2Tag_Dummy + 17 ) // v1.1  - U32
-
-#define USB2Tag_SetupBufferSize ( USB2Tag_Dummy + 18 ) // v1.1  - U32
-#endif
-
-#if 0
-#define USB2Tag_Stat_Buffer_Name		 ( USB2Tag_Dummy + 21 ) // v1.1  - STR *
-
-#define USB2Tag_Stat_Buffer_Total		 ( USB2Tag_Dummy + 22 ) // v1.1  - U32 *
-
-#define USB2Tag_Stat_Buffer_Used		 ( USB2Tag_Dummy + 23 ) // v1.1  - U32 *
-
-#define USB2Tag_Stat_Buffer_Free		 ( USB2Tag_Dummy + 24 ) // v1.1  - U32 *
-
-#define USB2Tag_Stat_Buffer_MaxFree		 ( USB2Tag_Dummy + 25 ) // v1.1  - U32 *
-
-#define USB2Tag_Stat_Buffer_Alignment	 ( USB2Tag_Dummy + 26 ) // v1.1  - U32 *
-
-#define USB2Tag_Stat_Buffer_Size		 ( USB2Tag_Dummy + 27 ) // v1.1  - U32 *
-
-#define USB2Tag_Stat_Transfer_Control	 ( USB2Tag_Dummy + 28 ) // v1.1  - U64 *
-
-#define USB2Tag_Stat_Transfer_Interrupt	 ( USB2Tag_Dummy + 29 ) // v1.1  - U64 *
-
-#define USB2Tag_Stat_Transfer_Bulk		 ( USB2Tag_Dummy + 30 ) // v1.1  - U64 *
-
-#define USB2Tag_Stat_Transfer_Isochonous ( USB2Tag_Dummy + 31 ) // v1.1  - U64 *
-
-#define USB2Tag_Stat_Transfer_Total		 ( USB2Tag_Dummy + 32 ) // v1.1  - U64 *
-
-//#define USB2Tag_Reg_DeviceList		   ( USB2Tag_Dummy + 33 )   // v1.1  - PTR
-
-//#define USB2Tag_Reg_List_Entry_Size	   ( USB2Tag_Dummy + 34 )   // v1.1  - U32
-
-//#define USB2Tag_Reg_List_VendorID_Offset ( USB2Tag_Dummy + 35 )   // v1.1  - U32
-
-//#define USB2Tag_Reg_List_DeviceID_Offset ( USB2Tag_Dummy + 36 )  // v1.1  - U32
-#endif
-
-#if 0
-#define USB2Tag_FDriver_Promote ( USB2Tag_Dummy + 44 ) // v1.1  - PTR
-#endif
-
 #define USB2Tag_FDriver_DeviceList ( USB2Tag_Dummy + 50 ) // struct List * of owned USB2_DeviceNode entries to move
-
-#if 0
-#define USB2Tag_FDriver_Stack	   ( USB2Tag_Dummy + 49 ) // v1.1  - U32
-#define USB2Tag_FDriver_DriverDate ( USB2Tag_Dummy + 51 ) // v1.1  - struct DateStamp *
-
-#define USB2Tag_FDriver_Hotkey	   ( USB2Tag_Dummy + 52 ) // v1.1  - STR
-#endif
-
-#if 0
-#define USB2Tag_FKT_ManufacturerStr ( USB2Tag_Dummy + 54 ) // v1.4  - U16 *
-
-#define USB2Tag_FKT_DeviceStr		( USB2Tag_Dummy + 55 ) // v1.4  - U16 *
-
-#define USB2Tag_FKT_SerialStr		( USB2Tag_Dummy + 56 ) // v1.4  - U16 *
-
-#define USB2Tag_CFG_String			( USB2Tag_Dummy + 57 ) // v1.6  - U16 *
-
-#define USB2Tag_IFC_String			( USB2Tag_Dummy + 58 ) // v1.6  - U16 *
-#endif
 
 struct USB2_DeviceNode
 {

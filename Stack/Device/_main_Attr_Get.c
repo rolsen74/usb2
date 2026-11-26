@@ -17,6 +17,36 @@ static struct RealFunctionNode *Find_Function( struct USBBase *usbbase, USB2_ID 
 // --
 
 SEC_CODE static S32
+StackInfo( struct USBBase *usbbase, struct USB2_StackInfo *info )
+{
+	struct TimeVal elapsed;
+	enum USB2_FullBootState state;
+
+	if ( ! usbbase->usb_ITimer )
+	{
+		return ( FALSE );
+	}
+
+	usbbase->usb_ITimer->GetUpTime( &elapsed );
+
+	usbbase->usb_ITimer->SubTime( &elapsed, &usbbase->usb_StartupTime );
+
+	info->UptimeSeconds = elapsed.Seconds;
+	state = usbbase->usb_FullBootState;
+
+	switch( state )
+	{
+		case USB2_FullBoot_Ready: info->State = USB2_STACK_READY; break;
+		case USB2_FullBoot_Failed: info->State = USB2_STACK_FAILED; break;
+		default: info->State = USB2_STACK_STARTING; break;
+	}
+
+	return ( TRUE );
+}
+
+// --
+
+SEC_CODE static S32
 PortPath( struct RealFunctionNode *fn, struct USB2_PortPath *path )
 {
 	struct USB2_HCDNode *hn;
@@ -74,6 +104,7 @@ SEC_CODE static U32 _main_Attr_Get( struct USB2IFace *Self, USB2_ID id, U32 tag,
 {
 struct RealFunctionNode *fn;
 struct USB2_PortPath path;
+struct USB2_StackInfo stack;
 struct USBBase *usbbase;
 U32 value;
 U32 len;
@@ -87,6 +118,28 @@ PTR mem;
 
 	switch( tag )
 	{
+		case USB2Tag_Attr_StackInfo:
+		{
+			if ( StackInfo( usbbase, &stack ) )
+			{
+				len = sizeof( stack );
+				mem = &stack;
+			}
+			break;
+		}
+
+		case USB2Tag_Attr_ActiveIORequests:
+		{
+			return ( USB2_IORequest_Snapshot( usbbase, buffer, buffersize ) );
+		}
+
+		case USB2Tag_Attr_DriverMatches:
+		case USB2Tag_Attr_DriverTitles:
+		case USB2Tag_Attr_DriverTitleSummary:
+		{
+			return ( USB2_Driver_Matches( usbbase, id, tag, buffer, buffersize ) );
+		}
+
 		case USB2Tag_Attr_DeviceSize:
 		{
 			fn = Find_Function( usbbase, id );

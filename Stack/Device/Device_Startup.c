@@ -222,6 +222,8 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 		goto bailout;
 	}
 
+	usbbase->usb_ITimer->GetUpTime ( &usbbase->usb_StartupTime );
+
 	// --
 
 #ifdef DO_DEBUG

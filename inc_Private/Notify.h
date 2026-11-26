@@ -16,6 +16,7 @@
 /***************************************************************************/
 
 struct USBBase;
+struct RealRequest;
 
 struct USB2_NotifyNode
 {
@@ -25,10 +26,15 @@ struct USB2_NotifyNode
 	U32								nn_StructID;
 	struct MsgPort *				nn_MsgPort;			// Normal Exec Port from User
 	U32								nn_Type;
+	U32								nn_IOFilterCount;
+	struct USB2_IOCaptureTarget *	nn_IOFilter;
 };
 
 void USB2_Notify_Interface( struct USBBase *usbbase, struct USB2_InterfaceHeader *ih );
 void USB2_Notify_Function( struct USBBase *usbbase, struct RealFunctionNode *fn, U32 command );
+void USB2_Notify_IORequest( struct USBBase *usbbase, const struct RealRequest *ioreq );
+void USB2_Notify_Free( struct USBBase *usbbase, struct USB2_NotifyMessage *msg );
+S32 USB2_Notify_SetIOFilter( struct USBBase *usbbase, const struct USB2_IOCaptureFilter *filter );
 
 /***************************************************************************/
 

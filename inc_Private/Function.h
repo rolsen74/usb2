@@ -102,6 +102,7 @@ struct RealFunctionNode
 };
 
 S32 USB2_Function_Publish ( struct USBBase * usbbase, struct RealFunctionNode * fn );
+U32 USB2_Driver_Matches ( struct USBBase * usbbase, USB2_ID id, U32 tag, STR buffer, U32 capacity );
 
 /***************************************************************************/
 

@@ -289,6 +289,11 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 
 				return;
 			}
+
+			if ( usbbase->usb_Notify_IOWatchers )
+			{
+				USB2_Notify_IORequest ( usbbase, ioreq );
+			}
 		}
 	}
 

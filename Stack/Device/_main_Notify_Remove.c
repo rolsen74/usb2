@@ -25,6 +25,8 @@ _main_Notify_Remove ( struct USB2IFace * Self, struct USB2_NotifyNode * node )
 		goto bailout;
 	}
 
+	SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
+
 	SEMAPHORE_OBTAIN ( &usbbase->usb_Notify_Semaphore );
 
 	n = usbbase->usb_Notify_Header.uh_Head;
@@ -43,6 +45,13 @@ _main_Notify_Remove ( struct USB2IFace * Self, struct USB2_NotifyNode * node )
 
 	if ( n )
 	{
+		if ( n->nn_IOFilter )
+		{
+			usbbase->usb_Notify_IOWatchers--;
+
+			MEM_FREEVEC( n->nn_IOFilter );
+		}
+
 		n->nn_StructID = 0;
 
 		NODE_REMNODE ( &usbbase->usb_Notify_Header, n );
@@ -57,6 +66,8 @@ _main_Notify_Remove ( struct USB2IFace * Self, struct USB2_NotifyNode * node )
 #endif
 
 	SEMAPHORE_RELEASE ( &usbbase->usb_Notify_Semaphore );
+
+	SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
 bailout:
 

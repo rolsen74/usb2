@@ -108,7 +108,7 @@ S32 retval;
 		goto bailout;
 	}
 
-	if ( ! USB_Setup() )
+	if ( ! USB_Setup( gui ) )
 	{
 		printf( "USB_Setup() failed\n" );
 		goto bailout;
@@ -248,7 +248,7 @@ U32 mask;
 //			DBInfoWindowBits |
 //			MemWindowBits |
 			Prefs_WindowBits |
-//			TimerMsgPortBit |
+			WindowTimerMask |
 //			USBNotifyMsgPortBit |
 //			USBWatchMsgPortBit |
 			USBNotifyBit |
@@ -280,10 +280,10 @@ U32 mask;
 			Prefs_HandleWindow();
 		}
 
-//		if ( mask & TimerMsgPortBit )
-//		{
-//			Handle_Timer();
-//		}
+		if ( ( Running ) && ( mask & WindowTimerMask ) )
+		{
+			Handle_Window_Timer();
+		}
 
 //		if ( mask & CmdMsgPortBit )
 //		{

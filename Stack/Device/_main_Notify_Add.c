@@ -79,6 +79,9 @@ _main_Notify_Add ( struct USB2IFace * Self, U32 type, struct MsgPort * mp )
 			case USBNT_Interface:
 				okay = Send_Interfaces ( usbbase, &snapshot );
 				break;
+			case USBNT_IORequest:
+				okay = TRUE;
+				break;
 		}
 	}
 

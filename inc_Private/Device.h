@@ -67,10 +67,10 @@ struct USBBase
 	U32 usb_MachineType;
 
 	struct USB2_Semaphore usb_HID_Semaphore;
-	U32 usb_HID_Held[128 + 5];
-	U32 usb_HID_Qualifiers;
-	S16 usb_HID_Prev_Code[2];
-	U16 usb_HID_Prev_Qual[2];
+	U32					  usb_HID_Held[128 + 5];
+	U32					  usb_HID_Qualifiers;
+	S16					  usb_HID_Prev_Code[2];
+	U16					  usb_HID_Prev_Qual[2];
 
 	struct USB2_DeviceUnit usb_OpenUnit;
 	struct USB2_Semaphore  usb_OpenCloseSemaphore;
@@ -81,17 +81,19 @@ struct USBBase
 	struct USB2_Header usb_HCDHeader; // struct USB2_HCDNode's
 	struct USB2_ASync  usb_HCDASync;
 
-	struct MSDBase * usb_MSDDevice;
-	//	struct USB2_Header				usb_MSDHeader;
+	struct MSDBase *	  usb_MSDDevice;
 	struct USB2_Semaphore usb_MSDSemaphore;
-	//	struct USB2_Header				usb_MSDDiskChangeList;
 
 	USB2_ID				  usb_Notify_ID;
 	struct USB2_Header	  usb_Notify_Header;
 	struct USB2_Semaphore usb_Notify_Semaphore;
 	struct USB2_MsgPort * usb_Notify_ReplyMsgPort;
+	U32					  usb_Notify_IOWatchers;
+	U32					  usb_Notify_IOPending;
+	U32					  usb_Notify_IOSequence;
 
 	struct TimerIFace *	 usb_ITimer;
+	struct TimeVal		 usb_StartupTime;
 	struct Library *	 usb_TimerBase;
 	struct TimeRequest * usb_TimeRequest;
 
@@ -133,7 +135,7 @@ struct USBBase
 
 // --
 #if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_INFO ) || defined( DO_DEBUG ) || defined( DO_TASKNAME )
-	struct Task *		  _dbg_Task;
+	struct Task * _dbg_Task;
 #endif
 // --
 #ifdef DO_PANIC
@@ -173,7 +175,7 @@ struct USBBase
 
 // -- Config
 
-#define CONFIG_PARSE( x )				 usbbase->_Config_Parse ( usbbase, x )
+#define CONFIG_PARSE( x )				usbbase->_Config_Parse ( usbbase, x )
 
 // -- USB Driver
 
@@ -183,45 +185,45 @@ struct USBBase
 
 // -- Function
 
-#define FUNCTION_INIT( x, y )			 usbbase->_Function_Init ( usbbase, x, y )
-#define FUNCTION_BIND( x, y )			 usbbase->_Function_Bind ( usbbase, x, y )
-#define FUNCTION_CLAIM( x, y )			 usbbase->_Function_Claim ( usbbase, x, y )
-#define FUNCTION_DECLAIM( x, y )		 usbbase->_Function_Declaim ( usbbase, x, y )
-#define FUNCTION_MARKDETACH( x )		 usbbase->_Function_MarkDetach ( usbbase, x )
+#define FUNCTION_INIT( x, y )			usbbase->_Function_Init ( usbbase, x, y )
+#define FUNCTION_BIND( x, y )			usbbase->_Function_Bind ( usbbase, x, y )
+#define FUNCTION_CLAIM( x, y )			usbbase->_Function_Claim ( usbbase, x, y )
+#define FUNCTION_DECLAIM( x, y )		usbbase->_Function_Declaim ( usbbase, x, y )
+#define FUNCTION_MARKDETACH( x )		usbbase->_Function_MarkDetach ( usbbase, x )
 // #define FUNCTION_FREEDETACH(x)				usbbase->_Function_FreeDetach(usbbase,x)
 
 // -- Function Driver
 
-#define FDRIVER_CREATETAGS( ... )		 usbbase->_FDriver_CreateTags ( usbbase, __VA_ARGS__ )
-#define FDRIVER_CREATELIST( x )			 usbbase->_FDriver_CreateList ( usbbase, x )
-#define FDRIVER_LOAD( x )				 usbbase->_FDriver_Load ( usbbase, x )
+#define FDRIVER_CREATETAGS( ... )		usbbase->_FDriver_CreateTags ( usbbase, __VA_ARGS__ )
+#define FDRIVER_CREATELIST( x )			usbbase->_FDriver_CreateList ( usbbase, x )
+#define FDRIVER_LOAD( x )				usbbase->_FDriver_Load ( usbbase, x )
 
 // -- HCD
 
-#define HCD_CONTROLLERS_FIND()			 usbbase->_HCD_Controllers_Find ( usbbase )
-#define HCD_CONTROLLERS_START()			 usbbase->_HCD_Controllers_Start ( usbbase )
-#define HCD_CONTROLLERS_STOP()			 usbbase->_HCD_Controllers_Stop ( usbbase )
+#define HCD_CONTROLLERS_FIND()			usbbase->_HCD_Controllers_Find ( usbbase )
+#define HCD_CONTROLLERS_START()			usbbase->_HCD_Controllers_Start ( usbbase )
+#define HCD_CONTROLLERS_STOP()			usbbase->_HCD_Controllers_Stop ( usbbase )
 // #define HCD_SIGNAL_DRIVERNODE(x)			usbbase->_HCD_Signal_DriverNode(usbbase,x)
-#define HCD_ADDR_OBTAIN( x, y )			 usbbase->_HCD_Addr_Obtain ( usbbase, x, y )
-#define HCD_ADDR_RELEASE( x )			 usbbase->_HCD_Addr_Release ( usbbase, x )
-#define HCD_ADD_REQUEST( x, y )			 usbbase->_HCD_Add_Request ( usbbase, x, y )
-#define HCD_WAIT_MS( x, y )				 usbbase->_HCD_Wait_ms ( usbbase, x, y )
-#define HCD_RESTART_ENDPOINT( x, y )	 usbbase->_HCD_Restart_EndPoint ( usbbase, x, y )
-#define HCD_TRANSFER_CHECK( x, y, z )	 usbbase->_HCD_Transfer_Check ( usbbase, x, y, z )
-#define HCD_TRANSFER_REMOVE( x, y )		 usbbase->_HCD_Transfer_Remove ( usbbase, x, y )
+#define HCD_ADDR_OBTAIN( x, y )			usbbase->_HCD_Addr_Obtain ( usbbase, x, y )
+#define HCD_ADDR_RELEASE( x )			usbbase->_HCD_Addr_Release ( usbbase, x )
+#define HCD_ADD_REQUEST( x, y )			usbbase->_HCD_Add_Request ( usbbase, x, y )
+#define HCD_WAIT_MS( x, y )				usbbase->_HCD_Wait_ms ( usbbase, x, y )
+#define HCD_RESTART_ENDPOINT( x, y )	usbbase->_HCD_Restart_EndPoint ( usbbase, x, y )
+#define HCD_TRANSFER_CHECK( x, y, z )	usbbase->_HCD_Transfer_Check ( usbbase, x, y, z )
+#define HCD_TRANSFER_REMOVE( x, y )		usbbase->_HCD_Transfer_Remove ( usbbase, x, y )
 
 // -- Interface
 
-#define INTERFACE_CLAIMHEADER( x, y )	 usbbase->_Interface_ClaimHeader ( usbbase, x, y )
-#define INTERFACE_DECLAIMHEADER( x, y )	 usbbase->_Interface_DeclaimHeader ( usbbase, x, y )
+#define INTERFACE_CLAIMHEADER( x, y )	usbbase->_Interface_ClaimHeader ( usbbase, x, y )
+#define INTERFACE_DECLAIMHEADER( x, y ) usbbase->_Interface_DeclaimHeader ( usbbase, x, y )
 
 // -- IORequest
 
-#define IOREQUEST_ALLOCTAGS( ... )		 usbbase->_IORequest_AllocTags ( usbbase, __VA_ARGS__ )
+#define IOREQUEST_ALLOCTAGS( ... )		usbbase->_IORequest_AllocTags ( usbbase, __VA_ARGS__ )
 
 // -- Master
 
-S32 USB2_Master_QueueCommand( struct USBBase *usbbase, struct CmdHeader *command );
+S32 USB2_Master_QueueCommand ( struct USBBase * usbbase, struct CmdHeader * command );
 
 #define MASTER_STARTUP()				 usbbase->_Master_Startup ( usbbase )
 #define MASTER_SHUTDOWN()				 usbbase->_Master_Shutdown ( usbbase )

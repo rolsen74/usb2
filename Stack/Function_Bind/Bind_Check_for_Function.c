@@ -153,9 +153,7 @@ _Check_for_Functions ( struct USBBase * usbbase, struct RealFunctionNode * fn, s
 			continue;
 		}
 
-		if ( ( ( fdn->fdn_Class != fn->fkt_Class ) && ( fdn->fdn_Class != FDCLASS_Any ) )
-			 || ( ( fdn->fdn_SubClass != fn->fkt_SubClass ) && ( fdn->fdn_SubClass != FDSUBCLASS_Any ) )
-			 || ( ( fdn->fdn_Protocol != fn->fkt_Protocol ) && ( fdn->fdn_Protocol != FDPROTOCOL_Any ) ) )
+		if ( ! Match_Driver_Class ( fdn, fn->fkt_Class, fn->fkt_SubClass, fn->fkt_Protocol ) )
 		{
 			USBDEBUG ( "FKT : class %ld/%ld/%ld does not match %ld/%ld/%ld",
 					   fn->fkt_Class, fn->fkt_SubClass, fn->fkt_Protocol, fdn->fdn_Class, fdn->fdn_SubClass, fdn->fdn_Protocol );

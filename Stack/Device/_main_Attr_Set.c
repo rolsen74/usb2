@@ -12,9 +12,22 @@
 
 // --
 
-SEC_CODE static U32 _main_Attr_Set( struct USB2IFace *Self UNUSED, USB2_ID id UNUSED, U32 tag UNUSED, PTR buffer UNUSED, U32 buffersize UNUSED )
+SEC_CODE static U32
+_main_Attr_Set( struct USB2IFace *Self, USB2_ID id UNUSED, U32 tag, PTR buffer, U32 buffersize )
 {
-	return( 0 );
+	struct USBBase *usbbase;
+
+	usbbase = (PTR) Self->Data.LibBase;
+
+	if ( ( tag == USB2Tag_Attr_IOCaptureFilter ) && ( buffer ) && ( buffersize == sizeof( struct USB2_IOCaptureFilter ) ) )
+	{
+		if ( USB2_Notify_SetIOFilter( usbbase, buffer ) )
+		{
+			return ( buffersize );
+		}
+	}
+
+	return ( 0 );
 }
 
 // --

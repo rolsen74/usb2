@@ -192,7 +192,7 @@ __myTask_Main ( struct USBBase * usbbase, struct intern * in )
 					break;
 				}
 
-				MEMORY_FREE ( MEMID_NotifyMessage, msg, 0 );
+				USB2_Notify_Free ( usbbase, msg );
 			}
 		}
 	}

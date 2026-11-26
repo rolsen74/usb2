@@ -23,9 +23,9 @@ enum DriverDeviceMatch
 
 struct DriverSearch
 {
-	struct USB2_FktDriverNode *After;
-	struct USB2_FktDriverNode *Early;
-	S32 ExternalReady;
+	struct USB2_FktDriverNode * After;
+	struct USB2_FktDriverNode * Early;
+	S32							ExternalReady;
 };
 
 // --
@@ -84,6 +84,16 @@ Match_Driver_Device ( struct USBBase * usbbase, struct USB2_FktDriverNode * fdn,
 	}
 
 	return ( best );
+}
+
+// --
+
+SEC_CODE static S32
+Match_Driver_Class ( const struct USB2_FktDriverNode * fdn, U16 class, U16 subclass, U16 protocol )
+{
+	return ( ( ( fdn->fdn_Class == class ) || ( fdn->fdn_Class == FDCLASS_Any ) )
+		  && ( ( fdn->fdn_SubClass == subclass ) || ( fdn->fdn_SubClass == FDSUBCLASS_Any ) )
+		  && ( ( fdn->fdn_Protocol == protocol ) || ( fdn->fdn_Protocol == FDPROTOCOL_Any ) ) );
 }
 
 // --
@@ -254,8 +264,8 @@ DiscardDriver ( struct USBBase * usbbase, struct USB2_DriverNode * dn )
 SEC_CODE static void
 InitDriverSearch ( struct USBBase * usbbase, struct DriverSearch * search, const struct USB2_DriverNode * previous )
 {
-	search->After = NULL;
-	search->Early = NULL;
+	search->After		  = NULL;
+	search->Early		  = NULL;
 	search->ExternalReady = ( usbbase->usb_FrontendsReady ) && ( usbbase->usb_ClassesReady );
 
 	if ( previous )
@@ -301,12 +311,16 @@ TryDriverClass ( struct DriverSearch * search, const struct USB2_FktDriverNode *
 
 // --
 
+#include "Get_Matches.c"
+
+// --
+
 SEC_CODE static struct USB2_DriverNode *
-AllocDriver ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_FktDriverNode * fdn,
-			  struct USB2_ASync * as, const struct DriverSearch * search )
+AllocDriver ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_FktDriverNode * fdn, struct USB2_ASync * as,
+			  const struct DriverSearch * search )
 {
 	struct USB2_DriverMessage * msg;
-	struct USB2_DriverNode * dn;
+	struct USB2_DriverNode *	dn;
 
 	dn = DRIVER_ALLOC ( fn, as );
 
@@ -315,20 +329,20 @@ AllocDriver ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB
 		return ( NULL );
 	}
 
-	dn->dn_Class = fdn;
-	dn->dn_EarlyClass = search->Early;
-	dn->dn_ExternalReady = search->ExternalReady;
-	dn->dn_Entry = fdn->fdn_Entry;
-	dn->dn_Filename = fdn->fdn_Driver_Filename;
-	msg = &dn->dn_Message.rdm_Public;
-	msg->IUSB2 = usbbase->usb_IUSB2;
-	msg->VendorID = LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID );
-	msg->DeviceID = LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID );
-	msg->Function = (PTR)fn;
+	dn->dn_Class		   = fdn;
+	dn->dn_EarlyClass	   = search->Early;
+	dn->dn_ExternalReady   = search->ExternalReady;
+	dn->dn_Entry		   = fdn->fdn_Entry;
+	dn->dn_Filename		   = fdn->fdn_Driver_Filename;
+	msg					   = &dn->dn_Message.rdm_Public;
+	msg->IUSB2			   = usbbase->usb_IUSB2;
+	msg->VendorID		   = LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID );
+	msg->DeviceID		   = LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID );
+	msg->Function		   = (PTR)fn;
 	msg->ConfigDescriptors = (PTR)fn->fkt_Config_Desc_Buf;
-	msg->ClassTitle = fdn->fdn_Title;
-	msg->ClassDriver = fdn->fdn_Driver_Filename;
-	msg->ClassAlias = fdn->fdn_Alias;
+	msg->ClassTitle		   = fdn->fdn_Title;
+	msg->ClassDriver	   = fdn->fdn_Driver_Filename;
+	msg->ClassAlias		   = fdn->fdn_Alias;
 
 	return ( dn );
 }
@@ -343,14 +357,13 @@ AllocDriver ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB
 
 // Called with the class registry locked.
 SEC_CODE static enum FDSTAT
-BindClasses ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_ASync * as,
-			  struct USB2_DriverNode * previous )
+BindClasses ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB2_ASync * as, struct USB2_DriverNode * previous )
 {
 	struct USB2_DriverNode * bound;
-	struct DriverSearch search;
+	struct DriverSearch		 search;
 
 	enum FDSTAT stat;
-	S32 available;
+	S32			available;
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_Bind_Semaphore );
 
@@ -360,8 +373,8 @@ BindClasses ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct USB
 
 	for ( bound = Header_Head ( &usbbase->usb_Bind_Header ); ( available ) && ( bound ); bound = Node_Next ( bound ) )
 	{
-		if ( ( bound != previous ) && ( bound->dn_Function == fn ) && ( ! bound->dn_Interface )
-			 && ( ! bound->dn_Detach ) && ( ! bound->dn_FreeMe ) )
+		if ( ( bound != previous ) && ( bound->dn_Function == fn ) && ( ! bound->dn_Interface ) && ( ! bound->dn_Detach )
+			 && ( ! bound->dn_FreeMe ) )
 		{
 			available = FALSE;
 		}
@@ -460,7 +473,7 @@ __Function_Bind ( struct USBBase * usbbase, struct RealFunctionNode * fn, struct
 
 			SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 
-			usbbase->usb_IExec->DebugPrintF ( "USB2 bind: %04lX:%04lX address %lu, active configuration %lu, owner %p\n",
+			usbbase->usb_IExec->DebugPrintF ( "USB Bind: %04lX:%04lX address %lu, active configuration %lu, owner %p\n",
 											  (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->VendorID ),
 											  (U32)LE_SWAP16 ( fn->fkt_DeviceDescriptor->DeviceID ), (U32)fn->fkt_Address,
 											  config, fn->fkt_Owner );
