@@ -35,6 +35,22 @@ uses `usb2wifi.library` 1.49 or later for the **Default** subtab.
 - For these device opens and the Bluetooth tool, Auto uses unit 0.
   In Auto, the video tool keeps its existing camera selection.
 
+## Reconnecting USB units
+
+The stack matches returning devices by USB vendor ID, product ID, interface,
+and serial number. A device without a usable serial must return to the same USB
+port path. Mass storage also matches the logical unit number on the USB device.
+
+- Audio, serial, and printer keep an open unit reserved while the device is
+  disconnected. Submit new I/O after it returns. Interrupted transfers report
+  an error to the application.
+- Disk and Ethernet reuse the unit number. Existing handles remain disconnected.
+  Reopen the Ethernet interface or let the disk mounter reopen the returned
+  volume. Interrupted disk writes and network requests are never replayed.
+- A parallel backend can use `RegisterDevice` on `usb2parallel.device` 1.7
+  to reserve its open unit and route new requests after reconnect. The archive
+  includes the parallel frontend.
+
 Unit numbers can change when adapters are reconnected in a different
 order. An audio endpoint without a unique serial is identified by its USB
 port path. The Custom list shows the devices available when it opens.
