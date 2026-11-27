@@ -21,16 +21,17 @@ static void Full_Boot_Entry ( void );
 // --
 // Note: don't add Static
 
-SEC_RODATA const struct Resident fullboot_res = { /* rt_MatchWord	*/ RTC_MATCHWORD,
-												  /* rt_MatchTag	*/ (PTR)( &fullboot_res + 0 ),
-												  /* rt_EndSkip	*/ (PTR)( &fullboot_res + 1 ),
-												  /* rt_Flags		*/ RTF_NATIVE | RTF_AFTERDOS,
-												  /* rt_Version	*/ 1,
-												  /* rt_Type		*/ NT_UNKNOWN,
-												  /* rt_Pri		*/ -49,
-												  /* rt_Name		*/ ( STR ) "Universal Serial Bus - Fullboot",
-												  /* rt_IdString	*/ ( STR ) "Universal Serial Bus - Fullboot",
-												  /* rt_Init		*/ (PTR)Full_Boot };
+SEC_RODATA const struct Resident fullboot_res = //
+	{ /* rt_MatchWord	*/ RTC_MATCHWORD,
+	  /* rt_MatchTag	*/ (PTR)( &fullboot_res + 0 ),
+	  /* rt_EndSkip		*/ (PTR)( &fullboot_res + 1 ),
+	  /* rt_Flags		*/ RTF_NATIVE | RTF_AFTERDOS,
+	  /* rt_Version		*/ 1,
+	  /* rt_Type		*/ NT_UNKNOWN,
+	  /* rt_Pri			*/ -49,
+	  /* rt_Name		*/ ( STR ) "Universal Serial Bus - Fullboot",
+	  /* rt_IdString	*/ ( STR ) "Universal Serial Bus - Fullboot",
+	  /* rt_Init		*/ (PTR)Full_Boot };
 
 // --
 
@@ -63,7 +64,7 @@ Full_Boot ( void )
 	IExec	= USB2_GetExecIFace ();
 	process = NULL;
 
-	IExec->DebugPrintF ( "USB : Full Boot (" VERS ")\n" );
+	IExec->DebugPrintF ( "USB : Full Boot ( " VERSTR " )\n" );
 
 #ifdef MSD_DEBUG
 	IExec->DebugPrintF ( "USB : MSD debug active\n" );
