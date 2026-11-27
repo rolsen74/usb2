@@ -14,10 +14,11 @@
 SEC_CODE void Audio_Manager_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq )
 {
 struct AudioBase *base;
+struct AudioSlot *slot;
 struct AudioUnit *unit;
 
 	base = (PTR) Self->Data.LibBase;
-	unit = (PTR) ioreq->io_Unit;
+	slot = (PTR) ioreq->io_Unit;
 
 	if ( ioreq->io_Message.mn_Length < sizeof( *ioreq ) )
 	{
@@ -52,9 +53,11 @@ struct AudioUnit *unit;
 
 	ObtainSemaphore( & base->Semaphore );
 
+	unit = ( slot && slot->Open ) ? slot->Unit : NULL;
+
 	if ( ( ! unit ) || ( unit->Detached ) )
 	{
-		ioreq->io_Error = unit ? USB2Err_Device_Detached : IOERR_OPENFAIL;
+		ioreq->io_Error = ( slot && slot->Open ) ? USB2Err_Device_Detached : IOERR_OPENFAIL;
 		ReleaseSemaphore( & base->Semaphore );
 		ReplyMsg( (PTR) ioreq );
 

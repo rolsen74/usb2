@@ -77,9 +77,13 @@ Audio_Alloc( struct AudioContext *ctx, struct USB2_DriverMessage *msg )
 struct AudioUnit *unit;
 struct AudioBase *base;
 struct USB2_EPResource *control;
+struct USB2UnitIdentity identity;
+struct USB2UnitSearch search;
+struct AudioSlot *slot;
 
 U32 index;
 U32 limit;
+U32 selected;
 U32 confirmations;
 
 	base = ctx->Device;
@@ -163,20 +167,37 @@ U32 confirmations;
 
 	Audio_EndpointInit( unit );
 
+	USB2_ReadUnitIdentity( &identity, msg, !! ( unit->EndPoint & EPADR_Dir_Mask ) );
+
 	ObtainSemaphore( & base->Semaphore );
 
 	index = ( unit->EndPoint & EPADR_Dir_Mask ) ? 0 : AUDIO_PLAYBACK_UNIT_BASE;
 	limit = index ? AUDIO_MAX_UNITS : AUDIO_PLAYBACK_UNIT_BASE;
 
-	for( ; index < limit; index++ )
+	USB2_InitUnitSearch( &search, AUDIO_MAX_UNITS );
+
+	for ( ; index < limit; index++ )
 	{
-		if ( ! base->Units[index] )
+		slot = &base->Slots[index];
+
+		if ( ! slot->Unit )
 		{
-			base->Units[index] = unit;
-			unit->UnitNr = index;
-			unit->Endpoint.LegacyUnit = index;
-			break;
+			USB2_ConsiderUnit( &search, &slot->Identity, &identity, index, slot->Open );
 		}
+	}
+
+	selected = USB2_SelectUnit( &search );
+
+	if ( selected < AUDIO_MAX_UNITS )
+	{
+		slot = &base->Slots[selected];
+
+		CopyMem( &identity, &slot->Identity, sizeof( identity ) );
+
+		slot->Unit = unit;
+		unit->UnitNr = selected;
+		unit->Endpoint.LegacyUnit = selected;
+		unit->ReconnectRate = slot->Open ? slot->Rate : 0;
 	}
 
 	ReleaseSemaphore( & base->Semaphore );

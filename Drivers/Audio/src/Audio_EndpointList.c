@@ -38,7 +38,7 @@ Audio_EndpointList( struct AudioBase *base, struct IOStdReq *ioreq )
 
 	for( index = 0; index < AUDIO_MAX_UNITS; index++ )
 	{
-		unit = base->Units[index];
+		unit = base->Slots[index].Unit;
 
 		if ( ( unit ) && ( ! unit->Detached ) )
 		{
@@ -59,7 +59,7 @@ Audio_EndpointList( struct AudioBase *base, struct IOStdReq *ioreq )
 
 		for( index = 0; index < AUDIO_MAX_UNITS; index++ )
 		{
-			unit = base->Units[index];
+			unit = base->Slots[index].Unit;
 
 			if ( ( ! unit ) || ( unit->Detached ) )
 			{
@@ -68,7 +68,7 @@ Audio_EndpointList( struct AudioBase *base, struct IOStdReq *ioreq )
 
 			CopyMem( & unit->Endpoint, & entry, sizeof( entry ) );
 
-			entry.Flags = unit->OpenCount ? AUDIO_ENDPOINT_BUSY : 0;
+			entry.Flags = base->Slots[index].Open ? AUDIO_ENDPOINT_BUSY : 0;
 
 			if ( ! Audio_EndpointFind( base, entry.ID, & match ) )
 			{

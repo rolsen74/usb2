@@ -80,6 +80,22 @@ Audio_Begin( struct AudioUnit *unit )
 
 	S32 reset;
 	U32 index;
+	U32 restore;
+
+	ObtainSemaphore( &unit->Base->Semaphore );
+
+	restore = unit->ReconnectRate;
+	unit->ReconnectRate = 0;
+
+	ReleaseSemaphore( &unit->Base->Semaphore );
+
+	if ( ( restore ) && ( restore != unit->Format.SampleRate ) &&
+		( Audio_Rate_Valid( unit, restore ) ) && ( Audio_Frequency( unit, restore ) ) )
+	{
+		unit->Format.SampleRate = restore;
+		unit->RatePending = FALSE;
+		unit->RateValid = TRUE;
+	}
 
 	while(( ioreq = (PTR) GetMsg( unit->BeginPort ) ))
 	{

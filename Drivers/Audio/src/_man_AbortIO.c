@@ -14,12 +14,15 @@
 SEC_CODE void Audio_Manager_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq )
 {
 struct AudioBase *base;
+struct AudioSlot *slot;
 struct AudioUnit *unit;
 
 	base = (PTR) Self->Data.LibBase;
-	unit = (PTR) ioreq->io_Unit;
+	slot = (PTR) ioreq->io_Unit;
 
 	ObtainSemaphore( & base->Semaphore );
+
+	unit = ( slot && slot->Open ) ? slot->Unit : NULL;
 
 	if ( ( unit ) && ( ! unit->Detached ) && ( ioreq->io_Message.mn_Node.ln_Type == NT_MESSAGE ) )
 	{

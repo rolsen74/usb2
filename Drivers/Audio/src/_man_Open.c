@@ -37,7 +37,7 @@ U32 index;
 	{
 		for( index = AUDIO_PLAYBACK_UNIT_BASE; index < AUDIO_MAX_UNITS; index++ )
 		{
-			unit = base->Units[index];
+			unit = base->Slots[index].Unit;
 
 			if ( ( unit ) && ( ! unit->Detached ) &&
 				( unit->Endpoint.DefaultFormat.Encoding == AUDIO_ENCODING_PCM_S16LE ) &&
@@ -51,7 +51,7 @@ U32 index;
 	}
 	else if ( unitnr < AUDIO_MAX_UNITS )
 	{
-		unit = base->Units[unitnr];
+		unit = base->Slots[unitnr].Unit;
 	}
 
 	if ( error )
@@ -71,7 +71,7 @@ U32 index;
 		ioreq->io_Error = IOERR_OPENFAIL;
 		ioreq->io_Device = NULL;
 	}
-	else if ( unit->OpenCount )
+	else if ( base->Slots[unit->UnitNr].Open )
 	{
 		AUDIO_TRACE( "open unit %lu: already in use\n", unitnr );
 
@@ -89,8 +89,8 @@ U32 index;
 	else
 	{
 		base->Library.lib_OpenCnt++;
-		unit->OpenCount++;
-		ioreq->io_Unit = (PTR) unit;
+		base->Slots[unit->UnitNr].Open = TRUE;
+		ioreq->io_Unit = (PTR) &base->Slots[unit->UnitNr];
 		ioreq->io_Error = 0;
 	}
 

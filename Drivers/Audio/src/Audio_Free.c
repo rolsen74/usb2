@@ -71,19 +71,19 @@ S32 error;
 	}
 
 	ObtainSemaphore( & base->Semaphore );
-	unit->Released = TRUE;
-
-	if ( unit->UnitNr < AUDIO_MAX_UNITS )
+	if ( ( unit->UnitNr < AUDIO_MAX_UNITS ) && ( base->Slots[unit->UnitNr].Unit == unit ) )
 	{
-		base->Units[unit->UnitNr] = NULL;
-	}
+		if ( ( base->Slots[unit->UnitNr].Open ) && ( ! unit->ReconnectRate ) )
+		{
+			base->Slots[unit->UnitNr].Rate = unit->Format.SampleRate;
+		}
 
-	if ( ! unit->OpenCount )
-	{
-		FreeVec( unit );
+		base->Slots[unit->UnitNr].Unit = NULL;
 	}
 
 	ReleaseSemaphore( & base->Semaphore );
+
+	FreeVec( unit );
 }
 
 // --

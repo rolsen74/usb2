@@ -8,6 +8,8 @@
 #ifndef DRIVERS_AUDIO_AUDIO_H
 #define DRIVERS_AUDIO_AUDIO_H
 
+#include <interfaces/usb2unitidentity.h>
+
 #include "AudioDevice.h"
 
 #define AUDIO_PACKET_COUNT 256
@@ -38,6 +40,14 @@ struct AudioDriverBase
 	struct AudioContext Context;
 };
 
+struct AudioSlot
+{
+	struct AudioUnit *Unit;
+	struct USB2UnitIdentity Identity;
+	U32 Rate;
+	U8 Open;
+};
+
 struct AudioBase
 {
 	struct Library Library;
@@ -45,7 +55,7 @@ struct AudioBase
 	PTR SegList;
 	struct AudioContext *Context;
 	struct SignalSemaphore Semaphore;
-	struct AudioUnit *Units[AUDIO_MAX_UNITS];
+	struct AudioSlot Slots[AUDIO_MAX_UNITS];
 };
 
 struct AudioWrite
@@ -85,7 +95,7 @@ struct AudioUnit
 	char PortID[AUDIO_ENDPOINT_ID_SIZE];
 	struct AudioGain Gain;
 	U32 UnitNr;
-	U32 OpenCount;
+	U32 ReconnectRate;
 	U32 DataUsed;
 	U32 PacketBytes;
 	U32 PacketCount;
@@ -110,7 +120,6 @@ struct AudioUnit
 	U8 AltNr;
 	U8 EndPoint;
 	U8 Detached;
-	U8 Released;
 	U8 ReadDiscontinuity;
 	U8 ResetStream;
 	U8 ActiveAlt;

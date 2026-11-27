@@ -52,7 +52,7 @@ Audio_EndpointFind( struct AudioBase *base, const char *id, struct AudioUnit **s
 
 	for( index = 0; index < AUDIO_MAX_UNITS; index++ )
 	{
-		unit = base->Units[index];
+		unit = base->Slots[index].Unit;
 
 		if ( ( ! unit ) || ( unit->Detached ) )
 		{

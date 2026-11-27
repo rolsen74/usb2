@@ -14,25 +14,26 @@
 SEC_CODE PTR Audio_Manager_Close( struct DeviceManagerInterface *Self, struct IORequest *ioreq )
 {
 struct AudioBase *base;
-struct AudioUnit *unit;
+struct AudioSlot *slot;
 
 	base = (PTR) Self->Data.LibBase;
-	unit = (PTR) ioreq->io_Unit;
+	slot = (PTR) ioreq->io_Unit;
 
 	ObtainSemaphore( & base->Semaphore );
 
 	base->Library.lib_OpenCnt--;
 	ioreq->io_Device = NULL;
 
-	if ( unit )
+	if ( slot )
 	{
-		unit->ResetStream = TRUE;
-		unit->OpenCount--;
+		slot->Open = FALSE;
+		slot->Rate = 0;
 		ioreq->io_Unit = NULL;
 
-		if ( ( unit->Released ) && ( ! unit->OpenCount ) )
+		if ( slot->Unit )
 		{
-			FreeVec( unit );
+			slot->Unit->ResetStream = TRUE;
+			slot->Unit->ReconnectRate = 0;
 		}
 	}
 
