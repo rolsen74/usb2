@@ -15,15 +15,15 @@
 // --
 
 SEC_CODE struct Mem_PageNode *
-Memory_FindPage( struct Mem_HeaderNode *h, PTR mem, U32 *chunk )
+Memory_FindPage ( struct Mem_HeaderNode * h, PTR mem, U32 * chunk )
 {
-	struct Mem_PageNode *page;
+	struct Mem_PageNode * page;
 
 	uintptr_t offset;
-	U32 stride;
+	U32		  stride;
 
 	stride = h->Mem.Align.Stride;
-	page = h->Mem.Align.Pages.uh_Head;
+	page   = h->Mem.Align.Pages.uh_Head;
 
 	while ( page )
 	{
@@ -41,7 +41,7 @@ Memory_FindPage( struct Mem_HeaderNode *h, PTR mem, U32 *chunk )
 			return ( page );
 		}
 
-		page = Node_Next( page );
+		page = Node_Next ( page );
 	}
 
 	return ( NULL );
@@ -50,59 +50,54 @@ Memory_FindPage( struct Mem_HeaderNode *h, PTR mem, U32 *chunk )
 // --
 
 SEC_CODE PTR
-Memory_AllocDMAPages( struct USBBase *usbbase, U32 size, U32 alignment, U32 *physical )
+Memory_AllocDMAPages ( struct USBBase * usbbase, U32 size, U32 alignment, U32 * physical )
 {
-	struct ExecIFace *IExec;
-	struct MMUIFace *IMMU;
+	struct ExecIFace * IExec;
+	struct MMUIFace *  IMMU;
 
 	PTR mem;
 	PTR stack;
 	U64 address;
 
 	IExec = usbbase->usb_IExec;
-	IMMU = usbbase->usb_IMMU;
+	IMMU  = usbbase->usb_IMMU;
 
-	mem = IExec->AllocVecTags( size,
-		AVT_PhysicalAlignment, alignment,
-		AVT_Alignment, alignment,
-		AVT_Type, MEMF_SHARED,
-		AVT_Contiguous, TRUE,
-		AVT_Lock, TRUE,
-		TAG_END );
+	mem = IExec->AllocVecTags ( size, AVT_PhysicalAlignment, alignment, AVT_Alignment, alignment, AVT_Type, MEMF_SHARED,
+								AVT_Contiguous, TRUE, AVT_Clear, 0, AVT_Lock, TRUE, TAG_END );
 
 	if ( ! mem )
 	{
 		return ( NULL );
 	}
 
-	stack = IExec->SuperState();
+	stack = IExec->SuperState ();
 
-	address = (uintptr_t)IMMU->GetPhysicalAddress( mem );
+	address = (uintptr_t)IMMU->GetPhysicalAddress ( mem );
 
-	if ( ( ! address ) || ( address & ( alignment - 1 ) ) ||
-		( (uintptr_t)mem & ( alignment - 1 ) ) || ( address > 0xffffffffULL - ( size - 1 ) ) )
+	if ( ( ! address ) || ( address & ( alignment - 1 ) ) || ( (uintptr_t)mem & ( alignment - 1 ) )
+		 || ( address > 0xffffffffULL - ( size - 1 ) ) )
 	{
 		if ( stack )
 		{
-			IExec->UserState( stack );
+			IExec->UserState ( stack );
 		}
 
-		USBERROR( "Memory_AllocDMAPages : Invalid DMA allocation at %p", mem );
+		USBERROR ( "Memory_AllocDMAPages : Invalid DMA allocation at %p", mem );
 
-		Memory_FreeDMAPages( usbbase, mem, size );
+		Memory_FreeDMAPages ( usbbase, mem, size );
 
 		return ( NULL );
 	}
 
-	IExec->CacheClearE( mem, size, CACRF_ClearD | CACRF_ClearI );
+	IExec->CacheClearE ( mem, size, CACRF_ClearD | CACRF_ClearI );
 
-	IMMU->SetMemoryAttrs( mem, size, MEMATTRF_READ_WRITE | MEMATTRF_CACHEINHIBIT );
+	IMMU->SetMemoryAttrs ( mem, size, MEMATTRF_READ_WRITE | MEMATTRF_CACHEINHIBIT );
 
-	IExec->CacheClearE( mem, size, CACRF_InvalidateD );
+	IExec->CacheClearE ( mem, size, CACRF_InvalidateD );
 
 	if ( stack )
 	{
-		IExec->UserState( stack );
+		IExec->UserState ( stack );
 	}
 
 	*physical = (U32)address;
@@ -113,37 +108,37 @@ Memory_AllocDMAPages( struct USBBase *usbbase, U32 size, U32 alignment, U32 *phy
 // --
 
 SEC_CODE void
-Memory_FreeDMAPages( struct USBBase *usbbase, PTR mem, U32 size )
+Memory_FreeDMAPages ( struct USBBase * usbbase, PTR mem, U32 size )
 {
-	struct ExecIFace *IExec;
+	struct ExecIFace * IExec;
 
 	IExec = usbbase->usb_IExec;
 
-	IExec->UnlockMem( mem, size );
+	IExec->UnlockMem ( mem, size );
 
-	IExec->FreeVec( mem );
+	IExec->FreeVec ( mem );
 }
 
 // --
 
 SEC_CODE void
-Memory_ReleasePage( struct USBBase *usbbase, struct Mem_PageNode *page, U32 size )
+Memory_ReleasePage ( struct USBBase * usbbase, struct Mem_PageNode * page, U32 size )
 {
 	if ( page->mpn_Memory )
 	{
-		Memory_FreeDMAPages( usbbase, page->mpn_Memory, size );
+		Memory_FreeDMAPages ( usbbase, page->mpn_Memory, size );
 	}
 
-	MEM_FREEVEC( page );
+	MEM_FREEVEC ( page );
 }
 
 // --
 
 // The caller holds usb_IOBufferSemaphore.
 SEC_CODE struct Mem_IOBuffer *
-Memory_FindIOBuffer( struct USBBase *usbbase, PTR mem )
+Memory_FindIOBuffer ( struct USBBase * usbbase, PTR mem )
 {
-	struct Mem_IOBuffer *buffer;
+	struct Mem_IOBuffer * buffer;
 
 	buffer = usbbase->usb_IOBuffers.uh_Head;
 
@@ -154,7 +149,7 @@ Memory_FindIOBuffer( struct USBBase *usbbase, PTR mem )
 			return ( buffer );
 		}
 
-		buffer = Node_Next( buffer );
+		buffer = Node_Next ( buffer );
 	}
 
 	return ( NULL );
@@ -163,9 +158,9 @@ Memory_FindIOBuffer( struct USBBase *usbbase, PTR mem )
 // --
 
 SEC_CODE U32
-Memory_IOBufferPhysical( struct USBBase *usbbase, PTR mem, U32 length )
+Memory_IOBufferPhysical ( struct USBBase * usbbase, PTR mem, U32 length )
 {
-	struct Mem_IOBuffer *buffer;
+	struct Mem_IOBuffer * buffer;
 
 	U32 offset;
 	U32 physical;
@@ -177,9 +172,9 @@ Memory_IOBufferPhysical( struct USBBase *usbbase, PTR mem, U32 length )
 		return ( 0 );
 	}
 
-	SEMAPHORE_OBTAIN( &usbbase->usb_IOBufferSemaphore );
+	SEMAPHORE_OBTAIN ( &usbbase->usb_IOBufferSemaphore );
 
-	buffer = Memory_FindIOBuffer( usbbase, mem );
+	buffer = Memory_FindIOBuffer ( usbbase, mem );
 
 	if ( buffer )
 	{
@@ -191,7 +186,7 @@ Memory_IOBufferPhysical( struct USBBase *usbbase, PTR mem, U32 length )
 		}
 	}
 
-	SEMAPHORE_RELEASE( &usbbase->usb_IOBufferSemaphore );
+	SEMAPHORE_RELEASE ( &usbbase->usb_IOBufferSemaphore );
 
 	return ( physical );
 }
