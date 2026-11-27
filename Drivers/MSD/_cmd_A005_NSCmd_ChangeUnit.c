@@ -38,7 +38,8 @@ S32 reply;
 
 		for( new_unit_nr=0 ; new_unit_nr<MAX_MSD_UNITS ; new_unit_nr++ )
 		{
-			if ( ! msdbase->msdbase_MSDDisk_Units[ new_unit_nr ] )
+			if ( ( ! msdbase->msdbase_MSDDisk_Units[new_unit_nr] ) &&
+				( ! msdbase->msdbase_Reserved[new_unit_nr] ) )
 			{
 				break;
 			}
@@ -70,7 +71,7 @@ S32 reply;
 		goto bailout;
 	}
 
-	if ( msdbase->msdbase_MSDDisk_Units[ new_unit_nr ] )
+	if ( ( msdbase->msdbase_MSDDisk_Units[new_unit_nr] ) || ( msdbase->msdbase_Reserved[new_unit_nr] ) )
 	{
 		USBERROR( "MSD : NSCmd_ChangeUnit : Unit %lu is already in use", new_unit_nr );
 		ioreq->io_Actual = -1;
@@ -84,6 +85,15 @@ S32 reply;
 
 	msdbase->msdbase_MSDDisk_Units[ new_unit_nr ] = msddisk;
 	msdbase->msdbase_MSDDisk_Units[ old_unit_nr ] = NULL;
+
+	MEM_COPY( &msdbase->msdbase_Identity[old_unit_nr], &msdbase->msdbase_Identity[new_unit_nr],
+		sizeof( msdbase->msdbase_Identity[0] ) );
+
+	if ( ! msdbase->msdbase_Reserved[old_unit_nr] )
+	{
+		msdbase->msdbase_Identity[old_unit_nr].SerialLength = 0;
+		msdbase->msdbase_Identity[old_unit_nr].Port.Depth = 0;
+	}
 
 	msddisk->msddisk_UnitNr = new_unit_nr;
 

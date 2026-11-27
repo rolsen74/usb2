@@ -30,6 +30,7 @@ MSD_Disk_Free( struct USBBase *usbbase, struct MSDDisk *msddisk )
 	if ( ( unit < MAX_MSD_UNITS ) && ( msdbase->msdbase_MSDDisk_Units[unit] == msddisk ) )
 	{
 		msdbase->msdbase_MSDDisk_Units[unit] = NULL;
+		msdbase->msdbase_Reserved[unit] += msddisk->msddisk_OpenCnt;
 	}
 
 	msddisk->msddisk_Released = TRUE;

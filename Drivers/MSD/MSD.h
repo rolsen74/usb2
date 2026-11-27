@@ -15,14 +15,16 @@
 #ifndef DRIVERS_msddisk_msddisk_H
 #define DRIVERS_msddisk_msddisk_H
 
+#include <interfaces/usb2unitidentity.h>
+
 // --
 
 #define MAX_MSD_UNITS		32
 
 #define MSD_Device_Name		"usb2disk.device"
 #define MSD_Device_Version	1
-#define MSD_Device_Revision 5
-#define MSD_Device_Date		"24.11.2026"
+#define MSD_Device_Revision 6
+#define MSD_Device_Date		"27.11.2026"
 
 #ifdef MSD_DEBUG
 #define MSDDEBUG( ... ) usbbase->usb_IExec->DebugPrintF ( __VA_ARGS__ )
@@ -185,6 +187,8 @@ struct MSDBase
 	struct USBBase *	  msdbase_usbbase; // USB stack
 	struct USB2_Semaphore msdbase_MSDDisk_Semaphore;
 	PTR					  msdbase_MSDDisk_Units[MAX_MSD_UNITS]; // struct MSDDisk's
+	struct USB2UnitIdentity msdbase_Identity[MAX_MSD_UNITS];
+	U32					  msdbase_Reserved[MAX_MSD_UNITS];
 };
 
 // --

@@ -44,6 +44,12 @@ S32 free_dev;
 	{
 		msddev = msddisk->msddisk_MSDDev;
 		msddisk->msddisk_OpenCnt--;
+
+		if ( ( msddisk->msddisk_Released ) && ( msddisk->msddisk_UnitNr < MAX_MSD_UNITS ) )
+		{
+			MSDBase->msdbase_Reserved[msddisk->msddisk_UnitNr]--;
+		}
+
 		free_disk = ( msddisk->msddisk_Released ) && ( ! msddisk->msddisk_OpenCnt );
 		free_dev = --msddev->msddev_References == 0;
 	}

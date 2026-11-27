@@ -17,9 +17,12 @@ SEC_CODE struct MSDDisk *MSD_Disk_Alloc( struct USBBase *usbbase, struct MSDDevi
 {
 struct MSDBase *msdbase;
 struct MSDDisk *msddisk;
+struct USB2UnitIdentity identity;
+struct USB2UnitSearch search;
 U32 blk_size;
 U64 blk_secs;
 U32 unit_nr;
+U32 index;
 S32 error;
 S32 stat;
 U32 cnt;
@@ -167,16 +170,29 @@ U8 type;
 	// --
 	// End Init with, find Unit slot and then Add/Mount
 
+	USB2_ReadUnitIdentity( &identity, msddev->msddev_StartMsg, lun );
+
+	USB2_InitUnitSearch( &search, MAX_MSD_UNITS );
+
 	SEMAPHORE_OBTAIN( & msdbase->msdbase_MSDDisk_Semaphore );
 
-	for( unit_nr=0 ; unit_nr<MAX_MSD_UNITS ; unit_nr++ )
+	for ( index = 0; index < MAX_MSD_UNITS; index++ )
 	{
-		if ( ! msdbase->msdbase_MSDDisk_Units[ unit_nr ] )
+		if ( ! msdbase->msdbase_MSDDisk_Units[index] )
 		{
-			msddisk->msddisk_UnitNr = unit_nr;
-			msdbase->msdbase_MSDDisk_Units[ unit_nr ] = msddisk;
-			break;
+			USB2_ConsiderUnit( &search, &msdbase->msdbase_Identity[index], &identity, index,
+				msdbase->msdbase_Reserved[index] != 0 );
 		}
+	}
+
+	unit_nr = USB2_SelectUnit( &search );
+
+	if ( unit_nr < MAX_MSD_UNITS )
+	{
+		MEM_COPY( &identity, &msdbase->msdbase_Identity[unit_nr], sizeof( identity ) );
+
+		msddisk->msddisk_UnitNr = unit_nr;
+		msdbase->msdbase_MSDDisk_Units[unit_nr] = msddisk;
 	}
 
 	SEMAPHORE_RELEASE( & msdbase->msdbase_MSDDisk_Semaphore );
