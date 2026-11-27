@@ -17,6 +17,10 @@
 
 /****************************************************************************/
 
+// Buffer methods are available in the main interface starting with usb2.device 1.128.
+#define USB2_IOBUFFER_DEVICE_VERSION 1
+#define USB2_IOBUFFER_DEVICE_REVISION 128
+
 struct USB2IFace
 {
 	struct InterfaceData Data;
@@ -56,6 +60,11 @@ struct USB2IFace
 	// Select an owned interface's alternate setting and update its active endpoints.
 	S32 APICALL ( *USB2_Ifc_SetAlt ) ( struct USB2IFace * Self, struct USB2_Register * reg, struct USB2_Interface * ifc,
 									   U32 alt );
+
+	// Allocates contiguous DMA memory for USB I/O. Free it with USB2_FreeIOBuffer.
+	// Wait for pending I/O before accessing or freeing the buffer.
+	PTR APICALL ( *USB2_AllocIOBuffer )( struct USB2IFace *Self, U32 size );
+	void APICALL ( *USB2_FreeIOBuffer )( struct USB2IFace *Self, PTR buffer );
 };
 
 /***************************************************************************/

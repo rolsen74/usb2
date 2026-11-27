@@ -181,3 +181,38 @@ SEC_CODE void __Memory_Free( struct USBBase *usbbase, U32 memtype, PTR mem, U32 
 }
 
 // --
+
+SEC_CODE void
+Memory_FreeIOBuffer( struct USBBase *usbbase, PTR mem )
+{
+	struct Mem_IOBuffer *buffer;
+
+	if ( ! mem )
+	{
+		return;
+	}
+
+	SEMAPHORE_OBTAIN( &usbbase->usb_IOBufferSemaphore );
+
+	buffer = Memory_FindIOBuffer( usbbase, mem );
+
+	if ( ( buffer ) && ( buffer->Memory == mem ) )
+	{
+		NODE_REMNODE( &usbbase->usb_IOBuffers, buffer );
+	}
+	else
+	{
+		buffer = NULL;
+	}
+
+	SEMAPHORE_RELEASE( &usbbase->usb_IOBufferSemaphore );
+
+	if ( buffer )
+	{
+		Memory_FreeDMAPages( usbbase, mem, buffer->Allocated );
+
+		MEM_FREEVEC( buffer );
+	}
+}
+
+// --

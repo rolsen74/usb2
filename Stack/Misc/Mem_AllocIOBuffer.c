@@ -28,10 +28,10 @@ U32 cs;
 
 	#endif
 
-	if ( size )
-	{
-		cs = usbbase->usb_CPU_CacheSize;
+	cs = usbbase->usb_CPU_CacheSize;
 
+	if ( ( size ) && ( cs ) && ( size <= 0xffffffffU - ( cs - 1 ) ) )
+	{
 		real = (( size + cs - 1 ) & ~ ( cs - 1 ));
 
 		IExec = usbbase->usb_IExec;

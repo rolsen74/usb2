@@ -50,7 +50,7 @@ EHCI_Isochronous_Add ( struct USB2_HCDNode *hn, struct RealRequest *req )
 			}
 
 			ioc = itd->Next ? 0 : EHCI_ITD_IOC;
-			itd->Transaction[itd->Microframe] = LE_SWAP32( EHCI_ITD_ACTIVE | ( itd->Length << 16 ) | ioc | EHCI_ITD_DATA );
+			itd->Transaction[itd->Microframe] = LE_SWAP32( EHCI_ITD_ACTIVE | ( itd->Length << 16 ) | ioc | itd->DataOffset );
 		}
 
 		itd->Link = *hardware;

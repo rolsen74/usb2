@@ -89,7 +89,7 @@ EHCI_Isochronous_Reap( struct USB2_HCDNode *hn, S32 halted )
 	{
 		*link = itd->Next;
 
-		MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
+		MEMORY_FREE( itd->DirectDMA ? MEMID_EHCI_ITD : MEMID_HCD_4k, itd, itd->Physical );
 	}
 }
 
@@ -127,7 +127,7 @@ U32 retired;
 		}
 		else
 		{
-			MEMORY_FREE( MEMID_HCD_4k, itd, itd->Physical );
+			MEMORY_FREE( itd->DirectDMA ? MEMID_EHCI_ITD : MEMID_HCD_4k, itd, itd->Physical );
 		}
 	}
 

@@ -14,7 +14,7 @@
 
 SEC_CODE static U32 _main_Obtain( struct Interface *Self )
 {
-	Self->Data.RefCount--;
+	Self->Data.RefCount++;
 
 	return( Self->Data.RefCount );
 }

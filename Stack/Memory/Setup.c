@@ -39,6 +39,7 @@ static const struct myMemList TheMemList[MEMID_Last] =
 	[MEMID_USBTask]				= { .Max = 25, .Pre = 0, .Align = 1, .Size = sizeof( struct USB2_TaskNode ) },
 	[MEMID_EHCI_QH]				= { .Max = 25, .Pre = 0, .Align = EHCI_QH_ALIGN, .Size = sizeof( struct EHCI_QH ) },
 	[MEMID_EHCI_TD]				= { .Max = 25, .Pre = 0, .Align = EHCI_TD_ALIGN, .Size = sizeof( struct EHCI_TD ) },
+	[MEMID_EHCI_ITD]				= { .Max = EHCI_ISO_MAX_PACKETS, .Pre = 0, .Align = EHCI_ITD_ALIGN, .Size = sizeof( struct EHCI_ITD ) },
 	[MEMID_OHCI_ED]				= { .Max = 25, .Pre = 0, .Align = OHCI_ED_ALIGN, .Size = sizeof( struct OHCI_ED ) },
 	[MEMID_OHCI_TD]				= { .Max = 25, .Pre = 0, .Align = OHCI_TD_ALIGN, .Size = sizeof( struct OHCI_TD ) },
 	[MEMID_OHCI_HCCA]			= { .Max = 25, .Pre = 0, .Align = OHCI_HCCA_ALIGN, .Size = sizeof( struct OHCI_HCCA ) },
@@ -82,6 +83,7 @@ SEC_RWDATA char *idnames[MEMID_Last] =
 	// EHCI
 	[MEMID_EHCI_QH]					= "MEMID_EHCI_QH",
 	[MEMID_EHCI_TD]					= "MEMID_EHCI_TD",
+	[MEMID_EHCI_ITD]					= "MEMID_EHCI_ITD",
 	
 	// OHCI
 	[MEMID_OHCI_ED]					= "MEMID_OHCI_ED",
@@ -161,6 +163,8 @@ __Memory_Setup( struct USBBase *usbbase )
 			h->Mem.Normal.Free_Max = l->Max;
 		}
 	}
+
+	SEMAPHORE_INIT( &usbbase->usb_IOBufferSemaphore );
 
 	usbbase->usb_Memory_Headers = mhn;
 

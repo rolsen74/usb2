@@ -201,6 +201,10 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 	U32	  offset;
 	U32	  length;
 	U32	  physical;
+	U32	  dma;
+	U32	  data;
+	U32	  page;
+	U32	  nextPage;
 	U32	  in;
 	U32	  index;
 	U32	  size;
@@ -291,6 +295,14 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		return ( TRUE );
 	}
 
+	dma = 0;
+
+	// Packet lengths let the caller consume short packets in place.
+	if ( ( ! split ) && ( in ) && ( req->req_Public.io_IsoPacketLengths ) )
+	{
+		dma = Memory_IOBufferPhysical( usbbase, req->req_Public.io_Data, length );
+	}
+
 	link = &req->req_HCD.EHCI.IsoHead;
 
 	EHCI_Isochronous_Reap ( hn, FALSE );
@@ -311,7 +323,7 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 			size = lengths[index];
 		}
 
-		itd = MEMORY_ALLOC ( MEMID_HCD_4k, FALSE );
+		itd = MEMORY_ALLOC( dma ? MEMID_EHCI_ITD : MEMID_HCD_4k, FALSE );
 
 		if ( ! itd )
 		{
@@ -325,6 +337,7 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		MEM_SET ( itd, 0, sizeof ( *itd ) );
 
 		itd->Physical = physical;
+		itd->DirectDMA = dma != 0;
 		itd->Length	  = size;
 		itd->Usecs	  = usecs;
 		itd->Hub	  = split ? ( hub ? hub : EHCI_ROOT_TT ) : 0;
@@ -335,8 +348,18 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 		}
 		else
 		{
-			itd->Page[0] = LE_SWAP32 ( physical | ( ep->ep_Number << 8 ) | req->req_Function->fkt_Address );
-			itd->Page[1] = LE_SWAP32 ( packet | ( in << 11 ) );
+			data = dma ? dma + offset : physical + EHCI_ITD_DATA;
+			page = data & ~EHCI_ITD_PAGE_MASK;
+			itd->DataOffset = data & EHCI_ITD_PAGE_MASK;
+			nextPage = 0;
+
+			if ( itd->DataOffset + size > EHCI_ITD_PAGE_SIZE )
+			{
+				nextPage = page + EHCI_ITD_PAGE_SIZE;
+			}
+
+			itd->Page[0] = LE_SWAP32 ( page | ( ep->ep_Number << 8 ) | req->req_Function->fkt_Address );
+			itd->Page[1] = LE_SWAP32 ( nextPage | packet | ( in << 11 ) );
 			itd->Page[2] = LE_SWAP32 ( mult );
 		}
 

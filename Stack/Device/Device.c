@@ -52,6 +52,9 @@
 #include "_main_Notify_Remove.c"
 #include "Notify_Function.c"
 
+#include "_main_AllocIOBuffer.c"
+#include "_main_FreeIOBuffer.c"
+
 // --
 
 SEC_RODATA static const PTR _manager_Vectors[] = //
@@ -104,6 +107,9 @@ SEC_RODATA static const PTR main_v1_vectors[] = //
 	  (PTR)_main_Notify_Add,
 	  (PTR)_main_Notify_Remove,
 	  (PTR)_main_Ifc_SetAlt,
+
+	  (PTR)_main_AllocIOBuffer,
+	  (PTR)_main_FreeIOBuffer,
 
 	  (PTR)-1 };
 

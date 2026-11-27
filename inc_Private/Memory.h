@@ -42,6 +42,7 @@ enum MEMID
 	// EHCI
 	MEMID_EHCI_QH,
 	MEMID_EHCI_TD,
+	MEMID_EHCI_ITD,
 
 	// OHCI
 	MEMID_OHCI_ED,
@@ -60,8 +61,6 @@ enum MEMID
 
 
 	MEMID_OHCI_ITD,
-
-	MEMID_EHCI_ITD,
 
 
 	MEMID_CommandMessage,
@@ -118,6 +117,15 @@ struct Mem_PageNode
 	U32 mpn_Free;
 	U32 mpn_Total;
 	U32 mpn_InUse[];
+};
+
+struct Mem_IOBuffer
+{
+	struct USB2_Node Node;
+	PTR Memory;
+	U32 Physical;
+	U32 Length;
+	U32 Allocated;
 };
 
 /***************************************************************************/

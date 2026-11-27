@@ -33,9 +33,9 @@ EHCI_Isochronous_Remove ( struct USB2_HCDNode *hn, struct RealRequest *req )
 		return;
 	}
 
-	// A canceled high-speed read has no split transaction to drain from a hub.
-	if ( ( cancel ) && ( ( req->req_Function->fkt_Speed != USBSPEED_High ) ||
-		( req->req_Public.io_Command != CMD_READ ) ) )
+	// Stop DMA to the caller's buffer before replying to a canceled read.
+	if ( ( cancel ) && ( ( req->req_HCD.EHCI.IsoHead->DirectDMA ) ||
+		( req->req_Function->fkt_Speed != USBSPEED_High ) || ( req->req_Public.io_Command != CMD_READ ) ) )
 	{
 		paused = TRUE;
 

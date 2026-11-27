@@ -10,7 +10,6 @@
 
 #include "usb2_all.h"
 #include "Page.h"
-#include <stdint.h>
 
 // --
 
@@ -40,10 +39,7 @@ __Add_Aligned( struct USBBase *usbbase, struct Mem_HeaderNode *h )
 {
 	struct Mem_PageNode *page;
 	struct Mem_FreeNode *chunk;
-	struct ExecIFace *IExec;
-	struct MMUIFace *IMMU;
 
-	PTR stack;
 	PTR mem;
 	U32 alignment;
 	U32 size;
@@ -51,14 +47,11 @@ __Add_Aligned( struct USBBase *usbbase, struct Mem_HeaderNode *h )
 	U32 count;
 	U32 index;
 	U32 offset;
-	U64 physical;
 
 	size = h->Mem.Align.Real_Size;
 	stride = h->Mem.Align.Stride;
 	count = size / stride;
 	alignment = MAX( usbbase->usb_Exec_PageSize, h->mhn_Align );
-	IExec = usbbase->usb_IExec;
-	IMMU = usbbase->usb_IMMU;
 
 	page = MEM_ALLOCVEC( sizeof( *page ) + ( ( count + 31 ) / 32 ) * sizeof( U32 ), TRUE );
 
@@ -67,50 +60,16 @@ __Add_Aligned( struct USBBase *usbbase, struct Mem_HeaderNode *h )
 		return;
 	}
 
-	mem = IExec->AllocVecTags( size,
-		AVT_PhysicalAlignment, alignment,
-		AVT_Alignment, alignment,
-		AVT_Type, MEMF_SHARED,
-		AVT_Contiguous, TRUE,
-		AVT_Lock, TRUE,
-		TAG_END );
-
-	page->mpn_Memory = mem;
+	mem = Memory_AllocDMAPages( usbbase, size, alignment, & page->mpn_Physical );
 
 	if ( ! mem )
 	{
-		goto bailout;
+		MEM_FREEVEC( page );
+
+		return;
 	}
 
-	stack = IExec->SuperState();
-
-	physical = (uintptr_t)IMMU->GetPhysicalAddress( mem );
-
-	if ( ( ! physical ) || ( physical & ( alignment - 1 ) ) ||
-		( (uintptr_t)mem & ( alignment - 1 ) ) || ( physical > 0xffffffffULL - ( size - 1 ) ) )
-	{
-		if ( stack )
-		{
-			IExec->UserState( stack );
-		}
-
-		USBERROR( "__Add_Aligned : Invalid DMA allocation at %p", mem );
-
-		goto bailout;
-	}
-
-	IExec->CacheClearE( mem, size, CACRF_ClearD | CACRF_ClearI );
-
-	IMMU->SetMemoryAttrs( mem, size, MEMATTRF_READ_WRITE | MEMATTRF_CACHEINHIBIT );
-
-	IExec->CacheClearE( mem, size, CACRF_InvalidateD );
-
-	if ( stack )
-	{
-		IExec->UserState( stack );
-	}
-
-	page->mpn_Physical = (U32)physical;
+	page->mpn_Memory = mem;
 	page->mpn_Total = count;
 	page->mpn_Free = count;
 	h->Mem.Align.Idle_Chunks += count;
@@ -125,12 +84,6 @@ __Add_Aligned( struct USBBase *usbbase, struct Mem_HeaderNode *h )
 		chunk->mfn_Next = h->mhn_Free_Nodes;
 		h->mhn_Free_Nodes = chunk;
 	}
-
-	return;
-
-bailout:
-
-	Memory_ReleasePage( usbbase, page, size );
 }
 
 // --
@@ -239,6 +192,56 @@ SEC_CODE PTR __Memory_Alloc( struct USBBase *usbbase, U32 memtype, S32 clear )
 	{
 		MEM_SET( mem, 0, h->mhn_Mem_Size );
 	}
+
+	return ( mem );
+}
+
+// --
+
+SEC_CODE PTR
+Memory_AllocIOBuffer( struct USBBase *usbbase, U32 length )
+{
+	struct Mem_IOBuffer *buffer;
+
+	PTR mem;
+	U32 pageSize;
+	U32 size;
+
+	pageSize = usbbase->usb_Exec_PageSize;
+
+	if ( ( ! usbbase->usb_Memory_Headers ) || ( ! length ) ||
+		( length > 0xffffffffU - ( pageSize - 1 ) ) )
+	{
+		return ( NULL );
+	}
+
+	size = ( length + pageSize - 1 ) & ~( pageSize - 1 );
+
+	buffer = MEM_ALLOCVEC( sizeof( *buffer ), FALSE );
+
+	if ( ! buffer )
+	{
+		return ( NULL );
+	}
+
+	mem = Memory_AllocDMAPages( usbbase, size, pageSize, & buffer->Physical );
+
+	if ( ! mem )
+	{
+		MEM_FREEVEC( buffer );
+
+		return ( NULL );
+	}
+
+	buffer->Memory = mem;
+	buffer->Length = length;
+	buffer->Allocated = size;
+
+	SEMAPHORE_OBTAIN( &usbbase->usb_IOBufferSemaphore );
+
+	NODE_ADDTAIL( &usbbase->usb_IOBuffers, buffer );
+
+	SEMAPHORE_RELEASE( &usbbase->usb_IOBufferSemaphore );
 
 	return ( mem );
 }

@@ -81,6 +81,7 @@ struct Mem_FreeNode *next;
 
 SEC_CODE void __Memory_Cleanup( struct USBBase *usbbase )
 {
+struct Mem_IOBuffer *buffer;
 struct Mem_HeaderNode *mhn;
 struct Mem_HeaderNode *h;
 U32 cnt;
@@ -90,6 +91,11 @@ U32 cnt;
 	if ( mhn )
 	{
 		usbbase->usb_Memory_Headers = NULL;
+
+		while ( ( buffer = usbbase->usb_IOBuffers.uh_Head ) )
+		{
+			Memory_FreeIOBuffer( usbbase, buffer->Memory );
+		}
 
 		for( cnt=0 ; cnt<MEMID_Last ; cnt++ )
 		{

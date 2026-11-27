@@ -114,6 +114,8 @@ struct USBBase
 
 	// Queued Memory -- MEMID_x Headers
 	struct Mem_HeaderNode * usb_Memory_Headers;
+	struct USB2_Semaphore usb_IOBufferSemaphore;
+	struct USB2_Header usb_IOBuffers;
 
 	// Any Task started
 	struct USB2_Semaphore usb_Task_Semaphore;

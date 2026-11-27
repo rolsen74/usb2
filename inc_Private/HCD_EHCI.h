@@ -321,9 +321,11 @@ struct EHCI_ITD
 	U32 Microframe;
 	U32 Length;
 	U32 RetiredAt;
+	U16 DataOffset;
 	U8 Mask;
 	U8 Usecs;
 	U8 Hub;
+	U8 DirectDMA;
 };
 
 #define EHCI_FRAME_COUNT	1024
@@ -335,6 +337,9 @@ struct EHCI_ITD
 #define EHCI_ITD_ACTIVE		0x80000000U
 #define EHCI_ITD_ERRORS		0x70000000U
 #define EHCI_ITD_IOC		0x00008000U
+#define EHCI_ITD_PAGE_SIZE	4096U
+#define EHCI_ITD_PAGE_MASK	( EHCI_ITD_PAGE_SIZE - 1 )
+#define EHCI_ITD_ALIGN		128
 #define EHCI_ITD_DATA		128
 
 #define EHCI_SITD_ACTIVE	0x00000080U

@@ -88,7 +88,7 @@ EHCI_Isochronous_Length ( struct USB2_HCDNode *hn, struct RealRequest *req )
 			}
 		}
 
-		if ( ( in ) && ( actual ) )
+		if ( ( in ) && ( actual ) && ( ! itd->DirectDMA ) )
 		{
 			MEM_COPY( (U8 *) itd + EHCI_ITD_DATA, (U8 *) req->req_Public.io_Data + offset, actual );
 		}

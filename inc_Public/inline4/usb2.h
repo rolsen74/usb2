@@ -41,6 +41,9 @@
 #define USB2_Notify_Add(x,y)				IUSB2->USB2_Notify_Add((x),(y))
 #define USB2_Notify_Remove(x)				IUSB2->USB2_Notify_Remove((x))
 
+#define USB2_AllocIOBuffer(x)				IUSB2->USB2_AllocIOBuffer((x))
+#define USB2_FreeIOBuffer(x)				IUSB2->USB2_FreeIOBuffer((x))
+
 	#if 0
 #ifndef EXEC_TYPES_H
 #include <exec/types.h>

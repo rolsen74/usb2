@@ -186,6 +186,9 @@ SEC_CODE void USB2_Bind_Enumerated( struct USBBase *usbbase );
 SEC_CODE S32 USB2_FullBoot_Wait( struct USBBase *usbbase );
 SEC_CODE void USB2_FullBoot_Complete( struct USBBase *usbbase, S32 ready );
 SEC_CODE void USB2_DeviceQuery( struct IOStdReq *ioreq, U16 type, const U16 *commands );
+SEC_CODE PTR Memory_AllocIOBuffer( struct USBBase *usbbase, U32 length );
+SEC_CODE void Memory_FreeIOBuffer( struct USBBase *usbbase, PTR mem );
+SEC_CODE U32 Memory_IOBufferPhysical( struct USBBase *usbbase, PTR mem, U32 length );
 #ifdef DRV_MSD
 SEC_CODE S32 MSD_CreateDevice( struct USBBase *usbbase );
 #endif
