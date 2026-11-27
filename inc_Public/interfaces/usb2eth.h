@@ -24,6 +24,7 @@
 #define USB2ETH_TITLE_SIZE 96
 #define USB2ETH_CLASS_REVISION 7
 #define USB2ETH_REGISTRATION_REVISION 8
+#define USB2ETH_RECONNECT_REVISION 12
 
 /* Values used by existing driver and client pairs. The stack treats type as opaque. */
 enum USB2EthAdapterType
@@ -39,6 +40,7 @@ enum USB2EthAdapterType
 };
 
 struct USB2EthUnit;
+struct USB2_DriverMessage;
 
 struct USB2EthAdapterInfo
 {
@@ -111,6 +113,9 @@ struct USB2EthIFace
 		struct USB2EthAdapterInfo *info );
 	/* Since USB2ETH_REGISTRATION_REVISION. Zero means no live registration. */
 	ULONG APICALL ( *GetRegistrationID )( struct USB2EthIFace *Self, const struct IORequest *request, ULONG number );
+	/* Since USB2ETH_RECONNECT_REVISION. Match the unit number without carrying over SANA-II opens. */
+	struct USB2EthUnit *APICALL ( *RegisterDevice )( struct USB2EthIFace *Self,
+		const struct USB2EthOps *ops, APTR adapter, ULONG *number, ULONG type, const struct USB2_DriverMessage *msg );
 };
 
 #endif

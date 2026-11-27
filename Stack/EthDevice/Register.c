@@ -28,6 +28,12 @@ CopyName( char *target, const char *source )
 
 // --
 
+SEC_CODE static struct USB2EthUnit *
+Register( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR adapter, ULONG *number, ULONG type,
+	const char *title, const char *driver, const char *alias, const struct USB2_DriverMessage *msg );
+
+// --
+
 SEC_CODE struct USB2EthUnit *
 EthDevice_Register( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR adapter, ULONG *number )
 {
@@ -57,9 +63,34 @@ SEC_CODE struct USB2EthUnit *
 EthDevice_RegisterClassAdapter( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR adapter,
 	ULONG *number, ULONG type, const char *title, const char *driver, const char *alias )
 {
+	return ( Register( Self, ops, adapter, number, type, title, driver, alias, NULL ) );
+}
+
+// --
+
+SEC_CODE struct USB2EthUnit *
+EthDevice_RegisterDevice( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR adapter,
+	ULONG *number, ULONG type, const struct USB2_DriverMessage *msg )
+{
+	if ( ! msg )
+	{
+		return ( NULL );
+	}
+
+	return ( Register( Self, ops, adapter, number, type, msg->ClassTitle, msg->ClassDriver, msg->ClassAlias, msg ) );
+}
+
+// --
+
+SEC_CODE static struct USB2EthUnit *
+Register( struct USB2EthIFace *Self, const struct USB2EthOps *ops, PTR adapter, ULONG *number, ULONG type,
+	const char *title, const char *driver, const char *alias, const struct USB2_DriverMessage *msg )
+{
 	struct USB2EthDevice *base;
 	struct USB2EthUnit *unit;
 	struct ExecIFace *IExec;
+	struct USB2UnitIdentity identity;
+	struct USB2UnitSearch search;
 
 	U32 index;
 
@@ -87,20 +118,28 @@ EthDevice_RegisterClassAdapter( struct USB2EthIFace *Self, const struct USB2EthO
 
 	CopyName( unit->Info.Alias, alias );
 
+	USB2_ReadUnitIdentity( &identity, msg, 0 );
+
+	USB2_InitUnitSearch( &search, USB2_ETH_MAX_UNITS );
+
 	IExec->ObtainSemaphore( & base->OpenLock );
 
 	IExec->ObtainSemaphore( & base->RouteLock );
 
-	for( index = 0; index < USB2_ETH_MAX_UNITS; index++ )
+	for ( index = 0; index < USB2_ETH_MAX_UNITS; index++ )
 	{
 		if ( ! base->Units[index] )
 		{
-			break;
+			USB2_ConsiderUnit( &search, &base->Identity[index], &identity, index, base->Reserved[index] != 0 );
 		}
 	}
 
+	index = USB2_SelectUnit( &search );
+
 	if ( index < USB2_ETH_MAX_UNITS )
 	{
+		IExec->CopyMem( &identity, &base->Identity[index], sizeof( identity ) );
+
 		unit->Ops = ops;
 		unit->Adapter = adapter;
 		unit->Number = index;

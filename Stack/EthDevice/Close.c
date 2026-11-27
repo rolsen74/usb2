@@ -47,6 +47,11 @@ EthDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request 
 
 		IExec->ObtainSemaphore( & base->OpenLock );
 
+		if ( unit->Detached )
+		{
+			base->Reserved[unit->Number]--;
+		}
+
 		// Keep the last open reference until the adapter callback returns.
 		destroy = ( ! --unit->Opens ) && ( ! unit->Opening ) && ( unit->Detached );
 

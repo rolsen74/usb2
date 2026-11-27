@@ -38,6 +38,7 @@ EthDevice_Unregister( struct USB2EthIFace *Self, struct USB2EthUnit *unit )
 	IExec->ObtainSemaphore( & base->RouteLock );
 
 	base->Units[unit->Number] = NULL;
+	base->Reserved[unit->Number] += unit->Opens + unit->Opening;
 	unit->Detached = TRUE;
 
 	destroy = ( ! unit->Opens ) && ( ! unit->Opening );

@@ -15,6 +15,7 @@
 #include <devices/newstyle.h>
 #include <devices/usb2defaults.h>
 #include <interfaces/usb2eth.h>
+#include <interfaces/usb2unitidentity.h>
 
 // --
 
@@ -38,6 +39,8 @@ struct USB2EthDevice
 	struct SignalSemaphore RouteLock;
 	ULONG NextRegistrationID;
 	struct USB2EthUnit *Units[USB2_ETH_MAX_UNITS];
+	struct USB2UnitIdentity Identity[USB2_ETH_MAX_UNITS];
+	U32 Reserved[USB2_ETH_MAX_UNITS];
 };
 
 SEC_CODE struct USB2EthDevice *EthDevice_Alloc( struct USBBase *usbbase );
@@ -66,6 +69,8 @@ SEC_CODE LONG EthDevice_GetAdapterInfo( struct USB2EthIFace *Self, const struct 
 	struct USB2EthAdapterInfo *info );
 
 SEC_CODE ULONG EthDevice_GetRegistrationID( struct USB2EthIFace *Self, const struct IORequest *request, ULONG number );
+SEC_CODE struct USB2EthUnit *EthDevice_RegisterDevice( struct USB2EthIFace *Self,
+	const struct USB2EthOps *ops, PTR adapter, ULONG *number, ULONG type, const struct USB2_DriverMessage *msg );
 
 #endif
 

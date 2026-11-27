@@ -75,6 +75,7 @@ SEC_RODATA static const PTR MainVectors[] =
 	(PTR) EthDevice_RegisterClassAdapter,
 	(PTR) EthDevice_GetAdapterInfo,
 	(PTR) EthDevice_GetRegistrationID,
+	(PTR) EthDevice_RegisterDevice,
 	(PTR) -1
 };
 
@@ -115,8 +116,8 @@ EthDevice_Alloc( struct USBBase *usbbase )
 	base->Library.lib_Node.ln_Name = USB2_ETH_DEVICE;
 	base->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
 	base->Library.lib_Version = 1;
-	base->Library.lib_Revision = 11;
-	base->Library.lib_IdString = USB2_ETH_DEVICE " 1.11 (" DATE ")\r\n";
+	base->Library.lib_Revision = USB2ETH_RECONNECT_REVISION;
+	base->Library.lib_IdString = USB2_ETH_DEVICE " 1.12 (" DATE ")\r\n";
 	base->USB = usbbase;
 
 	IExec->InitSemaphore( & base->OpenLock );

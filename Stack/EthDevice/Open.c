@@ -188,6 +188,11 @@ EthDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, 
 
 		unit->Opening--;
 
+		if ( ( error ) && ( unit->Detached ) )
+		{
+			base->Reserved[unit->Number]--;
+		}
+
 		if ( ! error )
 		{
 			IExec->ObtainSemaphore( & base->RouteLock );
