@@ -24,6 +24,8 @@
 #define PREVIEW_AUDIO_CHUNK_US 32000U
 #define PREVIEW_AUDIO_AHI ~0U
 #define PREVIEW_MONITOR_RATE_ADJUSTMENT 10
+#define PREVIEW_MONITOR_RECOVERY_WINDOW 64U
+#define PREVIEW_MONITOR_RECOVERY_COOLDOWN 32U
 
 // --
 
@@ -398,6 +400,19 @@ StartAudioInput( struct PreviewAudio *audio, U32 bytes )
 // --
 
 static void
+ResetMonitorQueue( struct PreviewAudio *audio )
+{
+	audio->MonitorResampler = (struct AudioWavResampler){ 0 };
+	audio->MonitorRead = 0;
+	audio->MonitorCount = 0;
+	audio->MonitorOffset = 0;
+	audio->MonitorBytes = 0;
+	audio->MonitorPrimed = FALSE;
+}
+
+// --
+
+static void
 CloseMonitor( struct PreviewAudio *audio )
 {
 	struct IOStdReq *request;
@@ -443,15 +458,13 @@ CloseMonitor( struct PreviewAudio *audio )
 
 	audio->MonitorBuffer = NULL;
 	audio->Silence = NULL;
-	audio->MonitorRead = 0;
-	audio->MonitorCount = 0;
-	audio->MonitorOffset = 0;
-	audio->MonitorBytes = 0;
 	audio->MonitorPhase = 0;
 	audio->SilencePhase = 0;
 	audio->MonitorEmptySince = 0;
 	audio->ShortWrites = 0;
-	audio->MonitorPrimed = FALSE;
+	audio->MonitorRecovering = FALSE;
+
+	ResetMonitorQueue( audio );
 }
 
 // --
@@ -581,6 +594,9 @@ PreviewAudio_Stop( struct PreviewAudio *audio )
 		DebugPrintF( "USB2VideoTest: audio in %lu ms captured %lu frames, completed %lu output frames, "
 			"longest observed refill %lu us\n",
 			(U32) ( elapsed / 1000 ), (U32) audio->CapturedFrames, (U32) audio->PlayedFrames, (U32) audio->MonitorRefillUS );
+
+		DebugPrintF( "USB2VideoTest: audio USB output gaps in %lu writes, %lu monitor recoveries\n",
+			audio->MonitorGapWrites, audio->MonitorRecoveries );
 	}
 
 	if ( audio->ShortReads )
@@ -740,6 +756,9 @@ PreviewAudio_Start( struct PreviewAudio *audio, const struct PreviewAudioChoices
 		if ( sink->Request )
 		{
 			OpenMonitorRequests( audio );
+
+			audio->MonitorCanRecover = ( ! sink->AHI ) && ( audio->WriteDepth > 1 ) &&
+				LIB_IS_AT_LEAST( &sink->Request->io_Device->dd_Library, AUDIO_DEVICE_VERSION, AUDIO_OUTPUT_RECOVERY_REVISION );
 
 			sink->Frames = audio->Input.Frames;
 
@@ -971,7 +990,7 @@ PlayQueuedAudio( struct PreviewAudio *audio )
 
 	priming = MAX( 2, audio->WriteDepth );
 
-	if ( ( audio->WriteCount == audio->WriteDepth ) || ( ! audio->MonitorCount ) ||
+	if ( ( audio->MonitorRecovering ) || ( audio->WriteCount == audio->WriteDepth ) || ( ! audio->MonitorCount ) ||
 		( ( ! audio->MonitorPrimed ) && ( audio->MonitorCount < priming ) ) )
 	{
 		return;
@@ -1043,6 +1062,30 @@ PlayQueuedAudio( struct PreviewAudio *audio )
 // --
 
 static void
+NoteMonitorDisruption( struct PreviewAudio *audio )
+{
+	if ( ( ! audio->MonitorCanRecover ) || ( audio->MonitorRecovering ) || ( audio->MonitorRecoveryCooldown ) )
+	{
+		return;
+	}
+
+	if ( ! audio->MonitorRecoveryWindow )
+	{
+		audio->MonitorRecoveryWindow = PREVIEW_MONITOR_RECOVERY_WINDOW;
+
+		return;
+	}
+
+	// Drain submitted writes while capture continues, then prime with recent audio.
+	audio->MonitorRecovering = TRUE;
+	audio->MonitorRecoveryWindow = 0;
+
+	ResetMonitorQueue( audio );
+}
+
+// --
+
+static void
 QueueMonitorAudio( struct PreviewAudio *audio, U8 *input, U32 bytes )
 {
 	struct PreviewAudioStream *output;
@@ -1070,6 +1113,8 @@ QueueMonitorAudio( struct PreviewAudio *audio, U8 *input, U32 bytes )
 		audio->MonitorRead = ( audio->MonitorRead + 1 ) % PREVIEW_MONITOR_BUFFERS;
 		audio->MonitorCount--;
 		audio->MonitorDrops++;
+
+		NoteMonitorDisruption( audio );
 	}
 
 	slot = ( audio->MonitorRead + audio->MonitorCount ) % PREVIEW_MONITOR_BUFFERS;
@@ -1152,6 +1197,23 @@ FinishMonitorWrite( struct PreviewAudio *audio )
 	partial = ( ! audio->Output.AHI ) && ( ( error == AUDIO_ERR_SHORT_WRITE ) ||
 		( error == IOERR_BADLENGTH ) || ( ( ! error ) && ( actual != wanted ) ) );
 	audio->PlayedFrames += MIN( actual, wanted ) / ( audio->Output.Format.Channels * 2 );
+
+	if ( audio->MonitorRecoveryWindow )
+	{
+		audio->MonitorRecoveryWindow--;
+	}
+
+	if ( audio->MonitorRecoveryCooldown )
+	{
+		audio->MonitorRecoveryCooldown--;
+	}
+
+	if ( ( audio->MonitorCanRecover ) && ( request->io_Offset ) )
+	{
+		audio->MonitorGapWrites++;
+
+		NoteMonitorDisruption( audio );
+	}
 
 	if ( ( ! error ) && ( ! partial ) )
 	{
@@ -1238,6 +1300,35 @@ PreviewAudio_Update( struct PreviewAudio *audio )
 		PreviewAudio_Stop( audio );
 
 		return;
+	}
+
+	if ( ( audio->MonitorRecovering ) && ( ! audio->WriteCount ) )
+	{
+		struct IOStdReq *request;
+
+		request = output->Request;
+		request->io_Command = CMD_RESET;
+		request->io_Flags = 0;
+		request->io_Data = NULL;
+		request->io_Length = 0;
+		request->io_Offset = 0;
+
+		error = DoIO( (PTR) request );
+
+		if ( error )
+		{
+			Printf( "Could not restart USB audio monitoring (error %ld).\n", error );
+
+			CloseMonitor( audio );
+		}
+		else
+		{
+			audio->MonitorPhase = 0;
+			audio->MonitorVolume = 0;
+			audio->MonitorRecovering = FALSE;
+			audio->MonitorRecoveries++;
+			audio->MonitorRecoveryCooldown = PREVIEW_MONITOR_RECOVERY_COOLDOWN;
+		}
 	}
 
 	PlayQueuedAudio( audio );

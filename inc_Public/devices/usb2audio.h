@@ -24,8 +24,11 @@
 // CHECK_RATE validates a native U32 rate in Hz without changing the stream.
 #define AUDIO_CMD_CHECK_RATE 0x8004
 // QUEUE_WRITE can keep three writes outstanding from device revision 7.
+// At revision 10, io_Offset returns the total detected USB gap in microseconds.
+// CMD_RESET on an idle playback unit resets timing for a new series of writes.
 #define AUDIO_CMD_QUEUE_WRITE 0x8005
 #define AUDIO_THREE_WRITES_REVISION 7
+#define AUDIO_OUTPUT_RECOVERY_REVISION 10
 #define AUDIO_MAX_QUEUED_WRITES 3
 // Query-unit command. io_Offset is AUDIO_ENDPOINT_VERSION, and io_Data points
 // to a caller-owned array of AudioEndpoint records. io_Actual is the required

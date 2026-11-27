@@ -180,6 +180,12 @@ __HCD_Transfer_Check ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struc
 			if ( ( gap ) && ( gap <= EHCI_FRINDEX_MASK / 2 ) )
 			{
 				gap *= 125;
+
+				if ( next->req_Public.io_IsoPacketLengths )
+				{
+					next->req_Public.io_Offset = gap;
+				}
+
 				hn->hn_HCD.EHCI.IsoOutGapCount++;
 				hn->hn_HCD.EHCI.IsoOutGapUsecs += gap;
 				hn->hn_HCD.EHCI.IsoOutGapMax = MAX ( hn->hn_HCD.EHCI.IsoOutGapMax, gap );

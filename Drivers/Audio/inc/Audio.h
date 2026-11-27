@@ -65,6 +65,7 @@ struct AudioWrite
 	U32 Queued;
 	U32 Done;
 	U32 Actual;
+	U32 GapUS;
 };
 
 struct AudioReadBatch

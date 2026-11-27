@@ -12,9 +12,10 @@
 #include <exec/libraries.h>
 
 #define AUDIO_DEVICE_VERSION 1
-#define AUDIO_DEVICE_REVISION 9
+#define AUDIO_DEVICE_REVISION 10
 #define AUDIO_ENDPOINT_BACKEND_REVISION 3
-#define AUDIO_DEVICE_ID AUDIO_DEVICE_NAME " 1.9 (27.11.2026)"
+#define AUDIO_DEVICE_ID AUDIO_DEVICE_NAME " 1.10 (27.11.2026)"
+#define AUDIO_WORKER_PRIORITY 10
 
 static inline U32
 Audio_QueuedWriteDepth( const struct Library *device )

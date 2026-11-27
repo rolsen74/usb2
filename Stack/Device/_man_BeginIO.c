@@ -227,6 +227,12 @@ _manager_BeginIO ( struct DeviceManagerInterface * Self, struct IORequest * requ
 			hn							= fn->fkt_HCD;
 			ioreq->req_Public.io_Actual = 0;
 
+			if ( ( request->io_Command == CMD_WRITE ) && ( ioreq->req_EndPoint->ep_Type == EPATT_Type_Isochronous ) &&
+				( ioreq->req_Public.io_IsoPacketLengths ) )
+			{
+				ioreq->req_Public.io_Offset = 0;
+			}
+
 			in		 = ioreq->req_EndPoint->ep_Interface;
 			resource = ioreq->req_Resource;
 

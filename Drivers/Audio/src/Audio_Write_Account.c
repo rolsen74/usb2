@@ -29,6 +29,7 @@ Audio_Write_Account( struct AudioUnit *unit, U32 slot )
 	actual = MIN( ioreq->io_Actual, bytes );
 	write->Done += bytes;
 	write->Actual += actual - actual % framesize;
+	write->GapUS += MIN( ioreq->io_Offset, ~0U - write->GapUS );
 	unit->WriteOwners[slot] = NULL;
 }
 

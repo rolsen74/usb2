@@ -55,6 +55,7 @@ Audio_Write_Start( struct AudioUnit *unit )
 			offset = write->Queued;
 			ioreq->io_Command = CMD_WRITE;
 			ioreq->io_Actual = 0;
+			ioreq->io_Offset = 0;
 			ioreq->io_Data = unit->Stream->Buffers[slot];
 			ioreq->io_AllowShortPackets = FALSE;
 			ioreq->io_IsoPacketLengths = unit->WritePacketLengths[slot];

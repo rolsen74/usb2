@@ -78,6 +78,10 @@ struct PreviewAudio
 	U32 ShortWriteTotal;
 	U32 MonitorUnderruns;
 	U32 MonitorDrops;
+	U32 MonitorGapWrites;
+	U32 MonitorRecoveries;
+	U32 MonitorRecoveryWindow;
+	U32 MonitorRecoveryCooldown;
 	U32 Written;
 	U32 Volume;
 	U32 MonitorVolume;
@@ -85,6 +89,8 @@ struct PreviewAudio
 	S32 WriteFailed;
 	enum PreviewRecordingResult RecordingResult;
 	S32 MonitorPrimed;
+	S32 MonitorCanRecover;
+	S32 MonitorRecovering;
 	S32 TimedRead;
 	S32 Trace;
 };

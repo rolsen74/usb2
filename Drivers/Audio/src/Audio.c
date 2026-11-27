@@ -16,6 +16,9 @@ SEC_CODE U32 Audio_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessag
 struct AudioDriverBase *driver;
 struct AudioContext *ctx;
 struct AudioUnit *unit;
+struct Task *task;
+
+S32 priority;
 
 	if ( ( ! msg ) || ( ! msg->Interface ) || ( ! msg->InterfaceDescriptor ) ||
 		( msg->InterfaceDescriptor->InterfaceClass != USBCLASS_Audio ) ||
@@ -52,8 +55,15 @@ struct AudioUnit *unit;
 		(U32) unit->InterfaceNr, unit->UnitNr, (U32) unit->EndPoint,
 		unit->Format.SampleRate, unit->Format.Channels );
 
+	task = FindTask( NULL );
+
+	priority = SetTaskPri( task, AUDIO_WORKER_PRIORITY );
+
 	Audio_Main( unit );
+
 	Audio_Free( unit );
+
+	SetTaskPri( task, priority );
 
 	return ( TRUE );
 }

@@ -421,6 +421,8 @@ struct USB2_IORequest
 	// Single-packet SuperSpeed endpoints can transfer fewer bytes per slot.
 	// For writes, supply each packet's nonzero length before submitting.
 	// io_Length includes the full stride of every packet slot for such writes.
+	// On EHCI writes, io_Offset returns the gap in microseconds before this
+	// request when a previous batch ended with this request still queued.
 	// For reads, the array receives the lengths on successful completion.
 	// A failed interval is reported as USB2_ISO_PACKET_ERROR where supported.
 	// Keep the array valid until the request returns.

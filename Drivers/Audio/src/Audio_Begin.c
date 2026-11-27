@@ -184,6 +184,17 @@ Audio_Begin( struct AudioUnit *unit )
 				continue;
 			}
 		}
+		else if ( ( ! ( unit->EndPoint & EPADR_Dir_Mask ) ) && ( ioreq->io_Command == CMD_RESET ) )
+		{
+			if ( unit->WriteCount )
+			{
+				ioreq->io_Error = IOERR_UNITBUSY;
+			}
+			else
+			{
+				unit->WritePhase = 0;
+			}
+		}
 		else if ( ( ! ( unit->EndPoint & EPADR_Dir_Mask ) ) &&
 			( ( ioreq->io_Command == CMD_WRITE ) || ( ioreq->io_Command == AUDIO_CMD_QUEUE_WRITE ) ) )
 		{
@@ -205,6 +216,7 @@ Audio_Begin( struct AudioUnit *unit )
 				write->Queued = 0;
 				write->Done = 0;
 				write->Actual = 0;
+				write->GapUS = 0;
 				unit->WriteCount++;
 
 				Audio_Write_Start( unit );

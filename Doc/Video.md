@@ -102,14 +102,17 @@ streams fit within its [periodic schedule](EHCI.md).
 The preview retries briefly when the controller cannot schedule a video
 transfer. If the retries fail, the window reports insufficient USB bandwidth
 and keeps the active audio session running.
-Monitoring buffers three audio blocks before playback starts on a USB audio
-device with a three-write queue. Other outputs buffer two blocks. Monitoring
+Monitoring buffers enough samples for three writes before playback starts on a
+USB audio device with a three-write queue. Other outputs buffer two blocks. Monitoring
 keeps playing queued writes after a short write and refills the buffer when
 the queue runs dry. USB playback carries leftover resampled samples into the
 next 32 ms write so block boundaries follow the USB packet cadence.
 Monitoring fills the unused part of a short input block with silence.
 `TRACE` reports USB input losses, short output writes,
-underruns, and dropped monitor blocks when the audio session ends.
+underruns, and dropped monitor blocks when the audio session ends. With
+`usb2audio.device` 1.10, repeated USB playback gaps or dropped monitor blocks
+can trigger a monitor restart. The monitor drains submitted writes and refills
+from recent audio while capture and WAV recording continue.
 Recording continues if the monitoring output stops.
 
 Run `USB2VideoTest MODES` in a Shell to list unit 0's resolutions and frame

@@ -383,6 +383,7 @@ AHI_Start( struct AHIsubIFace *self, ULONG flags, struct AHIAudioCtrlDrv *audio 
 		process = play->DOS->CreateNewProcTags(
 			NP_Entry, Playback_Entry,
 			NP_Name, WORKER_NAME,
+			NP_Priority, AUDIO_WORKER_PRIORITY,
 			NP_UserData, play,
 			TAG_END );
 	}
