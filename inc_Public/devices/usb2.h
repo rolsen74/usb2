@@ -876,14 +876,14 @@ enum USB2_StackState
 
 struct USB2_StackInfo
 {
-	U32 State; // enum USB2_StackState
-	U32 UptimeSeconds;
+	U32 State;		   // enum USB2_StackState
+	U32 UptimeSeconds; //
 };
 
 struct USB2_IOCaptureTarget
 {
-	USB2_ID ID;
-	U32		Enabled;
+	USB2_ID ID;		 //
+	U32		Enabled; //
 };
 
 struct USB2_IOCaptureFilter
