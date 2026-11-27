@@ -75,7 +75,7 @@ PrintDevice( struct BTLEDevice *device )
 LONG
 RunLE( struct IORequest *request, ULONG unit, enum BTLEMode mode, const char *name, LONG seconds )
 {
-	struct Bluetooth2LEIFace *interface;
+	struct Bluetooth2IFace *interface;
 	struct BTLERequest operation;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -109,11 +109,13 @@ RunLE( struct IORequest *request, ULONG unit, enum BTLEMode mode, const char *na
 		memcpy( operation.Name, name, length );
 	}
 
-	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_LE_INTERFACE, BLUETOOTH2_LE_VERSION, NULL );
+	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! interface )
 	{
-		Printf( "LE operations require Bluetooth2 1.15 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
@@ -140,7 +142,7 @@ RunLE( struct IORequest *request, ULONG unit, enum BTLEMode mode, const char *na
 		Printf( "Scanning for LE advertisements on unit %lu for %ld seconds. Ctrl-C stops the scan.\n", unit, seconds );
 	}
 
-	result = interface->RunController( unit, & operation, & error );
+	result = interface->le_RunController( unit, & operation, & error );
 
 	if ( operation.Devices )
 	{

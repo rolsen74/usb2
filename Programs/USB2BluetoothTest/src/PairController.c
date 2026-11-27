@@ -97,8 +97,7 @@ ReadPIN( struct BTPairRequest *pair )
 LONG
 PairController( struct IORequest *request, ULONG unit, const char *address, enum BTPairOperation operation )
 {
-	struct Bluetooth2PairingIFace *pairing;
-	struct Bluetooth2BondingIFace *bonding;
+	struct Bluetooth2IFace *bt2;
 	struct BTBondRequest bond;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -112,35 +111,19 @@ PairController( struct IORequest *request, ULONG unit, const char *address, enum
 		return ( RETURN_FAIL );
 	}
 
-	pairing = NULL;
-	bonding = NULL;
 	bond.Peer.PINLength = 0;
 	bond.Reconnect = operation == BT_TEST_RECONNECT;
 	bond.SentSavedKey = 0;
 
-	if ( operation == BT_TEST_PAIR )
+	bt2 = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
+
+	if ( ! bt2 )
 	{
-		pairing = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_PAIRING_INTERFACE,
-			BLUETOOTH2_PAIRING_VERSION, NULL );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
-		if ( ! pairing )
-		{
-			Printf( "PAIR requires Bluetooth2 1.4 or later.\n" );
-
-			return ( RETURN_FAIL );
-		}
-	}
-	else
-	{
-		bonding = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_BONDING_INTERFACE,
-			BLUETOOTH2_BONDING_VERSION, NULL );
-
-		if ( ! bonding )
-		{
-			Printf( "BOND and RECONNECT require Bluetooth2 1.5 or later.\n" );
-
-			return ( RETURN_FAIL );
-		}
+		return ( RETURN_FAIL );
 	}
 
 	result = BT_HCI_INVALID_ARGUMENT;
@@ -149,8 +132,8 @@ PairController( struct IORequest *request, ULONG unit, const char *address, enum
 	{
 		Printf( "Opening a Classic Bluetooth connection to %s on unit %lu.\n", address, unit );
 
-		result = bonding ? bonding->BondController( unit, & bond, & error ) :
-			pairing->PairController( unit, & bond.Peer, & error );
+		result = operation != BT_TEST_PAIR ? bt2->bonding_BondController( unit, & bond, & error ) :
+			bt2->pairing_PairController( unit, & bond.Peer, & error );
 	}
 
 	for( byte = 0; byte < BT_PIN_MAX; byte++ )
@@ -158,7 +141,7 @@ PairController( struct IORequest *request, ULONG unit, const char *address, enum
 		((volatile uint8_t *)bond.Peer.PIN)[byte] = 0;
 	}
 
-	DropInterface( bonding ? (APTR) bonding : (APTR) pairing );
+	DropInterface( (APTR) bt2 );
 
 	switch( result )
 	{

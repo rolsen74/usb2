@@ -13,14 +13,13 @@
 // --
 
 S32
-BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message )
+BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint, U8 recipient )
 {
 	struct USB2_EPResource *control;
 
-	U8 endpoint;
-
 	usb->USB2 = message->IUSB2;
 	usb->InterfaceNumber = message->Interface->IFC_Num;
+	usb->CommandRecipient = recipient;
 	usb->EventPending = BTUSB_EVENT_IDLE;
 	usb->PrefetchEvents = FALSE;
 	usb->TimerPort = NULL;
@@ -36,6 +35,7 @@ BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message )
 	usb->UncertainResponse = FALSE;
 	usb->Detached = FALSE;
 	usb->Stopping = FALSE;
+	usb->CheckingReadiness = FALSE;
 	usb->Events = NULL;
 	usb->ACLIn = NULL;
 	usb->ACLOut = NULL;
@@ -48,16 +48,12 @@ BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message )
 		return ( FALSE );
 	}
 
+	DebugPrintF( "Bluetooth USB: opening HCI endpoints for %04lx:%04lx if %lu, event EP $%02lx\n",
+		(U32) message->VendorID, (U32) message->DeviceID, (U32) usb->InterfaceNumber, (U32) endpoint );
+
 	control = usb->Registration->Res_Control;
 
 	if ( ( ! control ) || ( ! control->SetupData ) || ( ! control->IORequests ) || ( ! control->IORequests[0] ) )
-	{
-		return ( FALSE );
-	}
-
-	endpoint = BTUSB_FindEventEndpoint( message, & usb->CommandRecipient );
-
-	if ( ! endpoint )
 	{
 		return ( FALSE );
 	}
@@ -71,6 +67,8 @@ BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message )
 
 	if ( ! BTUSB_OpenTimer( usb ) )
 	{
+		DebugPrintF( "Bluetooth USB: could not open HCI timer\n" );
+
 		return ( FALSE );
 	}
 

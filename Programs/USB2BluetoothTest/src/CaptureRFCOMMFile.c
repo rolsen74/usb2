@@ -166,7 +166,7 @@ LONG
 CaptureRFCOMMFile( struct IORequest *request, ULONG unit, const char *address, LONG channel,
 	const char *path, LONG bytes )
 {
-	struct Bluetooth2SerialCaptureIFace *interface;
+	struct Bluetooth2IFace *interface;
 	struct BTRFCOMMCapture capture;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -195,12 +195,13 @@ CaptureRFCOMMFile( struct IORequest *request, ULONG unit, const char *address, L
 		return ( RETURN_FAIL );
 	}
 
-	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_CAPTURE_INTERFACE,
-		BLUETOOTH2_CAPTURE_VERSION, NULL );
+	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! interface )
 	{
-		Printf( "SAVE requires Bluetooth2 1.13 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
@@ -219,7 +220,7 @@ CaptureRFCOMMFile( struct IORequest *request, ULONG unit, const char *address, L
 
 			Printf( "Capturing %ld bytes from %s on RFCOMM channel %ld. Ctrl-C cancels.\n", bytes, address, channel );
 
-			result = interface->ReceiveController( unit, & capture, & error );
+			result = interface->serialcapture_ReceiveController( unit, & capture, & error );
 
 			status = ReportCaptureResult( & capture, result, & error, unit );
 		}

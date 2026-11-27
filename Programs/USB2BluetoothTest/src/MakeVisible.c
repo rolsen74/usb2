@@ -18,7 +18,7 @@
 LONG
 MakeVisible( struct IORequest *request, ULONG unit, const char *name, LONG seconds )
 {
-	struct Bluetooth2VisibilityIFace *interface;
+	struct Bluetooth2IFace *interface;
 	struct BTVisibility visibility;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -41,12 +41,13 @@ MakeVisible( struct IORequest *request, ULONG unit, const char *name, LONG secon
 		return ( RETURN_FAIL );
 	}
 
-	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_VISIBILITY_INTERFACE,
-		BLUETOOTH2_VISIBILITY_VERSION, NULL );
+	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! interface )
 	{
-		Printf( "VISIBLE requires Bluetooth2 1.7 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
@@ -59,7 +60,7 @@ MakeVisible( struct IORequest *request, ULONG unit, const char *name, LONG secon
 
 	Printf( "Making unit %lu discoverable as %s for %ld seconds.\n", unit, name, seconds );
 
-	result = interface->MakeVisible( unit, & visibility, & error );
+	result = interface->visibility_MakeVisible( unit, & visibility, & error );
 
 	DropInterface( (APTR) interface );
 

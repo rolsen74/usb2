@@ -104,7 +104,7 @@ ReportPushResult( const struct BTObjectPush *push, enum BTHCIResult result, cons
 LONG
 PushObjectFile( struct IORequest *request, ULONG unit, const char *address, LONG channel, const char *path )
 {
-	struct Bluetooth2ObjectPushIFace *interface;
+	struct Bluetooth2IFace *interface;
 	struct BTObjectPush push;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -135,12 +135,13 @@ PushObjectFile( struct IORequest *request, ULONG unit, const char *address, LONG
 		return ( RETURN_FAIL );
 	}
 
-	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_OBEX_INTERFACE,
-		BLUETOOTH2_OBEX_VERSION, NULL );
+	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! interface )
 	{
-		Printf( "PUSH requires Bluetooth2 1.14 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
@@ -179,7 +180,7 @@ PushObjectFile( struct IORequest *request, ULONG unit, const char *address, LONG
 			Printf( "Finding the Object Push receiver on %s. Ctrl-C cancels.\n", address );
 		}
 
-		result = interface->PushController( unit, & push, & error );
+		result = interface->objectpush_PushController( unit, & push, & error );
 
 		status = ReportPushResult( & push, result, & error, unit );
 	}

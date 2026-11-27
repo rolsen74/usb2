@@ -160,7 +160,7 @@ StopInput( void *context )
 LONG
 ConnectBluetoothInput( struct IORequest *request, ULONG unit, const char *address )
 {
-	struct Bluetooth2HIDInputIFace *interface;
+	struct Bluetooth2IFace *interface;
 	struct BTInputDevice input;
 	struct BTHIDInput hid;
 	struct BTHCIError error;
@@ -177,12 +177,13 @@ ConnectBluetoothInput( struct IORequest *request, ULONG unit, const char *addres
 		return ( RETURN_FAIL );
 	}
 
-	interface = (APTR) GetInterface( (APTR) request->io_Device,
-		BLUETOOTH2_HID_INPUT_INTERFACE, BLUETOOTH2_HID_INPUT_VERSION, NULL );
+	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! interface )
 	{
-		Printf( "INPUT requires Bluetooth2 1.22 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
@@ -194,7 +195,7 @@ ConnectBluetoothInput( struct IORequest *request, ULONG unit, const char *addres
 
 	Printf( "Connecting %s on unit %lu for system input. Ctrl-C stops.\n", address, unit );
 
-	result = interface->ConnectController( unit, & hid, & error );
+	result = interface->hidinput_ConnectController( unit, & hid, & error );
 
 	DropInterface( (APTR) interface );
 

@@ -9,6 +9,7 @@
 #include <interfaces/bluetooth2.h>
 
 #define HCI_USB_TIMEOUT 1500000
+#define HCI_READY_TIMEOUT ( 2 * HCI_USB_TIMEOUT )
 
 enum BTUSBEventRead
 {
@@ -44,12 +45,13 @@ struct BTUSB
 	U16 UncertainOpcode;
 	U8 Detached;
 	U8 Stopping;
+	U8 CheckingReadiness;
 	enum BTUSBEventRead EventPending;
 	S32 PrefetchEvents;
 };
 
 U8 BTUSB_FindEventEndpoint( struct USB2_DriverMessage *message, U8 *recipient );
-S32 BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message );
+S32 BTUSB_Open( struct BTUSB *usb, struct USB2_DriverMessage *message, U8 endpoint, U8 recipient );
 S32 BTUSB_OpenTimer( struct BTUSB *usb );
 void BTUSB_CloseTimer( struct BTUSB *usb );
 U64 BTUSB_Now( struct BTUSB *usb );

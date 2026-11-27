@@ -77,6 +77,12 @@ BTUSB_FindEventEndpoint( struct USB2_DriverMessage *message, U8 *recipient )
 		size -= length;
 	}
 
+	// This legacy dongle used device-recipient HCI commands on interface zero.
+	if ( ( message->VendorID == 0x1131 ) && ( message->DeviceID == 0x1001 ) && ( ! interface ) )
+	{
+		*recipient = REQTYPE_Device;
+	}
+
 	return ( size ? 0 : endpoint );
 }
 

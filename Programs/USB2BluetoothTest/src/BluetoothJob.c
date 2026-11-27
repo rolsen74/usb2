@@ -23,7 +23,7 @@ ScanForPeers( struct BTWindowJob *job, struct IORequest *request )
 	struct BTInquiryResult inquiry;
 	struct BTHCIError error;
 
-	bt2 = (APTR) GetInterface( (APTR) request->io_Device, "main", BLUETOOTH2_INTERFACE_VERSION, NULL );
+	bt2 = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE, 3, NULL );
 
 	if ( ! bt2 )
 	{

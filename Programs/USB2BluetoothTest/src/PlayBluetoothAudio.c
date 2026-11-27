@@ -100,7 +100,7 @@ ReportPlayback( struct BTAudioPlayback *audio, enum BTHCIResult result, struct B
 LONG
 PlayBluetoothAudio( struct IORequest *request, ULONG unit, const char *address, const char *path )
 {
-	struct Bluetooth2A2DPIFace *interface;
+	struct Bluetooth2IFace *interface;
 	struct BTAudioPlayback audio;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -116,12 +116,13 @@ PlayBluetoothAudio( struct IORequest *request, ULONG unit, const char *address, 
 		return ( RETURN_FAIL );
 	}
 
-	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_A2DP_INTERFACE,
-		BLUETOOTH2_A2DP_VERSION, NULL );
+	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! interface )
 	{
-		Printf( "PLAY requires Bluetooth2 1.17 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
@@ -150,7 +151,7 @@ PlayBluetoothAudio( struct IORequest *request, ULONG unit, const char *address, 
 
 		Printf( "Playing %s to %s on unit %lu. Ctrl-C stops playback.\n", resolved, address, unit );
 
-		result = interface->PlayController( unit, & audio, & error );
+		result = interface->a2dp_PlayController( unit, & audio, & error );
 
 		status = ReportPlayback( & audio, result, & error );
 	}

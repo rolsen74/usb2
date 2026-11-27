@@ -56,7 +56,7 @@ PrintService( struct BTServiceRecord *record )
 LONG
 BrowseServices( struct IORequest *request, ULONG unit, const char *address )
 {
-	struct Bluetooth2SDPIFace *sdp;
+	struct Bluetooth2IFace *sdp;
 	struct BTServiceQuery query;
 	struct BTServiceRecord records[32];
 	struct BTHCIError error;
@@ -71,11 +71,13 @@ BrowseServices( struct IORequest *request, ULONG unit, const char *address )
 		return ( RETURN_FAIL );
 	}
 
-	sdp = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_SDP_INTERFACE, BLUETOOTH2_SDP_VERSION, NULL );
+	sdp = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! sdp )
 	{
-		Printf( "SERVICES requires Bluetooth2 1.9 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
@@ -87,7 +89,7 @@ BrowseServices( struct IORequest *request, ULONG unit, const char *address )
 
 	Printf( "Browsing Classic Bluetooth services on %s from unit %lu.\n", address, unit );
 
-	result = sdp->BrowseController( unit, & query, & error );
+	result = sdp->sdp_BrowseController( unit, & query, & error );
 
 	DropInterface( (APTR) sdp );
 

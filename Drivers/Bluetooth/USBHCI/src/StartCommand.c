@@ -108,7 +108,8 @@ BTUSB_StartCommand( PTR context, const U8 *command, U32 length )
 		usb->CommandOpcode = opcode;
 		usb->ResponsePending = TRUE;
 
-		usb->ResponseDeadline = BTUSB_Now( usb ) + HCI_USB_TIMEOUT;
+		usb->ResponseDeadline = BTUSB_Now( usb ) +
+			( usb->CheckingReadiness ? HCI_READY_TIMEOUT : HCI_USB_TIMEOUT );
 	}
 
 	return ( error );

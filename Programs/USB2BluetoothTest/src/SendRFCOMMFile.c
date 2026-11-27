@@ -129,7 +129,7 @@ ReportFileResult( const struct BTRFCOMMFile *file, enum BTHCIResult result, cons
 LONG
 SendRFCOMMFile( struct IORequest *request, ULONG unit, const char *address, LONG channel, const char *path )
 {
-	struct Bluetooth2SerialFileIFace *serial;
+	struct Bluetooth2IFace *serial;
 	struct BTRFCOMMFile file;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -152,12 +152,13 @@ SendRFCOMMFile( struct IORequest *request, ULONG unit, const char *address, LONG
 		return ( RETURN_FAIL );
 	}
 
-	serial = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_SERIALFILE_INTERFACE,
-		BLUETOOTH2_SERIALFILE_VERSION, NULL );
+	serial = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! serial )
 	{
-		Printf( "FILE requires Bluetooth2 1.12 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
@@ -189,7 +190,7 @@ SendRFCOMMFile( struct IORequest *request, ULONG unit, const char *address, LONG
 
 		Printf( "Sending %s to %s on RFCOMM channel %ld. Ctrl-C cancels.\n", resolved, address, channel );
 
-		result = serial->SendController( unit, & file, & error );
+		result = serial->serialfile_SendController( unit, & file, & error );
 
 		status = ReportFileResult( & file, result, & error, unit );
 	}

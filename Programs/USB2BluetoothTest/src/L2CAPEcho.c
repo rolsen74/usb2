@@ -17,7 +17,7 @@
 LONG
 L2CAPEcho( struct IORequest *request, ULONG unit, const char *address )
 {
-	struct Bluetooth2L2CAPIFace *l2cap;
+	struct Bluetooth2IFace *l2cap;
 	struct BTHCIError error;
 	enum BTHCIResult result;
 
@@ -30,18 +30,20 @@ L2CAPEcho( struct IORequest *request, ULONG unit, const char *address )
 		return ( RETURN_FAIL );
 	}
 
-	l2cap = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_L2CAP_INTERFACE, BLUETOOTH2_L2CAP_VERSION, NULL );
+	l2cap = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! l2cap )
 	{
-		Printf( "ECHO requires Bluetooth2 1.8 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
 
 	Printf( "Sending an L2CAP echo to %s from unit %lu.\n", address, unit );
 
-	result = l2cap->EchoController( unit, peer, & error );
+	result = l2cap->l2cap_EchoController( unit, peer, & error );
 
 	DropInterface( (APTR) l2cap );
 

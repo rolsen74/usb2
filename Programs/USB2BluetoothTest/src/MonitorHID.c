@@ -53,7 +53,7 @@ PrintReport( const struct BTHIDReport *report )
 LONG
 MonitorBluetoothHID( struct IORequest *request, ULONG unit, const char *address, LONG seconds )
 {
-	struct Bluetooth2HIDIFace *interface;
+	struct Bluetooth2IFace *interface;
 	struct BTHIDMonitor monitor;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -74,11 +74,13 @@ MonitorBluetoothHID( struct IORequest *request, ULONG unit, const char *address,
 		return ( RETURN_FAIL );
 	}
 
-	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_HID_INTERFACE, BLUETOOTH2_HID_VERSION, NULL );
+	interface = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! interface )
 	{
-		Printf( "HID monitoring requires Bluetooth2 1.21 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
@@ -100,7 +102,7 @@ MonitorBluetoothHID( struct IORequest *request, ULONG unit, const char *address,
 	Printf( "Monitoring Classic HID on %s for %ld seconds or %lu reports. Ctrl-C stops.\n",
 		address, seconds, (ULONG) monitor.Capacity );
 
-	result = interface->MonitorController( unit, & monitor, & error );
+	result = interface->hid_MonitorController( unit, & monitor, & error );
 
 	DropInterface( (APTR) interface );
 

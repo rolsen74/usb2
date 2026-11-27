@@ -36,7 +36,10 @@ BTUSB_QueueEvent( struct BTUSB *usb, enum BTUSBEventRead kind )
 			return;
 		}
 
-		timeout = usb->ResponseDeadline - now;
+		if ( usb->ResponseDeadline - now < timeout )
+		{
+			timeout = usb->ResponseDeadline - now;
+		}
 	}
 
 	request = usb->Events->IORequests[0];
@@ -59,10 +62,14 @@ BTUSB_EventPacket( struct BTUSB *usb )
 
 	S32 error;
 	U32 retry;
+	U32 attempts;
+	S32 retriedHostError;
 
 	request = usb->Events->IORequests[0];
+	attempts = usb->CheckingReadiness ? 4 : 3;
+	retriedHostError = FALSE;
 
-	for( retry = 0; retry < 2; retry++ )
+	for( retry = 0; retry < attempts; retry++ )
 	{
 		BTUSB_QueueEvent( usb, BTUSB_EVENT_ON_DEMAND );
 
@@ -75,6 +82,25 @@ BTUSB_EventPacket( struct BTUSB *usb )
 
 		error = BTUSB_Wait( usb, request );
 		usb->EventPending = BTUSB_EVENT_IDLE;
+
+		// Retry a failed split interrupt poll before any HCI event bytes arrive.
+		// Keep waiting for the original command's reply.
+		if ( ( retry + 1 < attempts ) && ( ! retriedHostError ) &&
+			( error == USB2Err_Host_HostError ) && ( ! request->io_Actual ) && ( ! usb->FrameUsed ) )
+		{
+			retriedHostError = TRUE;
+
+			continue;
+		}
+
+		// Allow more time for the initial Reset completion.
+		if ( ( usb->CheckingReadiness ) && ( retry + 1 < attempts ) &&
+			( ! request->io_Actual ) &&
+			( ( ! error ) || ( error == USB2Err_Host_Timeout ) ||
+			  ( ( error == USB2Err_Host_HostError ) && ( ! usb->FrameUsed ) ) ) )
+		{
+			continue;
+		}
 
 		if ( ( ( ! error ) || ( error == USB2Err_Host_Timeout ) ) && ( ! request->io_Actual ) )
 		{

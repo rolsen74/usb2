@@ -17,7 +17,7 @@
 LONG
 ReadRemoteName( struct IORequest *request, ULONG unit, const char *address )
 {
-	struct Bluetooth2NamesIFace *names;
+	struct Bluetooth2IFace *names;
 	struct BTRemoteName remote;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -32,18 +32,20 @@ ReadRemoteName( struct IORequest *request, ULONG unit, const char *address )
 		return ( RETURN_FAIL );
 	}
 
-	names = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_NAMES_INTERFACE, BLUETOOTH2_NAMES_VERSION, NULL );
+	names = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! names )
 	{
-		Printf( "NAME requires Bluetooth2 1.6 or later.\n" );
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
 
 		return ( RETURN_FAIL );
 	}
 
 	Printf( "Looking up the Classic Bluetooth name for %s on unit %lu.\n", address, unit );
 
-	result = names->ReadName( unit, & remote, & error );
+	result = names->names_ReadName( unit, & remote, & error );
 
 	DropInterface( (APTR) names );
 

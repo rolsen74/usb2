@@ -512,12 +512,8 @@ main( void )
 		}
 		else
 		{
-			bt2 = (APTR) GetInterface( (APTR) request->io_Device, "main", BLUETOOTH2_INTERFACE_VERSION, NULL );
-
-			if ( ( ! bt2 ) && ( ! discovery ) )
-			{
-				bt2 = (APTR) GetInterface( (APTR) request->io_Device, "main", 2, NULL );
-			}
+			bt2 = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+				discovery ? 3 : 2, NULL );
 
 			if ( bt2 )
 			{
@@ -529,13 +525,11 @@ main( void )
 			{
 				if ( discovery )
 				{
-					Printf( "Discovery requires bluetooth2.device main interface version %lu.\n",
-						(ULONG) BLUETOOTH2_INTERFACE_VERSION );
+					Printf( "Discovery requires bluetooth2.device main interface version 3 or later.\n" );
 				}
 				else
 				{
-					Printf( "Could not obtain bluetooth2.device main interface version 2 or %lu.\n",
-						(ULONG) BLUETOOTH2_INTERFACE_VERSION );
+					Printf( "Probing requires bluetooth2.device main interface version 2 or later.\n" );
 				}
 			}
 

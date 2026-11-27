@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 #include "All.h"
+#include <interfaces/bluetooth2share.h>
 
 // --
 
@@ -19,6 +20,11 @@
 static U32 *
 ProbeCancelFlag( struct BTControllerProbe *probe )
 {
+	if ( ( PROBE_HAS( probe, Share ) ) && ( probe->Share ) )
+	{
+		return ( &probe->Share->Cancel );
+	}
+
 	if ( ( PROBE_HAS( probe, HID ) ) && ( probe->HID ) )
 	{
 		return ( & probe->HID->Cancel );
@@ -54,15 +60,7 @@ ProbeCancelFlag( struct BTControllerProbe *probe )
 // --
 
 static void
-RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairing,
-	struct Bluetooth2BondingIFace *bonding, struct Bluetooth2NamesIFace *names,
-	struct Bluetooth2VisibilityIFace *visibility, struct Bluetooth2L2CAPIFace *l2cap,
-	struct Bluetooth2SDPIFace *sdp, struct Bluetooth2RFCOMMIFace *rfcomm,
-	struct Bluetooth2SerialIFace *serial, struct Bluetooth2SerialFileIFace *serialFile,
-	struct Bluetooth2SerialCaptureIFace *serialCapture, struct Bluetooth2ObjectPushIFace *objectPush,
-	struct Bluetooth2LEIFace *le, struct Bluetooth2A2DPIFace *a2dp,
-	struct Bluetooth2PCMIFace *pcm, struct Bluetooth2HIDIFace *hid,
-	struct Bluetooth2HIDInputIFace *hidInput, struct BTUSB *usb, struct MsgPort *requests )
+RunController( struct Bluetooth2IFace *bt2, struct BTUSB *usb, struct MsgPort *requests )
 {
 	struct BTControllerProbe *probe;
 	struct BTACLTransport transport;
@@ -123,94 +121,94 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 
 		if ( probe->Result == BT_HCI_OK )
 		{
-			if ( ( hid ) && ( probe->Message.mn_Length >= sizeof( *probe ) ) && ( probe->HID ) )
+			if ( ( PROBE_HAS( probe, Share ) ) && ( probe->Share ) )
+			{
+				probe->Result = bt2->fileshare_Serve( & transport, probe->Share, probe->Error );
+			}
+			else if ( ( PROBE_HAS( probe, HID ) ) && ( probe->HID ) )
 			{
 				if ( probe->HID->Seconds )
 				{
-					probe->Result = hid->Monitor( & transport, probe->HID, probe->Error );
-				}
-				else if ( hidInput )
-				{
-					probe->Result = hidInput->Connect( & transport, (struct BTHIDInput *) probe->HID, probe->Error );
+					probe->Result = bt2->hid_Monitor( & transport, probe->HID, probe->Error );
 				}
 				else
 				{
-					probe->Result = BT_HCI_UNSUPPORTED;
+					probe->Result = bt2->hidinput_Connect( & transport, (struct BTHIDInput *) probe->HID, probe->Error );
 				}
 			}
-			else if ( ( pcm ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, HID ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, HID ) ) &&
 				( probe->PCM ) )
 			{
 				usb->PrefetchEvents = TRUE;
 
-				probe->Result = pcm->Play( & transport, probe->PCM, probe->Error );
+				probe->Result = bt2->pcm_Play( & transport, probe->PCM, probe->Error );
 			}
-			else if ( ( a2dp ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, PCM ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, PCM ) ) &&
 				( probe->Audio ) )
 			{
 				usb->PrefetchEvents = TRUE;
 
-				probe->Result = a2dp->Play( & transport, probe->Audio, probe->Error );
+				probe->Result = bt2->a2dp_Play( & transport, probe->Audio, probe->Error );
 			}
-			else if ( ( le ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Audio ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Audio ) ) &&
 				( probe->LE ) )
 			{
-				probe->Result = le->Run( & transport.HCI, probe->LE, probe->Error );
+				probe->Result = bt2->le_Run( & transport.HCI, probe->LE, probe->Error );
 			}
-			else if ( ( objectPush ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, LE ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, LE ) ) &&
 				( probe->ObjectPush ) )
 			{
-				probe->Result = objectPush->Push( & transport, probe->ObjectPush, probe->Error );
+				probe->Result = bt2->objectpush_Push( & transport, probe->ObjectPush, probe->Error );
 			}
-			else if ( ( serialCapture ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, ObjectPush ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, ObjectPush ) ) &&
 				( probe->SerialCapture ) )
 			{
-				probe->Result = serialCapture->Receive( & transport, probe->SerialCapture, probe->Error );
+				probe->Result = bt2->serialcapture_Receive( & transport, probe->SerialCapture, probe->Error );
 			}
-			else if ( ( serialFile ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, SerialCapture ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, SerialCapture ) ) &&
 				( probe->SerialFile ) )
 			{
-				probe->Result = serialFile->Send( & transport, probe->SerialFile, probe->Error );
+				probe->Result = bt2->serialfile_Send( & transport, probe->SerialFile, probe->Error );
 			}
-			else if ( ( serial ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, SerialFile ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, SerialFile ) ) &&
 				( probe->Serial ) )
 			{
-				probe->Result = serial->Exchange( & transport, probe->Serial, probe->Error );
+				probe->Result = bt2->serial_Exchange( & transport, probe->Serial, probe->Error );
 			}
-			else if ( ( rfcomm ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Serial ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Serial ) ) &&
 				( probe->RFCOMM ) )
 			{
-				probe->Result = rfcomm->Test( & transport, probe->RFCOMM, probe->Error );
+				probe->Result = bt2->rfcomm_Test( & transport, probe->RFCOMM, probe->Error );
 			}
-			else if ( ( sdp ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, RFCOMM ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, RFCOMM ) ) &&
 				( probe->Services ) )
 			{
-				probe->Result = sdp->Browse( & transport, probe->Services, probe->Error );
+				probe->Result = bt2->sdp_Browse( & transport, probe->Services, probe->Error );
 			}
-			else if ( ( l2cap ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Services ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Services ) ) &&
 				( probe->EchoAddress ) )
 			{
-				probe->Result = l2cap->Echo( & transport, probe->EchoAddress, probe->Error );
+				probe->Result = bt2->l2cap_Echo( & transport, probe->EchoAddress, probe->Error );
 			}
-			else if ( ( visibility ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, EchoAddress ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, EchoAddress ) ) &&
 				( probe->Visibility ) )
 			{
-				probe->Result = visibility->RunVisible( & transport.HCI, probe->Visibility, probe->Error );
+				probe->Result = bt2->visibility_RunVisible( & transport.HCI, probe->Visibility, probe->Error );
 			}
-			else if ( ( names ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Visibility ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Visibility ) ) &&
 				( probe->RemoteName ) )
 			{
-				probe->Result = names->ReadRemoteName( & transport.HCI, probe->RemoteName, probe->Error );
+				probe->Result = bt2->names_ReadRemoteName( & transport.HCI, probe->RemoteName, probe->Error );
 			}
-			else if ( ( bonding ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, RemoteName ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, RemoteName ) ) &&
 				( probe->Bond ) )
 			{
-				probe->Result = bonding->Bond( & transport.HCI, probe->Bond, probe->Error );
+				probe->Result = bt2->bonding_Bond( & transport.HCI, probe->Bond, probe->Error );
 			}
-			else if ( ( pairing ) && ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Bond ) ) &&
+			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Bond ) ) &&
 				( probe->Pair ) )
 			{
-				probe->Result = pairing->Pair( & transport.HCI, probe->Pair, probe->Error );
+				probe->Result = bt2->pairing_Pair( & transport.HCI, probe->Pair, probe->Error );
 			}
 			else if ( ( probe->Message.mn_Length >= offsetof( struct BTControllerProbe, Pair ) ) && ( probe->Inquiry ) )
 			{
@@ -224,6 +222,14 @@ RunController( struct Bluetooth2IFace *bt2, struct Bluetooth2PairingIFace *pairi
 			{
 				probe->Result = BT_HCI_UNSUPPORTED;
 			}
+		}
+
+		if ( ( probe->Result != BT_HCI_OK ) &&
+			( ( PROBE_HAS( probe, Bond ) && probe->Bond ) || ( PROBE_HAS( probe, Pair ) && probe->Pair ) ) )
+		{
+			DebugPrintF( "Bluetooth USB: pairing failed on if %lu EP $%02lx, HCI $%04lx status $%02lx, result %lu, transport %ld\n",
+				(U32) usb->InterfaceNumber, (U32) usb->EventEndpoint, (U32) probe->Error->Opcode,
+				(U32) probe->Error->Status, (U32) probe->Result, probe->Error->TransportError );
 		}
 
 		cancelled = ( usb->Cancel ) && ( __atomic_load_n( usb->Cancel, __ATOMIC_RELAXED ) );
@@ -253,22 +259,6 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 {
 	struct IORequest *request;
 	struct Bluetooth2IFace *bt2;
-	struct Bluetooth2PairingIFace *pairing;
-	struct Bluetooth2BondingIFace *bonding;
-	struct Bluetooth2NamesIFace *names;
-	struct Bluetooth2VisibilityIFace *visibility;
-	struct Bluetooth2L2CAPIFace *l2cap;
-	struct Bluetooth2SDPIFace *sdp;
-	struct Bluetooth2RFCOMMIFace *rfcomm;
-	struct Bluetooth2SerialIFace *serial;
-	struct Bluetooth2SerialFileIFace *serialFile;
-	struct Bluetooth2SerialCaptureIFace *serialCapture;
-	struct Bluetooth2ObjectPushIFace *objectPush;
-	struct Bluetooth2LEIFace *le;
-	struct Bluetooth2A2DPIFace *a2dp;
-	struct Bluetooth2PCMIFace *pcm;
-	struct Bluetooth2HIDIFace *hid;
-	struct Bluetooth2HIDInputIFace *hidInput;
 	struct MsgPort *port;
 	struct MsgPort *requests;
 	struct BTUSB usb;
@@ -279,11 +269,19 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 	U32 status;
 	U32 result;
 	S32 unit;
-	S32 discovery;
-	S32 acl;
+	U8 endpoint;
+	U8 recipient;
 
 	if ( ( ! message ) || ( ! message->Interface ) || ( ! message->InterfaceDescriptor ) ||
 		( message->InterfaceDescriptor->InterfaceProtocol != 1 ) )
+	{
+		return ( FALSE );
+	}
+
+	// A companion SCO interface has no interrupt-IN HCI event endpoint.
+	endpoint = BTUSB_FindEventEndpoint( message, & recipient );
+
+	if ( ! endpoint )
 	{
 		return ( FALSE );
 	}
@@ -311,58 +309,15 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 		goto free_request;
 	}
 
-	bt2 = (PTR) GetInterface( (PTR) request->io_Device, "main", BLUETOOTH2_INTERFACE_VERSION, NULL );
-
-	discovery = bt2 != NULL;
+	bt2 = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_INTERFACE, BLUETOOTH2_INTERFACE_VERSION, NULL );
 
 	if ( ! bt2 )
 	{
-		bt2 = (PTR) GetInterface( (PTR) request->io_Device, "main", 2, NULL );
-	}
-
-	if ( ! bt2 )
-	{
-		DebugPrintF( "Bluetooth USB: bluetooth2.device main interface version 2 or later required\n" );
+		DebugPrintF( "Bluetooth USB: bluetooth2.device main interface version %lu required\n",
+			(U32) BLUETOOTH2_INTERFACE_VERSION );
 
 		goto close_device;
 	}
-
-	pairing = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_PAIRING_INTERFACE, BLUETOOTH2_PAIRING_VERSION, NULL );
-
-	bonding = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_BONDING_INTERFACE, BLUETOOTH2_BONDING_VERSION, NULL );
-
-	names = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_NAMES_INTERFACE, BLUETOOTH2_NAMES_VERSION, NULL );
-
-	visibility = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_VISIBILITY_INTERFACE,
-		BLUETOOTH2_VISIBILITY_VERSION, NULL );
-
-	l2cap = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_L2CAP_INTERFACE, BLUETOOTH2_L2CAP_VERSION, NULL );
-
-	sdp = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_SDP_INTERFACE, BLUETOOTH2_SDP_VERSION, NULL );
-
-	rfcomm = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_RFCOMM_INTERFACE, BLUETOOTH2_RFCOMM_VERSION, NULL );
-
-	serial = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_SERIAL_INTERFACE, BLUETOOTH2_SERIAL_VERSION, NULL );
-
-	serialFile = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_SERIALFILE_INTERFACE,
-		BLUETOOTH2_SERIALFILE_VERSION, NULL );
-
-	serialCapture = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_CAPTURE_INTERFACE,
-		BLUETOOTH2_CAPTURE_VERSION, NULL );
-
-	objectPush = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_OBEX_INTERFACE,
-		BLUETOOTH2_OBEX_VERSION, NULL );
-
-	le = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_LE_INTERFACE, BLUETOOTH2_LE_VERSION, NULL );
-
-	a2dp = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_A2DP_INTERFACE, BLUETOOTH2_A2DP_VERSION, NULL );
-
-	pcm = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_PCM_INTERFACE, BLUETOOTH2_PCM_VERSION, NULL );
-
-	hid = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_HID_INTERFACE, BLUETOOTH2_HID_VERSION, NULL );
-
-	hidInput = (PTR) GetInterface( (PTR) request->io_Device, BLUETOOTH2_HID_INPUT_INTERFACE,
-		BLUETOOTH2_HID_INPUT_VERSION, NULL );
 
 	requests = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
@@ -371,7 +326,7 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 		goto drop_interface;
 	}
 
-	if ( BTUSB_Open( & usb, message ) )
+	if ( BTUSB_Open( & usb, message, endpoint, recipient ) )
 	{
 		if ( ! BTUSB_InitializeRealtek( & usb, message->VendorID, message->DeviceID ) )
 		{
@@ -382,12 +337,21 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 		transport.StartCommand = BTUSB_StartCommand;
 		transport.ReadEventChunk = BTUSB_ReadEventChunk;
 
+		usb.CheckingReadiness = TRUE;
+
+		DebugPrintF( "Bluetooth USB: resetting HCI controller %04lx:%04lx\n",
+			(U32) message->VendorID, (U32) message->DeviceID );
+
 		status = bt2->ResetController( & transport, & error );
+
+		usb.CheckingReadiness = FALSE;
 
 		if ( status != BT_HCI_OK )
 		{
-			DebugPrintF( "Bluetooth USB: HCI readiness check failed for %04lx:%04lx (result %lu, transport %ld)\n",
-				(U32) message->VendorID, (U32) message->DeviceID, status, error.TransportError );
+			DebugPrintF( "Bluetooth USB: HCI readiness check failed for %04lx:%04lx if %lu, event EP $%02lx, "
+				"request type $%02lx (result %lu, transport %ld)\n", (U32) message->VendorID,
+				(U32) message->DeviceID, (U32) usb.InterfaceNumber, (U32) endpoint,
+				(U32) ( REQTYPE_Write | REQTYPE_Class | recipient ), status, error.TransportError );
 
 			goto close_transport;
 		}
@@ -396,76 +360,16 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 		location.ProductID = message->DeviceID;
 		location.EventEndpoint = usb.EventEndpoint;
 
-		if ( le )
-		{
-			acl = BTUSB_OpenACL( & usb );
+		DebugPrintF( "Bluetooth USB: HCI ready, registering controller %04lx:%04lx\n",
+			(U32) location.VendorID, (U32) location.ProductID );
 
-			if ( ( hid ) && ( pcm ) && ( a2dp ) && ( acl ) )
-			{
-				unit = hidInput ? hidInput->AddController( requests, & location ) : hid->AddController( requests, & location );
-			}
-			else if ( ( pcm ) && ( a2dp ) && ( acl ) )
-			{
-				unit = pcm->AddController( requests, & location );
-			}
-			else if ( ( a2dp ) && ( acl ) )
-			{
-				unit = a2dp->AddController( requests, & location );
-			}
-			else
-			{
-				unit = le->AddController( requests, & location, acl );
-			}
-		}
-		else if ( ( l2cap ) && ( visibility ) && ( names ) && ( bonding ) && ( pairing ) && ( BTUSB_OpenACL( & usb ) ) )
+		if ( BTUSB_OpenACL( & usb ) )
 		{
-			if ( ( serial ) && ( rfcomm ) && ( sdp ) )
-			{
-				if ( ( serialCapture ) && ( serialFile ) )
-				{
-					unit = objectPush ? objectPush->AddController( requests, & location ) : serialCapture->AddController( requests, & location );
-				}
-				else
-				{
-					unit = serialFile ? serialFile->AddController( requests, & location ) : serial->AddController( requests, & location );
-				}
-			}
-			else if ( ( rfcomm ) && ( sdp ) )
-			{
-				unit = rfcomm->AddController( requests, & location );
-			}
-			else if ( sdp )
-			{
-				unit = sdp->AddController( requests, & location );
-			}
-			else
-			{
-				unit = l2cap->AddController( requests, & location );
-			}
-		}
-		else if ( ( visibility ) && ( names ) && ( bonding ) && ( pairing ) )
-		{
-			unit = visibility->AddController( requests, & location );
-		}
-		else if ( ( names ) && ( bonding ) && ( pairing ) )
-		{
-			unit = names->AddController( requests, & location );
-		}
-		else if ( ( bonding ) && ( pairing ) )
-		{
-			unit = bonding->AddController( requests, & location );
-		}
-		else if ( pairing )
-		{
-			unit = pairing->AddController( requests, & location );
-		}
-		else if ( discovery )
-		{
-			unit = bt2->AddDiscoveryController( requests, & location );
+			unit = bt2->fileshare_AddController( requests, & location );
 		}
 		else
 		{
-			unit = bt2->AddController( requests, & location );
+			unit = bt2->le_AddController( requests, & location, FALSE );
 		}
 
 		if ( unit >= 0 )
@@ -473,8 +377,7 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 			DebugPrintF( "Bluetooth USB: unit %ld attached (%04lx:%04lx)\n",
 				unit, (U32) location.VendorID, (U32) location.ProductID );
 
-			RunController( bt2, pairing, bonding, names, visibility, l2cap, sdp, rfcomm, serial,
-				serialFile, serialCapture, objectPush, le, a2dp, pcm, hid, hidInput, & usb, requests );
+			RunController( bt2, & usb, requests );
 
 			bt2->RemoveController( unit, requests );
 
@@ -483,11 +386,16 @@ BTUSB_Entry( struct USB2DriverIFace *self __attribute__((unused)), struct USB2_D
 
 			result = TRUE;
 		}
+		else
+		{
+			DebugPrintF( "Bluetooth USB: bluetooth2.device refused registration for %04lx:%04lx (result %ld)\n",
+				(U32) location.VendorID, (U32) location.ProductID, unit );
+		}
 	}
 	else
 	{
-		DebugPrintF( "Bluetooth USB: could not claim HCI endpoints for %04lx:%04lx\n",
-			(U32) message->VendorID, (U32) message->DeviceID );
+		DebugPrintF( "Bluetooth USB: could not open HCI transport for %04lx:%04lx if %lu, event EP $%02lx\n",
+			(U32) message->VendorID, (U32) message->DeviceID, (U32) message->Interface->IFC_Num, (U32) endpoint );
 	}
 
 close_transport:
@@ -496,86 +404,6 @@ close_transport:
 	FreeSysObject( ASOT_PORT, requests );
 
 drop_interface:
-	if ( hidInput )
-	{
-		DropInterface( (PTR) hidInput );
-	}
-
-	if ( hid )
-	{
-		DropInterface( (PTR) hid );
-	}
-
-	if ( pcm )
-	{
-		DropInterface( (PTR) pcm );
-	}
-
-	if ( a2dp )
-	{
-		DropInterface( (PTR) a2dp );
-	}
-
-	if ( le )
-	{
-		DropInterface( (PTR) le );
-	}
-
-	if ( objectPush )
-	{
-		DropInterface( (PTR) objectPush );
-	}
-
-	if ( serialCapture )
-	{
-		DropInterface( (PTR) serialCapture );
-	}
-
-	if ( serialFile )
-	{
-		DropInterface( (PTR) serialFile );
-	}
-
-	if ( serial )
-	{
-		DropInterface( (PTR) serial );
-	}
-
-	if ( rfcomm )
-	{
-		DropInterface( (PTR) rfcomm );
-	}
-
-	if ( sdp )
-	{
-		DropInterface( (PTR) sdp );
-	}
-
-	if ( l2cap )
-	{
-		DropInterface( (PTR) l2cap );
-	}
-
-	if ( visibility )
-	{
-		DropInterface( (PTR) visibility );
-	}
-
-	if ( names )
-	{
-		DropInterface( (PTR) names );
-	}
-
-	if ( bonding )
-	{
-		DropInterface( (PTR) bonding );
-	}
-
-	if ( pairing )
-	{
-		DropInterface( (PTR) pairing );
-	}
-
 	DropInterface( (PTR) bt2 );
 
 close_device:

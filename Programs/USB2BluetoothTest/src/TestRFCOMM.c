@@ -64,8 +64,7 @@ ReportRFCOMMStage( uint8_t stage )
 LONG
 TestRFCOMM( struct IORequest *request, ULONG unit, const char *address, LONG channel, const char *text, LONG reply )
 {
-	struct Bluetooth2RFCOMMIFace *rfcomm;
-	struct Bluetooth2SerialIFace *serial;
+	struct Bluetooth2IFace *bt2;
 	struct BTRFCOMMTransfer transfer;
 	struct BTHCIError error;
 	enum BTHCIResult result;
@@ -102,23 +101,22 @@ TestRFCOMM( struct IORequest *request, ULONG unit, const char *address, LONG cha
 		return ( RETURN_FAIL );
 	}
 
+	bt2 = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_INTERFACE,
+		BLUETOOTH2_INTERFACE_VERSION, NULL );
+
+	if ( ! bt2 )
+	{
+		Printf( "This operation requires bluetooth2.device main interface version %lu.\n",
+			(ULONG) BLUETOOTH2_INTERFACE_VERSION );
+
+		return ( RETURN_FAIL );
+	}
+
 	Printf( "Testing RFCOMM channel %ld on %s from unit %lu.\n", channel, address, unit );
 
 	if ( ( text ) || ( reply ) )
 	{
-		serial = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_SERIAL_INTERFACE,
-			BLUETOOTH2_SERIAL_VERSION, NULL );
-
-		if ( ! serial )
-		{
-			Printf( "TEXT and REPLY require Bluetooth2 1.11 or later.\n" );
-
-			return ( RETURN_FAIL );
-		}
-
-		result = serial->ExchangeController( unit, & transfer, & error );
-
-		DropInterface( (APTR) serial );
+		result = bt2->serial_ExchangeController( unit, & transfer, & error );
 
 		if ( transfer.Sent )
 		{
@@ -132,20 +130,10 @@ TestRFCOMM( struct IORequest *request, ULONG unit, const char *address, LONG cha
 	}
 	else
 	{
-		rfcomm = (APTR) GetInterface( (APTR) request->io_Device, BLUETOOTH2_RFCOMM_INTERFACE,
-			BLUETOOTH2_RFCOMM_VERSION, NULL );
-
-		if ( ! rfcomm )
-		{
-			Printf( "RFCOMM requires Bluetooth2 1.10 or later.\n" );
-
-			return ( RETURN_FAIL );
-		}
-
-		result = rfcomm->TestController( unit, & transfer.Peer, & error );
-
-		DropInterface( (APTR) rfcomm );
+		result = bt2->rfcomm_TestController( unit, & transfer.Peer, & error );
 	}
+
+	DropInterface( (APTR) bt2 );
 
 	switch( result )
 	{
