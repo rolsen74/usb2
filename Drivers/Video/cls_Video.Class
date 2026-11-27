@@ -1,5 +1,5 @@
 TYPE Interface
-TITLE "USB Video Streaming"
+TITLE "Video Streaming"
 DRIVER "cls_Video.Driver"
 CLASS 0x0E
 SUBCLASS 0x02
