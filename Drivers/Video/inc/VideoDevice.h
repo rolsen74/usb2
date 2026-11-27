@@ -10,10 +10,10 @@
 
 #define VIDEO_DEVICE_NAME "usb2video.device"
 #define VIDEO_DEVICE_VERSION 1
-#define VIDEO_DEVICE_REVISION 9
+#define VIDEO_DEVICE_REVISION 10
 #define VIDEO_UNIT_LIST_REVISION 5
 #define VIDEO_RECONNECT_REVISION 9
-#define VIDEO_DEVICE_ID VIDEO_DEVICE_NAME " 1.9 (27.11.2026)"
+#define VIDEO_DEVICE_ID VIDEO_DEVICE_NAME " 1.10 (27.11.2026)"
 #define VIDEO_FRAME_TIMEOUT_SECONDS 10
 #define VIDEO_ERR_FRAME_TIMEOUT (-45)
 #define VIDEO_MAX_UNITS 16
@@ -30,6 +30,7 @@
 // request length is also accepted. Keep the buffers until STOP replies.
 #define VIDEO_CMD_SET_ISO_BUFFERS 0x8005
 // Returns the current or most recent capture counters in a VideoCaptureStats.
+// The original five-counter buffer is also accepted.
 #define VIDEO_CMD_GET_CAPTURE_STATS 0x8006
 #define VIDEO_ISO_BUFFERS 3
 #define VIDEO_FORMAT_MJPEG 1
@@ -48,6 +49,13 @@ struct VideoCaptureStats
 	U32 IsoBatchGaps;
 	U32 IsoPacketErrors;
 	U32 FrameLengthErrors;
+	U32 PayloadFrameStarts;
+	U32 InvalidPayloadHeaders;
+	U32 PayloadErrorFlags;
+	U32 FrameInterval;
+	U32 LinkSpeed; // USBSPEED value, or ~0U if unavailable.
+	U32 IsoServiceUS;
+	U32 IsoBatchPackets;
 };
 
 struct VideoFormat

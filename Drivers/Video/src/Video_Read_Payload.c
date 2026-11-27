@@ -67,6 +67,7 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 	U32 expected;
 	U32 limit;
 	U32 pts;
+	S32 newFrame;
 	U8 flags;
 	U8 frameid;
 
@@ -82,6 +83,11 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 		( data[0] < 2 ) || ( data[0] > length ) ||
 		( ( unit->OV534 ) && ( ( data[0] != 12 ) || ( ! ( data[1] & VIDEO_PAYLOAD_PTS ) ) ) ) )
 	{
+		if ( data )
+		{
+			unit->CaptureStats.InvalidPayloadHeaders++;
+		}
+
 		// Keep a known OV534 identity so the next frame can clear discard.
 		if ( ! unit->OV534 )
 		{
@@ -99,8 +105,9 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 	frameid = flags & VIDEO_PAYLOAD_FID;
 	pts = unit->OV534 ? Video_LE32( data + 2 ) : 0;
 	expected = ( unit->Format.Format == VIDEO_FORMAT_YUY2 ) ? unit->Format.MaxFrameSize : 0;
+	newFrame = ( ! unit->FrameStarted ) || ( frameid != unit->FrameID ) || ( pts != unit->FramePTS );
 
-	if ( ( unit->FrameStarted ) && ( ( frameid != unit->FrameID ) || ( pts != unit->FramePTS ) ) )
+	if ( ( unit->FrameStarted ) && ( newFrame ) )
 	{
 		// Some cameras delimit frames with FID and omit EOF.
 		if ( ( ! unit->FrameDiscard ) && ( unit->FrameUsed ) )
@@ -120,12 +127,18 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 		unit->FrameDiscard = FALSE;
 	}
 
+	if ( newFrame )
+	{
+		unit->CaptureStats.PayloadFrameStarts++;
+	}
+
 	unit->FrameID = frameid;
 	unit->FramePTS = pts;
 	unit->FrameStarted = TRUE;
 
 	if ( flags & VIDEO_PAYLOAD_ERR )
 	{
+		unit->CaptureStats.PayloadErrorFlags++;
 		unit->FrameDiscard = TRUE;
 		unit->FrameUsed = 0;
 	}

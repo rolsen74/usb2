@@ -15,7 +15,10 @@
 SEC_CODE S8
 Video_Stream_Start( struct VideoUnit *unit )
 {
+	static const struct VideoCaptureStats emptyStats;
+
 	U32 bufferSize;
+	U32 speed;
 	S8 error;
 
 	if ( unit->USBDetached )
@@ -111,7 +114,23 @@ Video_Stream_Start( struct VideoUnit *unit )
 	}
 
 	unit->FrameDiscard = TRUE;
-	unit->CaptureStats = (struct VideoCaptureStats) { 0 };
+
+	CopyMem( & emptyStats, & unit->CaptureStats, sizeof( emptyStats ) );
+
+	unit->CaptureStats.FrameInterval = unit->Format.FrameInterval;
+	unit->CaptureStats.LinkSpeed = ~0U;
+	unit->CaptureStats.IsoBatchPackets = unit->IsoPacketCount;
+
+	if ( USB2_Attr_Get( unit->StartMsg->Function->FKT_ID, USB2Tag_Attr_Speed, & speed, sizeof( speed ) ) == sizeof( speed ) )
+	{
+		unit->CaptureStats.LinkSpeed = speed;
+
+		if ( ( unit->StreamAlt ) && ( speed >= USBSPEED_Full ) && ( speed <= USBSPEED_Super ) )
+		{
+			unit->CaptureStats.IsoServiceUS = ( ( speed == USBSPEED_Full ) ? 1000U : 125U ) <<
+				( unit->StreamInterval - 1 );
+		}
+	}
 
 	return ( 0 );
 }

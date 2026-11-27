@@ -162,15 +162,24 @@ S8 error;
 		}
 		else if ( ioreq->io_Command == VIDEO_CMD_GET_CAPTURE_STATS )
 		{
-			if ( ( ! ioreq->io_Data ) || ( ioreq->io_Length < sizeof( unit->CaptureStats ) ) )
+			U32 length;
+
+			length = offsetof( struct VideoCaptureStats, PayloadFrameStarts );
+
+			if ( ( ! ioreq->io_Data ) || ( ioreq->io_Length < length ) )
 			{
 				ioreq->io_Error = IOERR_BADLENGTH;
 			}
 			else
 			{
-				CopyMem( & unit->CaptureStats, ioreq->io_Data, sizeof( unit->CaptureStats ) );
+				if ( ioreq->io_Length >= sizeof( unit->CaptureStats ) )
+				{
+					length = sizeof( unit->CaptureStats );
+				}
 
-				ioreq->io_Actual = sizeof( unit->CaptureStats );
+				CopyMem( & unit->CaptureStats, ioreq->io_Data, length );
+
+				ioreq->io_Actual = length;
 			}
 		}
 		else if ( ioreq->io_Command == VIDEO_CMD_STOP )

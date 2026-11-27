@@ -8,6 +8,7 @@
 // --
 
 #include <stdio.h>
+#include <stddef.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <exec/errors.h>
@@ -182,14 +183,30 @@ VideoTest_ReportCaptureStats( struct IOStdReq *ioreq )
 {
 	struct VideoCaptureStats stats;
 
+	static const char * const speeds[] = { "low-speed", "full-speed", "high-speed", "SuperSpeed" };
+
+	const char *speed;
+
 	ioreq->io_Command = VIDEO_CMD_GET_CAPTURE_STATS;
 	ioreq->io_Data = & stats;
 	ioreq->io_Length = sizeof( stats );
 
-	if ( ( ! DoIO( (PTR) ioreq ) ) && ( ioreq->io_Actual == sizeof( stats ) ) )
+	if ( ( ! DoIO( (PTR) ioreq ) ) && ( ioreq->io_Actual >= offsetof( struct VideoCaptureStats, PayloadFrameStarts ) ) )
 	{
 		DebugPrintF( "USB2VideoTest: %lu frames, %lu ISO batches, %lu batch gaps, %lu packet errors, %lu frame length errors\n",
 			stats.DeliveredFrames, stats.IsoBatches, stats.IsoBatchGaps, stats.IsoPacketErrors, stats.FrameLengthErrors );
+
+		if ( ( ioreq->io_Actual == sizeof( stats ) ) && ( stats.FrameInterval ) )
+		{
+			speed = stats.LinkSpeed < sizeof( speeds ) / sizeof( speeds[0] ) ? speeds[stats.LinkSpeed] : "unknown speed";
+
+			DebugPrintF( "USB2VideoTest: camera interval %lu (100 ns units), USB %s, "
+				"ISO service %lu us, %lu packets per batch\n",
+				stats.FrameInterval, speed, stats.IsoServiceUS, stats.IsoBatchPackets );
+
+			DebugPrintF( "USB2VideoTest: %lu payload frame starts, %lu invalid headers, %lu packets with the camera error flag\n",
+				stats.PayloadFrameStarts, stats.InvalidPayloadHeaders, stats.PayloadErrorFlags );
+		}
 	}
 
 	ioreq->io_Data = NULL;
