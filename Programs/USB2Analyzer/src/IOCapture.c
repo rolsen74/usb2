@@ -17,7 +17,7 @@
 
 const char *const IOCaptureTitles[IO_CAPTURE_COLUMNS] = { "#", "Request", "Device", "Endpoint", "Bytes", "Result" };
 const char *const ActiveIOTitles[IO_CAPTURE_COLUMNS] = { "HCD", "Request", "Device", "Endpoint", "Bytes", "State" };
-static const char *const EndpointTypes[] = { "Control", "Iso", "Bulk", "Interrupt" };
+static const char *const EndpointTypes[] = { "Control", "Isochronous", "Bulk", "Interrupt" };
 static U32 CaptureCount;
 static U32 ActiveSortColumn;
 static S32 ActiveSortReverse;
