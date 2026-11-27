@@ -141,7 +141,7 @@ AddBudget( U32 *usecs, U32 mask, U32 other, U32 cost )
 		{
 			usecs[index] += cost;
 
-			if ( usecs[index] > EHCI_ISO_USECS )
+			if ( usecs[index] > EHCI_PERIODIC_USECS )
 			{
 				return ( FALSE );
 			}

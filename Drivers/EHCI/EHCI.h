@@ -39,7 +39,7 @@ SEC_CODE S32 EHCI_Isochronous_Build( struct USB2_HCDNode *hn, struct RealRequest
 SEC_CODE void EHCI_Isochronous_Add( struct USB2_HCDNode *hn, struct RealRequest *req );
 SEC_CODE void EHCI_Isochronous_Remove( struct USB2_HCDNode *hn, struct RealRequest *req );
 SEC_CODE U32 EHCI_Isochronous_Length( struct USB2_HCDNode *hn, struct RealRequest *req );
-SEC_CODE void EHCI_Isochronous_Reap( struct USB2_HCDNode *hn, S32 halted );
+SEC_CODE void EHCI_Periodic_Reap( struct USB2_HCDNode *hn, S32 halted );
 SEC_CODE S32 EHCI_Clear_TT( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE S32 EHCI_Has_Root_TT( const struct USB2_HCDNode *hn );
 SEC_CODE S32 EHCI_Get_TT( struct RealFunctionNode *fn, U32 *hub, U32 *port );

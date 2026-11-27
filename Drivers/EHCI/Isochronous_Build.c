@@ -58,6 +58,38 @@ BuildSplitPacket ( struct EHCI_ITD * itd, U32 endpoint, U32 in, U32 start, U32 i
 // --
 
 static SEC_CODE S32
+ChooseSplitOutMicroframe ( struct USB2_HCDNode * hn, struct EHCI_ITD * itd, U32 frame )
+{
+	U32 downstream;
+	U32 shift;
+	U32 mask;
+
+	// Allow for worst-case bit stuffing and protocol overhead at full speed.
+	downstream = ( itd->Length * 7 + 8 ) / 9 + 8;
+
+	for ( shift = 0; shift < 7; shift++ )
+	{
+		mask = (U32) itd->Mask << shift;
+
+		if ( ( mask & ~0x7fU ) || ( downstream > ( 7 - shift ) * 125 + 25 ) )
+		{
+			break;
+		}
+
+		if ( EHCI_Periodic_Fits ( hn, frame, mask, itd->Usecs, itd->Hub, 0, TRUE, NULL ) )
+		{
+			itd->Microframe = shift;
+
+			return ( TRUE );
+		}
+	}
+
+	return ( FALSE );
+}
+
+// --
+
+static SEC_CODE S32
 SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count, U32 step, U32 split, U32 lead )
 {
 	struct EHCI_ITD *	 itd;
@@ -67,14 +99,12 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 	U32 microframe;
 	U32 phase;
 	U32 phases;
-	U32 shift;
 	U32 frame;
 	U32 mask;
 	U32 current;
 	U32 distance;
 	U32 horizon;
 	U32 latest;
-	U32 downstream;
 	S32 splitOut;
 
 	current	 = PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_FRINDEX );
@@ -89,7 +119,7 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 	{
 		start = ( start + 7 ) & ~7U;
 		step *= 8;
-		phases = splitOut ? 7 : 1;
+		phases = 1;
 	}
 
 	if ( active )
@@ -99,7 +129,7 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 		if ( ( distance >= EHCI_ISO_MIN_LEAD ) && ( distance < horizon ) )
 		{
 			start  = current + distance;
-			phases = splitOut ? 7 : 1;
+			phases = 1;
 			latest = horizon - 1 - ( count - 1 ) * step - ( split ? 7 : 0 );
 		}
 		else
@@ -112,7 +142,6 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 	for ( phase = 0; phase < phases; phase++ )
 	{
 		microframe		= split ? start : start + phase;
-		shift = splitOut ? phase : 0;
 
 		if ( ( ( microframe - current ) & EHCI_FRINDEX_MASK ) > latest )
 		{
@@ -122,35 +151,29 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 		for ( itd = req->req_HCD.EHCI.IsoHead; itd; itd = itd->Next, microframe += step )
 		{
 			frame = ( microframe >> 3 ) & ( hn->hn_HCD.EHCI.FrameList_Size - 1 );
-			mask  = split ? (U32)itd->Mask << shift : 1U << ( microframe & 7 );
-
-			if ( ( splitOut ) && ( mask & ~0x7fU ) )
-			{
-				break;
-			}
 
 			if ( splitOut )
 			{
-				// Allow for worst-case bit stuffing and protocol overhead at full speed.
-				downstream = ( itd->Length * 7 + 8 ) / 9 + 8;
-
-				if ( downstream > ( 7 - shift ) * 125 + 25 )
+				// Keep the frame cadence even if other transfers use different microframes.
+				if ( ! ChooseSplitOutMicroframe ( hn, itd, frame ) )
 				{
 					break;
 				}
 			}
-
-			if ( ! EHCI_Periodic_Fits( hn, frame, mask, itd->Usecs, itd->Hub, 0, TRUE, NULL ) )
+			else
 			{
-				break;
-			}
+				mask = split ? (U32) itd->Mask : 1U << ( microframe & 7 );
 
-			itd->Frame		= frame;
-			itd->Microframe = microframe & 7;
-			if ( ! splitOut )
-			{
+				if ( ! EHCI_Periodic_Fits ( hn, frame, mask, itd->Usecs, itd->Hub, 0, TRUE, NULL ) )
+				{
+					break;
+				}
+
+				itd->Microframe = microframe & 7;
 				itd->Mask = mask;
 			}
+
+			itd->Frame = frame;
 		}
 
 		if ( ! itd )
@@ -165,11 +188,12 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 				{
 					for ( itd = req->req_HCD.EHCI.IsoHead; itd; itd = itd->Next )
 					{
-						itd->Mask <<= shift;
+						itd->Mask <<= itd->Microframe;
 						itd->Split.Schedule = LE_SWAP32 ( (U32)itd->Mask );
 					}
 				}
 
+				req->req_HCD.EHCI.IsoFirstFrame = ( start + ( split ? 0 : phase ) ) & EHCI_FRINDEX_MASK;
 				req->req_HCD.EHCI.IsoNextFrame = microframe & EHCI_FRINDEX_MASK;
 				req->req_HCD.EHCI.IsoLastFrame = ( microframe - step + ( split ? 7 : 0 ) ) & EHCI_FRINDEX_MASK;
 
@@ -305,7 +329,7 @@ EHCI_Isochronous_Build ( struct USB2_HCDNode * hn, struct RealRequest * req )
 
 	link = &req->req_HCD.EHCI.IsoHead;
 
-	EHCI_Isochronous_Reap ( hn, FALSE );
+	EHCI_Periodic_Reap ( hn, FALSE );
 
 	for ( index = 0, offset = 0; index < count; index++, offset += capacity )
 	{

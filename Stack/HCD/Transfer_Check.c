@@ -23,6 +23,11 @@ SEC_CODE S32
 __HCD_Transfer_Check ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct RealRequest * ioreq, U32 Force )
 {
 	struct USB2_EndPointNode * ep;
+	struct RealRequest * next;
+	struct TimeVal now;
+
+	U32 expected;
+	U32 gap;
 	S32						   remove;
 
 	TASK_NAME_ENTER ( "HCD : __HCD_Transfer_Check : 1 :" );
@@ -146,6 +151,16 @@ __HCD_Transfer_Check ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struc
 
 		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 6" );
 
+		// Save the scheduled boundary before replying and releasing the request.
+		expected = EHCI_FRINDEX_MASK + 1;
+
+		if ( ( ! Force ) && ( hn->hn_IsEHCI ) && ( ep->ep_Type == EPATT_Type_Isochronous ) &&
+			( ioreq->req_Public.io_Command == CMD_WRITE ) && ( ! ioreq->req_Public.io_Error ) &&
+			( ep->ep_Request_Queue.uh_Head ) && ( ! ep->ep_Request_Active ) )
+		{
+			expected = ioreq->req_HCD.EHCI.IsoNextFrame;
+		}
+
 		HCD_REPLY ( ioreq );
 
 		TASK_NAME_SET ( "HCD : __HCD_Transfer_Check : 7" );
@@ -155,6 +170,40 @@ __HCD_Transfer_Check ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struc
 		// --
 		// Start next IOReq if there are any queued
 		HCD_RESTART_ENDPOINT ( hn, ep );
+
+		next = ep->ep_Request_Active;
+
+		if ( ( expected <= EHCI_FRINDEX_MASK ) && ( next ) && ( next->req_Public.io_Command == CMD_WRITE ) )
+		{
+			gap = ( next->req_HCD.EHCI.IsoFirstFrame - expected ) & EHCI_FRINDEX_MASK;
+
+			if ( ( gap ) && ( gap <= EHCI_FRINDEX_MASK / 2 ) )
+			{
+				gap *= 125;
+				hn->hn_HCD.EHCI.IsoOutGapCount++;
+				hn->hn_HCD.EHCI.IsoOutGapUsecs += gap;
+				hn->hn_HCD.EHCI.IsoOutGapMax = MAX ( hn->hn_HCD.EHCI.IsoOutGapMax, gap );
+
+				usbbase->usb_ITimer->GetUpTime ( &now );
+
+				// Keep missed playback time visible without logging each gap.
+				if ( ( hn->hn_HCD.EHCI.IsoOutGapReports < 4 ) ||
+					( (U32) ( now.Seconds - hn->hn_HCD.EHCI.IsoOutGapReportTime ) >= 30 ) )
+				{
+					usbbase->usb_IExec->DebugPrintF (
+						"EHCI iso OUT gap: HCD %lu addr %lu ep %lu, %lu us with a write queued"
+						" (%lu gaps, %lu us total, %lu us max since previous report)\n",
+						(U32) hn->hn_HCDIndex, ep->ep_Function->fkt_Address, (U32) ep->ep_Number, gap,
+						hn->hn_HCD.EHCI.IsoOutGapCount, hn->hn_HCD.EHCI.IsoOutGapUsecs, hn->hn_HCD.EHCI.IsoOutGapMax );
+
+					hn->hn_HCD.EHCI.IsoOutGapReports++;
+					hn->hn_HCD.EHCI.IsoOutGapReportTime = now.Seconds;
+					hn->hn_HCD.EHCI.IsoOutGapCount = 0;
+					hn->hn_HCD.EHCI.IsoOutGapUsecs = 0;
+					hn->hn_HCD.EHCI.IsoOutGapMax = 0;
+				}
+			}
+		}
 
 		ENDPOINT_UNLOCK ( ep );
 

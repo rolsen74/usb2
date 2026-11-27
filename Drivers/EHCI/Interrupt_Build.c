@@ -71,6 +71,8 @@ U8 *buf;
 
 	TASK_NAME_ENTER( "EHCI : EHCI_Interrupt_Build" );
 
+	EHCI_Periodic_Reap( hn, FALSE );
+
 //	fn			= ioreq->req_Function;
 	ep			= ioreq->req_EndPoint;
 	len			= ( ioreq->req_Public.io_Length );

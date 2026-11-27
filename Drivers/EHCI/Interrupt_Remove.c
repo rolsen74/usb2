@@ -57,7 +57,9 @@ struct EHCI_QH *qh;
 U32 status;
 S32 stop;
 
+	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
 	struct USBBase *usbbase = hn->hn_USBBase;
+	#endif
 
 	qh = ioreq->req_HCD.EHCI.QH_Header;
 
@@ -111,8 +113,8 @@ S32 stop;
 	else
 	{
 		// The controller can still hold the old link. Keep the QH and qTDs
-		// alive for two frames before the request's descriptors are freed.
-		MISC_MICRODELAY( 2000 );
+		// alive for two frames without holding up other periodic transfers.
+		ioreq->req_HCD.EHCI.InterruptRetire = TRUE;
 	}
 
 	status = LE_SWAP32( qh->qh_status );

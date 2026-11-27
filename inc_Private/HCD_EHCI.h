@@ -200,6 +200,8 @@ struct EHCI_QH
 	U32						pqh_self_phy;			// Physical addresse
 	struct EHCI_QH *		pqh_virt_next;			// Virtual address
 	struct EHCI_TD *		pqh_first_td;			// Virtual address
+	struct EHCI_QH *		pqh_RetiredNext;
+	U32						pqh_RetiredAt;
 };
 
 #define EHCI_QH_ALIGN			128						// Keep each descriptor within a DMA page
@@ -330,7 +332,8 @@ struct EHCI_ITD
 
 #define EHCI_FRAME_COUNT	1024
 #define EHCI_ROOT_TT		128U
-#define EHCI_ISO_USECS		80
+// USB 2.0 sections 5.6.4 and 5.7.4 allow 80% of a 125 us microframe.
+#define EHCI_PERIODIC_USECS	100U
 #define EHCI_ISO_MAX_PACKETS	256U
 #define EHCI_ISO_RETRY_LEAD	32U
 #define EHCI_ISO_COMPLETE_GRACE	16U
@@ -374,7 +377,13 @@ struct _EHCI
 	struct EHCI_QH **				FrameList_ISlots;
 	struct EHCI_ITD **				IsoFrames;
 	struct EHCI_ITD *				IsoRetired;
+	struct EHCI_QH *				InterruptRetired;
 	U32								IsoOutReports;
+	U32								IsoOutGapReports;
+	U32								IsoOutGapReportTime;
+	U32								IsoOutGapCount;
+	U32								IsoOutGapUsecs;
+	U32								IsoOutGapMax;
 	U32								IsoScheduled;
 
 	#if 0

@@ -50,7 +50,7 @@
 // --
 
 static SEC_CODE U32
-EHCI_Isochronous_Time( struct USBBase *usbbase )
+EHCI_Periodic_Time( struct USBBase *usbbase )
 {
 	struct TimeVal now;
 
@@ -61,35 +61,91 @@ EHCI_Isochronous_Time( struct USBBase *usbbase )
 
 // --
 
-SEC_CODE void
-EHCI_Isochronous_Reap( struct USB2_HCDNode *hn, S32 halted )
+static SEC_CODE void
+FreeQueueHead( struct USBBase *usbbase, struct EHCI_QH *qh )
 {
-	struct EHCI_ITD **link;
+	struct EHCI_TD *next;
+	struct EHCI_TD *td;
+
+	td = qh->pqh_first_td;
+
+	while( td )
+	{
+		next = td->ptd_virt_next;
+
+		if ( td->td_buffer[0] )
+		{
+			if ( ! td->td_buffer[1] )
+			{
+				MEMORY_FREE( MEMID_HCD_4k, td->ptd_buffer_virt, td->ptd_buffer_phy );
+			}
+			else
+			{
+				MEMORY_FREE( MEMID_HCD_20k, td->ptd_buffer_virt, td->ptd_buffer_phy );
+			}
+		}
+
+		MEMORY_FREE( MEMID_EHCI_TD, td, td->ptd_self_phy );
+
+		td = next;
+	}
+
+	MEMORY_FREE( MEMID_EHCI_QH, qh, qh->pqh_self_phy );
+}
+
+// --
+
+#define EHCI_RETIRE_US 2000U
+
+SEC_CODE void
+EHCI_Periodic_Reap( struct USB2_HCDNode *hn, S32 halted )
+{
+	struct EHCI_ITD **iso;
 	struct EHCI_ITD *itd;
+	struct EHCI_QH **interrupt;
+	struct EHCI_QH *qh;
 	struct USBBase *usbbase;
 
 	U32 now;
 
 	usbbase = hn->hn_USBBase;
-	link = & hn->hn_HCD.EHCI.IsoRetired;
+	iso = &hn->hn_HCD.EHCI.IsoRetired;
+	interrupt = &hn->hn_HCD.EHCI.InterruptRetired;
 	now = 0;
 
-	if ( ( *link ) && ( ! halted ) )
+	if ( ( ! *iso ) && ( ! *interrupt ) )
 	{
-		now = EHCI_Isochronous_Time( usbbase );
+		return;
+	}
+
+	if ( ! halted )
+	{
+		now = EHCI_Periodic_Time( usbbase );
 
 		// Newer descriptors are at the head. Keep cached links valid for two USB frames.
-		while ( ( *link ) && ( (U32) ( now - ( *link )->RetiredAt ) < 2000 ) )
+		while ( ( *iso ) && ( (U32)( now - ( *iso )->RetiredAt ) < EHCI_RETIRE_US ) )
 		{
-			link = & ( *link )->Next;
+			iso = &( *iso )->Next;
+		}
+
+		while ( ( *interrupt ) && ( (U32)( now - ( *interrupt )->pqh_RetiredAt ) < EHCI_RETIRE_US ) )
+		{
+			interrupt = &( *interrupt )->pqh_RetiredNext;
 		}
 	}
 
-	while ( ( itd = *link ) )
+	while ( ( itd = *iso ) )
 	{
-		*link = itd->Next;
+		*iso = itd->Next;
 
 		MEMORY_FREE( itd->DirectDMA ? MEMID_EHCI_ITD : MEMID_HCD_4k, itd, itd->Physical );
+	}
+
+	while ( ( qh = *interrupt ) )
+	{
+		*interrupt = qh->pqh_RetiredNext;
+
+		FreeQueueHead( usbbase, qh );
 	}
 }
 
@@ -97,22 +153,23 @@ EHCI_Isochronous_Reap( struct USB2_HCDNode *hn, S32 halted )
 
 SEC_CODE void EHCI_Transfer_Free( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 {
-struct EHCI_TD *next;
-struct EHCI_TD *td;
 struct EHCI_QH *qh;
 struct EHCI_ITD *itd;
 U32 retired;
+S32 retireInterrupt;
 
 	struct USBBase *usbbase = hn->hn_USBBase;
 	TASK_NAME_ENTER( "EHCI : EHCI_Transfer_Free" );
 
-	EHCI_Isochronous_Reap( hn, FALSE );
+	EHCI_Periodic_Reap( hn, FALSE );
 
 	retired = 0;
+	retireInterrupt = ioreq->req_HCD.EHCI.InterruptRetire;
+	ioreq->req_HCD.EHCI.InterruptRetire = FALSE;
 
-	if ( ioreq->req_HCD.EHCI.IsoRetire )
+	if ( ( ioreq->req_HCD.EHCI.IsoRetire ) || ( retireInterrupt ) )
 	{
-		retired = EHCI_Isochronous_Time( usbbase );
+		retired = EHCI_Periodic_Time( usbbase );
 	}
 
 	while ( ( itd = ioreq->req_HCD.EHCI.IsoHead ) )
@@ -144,30 +201,16 @@ U32 retired;
 
 	ioreq->req_HCD.EHCI.QH_Header = NULL;
 
-	td = qh->pqh_first_td;
-
-	while( td )
+	if ( retireInterrupt )
 	{
-		next = td->ptd_virt_next;
-
-		if ( td->td_buffer[0] )
-		{
-			if ( ! td->td_buffer[1] )
-			{
-				MEMORY_FREE( MEMID_HCD_4k, td->ptd_buffer_virt, td->ptd_buffer_phy );
-			}
-			else
-			{
-				MEMORY_FREE( MEMID_HCD_20k, td->ptd_buffer_virt, td->ptd_buffer_phy );
-			}
-		}
-
-		MEMORY_FREE( MEMID_EHCI_TD, td, td->ptd_self_phy );
-
-		td = next;
+		qh->pqh_RetiredAt = retired;
+		qh->pqh_RetiredNext = hn->hn_HCD.EHCI.InterruptRetired;
+		hn->hn_HCD.EHCI.InterruptRetired = qh;
 	}
-
-	MEMORY_FREE( MEMID_EHCI_QH, qh, qh->pqh_self_phy );
+	else
+	{
+		FreeQueueHead( usbbase, qh );
+	}
 
 bailout:
 

@@ -40,8 +40,10 @@ struct __ehci
 	struct EHCI_QH *  Start_Header;
 	U32				  Start_Slot;
 	U32				  IsoRetire;
+	U32				  IsoFirstFrame;
 	U32				  IsoNextFrame;
 	U32				  IsoLastFrame;
+	U32				  InterruptRetire;
 };
 
 struct __xhci

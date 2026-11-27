@@ -59,7 +59,7 @@ U32 cnt;
 	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Deinit" );
 
 	// Cleanup runs only after the hardware has halted.
-	EHCI_Isochronous_Reap( hn, TRUE );
+	EHCI_Periodic_Reap( hn, TRUE );
 
 	// --
 
