@@ -152,6 +152,7 @@ build_audio: | build_dir_tree
 build_prefs: | build_dir_tree
 	$(MAKE) -C Programs/USB2Prefs
 	cp Programs/USB2Prefs/bin/USB2Prefs $(BINDIR)/usb2/Prefs/USB2
+	cp Programs/USB2Prefs/USB2.info $(BINDIR)/usb2/Prefs/USB2.info
 
 ###########################################################################
 
