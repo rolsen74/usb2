@@ -89,8 +89,16 @@ Printer_Entry( struct USB2DriverIFace *Self UNUSED, struct USB2_DriverMessage *m
 
 	stage = "register printer unit";
 
-	unit->unit_PortUnit = unit->unit_PortInterface->Register(
-		unit->unit_PRT_Begin_MsgPort, unit->unit_PRT_Abort_MsgPort, & unit->unit_UnitNr );
+	if ( request.io_Device->dd_Library.lib_Revision >= USB2_PRINTER_RECONNECT_REVISION )
+	{
+		unit->unit_PortUnit = unit->unit_PortInterface->RegisterDevice(
+			unit->unit_PRT_Begin_MsgPort, unit->unit_PRT_Abort_MsgPort, &unit->unit_UnitNr, msg );
+	}
+	else
+	{
+		unit->unit_PortUnit = unit->unit_PortInterface->Register(
+			unit->unit_PRT_Begin_MsgPort, unit->unit_PRT_Abort_MsgPort, &unit->unit_UnitNr );
+	}
 
 	if ( ! unit->unit_PortUnit )
 	{
