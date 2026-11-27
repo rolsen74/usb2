@@ -12,12 +12,108 @@
 
 // --
 
+struct WorkerState
+{
+	void ( *Free )( struct USBBase *usbbase, struct USB2_DriverNode *dn, PTR in );
+	struct USB2_TaskNode *Node;
+	struct USB2_HCDNode *HCD;
+	struct USB2_ASync *ASync;
+	struct USBBase *Base;
+	struct Task *Replacement;
+	PTR UserData;
+	PTR Intern;
+	STR OriginalName;
+	U32 StackSize;
+	U32 ResumeMask;
+	S32 PromotionAttempted;
+#ifdef DO_DEBUG
+	U32 OriginalSignals;
+#endif
+};
+
+// --
+
+SEC_CODE static void
+CmdStart_Finish( struct WorkerState *worker )
+{
+	struct USB2_TaskNode *tn;
+	struct USB2_HCDNode *hn;
+	struct ExecIFace *IExec;
+	struct USBBase *usbbase;
+	struct Task *self;
+
+	tn = worker->Node;
+	hn = worker->HCD;
+	usbbase = worker->Base;
+	IExec = usbbase->usb_IExec;
+
+	self = TASK_FIND();
+
+	IExec->Disable();
+
+	tn->tn_State = TASK_State_Stopping;
+	tn->tn_TaskAdr = NULL;
+
+	IExec->Enable();
+
+	if ( worker->Free )
+	{
+		worker->Free( usbbase, worker->UserData, worker->Intern );
+	}
+
+#ifdef DO_DEBUG
+	if ( worker->OriginalSignals != TASK_SETSIGNAL( 0, 0 ) )
+	{
+		IExec->DebugPrintF( "USB2: changed pending signals at exit for '%s'\n", self->tc_Node.ln_Name );
+	}
+#endif
+
+	if ( worker->Intern )
+	{
+		MEM_FREEVEC( worker->Intern );
+	}
+
+	self->tc_Node.ln_Name = worker->OriginalName;
+	self->tc_UserData = NULL;
+
+	if ( hn )
+	{
+		SEMAPHORE_OBTAIN( &usbbase->usb_LockSemaphore );
+
+		hn->hn_Task = NULL;
+		tn->tn_Owner = NULL;
+
+		TASK_UNLOCK( tn );
+
+		SEMAPHORE_RELEASE( &usbbase->usb_LockSemaphore );
+	}
+
+	IExec->Disable();
+
+	ASYNC_SUB( worker->ASync );
+
+	tn->tn_State = TASK_State_Stopped;
+
+	TASK_SIGNAL( tn->tn_Parent, tn->tn_Mask );
+
+	TASK_SIGNAL( usbbase->usb_Master_Task.tn_TaskAdr, SIGBREAKF_CTRL_D );
+
+	USBDEBUG( "CmdStart_Entry           :  2 : Leave" );
+}
+
+// --
+
+#include "Worker_Promote.c"
+
+// --
+
 SEC_CODE static void
 CmdStart_Entry ( struct USB2_TaskMsg * tm )
 {
 	S32 ( *init ) ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in );
 	void ( *main ) ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in );
 	void ( *free ) ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in );
+	struct WorkerState	   worker;
 	struct USB2_TaskNode * tn;
 	struct USB2_HCDNode *  user_hn;
 	struct USB2_ASync *	   as;
@@ -30,6 +126,7 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 	U32					   name_len;
 	U32					   stat;
 	S32					   wait;
+	S32					   process;
 	PTR					   in;
 
 	struct Task * parent;
@@ -62,6 +159,7 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 
 	self	 = TASK_FIND ();
 	org_name = self->tc_Node.ln_Name;
+	process = self->tc_Node.ln_Type == NT_PROCESS;
 	if ( task_name )
 	{
 		name_len = sizeof ( "USB ' " ) - 1;
@@ -135,6 +233,22 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 	tn->tn_Parent  = tm->tm_Cmd.cm_Task;
 	tn->tn_Mask	   = tm->tm_Cmd.cm_Mask;
 
+	worker.Free = free;
+	worker.Node = tn;
+	worker.HCD = user_hn;
+	worker.ASync = as;
+	worker.Base = usbbase;
+	worker.Replacement = NULL;
+	worker.UserData = user_data;
+	worker.Intern = in;
+	worker.OriginalName = org_name;
+	worker.StackSize = tm->tm_StackSize;
+	worker.ResumeMask = 0;
+	worker.PromotionAttempted = FALSE;
+#ifdef DO_DEBUG
+	worker.OriginalSignals = TASK_SETSIGNAL( 0, 0 );
+#endif
+
 	// Alloc Intern Struct
 	if ( tm->tm_InternSize )
 	{
@@ -143,18 +257,19 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 		if ( ! in )
 		{
 			USBDEBUG ( "CmdStart_Entry           :: 3 : Error Allocating Memory (%ld)", tm->tm_InternSize );
+			worker.Free = NULL;
 			goto bailout;
 		}
 	}
 
 	// --
 
-#ifdef DO_DEBUG
+	worker.Intern = in;
 
-	// Get Current Signals
-	U32 old_signals = TASK_SETSIGNAL ( 0, 0 );
-
-#endif
+	if ( ! process )
+	{
+		self->tc_UserData = &worker;
+	}
 
 	// -- Call Init func if Any
 	if ( init )
@@ -188,6 +303,11 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 			TASK_SIGNAL ( parent, parent_mask );
 		}
 
+		if ( ( ! process ) && ( usbbase->usb_WorkerPromotionReady ) )
+		{
+			IExec->Signal( self, SIGBREAKF_CTRL_E );
+		}
+
 		if ( main )
 		{
 			main ( usbbase, user_data, in );
@@ -204,76 +324,19 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 		tm					 = NULL; // Can't use tm any more
 	}
 
-	// -- Start Shutdown
-	IExec->Disable ();
-
-	tn->tn_State   = TASK_State_Stopping;
-	tn->tn_TaskAdr = NULL;
-
-	IExec->Enable ();
-
-	// -- Call Free func if Any
-	if ( free )
+	if ( worker.Replacement )
 	{
-		free ( usbbase, user_data, in );
+		// The replacement now owns the worker state and will run its cleanup.
+		self->tc_Node.ln_Name = org_name;
+		self->tc_UserData = NULL;
+
+		IExec->Signal( worker.Replacement, worker.ResumeMask );
+
+		return;
 	}
-
-	// --
-
-#ifdef DO_DEBUG
-
-	// Get Current Signals
-	U32 new_signals = TASK_SETSIGNAL ( 0, 0 );
-
-	if ( old_signals ^ new_signals )
-	{
-		usbbase->usb_IExec->DebugPrintF ( "Unfreed Singal : Old $%08lx, New: $%08lx : Name '%s'\n", old_signals, new_signals,
-										  self->tc_Node.ln_Name );
-	}
-
-#endif
-
-	// --
 
 bailout:
-
-	if ( in )
-	{
-		MEM_FREEVEC ( in );
-	}
-
-	// --
-	// Restore the original name before releasing the task node.
-
-	self->tc_Node.ln_Name = org_name;
-
-	if ( user_hn )
-	{
-		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
-
-		user_hn->hn_Task = NULL;
-		tn->tn_Owner	 = NULL;
-
-		TASK_UNLOCK ( tn );
-
-		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
-	}
-
-	// Exit - time
-	IExec->Disable ();
-
-	ASYNC_SUB ( as );
-
-	// --
-	// Task is Done
-	tn->tn_State = TASK_State_Stopped;
-
-	// --
-	// Parent can be NULL, we can handle that
-	TASK_SIGNAL ( tn->tn_Parent, tn->tn_Mask );
-	TASK_SIGNAL ( usbbase->usb_Master_Task.tn_TaskAdr, SIGBREAKF_CTRL_D );
-
-	USBDEBUG ( "CmdStart_Entry           :  2 : Leave" );
+	CmdStart_Finish( &worker );
 }
 
 // --

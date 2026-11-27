@@ -214,6 +214,14 @@ struct pintern
 
 /***************************************************************************/
 
+struct HIDTransferState
+{
+	U32 Errors;
+	S32 Recovery;
+	U8 Active[HID_IOReqCount];
+	U8 Forwarded[HID_IOReqCount];
+};
+
 struct HIDData
 {
 	#ifdef DO_DEBUG
@@ -228,6 +236,7 @@ struct HIDData
 	struct USB2_MsgPort				Timer_MsgPort;
 	struct USB2_MsgPort				Return_MsgPort;
 	U32								Timer_Added;
+	struct HIDTransferState			Transfer;
 
 	struct USB2_EPResource *		Res_Interrupt;
 	struct USB2_EPResource *		Res_Control;
@@ -252,7 +261,7 @@ extern const S16 USBKeyMap2[256];
 
 SEC_CODE S32	HID_Init(				struct USBBase *usbbase, struct HIDData *hd );
 SEC_CODE void	HID_Free(				struct USBBase *usbbase, struct HIDData *hd );
-SEC_CODE U32	HID_Main(				struct USBBase *usbbase, struct HIDData *hd );
+SEC_CODE U32	HID_Main(				struct USBBase *usbbase, struct HIDData *hd, S32 *promoted );
 SEC_CODE void	Report_Free(			struct USBBase *usbbase, struct HIDData *hd );
 
 SEC_CODE void	USB_Send_LED(			struct USBBase *usbbase, struct HID_ReportNode *rn, U32 LEDStat );

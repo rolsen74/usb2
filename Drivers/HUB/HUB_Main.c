@@ -112,13 +112,17 @@ struct USB2_Node *n;
 
 // --
 
-SEC_CODE void HUB_Main( struct USBBase *usbbase, struct intern *in )
+SEC_CODE S32
+HUB_Main( struct USBBase *usbbase, struct intern *in )
 {
 	USBINFO( "__myMain (HUB)           : Enter" );
 
 	// --
 	// Normal running loop
-	HUB_Main__Normal(	usbbase, in );
+	if ( HUB_Main__Normal( usbbase, in ) )
+	{
+		return ( TRUE );
+	}
 
 	// --
 	// Signal subtasks to shutdown
@@ -136,7 +140,8 @@ SEC_CODE void HUB_Main( struct USBBase *usbbase, struct intern *in )
 	// -- Exit
 
 	USBINFO( "__myMain (HUB)           : Leave" );
-	return;
+
+	return ( FALSE );
 }
 
 // --

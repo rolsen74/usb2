@@ -23,6 +23,7 @@ SEC_CODE U32 HID_Entry( struct USBBase *usbbase, struct USB2_DriverMessage *msg 
 {
 struct HIDData *hd;
 U32 retval;
+S32 promoted;
 
 	// --
 
@@ -63,7 +64,14 @@ U32 retval;
 
 		if ( HID_Init( usbbase, hd ))
 		{
-			retval = HID_Main( usbbase, hd );
+			retval = HID_Main( usbbase, hd, &promoted );
+
+			if ( promoted )
+			{
+				TASK_NAME_LEAVE();
+
+				return ( retval );
+			}
 		}
 		else
 		{

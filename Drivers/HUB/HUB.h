@@ -152,11 +152,11 @@ SEC_CODE void	HUB__Port_Function_Rem( struct USBBase *usbbase, struct intern *in
 SEC_CODE S32	HUB__Port_Status_Get( struct USBBase *usbbase, struct intern *in, U32 port, struct USB2_PortStatus *stat );
 
 SEC_CODE void	HUB_Main__Free_FNs( struct USBBase *usbbase, struct intern *in );
-SEC_CODE void	HUB_Main__Normal( struct USBBase *usbbase, struct intern *in );
+SEC_CODE S32	HUB_Main__Normal( struct USBBase *usbbase, struct intern *in );
 SEC_CODE void	HUB_Main__Signal( struct USBBase *usbbase, struct intern *in );
 SEC_CODE void	HUB_Main__Stopping( struct USBBase *usbbase, struct intern *in );
 SEC_CODE void	HUB_Main__Shutdown( struct USBBase *usbbase, struct intern *in );
-SEC_CODE void	HUB_Main( struct USBBase *usbbase, struct intern *in );
+SEC_CODE S32	HUB_Main( struct USBBase *usbbase, struct intern *in );
 
 SEC_CODE S32	HUB_Init( struct USBBase *usbbase, struct intern *in );
 SEC_CODE void	HUB_Free( struct USBBase *usbbase, struct intern *in );

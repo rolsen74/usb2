@@ -144,7 +144,7 @@ HUB_Entry ( struct USBBase * usbbase, struct USB2_DriverMessage * msg )
 	in->StartMsg = msg;
 	in->Function = (PTR)msg->Function;
 	in->HCDNode	 = in->Function->fkt_HCD;
-	in->HUB_ID	 = ( (U32)TASK_FIND () + 1 );
+	in->HUB_ID	 = (U32)in;
 
 	USBDEBUG ( "HUB_Entry                : HUB_ID $%08lx", in->HUB_ID );
 
@@ -188,7 +188,10 @@ HUB_Entry ( struct USBBase * usbbase, struct USB2_DriverMessage * msg )
 	HUB_Schedule ( usbbase, in );
 
 	// Handle Messages
-	HUB_Main ( usbbase, in );
+	if ( HUB_Main ( usbbase, in ) )
+	{
+		in = NULL;
+	}
 
 	// --
 

@@ -105,6 +105,19 @@ enum TaskReturn
 
 // --
 
+struct USB2_EPResource;
+
+struct USB2_WorkerHandoff
+{
+	void ( *Entry )( struct USBBase *usbbase, PTR data, PTR in );
+	PTR Data;
+	struct MsgPort *Ports[6];
+	struct Task **Owners[2];
+	struct USB2_EPResource *Endpoints[3];
+	U32 Signals;
+	U32 Pending;
+};
+
 struct USB2_TaskNode
 {
 	struct USB2_Node tn_Node;

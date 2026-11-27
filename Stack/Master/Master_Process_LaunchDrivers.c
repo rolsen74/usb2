@@ -17,6 +17,8 @@ static void
 __myProcess_Entry ( void )
 {
 	struct MasterStartMsg * tm;
+	struct USB2_TaskNode *tn;
+	struct Task *task;
 	struct Task *			parent;
 	struct intern *			in;
 	struct ExecIFace *		IExec;
@@ -33,6 +35,26 @@ __myProcess_Entry ( void )
 	in		= usbbase->usb_Master_Intern;
 
 	Master_ReplyStart( IExec, tm, TRUE );
+
+	SEMAPHORE_OBTAIN( &usbbase->usb_Task_Semaphore );
+
+	usbbase->usb_WorkerPromotionReady = TRUE;
+
+	for ( tn = Header_Head( &usbbase->usb_Task_Header ); tn; tn = Node_Next( tn ) )
+	{
+		IExec->Disable();
+
+		task = tn->tn_TaskAdr;
+
+		if ( ( task ) && ( task->tc_Node.ln_Type == NT_TASK ) && ( tn->tn_State == TASK_State_Running ) )
+		{
+			IExec->Signal( task, SIGBREAKF_CTRL_E );
+		}
+
+		IExec->Enable();
+	}
+
+	SEMAPHORE_RELEASE( &usbbase->usb_Task_Semaphore );
 
 	// Master must be free to service driver start commands during the scan.
 	if ( __myProcess_ScanDriverDir( usbbase ) )
@@ -85,7 +107,7 @@ __myProcess_LaunchDrivers ( struct USBBase * usbbase, struct intern * in )
 
 		in->LauncherRunning = TRUE;
 
-		if ( IDOS->CreateNewProcTags ( NP_Name, "Universal Serial Bus - Launcher", NP_Child, FALSE, NP_Priority, 1, NP_StackSize,
+		if ( IDOS->CreateNewProcTags ( NP_Name, "Universal Serial Bus - Launcher", NP_Child, TRUE, NP_Priority, 1, NP_StackSize,
 									   1024 * 32, NP_Entry, __myProcess_Entry, NP_UserData, &msg, TAG_END ) )
 		{
 			do

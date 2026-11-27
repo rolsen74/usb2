@@ -22,6 +22,7 @@ enum USB2_Cmd
 	// -- Start new Task/Process
 	CMD_START_PROCESS,
 	CMD_STOP_PROCESS,
+	CMD_PROMOTE_WORKER,
 };
 
 // --

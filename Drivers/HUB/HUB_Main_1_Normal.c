@@ -101,24 +101,72 @@ RecoverPorts( struct USBBase *usbbase, struct intern *in )
 
 // --
 
-SEC_CODE void
+SEC_CODE static void
+HUB_Resume( struct USBBase *usbbase, PTR data, PTR unused UNUSED )
+{
+	struct intern *in;
+
+	in = data;
+
+	HUB_Main( usbbase, in );
+
+	HUB_Free( usbbase, in );
+
+	MEM_FREEVEC( in );
+}
+
+// --
+
+SEC_CODE static S32
+HUB_Promote( struct USBBase *usbbase, struct intern *in, U32 mask )
+{
+	struct USB2_WorkerHandoff handoff;
+
+	MEM_SET( &handoff, 0, sizeof( handoff ) );
+
+	handoff.Entry = HUB_Resume;
+	handoff.Data = in;
+	handoff.Ports[0] = &in->Register->reg_MsgPort.ump_MsgPort;
+	handoff.Ports[1] = &in->Delay_MsgPort.ump_MsgPort;
+	handoff.Ports[2] = &in->Tick_MsgPort.ump_MsgPort;
+	handoff.Endpoints[0] = in->Res_Interrupt;
+	handoff.Endpoints[1] = in->Res_Control;
+	handoff.Owners[0] = &in->ASync_Drivers.ua_Parent;
+	handoff.Owners[1] = &in->ASync_Functions.ua_Parent;
+	handoff.Pending = mask;
+
+	return ( USB2_PromoteWorker( usbbase, &handoff ) );
+}
+
+// --
+
+SEC_CODE S32
 HUB_Main__Normal( struct USBBase *usbbase, struct intern *in )
 {
 	U32 mask;
 	U32 wait;
 	U64 now;
 
-	in->Running = TRUE;
-	wait = SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_D | in->Res_Interrupt->MsgPortBit |
+	wait = SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_D | SIGBREAKF_CTRL_E | in->Res_Interrupt->MsgPortBit |
 		in->Register->reg_Public.Stack_MsgPortBit | in->Tick_MsgPort.ump_Signal.sig_Signal_Mask;
 
-	in->HousekeepingDue = HUB_Uptime( usbbase ) + 2000000;
+	if ( ! in->Running )
+	{
+		in->Running = TRUE;
 
-	HUB_Arm_Tick( usbbase, in );
+		in->HousekeepingDue = HUB_Uptime( usbbase ) + 2000000;
+
+		HUB_Arm_Tick( usbbase, in );
+	}
 
 	while ( in->Running )
 	{
 		mask = TASK_WAIT( wait );
+
+		if ( ( mask & SIGBREAKF_CTRL_E ) && ( ! ( mask & SIGBREAKF_CTRL_C ) ) && ( HUB_Promote( usbbase, in, mask ) ) )
+		{
+			return ( TRUE );
+		}
 
 		if ( mask & in->Register->reg_Public.Stack_MsgPortBit )
 		{
@@ -170,6 +218,8 @@ HUB_Main__Normal( struct USBBase *usbbase, struct intern *in )
 
 		HUB_Arm_Tick( usbbase, in );
 	}
+
+	return ( FALSE );
 }
 
 // --

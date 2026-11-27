@@ -16,6 +16,8 @@
 
 // --
 
+SEC_CODE static void __myMain( struct USBBase *usbbase, PTR userdata, PTR in_ptr );
+
 #include "HCD_2_Main_1_Normal.c"
 #include "HCD_2_Main_2_Signal.c"
 #include "HCD_2_Main_4_Shutdown.c"
@@ -44,7 +46,10 @@ struct intern *in;
 
 	// --
 	// Normal running loop
-	__Normal(	usbbase, hn, in );
+	if ( __Normal( usbbase, hn, in ) )
+	{
+		goto bailout;
+	}
 
 	// --
 	// Signal subtasks to shutdown

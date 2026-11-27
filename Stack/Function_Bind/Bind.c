@@ -143,21 +143,13 @@ SEC_CODE static void RetryDriverBinding ( struct USBBase * usbbase, struct USB2_
 
 // --
 
-SEC_CODE static void
-DriverWorkerMain ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in UNUSED )
+SEC_CODE void
+USB2_DriverWorkerResult( struct USBBase *usbbase, struct USB2_DriverMessage *msg, U32 result )
 {
-	struct Task * parent;
+	struct USB2_DriverNode *dn;
+	struct Task *parent;
 
-	U32 result;
-
-	if ( dn->dn_Entry )
-	{
-		result = dn->dn_Entry ( usbbase, &dn->dn_Message.rdm_Public );
-	}
-	else
-	{
-		result = dn->dn_DriverIFace->Entry ( &dn->dn_Message.rdm_Public );
-	}
+	dn = (PTR)( (U8 *)msg - offsetof( struct USB2_DriverNode, dn_Message ) );
 
 	// The root hub can report readiness before entering its event loop.
 	parent = dn->dn_Message.rdm_Parent;
@@ -174,6 +166,25 @@ DriverWorkerMain ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in
 	{
 		RetryDriverBinding ( usbbase, dn );
 	}
+}
+
+// --
+
+SEC_CODE static void
+DriverWorkerMain( struct USBBase *usbbase, struct USB2_DriverNode *dn, PTR in UNUSED )
+{
+	U32 result;
+
+	if ( dn->dn_Entry )
+	{
+		result = dn->dn_Entry( usbbase, &dn->dn_Message.rdm_Public );
+	}
+	else
+	{
+		result = dn->dn_DriverIFace->Entry( &dn->dn_Message.rdm_Public );
+	}
+
+	USB2_DriverWorkerResult( usbbase, &dn->dn_Message.rdm_Public, result );
 }
 
 // --

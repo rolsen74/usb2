@@ -78,9 +78,11 @@ U32 retval;
 
 	msddev = MSD_Device_Alloc( usbbase, msg );
 
-	if ( msddev )
+	if ( ( msddev ) && ( MSD_Main( usbbase, msddev ) ) )
 	{
-		MSD_Main( usbbase, msddev );
+		retval = TASK_Return_Okay;
+
+		goto bailout;
 	}
 
 	MSD_Device_Free( usbbase, msddev );

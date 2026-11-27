@@ -196,6 +196,8 @@ struct MSDDevice
 	struct MSDBase *			msddev_MSDBase;
 	struct USB2_Header			msddev_MSDDisk_Header; // struct MSDDisk's
 	struct USB2_MsgPort			msddev_MsgPort_Begin;
+	struct USB2_MsgPort			TickPort;
+	struct TimeRequest			Tick;
 	struct RealRegister *		msddev_Register;
 	struct USB2_EPResource *	msddev_Res_Bulk_Out;
 	struct USB2_EPResource *	msddev_Res_Bulk_In;
@@ -377,8 +379,8 @@ S32 MSD_Disk_MediaCheck ( struct USBBase * usbbase, struct MSDDisk * msddisk );
 SEC_CODE void MSD_Disk_Announce( struct USBBase *usbbase, struct MSDDisk *msddisk );
 void MSD_Disk_NotifyChange ( struct USBBase * usbbase, struct MSDDisk * msddisk );
 
-void MSD_Main ( struct USBBase * usbbase, struct MSDDevice * msddev );
-void MSD_Main_1_Normal ( struct USBBase * usbbase, struct MSDDevice * msddev );
+S32 MSD_Main ( struct USBBase * usbbase, struct MSDDevice * msddev );
+S32 MSD_Main_1_Normal ( struct USBBase * usbbase, struct MSDDevice * msddev );
 void MSD_Main_2_Stopping ( struct USBBase * usbbase, struct MSDDevice * msddev );
 SEC_CODE struct IOStdReq *MSD_Queue_Remove( struct USBBase *usbbase, struct MSDDisk *msddisk, struct IOStdReq *wanted );
 void MSD_Main__myHandle_Begin ( struct USBBase * usbbase, struct MSDDevice * msddev );

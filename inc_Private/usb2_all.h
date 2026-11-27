@@ -180,6 +180,8 @@ struct CMD_AddFunctionData
 // --
 // Build Protos
 
+SEC_CODE void USB2_DriverWorkerResult( struct USBBase *usbbase, struct USB2_DriverMessage *msg, U32 result );
+SEC_CODE S32 USB2_PromoteWorker( struct USBBase *usbbase, const struct USB2_WorkerHandoff *handoff );
 SEC_CODE void USB2_Bind_Enumerated( struct USBBase *usbbase );
 SEC_CODE S32 USB2_FullBoot_Wait( struct USBBase *usbbase );
 SEC_CODE void USB2_FullBoot_Complete( struct USBBase *usbbase, S32 ready );

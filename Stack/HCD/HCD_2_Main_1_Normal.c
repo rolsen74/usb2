@@ -12,7 +12,31 @@
 
 // --
 
-SEC_CODE static void
+SEC_CODE static S32
+PromoteHCD( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct intern *in, U32 mask )
+{
+	struct USB2_WorkerHandoff handoff;
+
+	MEM_SET( &handoff, 0, sizeof( handoff ) );
+
+	handoff.Entry = __myMain;
+	handoff.Data = hn;
+	handoff.Ports[0] = &hn->hn_Abort_MsgPort.ump_MsgPort;
+	handoff.Ports[1] = &hn->hn_Begin_MsgPort.ump_MsgPort;
+	handoff.Ports[2] = &hn->hn_Delay_MsgPort.ump_MsgPort;
+	handoff.Ports[3] = &hn->hn_WatchDog_MsgPort.ump_MsgPort;
+	handoff.Ports[4] = &in->Tick_MsgPort.ump_MsgPort;
+	handoff.Ports[5] = ( hn->hn_TTClearPort.ump_StructID == ID_USB2_MP ) ? &hn->hn_TTClearPort.ump_MsgPort : NULL;
+	handoff.Owners[0] = &hn->hn_HUB_ASync.ua_Parent;
+	handoff.Signals = hn->HCD_Mask | hn->HCD_Restart_Chip.sig_Signal_Mask | hn->hn_HUB_Signal.sig_Signal_Mask;
+	handoff.Pending = mask;
+
+	return ( USB2_PromoteWorker( usbbase, &handoff ) );
+}
+
+// --
+
+SEC_CODE static S32
 __Normal ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * in )
 {
 	struct USB2_TaskNode * tn;
@@ -24,7 +48,7 @@ __Normal ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * i
 	USBDEBUG ( "__myMain (HCD)           : __Normal (1) :: HN %p : IN %p : TN %p :", hn, in, tn );
 	TASK_NAME_ENTER ( "HCD Main : __Normal" );
 
-	wait = SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_D | hn->HCD_Mask | hn->HCD_Restart_Chip.sig_Signal_Mask
+	wait = SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_D | SIGBREAKF_CTRL_E | hn->HCD_Mask | hn->HCD_Restart_Chip.sig_Signal_Mask
 		   | hn->hn_HUB_Signal.sig_Signal_Mask | hn->hn_Abort_MsgPort.ump_Signal.sig_Signal_Mask
 		   | hn->hn_Begin_MsgPort.ump_Signal.sig_Signal_Mask | hn->hn_WatchDog_MsgPort.ump_Signal.sig_Signal_Mask
 		   | in->Tick_MsgPort.ump_Signal.sig_Signal_Mask;
@@ -39,6 +63,13 @@ __Normal ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * i
 		if ( ( mask & SIGBREAKF_CTRL_C ) && ( tn->tn_StopRequested ) )
 		{
 			break;
+		}
+
+		if ( ( mask & SIGBREAKF_CTRL_E ) && ( PromoteHCD( usbbase, hn, in, mask ) ) )
+		{
+			TASK_NAME_LEAVE();
+
+			return ( TRUE );
 		}
 
 		//		usbbase->usb_IExec->DebugPrintF( "HCD Mask $%08lx\n", mask );
@@ -134,6 +165,8 @@ __Normal ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * i
 	//	usbbase->usb_IExec->DebugPrintF( "HCD Shutting down\n" );
 
 	TASK_NAME_LEAVE ();
+
+	return ( FALSE );
 }
 
 // --

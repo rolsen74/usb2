@@ -18,12 +18,22 @@ HID_Pointer_Main( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
 {
 	struct HID_ReportNode *rn;
 	struct RealRequest *ioreq;
+	struct USB2_WorkerHandoff handoff;
 
 	U32 index;
 	U32 wait;
+	U32 mask;
 
 	rn = userdata;
-	wait = SIGBREAKF_CTRL_D | rn->IOReq_MsgPort.ump_Signal.sig_Signal_Mask;
+	wait = SIGBREAKF_CTRL_D | SIGBREAKF_CTRL_E | rn->IOReq_MsgPort.ump_Signal.sig_Signal_Mask;
+
+	MEM_SET( &handoff, 0, sizeof( handoff ) );
+
+	handoff.Entry = HID_Pointer_Main;
+	handoff.Data = rn;
+	handoff.Ports[0] = &rn->IOReq_MsgPort.ump_MsgPort;
+	handoff.Ports[1] = &rn->Input_MsgPort.ump_MsgPort;
+	handoff.Owners[0] = &rn->TaskAdr;
 
 	while ( TRUE )
 	{
@@ -46,7 +56,17 @@ HID_Pointer_Main( struct USBBase *usbbase, PTR userdata, PTR in UNUSED )
 			break;
 		}
 
-		TASK_WAIT( wait );
+		mask = TASK_WAIT( wait );
+
+		if ( mask & SIGBREAKF_CTRL_E )
+		{
+			handoff.Pending = mask;
+
+			if ( USB2_PromoteWorker( usbbase, &handoff ) )
+			{
+				return;
+			}
+		}
 	}
 
 	for ( index = 0; index < 5; index++ )

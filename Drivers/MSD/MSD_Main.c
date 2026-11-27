@@ -14,20 +14,25 @@
 // --
 #if 1
 
-SEC_CODE void MSD_Main( struct USBBase *usbbase, struct MSDDevice *msddev )
+SEC_CODE S32
+MSD_Main( struct USBBase *usbbase, struct MSDDevice *msddev )
 {
+	S32 promoted;
+
 	TASK_NAME_ENTER( "MSD : MSD_Main" );
 	USBERROR( "MSD : MSD_Main : Enter" );
 
 	// --
 	// Normal running loop
-	MSD_Main_1_Normal( usbbase, msddev );
+	promoted = MSD_Main_1_Normal( usbbase, msddev );
 
 	// --
 	// -- Exit
 
 	USBERROR( "MSD : MSD_Main : Leave" );
 	TASK_NAME_LEAVE();
+
+	return ( promoted );
 }
 
 #endif

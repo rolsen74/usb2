@@ -46,6 +46,13 @@ myHandle_Cmds ( struct USBBase * usbbase, struct intern * in )
 				break;
 			}
 
+			case CMD_PROMOTE_WORKER:
+			{
+				// The child replies after reserving the worker's signals.
+				reply = ( in->Stopping ) || ( ! Cmd_Promote_Worker( usbbase, (PTR)msg ) );
+				break;
+			}
+
 			case CMD_STOP_PROCESS:
 			{
 				__Cmd_Stop_Process ( usbbase, in, (PTR)msg );

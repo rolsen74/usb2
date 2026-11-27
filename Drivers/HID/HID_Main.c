@@ -90,34 +90,73 @@ StopReads( struct USBBase *usbbase, struct HIDData *hd, U8 *active )
 
 // --
 
+SEC_CODE static void
+HID_Resume( struct USBBase *usbbase, PTR data, PTR unused UNUSED )
+{
+	struct USB2_DriverMessage *msg;
+	struct HIDData *hd;
+
+	S32 promoted;
+	U32 result;
+
+	hd = data;
+	msg = hd->StartMsg;
+
+	result = HID_Main( usbbase, hd, &promoted );
+
+	HID_Free( usbbase, hd );
+
+	MEM_FREEVEC( hd );
+
+	USB2_DriverWorkerResult( usbbase, msg, result );
+}
+
+// --
+
+SEC_CODE static S32
+HID_Promote( struct USBBase *usbbase, struct HIDData *hd, U32 mask )
+{
+	struct USB2_WorkerHandoff handoff;
+
+	MEM_SET( &handoff, 0, sizeof( handoff ) );
+
+	handoff.Entry = HID_Resume;
+	handoff.Data = hd;
+	handoff.Ports[0] = &hd->Register->reg_MsgPort.ump_MsgPort;
+	handoff.Ports[1] = &hd->Return_MsgPort.ump_MsgPort;
+	handoff.Ports[2] = &hd->Timer_MsgPort.ump_MsgPort;
+	handoff.Endpoints[0] = hd->Res_Interrupt;
+	handoff.Endpoints[1] = hd->Res_Control;
+	handoff.Owners[0] = &hd->TaskAdr;
+	handoff.Owners[1] = &hd->ASync_Drivers.ua_Parent;
+	handoff.Pending = mask;
+
+	return ( USB2_PromoteWorker( usbbase, &handoff ) );
+}
+
+// --
+
 SEC_CODE U32
-HID_Main( struct USBBase *usbbase, struct HIDData *hd )
+HID_Main( struct USBBase *usbbase, struct HIDData *hd, S32 *promoted )
 {
 	struct HID_ReportNode *rn;
 	struct USB2_IORequest *request;
 	struct RealRequest *ioreq;
 	struct ExecIFace *IExec;
+	struct HIDTransferState *transfer;
 
 	U32 index;
-	U32 errors;
 	U32 mask;
 	U32 wait;
 	U32 result;
-	S32 recovery;
-	U8 active[HID_IOReqCount];
-	U8 forwarded[HID_IOReqCount];
 
 	IExec = usbbase->usb_IExec;
-	errors = 0;
-	recovery = 0;
+	transfer = &hd->Transfer;
+	*promoted = FALSE;
 	result = TASK_Return_Okay;
-	wait = SIGBREAKF_CTRL_C | hd->Res_Interrupt->MsgPortBit |
+	wait = SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_E | hd->Res_Interrupt->MsgPortBit |
 		hd->Register->reg_Public.Stack_MsgPortBit | hd->Return_MsgPort.ump_Signal.sig_Signal_Mask |
 		hd->Timer_MsgPort.ump_Signal.sig_Signal_Mask;
-
-	MEM_SET( active, 0, sizeof( active ) );
-
-	MEM_SET( forwarded, 0, sizeof( forwarded ) );
 
 	mask = TASK_SETSIGNAL( 0, wait );
 
@@ -128,13 +167,20 @@ HID_Main( struct USBBase *usbbase, struct HIDData *hd )
 			break;
 		}
 
+		if ( ( mask & SIGBREAKF_CTRL_E ) && ( HID_Promote( usbbase, hd, mask ) ) )
+		{
+			*promoted = TRUE;
+
+			return ( TASK_Return_Okay );
+		}
+
 		while ( ( request = MSGPORT_GETMSG( &hd->Return_MsgPort ) ) )
 		{
 			for ( index = 0; index < HID_IOReqCount; index++ )
 			{
 				if ( hd->Res_Interrupt->IORequests[index] == request )
 				{
-					forwarded[index] = FALSE;
+					transfer->Forwarded[index] = FALSE;
 					break;
 				}
 			}
@@ -155,49 +201,49 @@ HID_Main( struct USBBase *usbbase, struct HIDData *hd )
 				continue;
 			}
 
-			active[index] = FALSE;
+			transfer->Active[index] = FALSE;
 
 			if ( ioreq->req_Public.io_Error )
 			{
-				recovery = ioreq->req_Public.io_Error;
+				transfer->Recovery = ioreq->req_Public.io_Error;
 				break;
 			}
 
-			errors = 0;
+			transfer->Errors = 0;
 
 			rn = InputWorker( hd, ioreq );
 
 			if ( ( rn ) && ( rn->Running ) )
 			{
-				forwarded[index] = TRUE;
+				transfer->Forwarded[index] = TRUE;
 
 				MSGPORT_PUTMSG( &rn->IOReq_MsgPort, ioreq );
 			}
 		}
 
-		if ( recovery == USB2Err_Device_Detached )
+		if ( transfer->Recovery == USB2Err_Device_Detached )
 		{
 			break;
 		}
 
-		if ( recovery )
+		if ( transfer->Recovery )
 		{
 			if ( ! hd->Timer_Added )
 			{
-				StopReads( usbbase, hd, active );
+				StopReads( usbbase, hd, transfer->Active );
 
-				errors++;
+				transfer->Errors++;
 
-				if ( errors >= 20 )
+				if ( transfer->Errors >= 20 )
 				{
-					USBDEBUG( "HID: interrupt endpoint stopped after error %ld", recovery );
+					USBDEBUG( "HID: interrupt endpoint stopped after error %ld", transfer->Recovery );
 
 					result = TASK_Return_Error;
 					break;
 				}
 
 				hd->Timer_IOReq.Time.Seconds = 0;
-				hd->Timer_IOReq.Time.Microseconds = ( recovery == USB2Err_Host_NoBandWidth ) ? 250000 : 50000;
+				hd->Timer_IOReq.Time.Microseconds = ( transfer->Recovery == USB2Err_Host_NoBandWidth ) ? 250000 : 50000;
 				hd->Timer_IOReq.Request.io_Command = TR_ADDREQUEST;
 				hd->Timer_Added = TRUE;
 
@@ -207,9 +253,9 @@ HID_Main( struct USBBase *usbbase, struct HIDData *hd )
 			{
 				hd->Timer_Added = FALSE;
 
-				if ( ( recovery != USB2Err_Host_Stall ) || ( ENDPOINTRES_DESTALL( hd->Res_Interrupt ) ) )
+				if ( ( transfer->Recovery != USB2Err_Host_Stall ) || ( ENDPOINTRES_DESTALL( hd->Res_Interrupt ) ) )
 				{
-					recovery = 0;
+					transfer->Recovery = 0;
 				}
 				else
 				{
@@ -220,13 +266,13 @@ HID_Main( struct USBBase *usbbase, struct HIDData *hd )
 			}
 		}
 
-		if ( ! recovery )
+		if ( ! transfer->Recovery )
 		{
 			for ( index = 0; index < HID_IOReqCount; index++ )
 			{
-				if ( ( ! active[index] ) && ( ! forwarded[index] ) )
+				if ( ( ! transfer->Active[index] ) && ( ! transfer->Forwarded[index] ) )
 				{
-					active[index] = TRUE;
+					transfer->Active[index] = TRUE;
 
 					IO_SEND( hd->Res_Interrupt->IORequests[index] );
 				}
@@ -243,7 +289,7 @@ HID_Main( struct USBBase *usbbase, struct HIDData *hd )
 		hd->Timer_Added = FALSE;
 	}
 
-	StopReads( usbbase, hd, active );
+	StopReads( usbbase, hd, transfer->Active );
 
 	return ( result );
 }
