@@ -16,7 +16,7 @@
 #define VIDEO_OV534_PAYLOAD_SIZE 2048
 #define VIDEO_ISO_PACKETS 16
 #define VIDEO_ISO_MAX_PACKETS 256
-#define VIDEO_USB_READS 2
+#define VIDEO_USB_READS VIDEO_ISO_BUFFERS
 #define VIDEO_IO_ABORT 0x80
 #define VIDEO_PAYLOAD_FID 0x01
 #define VIDEO_PAYLOAD_EOF 0x02
@@ -60,6 +60,23 @@ struct VideoDriverBase
 	struct VideoContext Context;
 };
 
+struct VideoIdentity
+{
+	struct USB2_PortPath Port;
+	U16 VendorID;
+	U16 DeviceID;
+	U8 InterfaceNr;
+	U8 SerialLength;
+	U8 Serial[255];
+};
+
+struct VideoSlot
+{
+	struct VideoUnit *Unit;
+	struct VideoIdentity Identity;
+	U8 Open;
+};
+
 struct VideoBase
 {
 	struct Library Library;
@@ -67,7 +84,7 @@ struct VideoBase
 	PTR SegList;
 	struct VideoContext *Context;
 	struct SignalSemaphore Semaphore;
-	struct VideoUnit *Units[VIDEO_MAX_UNITS];
+	struct VideoSlot Slots[VIDEO_MAX_UNITS];
 };
 
 struct VideoUnit
@@ -87,8 +104,9 @@ struct VideoUnit
 	struct USB2_IORequest *ReadReady;
 	struct VideoFormat Format;
 	struct VideoMode DefaultMode;
+	struct VideoIsoBuffers IsoBuffers;
+	struct VideoCaptureStats CaptureStats;
 	U32 UnitNr;
-	U32 OpenCount;
 	U32 FrameUsed;
 	U32 PayloadSize;
 	U32 StreamPacketSize;
@@ -117,6 +135,7 @@ struct VideoUnit
 	U8 OV534Initialized;
 	U8 OV534StopPending;
 	U8 ReadPending;
+	U8 ReadCount;
 	U8 ReadHead;
 	U8 ReadTail;
 	U8 ReadGaps;
@@ -125,7 +144,6 @@ struct VideoUnit
 	U8 ReadReset;
 	U8 Detached;
 	U8 USBDetached;
-	U8 Released;
 };
 
 SEC_CODE U32 Video_Entry( struct USB2DriverIFace *Self, struct USB2_DriverMessage *msg );

@@ -66,6 +66,10 @@ struct IOStdReq *ioreq;
 	{
 		unit->FrameDiscard = TRUE;
 	}
+	else
+	{
+		unit->CaptureStats.DeliveredFrames++;
+	}
 
 	ReplyMsg( (PTR) ioreq );
 

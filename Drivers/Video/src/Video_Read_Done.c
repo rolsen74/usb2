@@ -64,13 +64,24 @@ Video_Read_Done( struct VideoUnit *unit )
 			WaitIO( (PTR) ioreq );
 
 			unit->ReadPending &= ~( 1U << slot );
-			unit->ReadHead = ( slot + 1 ) % VIDEO_USB_READS;
+			unit->ReadHead = ( slot + 1 ) % unit->ReadCount;
 
 			if ( unit->ReadGaps & ( 1U << slot ) )
 			{
 				unit->ReadGaps &= ~( 1U << slot );
 
+				// The first batch always starts with an unknown frame boundary.
+				if ( ( unit->StreamAlt ) && ( unit->CaptureStats.IsoBatches ) )
+				{
+					unit->CaptureStats.IsoBatchGaps++;
+				}
+
 				Video_Read_Payload( unit, NULL, 1 );
+			}
+
+			if ( unit->StreamAlt )
+			{
+				unit->CaptureStats.IsoBatches++;
 			}
 
 			if ( ioreq->io_Error )
@@ -116,6 +127,8 @@ Video_Read_Done( struct VideoUnit *unit )
 
 			if ( length == USB2_ISO_PACKET_ERROR )
 			{
+				unit->CaptureStats.IsoPacketErrors++;
+
 				consumed = Video_Read_Payload( unit, NULL, 1 );
 			}
 			else if ( length > unit->StreamPacketSize )

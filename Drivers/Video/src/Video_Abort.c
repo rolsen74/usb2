@@ -27,6 +27,8 @@ SEC_CODE void Video_Abort( struct VideoUnit *unit )
 	{
 		error = Video_Stream_Close( unit );
 
+		unit->IsoBuffers.Size = 0;
+
 		Video_Read_Reply( unit, error == USB2Err_Device_Detached ? error : IOERR_ABORTED );
 	}
 

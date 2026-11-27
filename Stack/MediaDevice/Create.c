@@ -38,6 +38,9 @@ SEC_RODATA static const U16 VideoCommands[] =
 	VIDEO_CMD_GET_MODE,
 	VIDEO_CMD_SET_MODE,
 	VIDEO_CMD_STOP,
+	VIDEO_CMD_GET_ISO_BUFFER_SIZE,
+	VIDEO_CMD_SET_ISO_BUFFERS,
+	VIDEO_CMD_GET_CAPTURE_STATS,
 	0
 };
 
@@ -90,7 +93,7 @@ SEC_RODATA static const struct TagItem ManagerTags[] =
 	{ TAG_END, 0 }
 };
 
-SEC_RODATA static const PTR BackendVectors[] =
+SEC_RODATA static const PTR MainVectors[] =
 {
 	(PTR) Obtain,
 	(PTR) Release,
@@ -103,16 +106,7 @@ SEC_RODATA static const PTR BackendVectors[] =
 SEC_RODATA static const struct TagItem MainTags[] =
 {
 	{ MIT_Name, (Tag) USB2_MEDIA_INTERFACE },
-	{ MIT_VectorTable, (Tag) BackendVectors },
-	{ MIT_Version, USB2_MEDIA_INTERFACE_VERSION },
-	{ TAG_END, 0 }
-};
-
-// Older audio and video class drivers still request "media".
-SEC_RODATA static const struct TagItem LegacyTags[] =
-{
-	{ MIT_Name, (Tag) "media" },
-	{ MIT_VectorTable, (Tag) BackendVectors },
+	{ MIT_VectorTable, (Tag) MainVectors },
 	{ MIT_Version, USB2_MEDIA_INTERFACE_VERSION },
 	{ TAG_END, 0 }
 };
@@ -121,7 +115,6 @@ SEC_RODATA static const PTR Interfaces[] =
 {
 	(PTR) ManagerTags,
 	(PTR) MainTags,
-	(PTR) LegacyTags,
 	NULL
 };
 

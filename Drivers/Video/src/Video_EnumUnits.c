@@ -16,7 +16,7 @@
 SEC_CODE void
 Video_EnumUnits( struct VideoBase *base, struct IOStdReq *request )
 {
-	struct VideoUnit *unit;
+	struct VideoSlot *slot;
 	struct USB2UnitInfo entries[VIDEO_MAX_UNITS];
 
 	U32 count;
@@ -35,12 +35,12 @@ Video_EnumUnits( struct VideoBase *base, struct IOStdReq *request )
 
 	for( index = 0; index < VIDEO_MAX_UNITS; index++ )
 	{
-		unit = base->Units[index];
+		slot = & base->Slots[index];
 
-		if ( ( unit ) && ( ! unit->Detached ) )
+		if ( slot->Unit )
 		{
 			entries[count].Number = index;
-			entries[count].Flags = unit->OpenCount ? USB2_UNIT_BUSY : 0;
+			entries[count].Flags = slot->Open ? USB2_UNIT_BUSY : 0;
 			count++;
 		}
 	}

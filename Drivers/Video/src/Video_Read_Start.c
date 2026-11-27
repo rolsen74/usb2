@@ -35,7 +35,7 @@ U32 previous;
 			break;
 		}
 
-		previous = ( slot + VIDEO_USB_READS - 1 ) % VIDEO_USB_READS;
+		previous = ( slot + unit->ReadCount - 1 ) % unit->ReadCount;
 		last = unit->Stream->IORequests[previous];
 
 		// Mark the new batch, leaving any retained packets before the gap usable.
@@ -46,7 +46,7 @@ U32 previous;
 		}
 
 		ioreq->io_Command = CMD_READ;
-		ioreq->io_Data = unit->Stream->Buffers[slot];
+		ioreq->io_Data = unit->IsoBuffers.Size ? unit->IsoBuffers.Buffer[slot] : unit->Stream->Buffers[slot];
 		ioreq->io_Length = unit->PayloadSize;
 		ioreq->io_AllowShortPackets = TRUE;
 		ioreq->io_TimeOut = 5 * 1000000;
@@ -65,7 +65,7 @@ U32 previous;
 		}
 
 		unit->ReadPending |= 1U << slot;
-		unit->ReadTail = ( slot + 1 ) % VIDEO_USB_READS;
+		unit->ReadTail = ( slot + 1 ) % unit->ReadCount;
 
 		SendIO( (PTR) ioreq );
 	}

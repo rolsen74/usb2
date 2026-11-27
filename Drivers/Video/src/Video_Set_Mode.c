@@ -54,6 +54,8 @@ Video_Set_Mode( struct VideoUnit *unit, U32 number )
 
 	error = Video_Stream_Close( unit );
 
+	unit->IsoBuffers.Size = 0;
+
 	if ( error )
 	{
 		return ( error );

@@ -14,14 +14,17 @@
 SEC_CODE void Video_Manager_AbortIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq )
 {
 struct VideoBase *base;
+struct VideoSlot *slot;
 struct VideoUnit *unit;
 
 	base = (PTR) Self->Data.LibBase;
-	unit = (PTR) ioreq->io_Unit;
+	slot = (PTR) ioreq->io_Unit;
 
 	ObtainSemaphore( & base->Semaphore );
 
-	if ( ( unit ) && ( ! unit->Detached ) && ( ioreq->io_Message.mn_Node.ln_Type == NT_MESSAGE ) )
+	unit = ( slot && slot->Open ) ? slot->Unit : NULL;
+
+	if ( ( unit ) && ( ioreq->io_Message.mn_Node.ln_Type == NT_MESSAGE ) )
 	{
 		ioreq->io_Flags |= VIDEO_IO_ABORT;
 		Signal( unit->BeginPort->mp_SigTask, 1UL << unit->BeginPort->mp_SigBit );

@@ -34,6 +34,15 @@ audio input in the same window. A camera with one format still shows that
 format as an active cycle choice.
 From a Shell, use `USB2VideoTest CAMERAS` to list available video units and
 `USB2VideoTest UNIT 1` to select unit 1 at launch.
+An open video unit stays reserved while its camera is disconnected. The driver
+matches a returning camera by vendor, product, streaming interface, and USB
+serial number. Cameras without a serial number must return to the same
+controller and port path. Pending reads fail with a detach error. After
+reconnection the same open handle can query the mode and start a new capture.
+USB2VideoTest keeps the preview window open and checks for the camera once
+a second. It restores the selected mode and resumes live video when the
+camera returns. A disconnect ends the current AVI recording, which is saved
+when the preview window closes.
 The distribution archive places the tool in `Tools/`. Click **Start** to
 hide settings and start the checked groups. With Video Capture unchecked,
 an audio session window opens and the camera stream stays idle. Close the
@@ -70,7 +79,13 @@ USB audio input with the camera's vendor and product IDs.
 Audio choices are detected when settings first opens and require the
 [USB audio driver](Audio.md).
 
-Run `USB2VideoTest TRACE` to log shutdown steps to the serial debug output.
+The video preview footer updates about once a second with average frame
+timings in milliseconds. **Capture** measures read submission to completion as
+observed by the preview. **Decode** includes conversion and pixel preparation,
+and **Show** measures the draw call. Capture overlaps work on other frames.
+
+Run `USB2VideoTest TRACE` for additional timing and shutdown details on the
+serial debug output.
 
 For video recording, check **Save AVI** in the **Video Capture** group and
 choose a destination with its file picker. The default is
@@ -94,8 +109,8 @@ Use `UNIT` with either command to choose a different camera.
 The preview title shows the measured display rate and
 the negotiated camera frame rate while capture is running.
 For a continuous range, the list includes the default and the two endpoints.
-Use `MODE 0` to restore the default. The selected mode stays active until
-another selection or the next reconnect.
+Use `MODE 0` to restore the default. When the driver reconnects the camera
+in its default mode, USB2VideoTest reapplies the preview's selected mode.
 
 Run `USB2VideoTest SAVE` from a Shell to capture 30 frames and save the last
 one as `RAM:usbvideo.jpg` (MJPEG) or `RAM:usbvideo.yuy2` (raw YUY2).
@@ -119,8 +134,10 @@ Descriptor; older builds may not bind its VideoStreaming interface.
 See the [EHCI guide](EHCI.md) for split-transfer limits. SuperSpeed
 isochronous burst and Mult modes are unsupported.
 
-Video uses two USB read buffers while capturing. For high-speed isochronous
-input, EHCI can schedule the second batch immediately after the first.
+Video uses three USB read buffers while capturing. For high-speed isochronous
+input, EHCI schedules 16 ms batches back to back, with up to two linked in
+hardware and the third waiting in the host controller's queue. Existing
+applications that register two buffers continue to use two requests.
 The video driver keeps unused packets from a completed batch for the next frame.
 After a known gap in the USB reads, it discards the partial frame and waits for
 a frame boundary.

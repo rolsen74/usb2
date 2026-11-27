@@ -21,7 +21,7 @@ Video_Read_Stop( struct VideoUnit *unit )
 
 	if ( unit->ReadPending )
 	{
-		for ( index = VIDEO_USB_READS - 1; index >= 0; index-- )
+		for ( index = unit->ReadCount - 1; index >= 0; index-- )
 		{
 			if ( unit->ReadPending & ( 1U << index ) )
 			{
@@ -34,7 +34,7 @@ Video_Read_Stop( struct VideoUnit *unit )
 			}
 		}
 
-		for ( index = 0; index < VIDEO_USB_READS; index++ )
+		for ( index = 0; index < unit->ReadCount; index++ )
 		{
 			if ( unit->ReadPending & ( 1U << index ) )
 			{

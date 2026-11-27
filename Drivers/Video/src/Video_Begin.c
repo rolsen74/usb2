@@ -8,6 +8,78 @@
 // --
 
 #include "inc/All.h"
+#include <stddef.h>
+#include <stdint.h>
+
+// --
+
+static S8
+SetIsoBuffers( struct VideoUnit *unit, const struct IOStdReq *ioreq )
+{
+	const struct VideoIsoBuffers *buffers;
+	struct VideoIsoBuffers registered;
+
+	uintptr_t first;
+	uintptr_t second;
+	U32 required;
+	U32 count;
+	U32 index;
+	U32 previous;
+
+	if ( ( unit->Stream ) || ( unit->ReadActive ) )
+	{
+		return ( IOERR_UNITBUSY );
+	}
+
+	if ( ( ! unit->StreamConfigured ) || ( ! unit->StreamAlt ) )
+	{
+		return ( IOERR_NOCMD );
+	}
+
+	required = unit->StreamPacketSize * unit->IsoPacketCount;
+
+	if ( ( ! ioreq->io_Data ) || ( ioreq->io_Length < offsetof( struct VideoIsoBuffers, Buffer[2] ) ) )
+	{
+		return ( IOERR_BADLENGTH );
+	}
+
+	buffers = ioreq->io_Data;
+
+	if ( buffers->Size < required )
+	{
+		return ( IOERR_BADLENGTH );
+	}
+
+	count = ( ioreq->io_Length < sizeof( *buffers ) ) ? 2 : VIDEO_ISO_BUFFERS;
+	registered = (struct VideoIsoBuffers) { 0 };
+	registered.Size = buffers->Size;
+
+	for ( index = 0; index < count; index++ )
+	{
+		first = (uintptr_t) buffers->Buffer[index];
+
+		if ( ( ! first ) || ( first > ~(uintptr_t)0 - required ) )
+		{
+			return ( IOERR_BADADDRESS );
+		}
+
+		for ( previous = 0; previous < index; previous++ )
+		{
+			second = (uintptr_t) registered.Buffer[previous];
+
+			if ( MAX( first, second ) - MIN( first, second ) < required )
+			{
+				return ( IOERR_BADADDRESS );
+			}
+		}
+
+		registered.Buffer[index] = buffers->Buffer[index];
+	}
+
+	unit->IsoBuffers = registered;
+
+	return ( 0 );
+}
 
 // --
 
@@ -73,9 +145,39 @@ S8 error;
 		{
 			ioreq->io_Error = Video_Set_Mode( unit, ioreq->io_Offset );
 		}
+		else if ( ioreq->io_Command == VIDEO_CMD_GET_ISO_BUFFER_SIZE )
+		{
+			if ( ! unit->StreamConfigured )
+			{
+				ioreq->io_Error = IOERR_OPENFAIL;
+			}
+			else if ( unit->StreamAlt )
+			{
+				ioreq->io_Actual = unit->StreamPacketSize * unit->IsoPacketCount;
+			}
+		}
+		else if ( ioreq->io_Command == VIDEO_CMD_SET_ISO_BUFFERS )
+		{
+			ioreq->io_Error = SetIsoBuffers( unit, ioreq );
+		}
+		else if ( ioreq->io_Command == VIDEO_CMD_GET_CAPTURE_STATS )
+		{
+			if ( ( ! ioreq->io_Data ) || ( ioreq->io_Length < sizeof( unit->CaptureStats ) ) )
+			{
+				ioreq->io_Error = IOERR_BADLENGTH;
+			}
+			else
+			{
+				CopyMem( & unit->CaptureStats, ioreq->io_Data, sizeof( unit->CaptureStats ) );
+
+				ioreq->io_Actual = sizeof( unit->CaptureStats );
+			}
+		}
 		else if ( ioreq->io_Command == VIDEO_CMD_STOP )
 		{
 			error = Video_Stream_Close( unit );
+
+			unit->IsoBuffers.Size = 0;
 			ioreq->io_Error = error;
 
 			Video_Read_Reply( unit, error == USB2Err_Device_Detached ? error : IOERR_ABORTED );

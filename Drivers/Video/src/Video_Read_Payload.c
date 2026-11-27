@@ -15,6 +15,8 @@
 static void
 ReportFrameLength( struct VideoUnit *unit, U32 bytes, U32 expected )
 {
+	unit->CaptureStats.FrameLengthErrors++;
+
 	if ( unit->FrameReports < 4 )
 	{
 		unit->FrameReports++;
@@ -27,71 +29,22 @@ ReportFrameLength( struct VideoUnit *unit, U32 bytes, U32 expected )
 // --
 
 static S32
-IsBottomUpYUY2( const struct VideoUnit *unit )
-{
-	return ( ( unit->Format.Format == VIDEO_FORMAT_YUY2 ) &&
-		( unit->Format.VendorID == 0x18ec ) && ( unit->Format.DeviceID == 0x3299 ) );
-}
-
-// --
-
-static void
-CopyFramePayload( struct VideoUnit *unit, U8 *dest, const U8 *data, U32 length )
-{
-	U32 stride;
-	U32 row;
-	U32 column;
-	U32 bytes;
-	U32 offset;
-
-	if ( ! IsBottomUpYUY2( unit ) )
-	{
-		CopyMem( data, dest + unit->FrameUsed, length );
-
-		return;
-	}
-
-	// This camera sends YUY2 scanlines from bottom to top.
-	stride = unit->Format.Width * 2;
-	row = unit->FrameUsed / stride;
-	column = unit->FrameUsed % stride;
-
-	while ( length )
-	{
-		bytes = MIN( stride - column, length );
-		offset = ( unit->Format.Height - 1 - row ) * stride + column;
-
-		CopyMem( data, dest + offset, bytes );
-
-		data += bytes;
-		length -= bytes;
-		row++;
-		column = 0;
-	}
-}
-
-// --
-
-static S32
 FillShortYUY2Tail( struct VideoUnit *unit, U8 *frame, U32 expected )
 {
 	U32 missing;
 	U32 stride;
-	U32 offset;
 	U32 index;
 
 	missing = expected - unit->FrameUsed;
 	stride = unit->Format.Width * 2;
 
-	if ( ( ! IsBottomUpYUY2( unit ) ) || ( missing > stride ) || ( missing & 1 ) )
+	if ( ( unit->Format.VendorID != 0x18ec ) || ( unit->Format.DeviceID != 0x3299 ) ||
+		( missing > stride ) || ( missing & 1 ) )
 	{
 		return ( FALSE );
 	}
 
-	// The last transmitted scanline is at the top of the flipped frame.
-	offset = stride - missing;
-
-	for ( index = offset; index < stride; index += 2 )
+	for ( index = unit->FrameUsed; index < expected; index += 2 )
 	{
 		frame[index] = 16;
 		frame[index + 1] = 128;
@@ -221,7 +174,7 @@ Video_Read_Payload ( struct VideoUnit *unit, U8 *data, U32 length )
 		return ( TRUE );
 	}
 
-	CopyFramePayload( unit, read->io_Data, data + header, payload );
+	CopyMem( data + header, (U8 *) read->io_Data + unit->FrameUsed, payload );
 
 	unit->FrameUsed += payload;
 

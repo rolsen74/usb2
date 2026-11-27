@@ -10,9 +10,10 @@
 
 #define VIDEO_DEVICE_NAME "usb2video.device"
 #define VIDEO_DEVICE_VERSION 1
-#define VIDEO_DEVICE_REVISION 6
+#define VIDEO_DEVICE_REVISION 9
 #define VIDEO_UNIT_LIST_REVISION 5
-#define VIDEO_DEVICE_ID VIDEO_DEVICE_NAME " 1.6 (25.11.2026)"
+#define VIDEO_RECONNECT_REVISION 9
+#define VIDEO_DEVICE_ID VIDEO_DEVICE_NAME " 1.9 (27.11.2026)"
 #define VIDEO_FRAME_TIMEOUT_SECONDS 10
 #define VIDEO_ERR_FRAME_TIMEOUT (-45)
 #define VIDEO_MAX_UNITS 16
@@ -23,8 +24,31 @@
 #define VIDEO_CMD_SET_MODE 0x8002
 // Stop capture and keep the selected mode for the next CMD_READ. Takes no buffer.
 #define VIDEO_CMD_STOP 0x8003
+// Query the required bytes per isochronous USB buffer in io_Actual. Bulk modes return zero.
+#define VIDEO_CMD_GET_ISO_BUFFER_SIZE 0x8004
+// Register three caller-owned USB buffers before capture. The original two-buffer
+// request length is also accepted. Keep the buffers until STOP replies.
+#define VIDEO_CMD_SET_ISO_BUFFERS 0x8005
+// Returns the current or most recent capture counters in a VideoCaptureStats.
+#define VIDEO_CMD_GET_CAPTURE_STATS 0x8006
+#define VIDEO_ISO_BUFFERS 3
 #define VIDEO_FORMAT_MJPEG 1
 #define VIDEO_FORMAT_YUY2 2
+
+struct VideoIsoBuffers
+{
+	U32 Size;
+	PTR Buffer[VIDEO_ISO_BUFFERS];
+};
+
+struct VideoCaptureStats
+{
+	U32 DeliveredFrames;
+	U32 IsoBatches;
+	U32 IsoBatchGaps;
+	U32 IsoPacketErrors;
+	U32 FrameLengthErrors;
+};
 
 struct VideoFormat
 {

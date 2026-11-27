@@ -66,12 +66,6 @@ S32 notified;
 		}
 	}
 
-	ObtainSemaphore( & unit->Base->Semaphore );
-
-	unit->Detached = TRUE;
-
-	ReleaseSemaphore( & unit->Base->Semaphore );
-
 	DebugPrintF( "USB Video: %04lx:%04lx unit %lu stopped (%s)\n",
 		unit->Format.VendorID, unit->Format.DeviceID, unit->UnitNr,
 		notified ? "USB detach notification" : "stack stop signal" );

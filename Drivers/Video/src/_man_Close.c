@@ -14,31 +14,29 @@
 SEC_CODE PTR Video_Manager_Close( struct DeviceManagerInterface *Self, struct IORequest *ioreq )
 {
 struct VideoBase *base;
+struct VideoSlot *slot;
 struct VideoUnit *unit;
 
 	base = (PTR) Self->Data.LibBase;
-	unit = (PTR) ioreq->io_Unit;
+	slot = (PTR) ioreq->io_Unit;
 
 	ObtainSemaphore( & base->Semaphore );
 
-	if ( unit )
+	if ( ( slot ) && ( slot->Open ) )
 	{
-		if ( ! unit->Detached )
+		unit = slot->Unit;
+
+		if ( unit )
 		{
 			unit->ReadReset = TRUE;
 
 			Signal( unit->BeginPort->mp_SigTask, 1UL << unit->BeginPort->mp_SigBit );
 		}
 
-		unit->OpenCount--;
+		slot->Open = FALSE;
 		base->Library.lib_OpenCnt--;
 		ioreq->io_Unit = NULL;
 		ioreq->io_Device = NULL;
-
-		if ( ( unit->Released ) && ( ! unit->OpenCount ) )
-		{
-			FreeVec( unit );
-		}
 	}
 
 	ReleaseSemaphore( & base->Semaphore );

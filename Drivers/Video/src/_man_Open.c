@@ -15,12 +15,12 @@
 SEC_CODE S32 Video_Manager_Open( struct DeviceManagerInterface *Self, struct IORequest *ioreq, U32 unitnr, U32 flags UNUSED )
 {
 struct VideoBase *base;
-struct VideoUnit *unit;
+struct VideoSlot *slot;
 
 U32 index;
 
 	base = (PTR) Self->Data.LibBase;
-	unit = NULL;
+	slot = NULL;
 
 	ObtainSemaphore( & base->Semaphore );
 
@@ -28,9 +28,9 @@ U32 index;
 	{
 		for( index = 0; index < VIDEO_MAX_UNITS; index++ )
 		{
-			if ( ( base->Units[index] ) && ( ! base->Units[index]->Detached ) )
+			if ( base->Slots[index].Unit )
 			{
-				unit = base->Units[index];
+				slot = & base->Slots[index];
 
 				break;
 			}
@@ -38,10 +38,10 @@ U32 index;
 	}
 	else if ( unitnr < VIDEO_MAX_UNITS )
 	{
-		unit = base->Units[unitnr];
+		slot = & base->Slots[unitnr];
 	}
 
-	if ( ( ! unit ) || ( unit->Detached ) || ( unit->OpenCount ) ||
+	if ( ( ! slot ) || ( ! slot->Unit ) || ( slot->Open ) ||
 		( ioreq->io_Message.mn_Length < sizeof( struct IOStdReq ) ) )
 	{
 		ioreq->io_Error = IOERR_OPENFAIL;
@@ -50,8 +50,8 @@ U32 index;
 	else
 	{
 		base->Library.lib_OpenCnt++;
-		unit->OpenCount++;
-		ioreq->io_Unit = (PTR) unit;
+		slot->Open = TRUE;
+		ioreq->io_Unit = (PTR) slot;
 		ioreq->io_Error = 0;
 	}
 

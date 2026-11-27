@@ -71,7 +71,7 @@ Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode )
 
 		unit->IsoPacketCount = VIDEO_ISO_PACKETS;
 
-		// Limit each high-speed batch to 32 ms regardless of the service interval.
+		// Limit each high-speed batch regardless of the service interval.
 		if ( ( unit->StreamInterval <= 3 ) &&
 			( USB2_Attr_Get( msg->Function->FKT_ID, USB2Tag_Attr_Speed,
 				& speed, sizeof( speed ) ) == sizeof( speed ) ) &&
@@ -83,6 +83,11 @@ Video_Stream_Open( struct VideoUnit *unit, const struct VideoMode *mode )
 				& hcd, sizeof( hcd ) ) != sizeof( hcd ) ) || ( hcd == HCDTYPE_XHCI ) )
 			{
 				unit->IsoPacketCount = MIN( unit->IsoPacketCount, 254 );
+			}
+			else if ( hcd == HCDTYPE_EHCI )
+			{
+				// Two linked 16 ms batches keep 32 ms on the EHCI schedule.
+				unit->IsoPacketCount >>= 1;
 			}
 		}
 	}

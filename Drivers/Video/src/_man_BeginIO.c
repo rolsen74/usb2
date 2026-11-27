@@ -15,10 +15,11 @@
 SEC_CODE void Video_Manager_BeginIO( struct DeviceManagerInterface *Self, struct IOStdReq *ioreq )
 {
 struct VideoBase *base;
+struct VideoSlot *slot;
 struct VideoUnit *unit;
 
 	base = (PTR) Self->Data.LibBase;
-	unit = (PTR) ioreq->io_Unit;
+	slot = (PTR) ioreq->io_Unit;
 	if ( ioreq->io_Command == USB2_CMD_ENUM_UNITS )
 	{
 		if ( ioreq->io_Message.mn_Length < sizeof( *ioreq ) )
@@ -48,9 +49,11 @@ struct VideoUnit *unit;
 
 	ObtainSemaphore( & base->Semaphore );
 
-	if ( ( ! unit ) || ( unit->Detached ) )
+	unit = ( slot && slot->Open ) ? slot->Unit : NULL;
+
+	if ( ! unit )
 	{
-		ioreq->io_Error = unit ? USB2Err_Device_Detached : IOERR_UNITBUSY;
+		ioreq->io_Error = ( slot && slot->Open ) ? USB2Err_Device_Detached : IOERR_UNITBUSY;
 		ReleaseSemaphore( & base->Semaphore );
 		ReplyMsg( (PTR) ioreq );
 

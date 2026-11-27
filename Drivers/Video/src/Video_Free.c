@@ -23,11 +23,19 @@ struct VideoBase *base;
 
 	base = unit->Base;
 
-	ObtainSemaphore( & base->Semaphore );
-	unit->Detached = TRUE;
-	ReleaseSemaphore( & base->Semaphore );
-
+	// Once STOP can report a detach, callers may free their USB buffers.
 	Video_Read_Stop( unit );
+
+	ObtainSemaphore( & base->Semaphore );
+
+	unit->Detached = TRUE;
+
+	if ( ( unit->UnitNr < VIDEO_MAX_UNITS ) && ( base->Slots[unit->UnitNr].Unit == unit ) )
+	{
+		base->Slots[unit->UnitNr].Unit = NULL;
+	}
+
+	ReleaseSemaphore( & base->Semaphore );
 
 	Video_Read_Reply( unit, USB2Err_Device_Detached );
 
@@ -73,20 +81,7 @@ struct VideoBase *base;
 		FreeSysObject( ASOT_PORT, unit->BeginPort );
 	}
 
-	ObtainSemaphore( & base->Semaphore );
-	unit->Released = TRUE;
-
-	if ( unit->UnitNr < VIDEO_MAX_UNITS )
-	{
-		base->Units[unit->UnitNr] = NULL;
-	}
-
-	if ( ! unit->OpenCount )
-	{
-		FreeVec( unit );
-	}
-
-	ReleaseSemaphore( & base->Semaphore );
+	FreeVec( unit );
 }
 
 // --

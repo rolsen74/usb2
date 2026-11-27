@@ -62,6 +62,7 @@ Video_Stream_Start( struct VideoUnit *unit )
 	}
 
 	bufferSize = unit->PayloadSize;
+	unit->ReadCount = VIDEO_USB_READS;
 
 	if ( unit->StreamAlt )
 	{
@@ -71,12 +72,17 @@ Video_Stream_Start( struct VideoUnit *unit )
 		}
 
 		unit->StreamAltActive = TRUE;
-		bufferSize = unit->StreamPacketSize * unit->IsoPacketCount;
+		bufferSize = unit->IsoBuffers.Size ? 0 : unit->StreamPacketSize * unit->IsoPacketCount;
+
+		if ( ( unit->IsoBuffers.Size ) && ( ! unit->IsoBuffers.Buffer[2] ) )
+		{
+			unit->ReadCount = 2;
+		}
 	}
 
 	unit->Stream = USB2_EPRes_ObtainTags( unit->Register,
 		USB2Tag_EPRes_MsgPort, unit->StreamPort,
-		USB2Tag_EPRes_NrOfIORequest, VIDEO_USB_READS,
+		USB2Tag_EPRes_NrOfIORequest, unit->ReadCount,
 		USB2Tag_EPRes_InterfaceNr, unit->InterfaceNr,
 		USB2Tag_EPRes_EndPointNr, unit->EndPoint,
 		USB2Tag_EPRes_BufferSize, bufferSize,
@@ -105,6 +111,7 @@ Video_Stream_Start( struct VideoUnit *unit )
 	}
 
 	unit->FrameDiscard = TRUE;
+	unit->CaptureStats = (struct VideoCaptureStats) { 0 };
 
 	return ( 0 );
 }

@@ -24,14 +24,21 @@
 
 // --
 
-static S32
-QueryCamera( struct IOStdReq *ioreq, struct VideoFormat *format )
+S32
+VideoTest_QueryCamera( struct IOStdReq *ioreq, struct VideoFormat *format )
 {
+	S32 error;
+
 	ioreq->io_Command = VIDEO_CMD_QUERY;
 	ioreq->io_Data = format;
 	ioreq->io_Length = sizeof( *format );
 
-	return ( DoIO( (PTR) ioreq ) );
+	error = DoIO( (PTR) ioreq );
+
+	ioreq->io_Data = NULL;
+	ioreq->io_Length = 0;
+
+	return ( error );
 }
 
 // --
@@ -80,7 +87,7 @@ FindCameras( struct IOStdReq *ioreq, struct PreviewCameras *cameras, U32 preferr
 			continue;
 		}
 
-		if ( ! QueryCamera( ioreq, & format ) )
+		if ( ! VideoTest_QueryCamera( ioreq, & format ) )
 		{
 			index = cameras->Count++;
 			cameras->Units[index] = unit;
@@ -115,7 +122,7 @@ VideoTest_OpenCamera( struct IOStdReq *ioreq, struct VideoFormat *format, U32 un
 		return ( FALSE );
 	}
 
-	error = QueryCamera( ioreq, format );
+	error = VideoTest_QueryCamera( ioreq, format );
 
 	if ( error )
 	{
@@ -170,6 +177,27 @@ ListModes( struct IOStdReq *ioreq )
 
 // --
 
+void
+VideoTest_ReportCaptureStats( struct IOStdReq *ioreq )
+{
+	struct VideoCaptureStats stats;
+
+	ioreq->io_Command = VIDEO_CMD_GET_CAPTURE_STATS;
+	ioreq->io_Data = & stats;
+	ioreq->io_Length = sizeof( stats );
+
+	if ( ( ! DoIO( (PTR) ioreq ) ) && ( ioreq->io_Actual == sizeof( stats ) ) )
+	{
+		DebugPrintF( "USB2VideoTest: %lu frames, %lu ISO batches, %lu batch gaps, %lu packet errors, %lu frame length errors\n",
+			stats.DeliveredFrames, stats.IsoBatches, stats.IsoBatchGaps, stats.IsoPacketErrors, stats.FrameLengthErrors );
+	}
+
+	ioreq->io_Data = NULL;
+	ioreq->io_Length = 0;
+}
+
+// --
+
 int
 main( int argc, char **argv )
 {
@@ -178,8 +206,10 @@ struct MsgPort *port;
 struct MsgPort *timerport;
 struct IOStdReq *ioreq;
 struct TimeRequest *timer;
+struct TimerIFace *clock;
 struct VideoFormat format;
 struct PreviewCameras cameras;
+struct VideoTestBuffers usbBuffers;
 
 BPTR file;
 U8 *frame;
@@ -193,6 +223,9 @@ U32 frameindex;
 U32 firstsize;
 U32 minsize;
 U32 maxsize;
+U32 rate;
+U64 captureStart;
+U64 captureEnd;
 	S32 written;
 	S32 closed;
 LONG options[6];
@@ -217,6 +250,7 @@ U32 camera;
 	opened = FALSE;
 	result = RETURN_FAIL;
 	cameras = (struct PreviewCameras) { 0 };
+	usbBuffers = (struct VideoTestBuffers) { 0 };
 
 	if ( argc )
 	{
@@ -370,7 +404,7 @@ U32 camera;
 		}
 	}
 
-	if ( QueryCamera( ioreq, & format ) )
+	if ( VideoTest_QueryCamera( ioreq, & format ) )
 	{
 		Printf( "Video format query failed: %ld\n", (S32) ioreq->io_Error );
 		goto close_device;
@@ -382,6 +416,9 @@ U32 camera;
 
 open_timer:
 	frame = NULL;
+	clock = NULL;
+	captureStart = 0;
+	captureEnd = 0;
 	timerport = AllocSysObjectTags( ASOT_PORT, TAG_END );
 
 	if ( ! timerport )
@@ -423,6 +460,17 @@ open_timer:
 		Printf( "Could not allocate frame buffer.\n" );
 		goto close_timer;
 	}
+
+	error = VideoTest_PrepareIsoBuffers( ioreq, & usbBuffers );
+
+	if ( error )
+	{
+		Printf( "Could not prepare USB capture buffers (error %ld).\n", error );
+
+		goto close_timer;
+	}
+
+	clock = (PTR) GetInterface( (PTR) timer->Request.io_Device, "main", 1, NULL );
 
 	mask = ( 1UL << port->mp_SigBit ) | ( 1UL << timerport->mp_SigBit ) | SIGBREAKF_CTRL_C;
 	firstsize = 0;
@@ -494,6 +542,16 @@ open_timer:
 			goto close_timer;
 		}
 
+		if ( clock )
+		{
+			captureEnd = VideoTest_UptimeUS( clock );
+
+			if ( ! frameindex )
+			{
+				captureStart = captureEnd;
+			}
+		}
+
 		if ( ! frameindex )
 		{
 			firstsize = ioreq->io_Actual;
@@ -516,6 +574,13 @@ open_timer:
 
 	Printf( "Frame sizes: first %lu, last %lu, range %lu-%lu bytes.\n",
 		firstsize, ioreq->io_Actual, minsize, maxsize );
+
+	if ( captureEnd > captureStart )
+	{
+		rate = ( VIDEO_TEST_FRAMES - 1 ) * 10000000ULL / ( captureEnd - captureStart );
+
+		Printf( "Capture without preview: %lu.%lu fps.\n", rate / 10, rate % 10 );
+	}
 
 	name = ( format.Format == VIDEO_FORMAT_MJPEG ) ? "RAM:usbvideo.jpg" : "RAM:usbvideo.yuy2";
 	file = Open( name, MODE_NEWFILE );
@@ -541,6 +606,26 @@ open_timer:
 	}
 
 close_timer:
+	if ( ( options[0] ) && ( options[5] ) )
+	{
+		VideoTest_ReportCaptureStats( ioreq );
+	}
+
+	if ( clock )
+	{
+		DropInterface( (PTR) clock );
+	}
+
+	if ( usbBuffers.Allocator )
+	{
+		error = VideoTest_StopCapture( ioreq, & usbBuffers );
+
+		if ( ( error ) && ( error != USB2Err_Device_Detached ) )
+		{
+			Printf( "Could not stop the video stream (error %ld).\n", error );
+		}
+	}
+
 	if ( options[5] )
 	{
 		DebugPrintF( "USB2VideoTest: closing timer.device\n" );

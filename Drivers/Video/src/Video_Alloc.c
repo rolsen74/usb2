@@ -84,13 +84,183 @@ finished:
 
 // --
 
+static void
+Video_GetIdentity( struct VideoUnit *unit, struct VideoIdentity *identity )
+{
+	struct USB2_DriverMessage *msg;
+
+	U32 length;
+
+	msg = unit->StartMsg;
+	identity->Port = (struct USB2_PortPath) { 0 };
+	identity->VendorID = msg->VendorID;
+	identity->DeviceID = msg->DeviceID;
+	identity->InterfaceNr = unit->InterfaceNr;
+	identity->SerialLength = 0;
+
+	if ( ! msg->Function )
+	{
+		return;
+	}
+
+	length = USB2_Attr_Get( msg->Function->FKT_ID, USB2Tag_Attr_SerialStr, identity->Serial, sizeof( identity->Serial ) );
+
+	if ( ( length >= 4 ) && ( length <= sizeof( identity->Serial ) ) && ( ! ( length & 1 ) ) &&
+		( identity->Serial[0] == length ) && ( identity->Serial[1] == DSCTYPE_String ) )
+	{
+		identity->SerialLength = length;
+	}
+
+	length = USB2_Attr_Get( msg->Function->FKT_ID, USB2Tag_Attr_PortPath, & identity->Port, sizeof( identity->Port ) );
+
+	if ( ( length != sizeof( identity->Port ) ) || ( identity->Port.Depth > USB2_PORT_PATH_DEPTH ) )
+	{
+		identity->Port.Depth = 0;
+	}
+}
+
+// --
+
+static U32
+Video_IdentityBytesMatch( const U8 *known, const U8 *found, U32 length )
+{
+	U32 index;
+
+	for ( index = 0; index < length; index++ )
+	{
+		if ( known[index] != found[index] )
+		{
+			return ( FALSE );
+		}
+	}
+
+	return ( TRUE );
+}
+
+// --
+
+static U32
+Video_IdentityMatch( const struct VideoIdentity *known, const struct VideoIdentity *found )
+{
+	S32 samePort;
+
+	if ( ( known->VendorID != found->VendorID ) || ( known->DeviceID != found->DeviceID ) ||
+		( known->InterfaceNr != found->InterfaceNr ) )
+	{
+		return ( 0 );
+	}
+
+	samePort = ( known->Port.Depth ) && ( known->Port.Depth == found->Port.Depth ) &&
+		( known->Port.Controller == found->Port.Controller ) && ( known->Port.IsPCI == found->Port.IsPCI ) &&
+		( Video_IdentityBytesMatch( known->Port.Ports, found->Port.Ports, known->Port.Depth ) );
+
+	if ( ( known->SerialLength ) || ( found->SerialLength ) )
+	{
+		if ( ( known->SerialLength != found->SerialLength ) ||
+			( ! Video_IdentityBytesMatch( known->Serial, found->Serial, known->SerialLength ) ) )
+		{
+			return ( 0 );
+		}
+
+		return ( samePort ? 2 : 1 );
+	}
+
+	return ( samePort ? 2 : 0 );
+}
+
+// --
+
+static void
+Video_AssignUnit( struct VideoUnit *unit, const struct VideoIdentity *identity )
+{
+	struct VideoBase *base;
+	struct VideoSlot *slot;
+
+	U32 index;
+	U32 match;
+	U32 bestMatch;
+	U32 matching;
+	U32 unused;
+	U32 reusable;
+
+	base = unit->Base;
+	bestMatch = 0;
+	matching = VIDEO_MAX_UNITS;
+	unused = VIDEO_MAX_UNITS;
+	reusable = VIDEO_MAX_UNITS;
+
+	ObtainSemaphore( & base->Semaphore );
+
+	for ( index = 0; index < VIDEO_MAX_UNITS; index++ )
+	{
+		slot = & base->Slots[index];
+
+		if ( slot->Unit )
+		{
+			continue;
+		}
+
+		match = Video_IdentityMatch( & slot->Identity, identity );
+
+		if ( match )
+		{
+			// Prefer the same port, then the open unit when otherwise tied.
+			match = match * 2 + slot->Open;
+
+			if ( match > bestMatch )
+			{
+				bestMatch = match;
+				matching = index;
+			}
+		}
+
+		if ( ! slot->Open )
+		{
+			if ( reusable == VIDEO_MAX_UNITS )
+			{
+				reusable = index;
+			}
+
+			if ( ( unused == VIDEO_MAX_UNITS ) && ( ! slot->Identity.SerialLength ) && ( ! slot->Identity.Port.Depth ) )
+			{
+				unused = index;
+			}
+		}
+	}
+
+	index = matching;
+
+	if ( index == VIDEO_MAX_UNITS )
+	{
+		index = ( unused < VIDEO_MAX_UNITS ) ? unused : reusable;
+	}
+
+	if ( index < VIDEO_MAX_UNITS )
+	{
+		slot = & base->Slots[index];
+		slot->Identity.Port = identity->Port;
+		slot->Identity.VendorID = identity->VendorID;
+		slot->Identity.DeviceID = identity->DeviceID;
+		slot->Identity.InterfaceNr = identity->InterfaceNr;
+		slot->Identity.SerialLength = identity->SerialLength;
+
+		CopyMem( (PTR) identity->Serial, slot->Identity.Serial, identity->SerialLength );
+
+		slot->Unit = unit;
+		unit->UnitNr = index;
+	}
+
+	ReleaseSemaphore( & base->Semaphore );
+}
+
+// --
+
 SEC_CODE struct VideoUnit *Video_Alloc( struct VideoContext *ctx, struct USB2_DriverMessage *msg )
 {
 struct VideoUnit *unit;
 struct VideoBase *base;
 struct VideoMode mode;
-
-U32 index;
+struct VideoIdentity identity;
 
 	base = ctx->Device;
 	unit = AllocVecTags( sizeof( struct VideoUnit ), AVT_ClearWithValue, 0, TAG_END );
@@ -166,19 +336,9 @@ U32 index;
 	}
 
 
-	ObtainSemaphore( & base->Semaphore );
+	Video_GetIdentity( unit, & identity );
 
-	for( index = 0; index < VIDEO_MAX_UNITS; index++ )
-	{
-		if ( ! base->Units[index] )
-		{
-			base->Units[index] = unit;
-			unit->UnitNr = index;
-			break;
-		}
-	}
-
-	ReleaseSemaphore( & base->Semaphore );
+	Video_AssignUnit( unit, & identity );
 
 	if ( unit->UnitNr == VIDEO_MAX_UNITS )
 	{
