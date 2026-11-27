@@ -66,6 +66,7 @@ SEC_RODATA static const PTR MainVectors[] = //
 		NULL,						//
 		(PTR)PortDevice_Register,	//
 		(PTR)PortDevice_Unregister, //
+		(PTR)PortDevice_RegisterDevice, //
 		(PTR)-1						//
 	};
 
@@ -86,28 +87,32 @@ SEC_RODATA static const PTR Interfaces[] = //
 
 // --
 
-SEC_RODATA static const PTR SerialVectors[] =
+SEC_RODATA static const PTR SerialMainVectors[] =
 {
 	(PTR)Obtain,
 	(PTR)Release,
 	NULL,
 	NULL,
+	(PTR)PortDevice_Register,
+	(PTR)PortDevice_Unregister,
 	(PTR)PortDevice_SetParams,
 	(PTR)PortDevice_RegisterSession,
 	(PTR)PortDevice_SerialSession,
 	(PTR)PortDevice_SerialFinishClose,
+	(PTR)PortDevice_RegisterDevice,
+	(PTR)PortDevice_GetParams,
 	(PTR)-1
 };
 
-SEC_RODATA static const struct TagItem SerialTags[] =
+SEC_RODATA static const struct TagItem SerialMainTags[] =
 {
-	{ MIT_Name, (Tag)"serial" },
-	{ MIT_VectorTable, (Tag)SerialVectors },
+	{ MIT_Name, (Tag)"main" },
+	{ MIT_VectorTable, (Tag)SerialMainVectors },
 	{ MIT_Version, 1 },
 	{ TAG_END, 0 }
 };
 
-SEC_RODATA static const PTR SerialInterfaces[] = { (PTR)ManagerTags, (PTR)MainTags, (PTR)SerialTags, NULL };
+SEC_RODATA static const PTR SerialInterfaces[] = { (PTR)ManagerTags, (PTR)SerialMainTags, NULL };
 
 // --
 
@@ -122,6 +127,7 @@ SEC_RODATA static const PTR PrinterVectors[] =
 	(PTR) PortDevice_JobClosing,
 	(PTR) PortDevice_FinishJob,
 	(PTR) PortDevice_Quiesce,
+	(PTR) PortDevice_RegisterDevice,
 	(PTR) -1
 };
 
@@ -198,7 +204,8 @@ PortDevice_Create ( struct USBBase * usbbase )
 	// --
 	// Serial
 
-	serial = Alloc ( usbbase, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.7 (" DATE ")\r\n", 7, PORT_SERIAL );
+	serial = Alloc ( usbbase, USB2_SERIAL_DEVICE, USB2_SERIAL_DEVICE " 1.9 (" DATE ")\r\n",
+		USB2_SERIAL_RECONNECT_REVISION, PORT_SERIAL );
 
 	if ( ! serial )
 	{
@@ -210,7 +217,8 @@ PortDevice_Create ( struct USBBase * usbbase )
 	// --
 	// Parallel
 
-	parallel = Alloc ( usbbase, USB2_PARALLEL_DEVICE, USB2_PARALLEL_DEVICE " 1.6 (" DATE ")\r\n", 6, PORT_PARALLEL );
+	parallel = Alloc ( usbbase, USB2_PARALLEL_DEVICE, USB2_PARALLEL_DEVICE " 1.7 (" DATE ")\r\n",
+		USB2_PARALLEL_RECONNECT_REVISION, PORT_PARALLEL );
 
 	if ( ! parallel )
 	{
@@ -221,7 +229,8 @@ PortDevice_Create ( struct USBBase * usbbase )
 		return ( FALSE );
 	}
 
-	printer = Alloc ( usbbase, USB2_PRINTER_DEVICE, USB2_PRINTER_DEVICE " 1.10 (" DATE ")\r\n", 10, PORT_PRINTER );
+	printer = Alloc ( usbbase, USB2_PRINTER_DEVICE, USB2_PRINTER_DEVICE " 1.11 (" DATE ")\r\n",
+		USB2_PRINTER_RECONNECT_REVISION, PORT_PRINTER );
 
 	if ( ! printer )
 	{

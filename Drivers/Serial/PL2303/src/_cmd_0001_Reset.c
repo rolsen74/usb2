@@ -69,7 +69,7 @@ Serial_Reset( struct SerialContext *ctx, struct SerialUnit *unit )
 		return ( FALSE );
 	}
 
-	if ( unit->SerialInterface )
+	if ( unit->Sessions )
 	{
 		defaults.io_Baud = 9600;
 		defaults.io_ReadLen = 8;
@@ -78,7 +78,7 @@ Serial_Reset( struct SerialContext *ctx, struct SerialUnit *unit )
 		defaults.io_SerFlags = 0;
 		defaults.io_ExtFlags = 0;
 
-		unit->SerialInterface->SetParams( unit->PortUnit, &defaults );
+		unit->PortInterface->SetParams( unit->PortUnit, &defaults );
 	}
 
 	return ( ! unit->BreakActive );

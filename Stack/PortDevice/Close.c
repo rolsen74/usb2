@@ -73,6 +73,8 @@ PortDevice_Close( struct DeviceManagerInterface *Self, struct IORequest *request
 
 		if ( ( ! unit->BeginPort ) && ( ! unit->Opens ) )
 		{
+			PortDevice_UnlinkUnit( base, unit );
+
 			IExec->FreeVec( unit );
 		}
 		else if ( ( ( base->Type == PORT_PRINTER ) || ( unit->SerialSessions ) ) && ( ! unit->Opens ) )

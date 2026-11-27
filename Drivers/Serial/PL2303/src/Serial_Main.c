@@ -21,7 +21,7 @@ UpdateSession( struct SerialContext *ctx, struct SerialUnit *unit )
 		return;
 	}
 
-	state = unit->SerialInterface->Session( unit->PortUnit );
+	state = unit->PortInterface->Session( unit->PortUnit );
 
 	if ( state == USB2_SERIAL_CLOSING )
 	{
@@ -29,10 +29,20 @@ UpdateSession( struct SerialContext *ctx, struct SerialUnit *unit )
 
 		Serial_Reset( ctx, unit );
 
-		unit->SerialInterface->FinishClose( unit->PortUnit );
+		unit->PortInterface->FinishClose( unit->PortUnit );
 	}
 	else if ( ( state == USB2_SERIAL_OPEN ) && ( ! unit->SessionOpen ) )
 	{
+		struct IOExtSer params;
+
+		params.io_SerFlags = 0;
+
+		if ( ( unit->Reconnect ) && ( unit->PortInterface->GetParams( unit->PortUnit, &params ) ) &&
+			( Serial_ApplyParams( ctx, unit, &params ) ) )
+		{
+			DebugPrintF( "USB2 serial: could not restore line settings after reconnect\n" );
+		}
+
 		unit->SessionOpen = TRUE;
 
 		Serial_RecoveryResume( unit );

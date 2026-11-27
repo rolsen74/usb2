@@ -12,17 +12,11 @@
 
 // --
 
+// Caller holds the device lock.
 SEC_CODE void
-PortDevice_Unregister( struct USB2PortIFace *Self, struct USB2PortUnit *unit )
+PortDevice_UnlinkUnit( struct USB2PortDevice *base, struct USB2PortUnit *unit )
 {
-	struct USB2PortDevice *base;
 	struct USB2PortUnit **link;
-	struct ExecIFace *IExec;
-
-	base = (PTR) Self->Data.LibBase;
-	IExec = base->IExec;
-
-	IExec->ObtainSemaphore( & base->Lock );
 
 	link = & base->Units;
 
@@ -35,12 +29,34 @@ PortDevice_Unregister( struct USB2PortIFace *Self, struct USB2PortUnit *unit )
 	{
 		*link = unit->Next;
 		unit->Next = NULL;
+	}
+}
+
+// --
+
+SEC_CODE void
+PortDevice_Unregister( struct USB2PortIFace *Self, struct USB2PortUnit *unit )
+{
+	struct USB2PortDevice *base;
+	struct ExecIFace *IExec;
+
+	base = (PTR) Self->Data.LibBase;
+	IExec = base->IExec;
+
+	IExec->ObtainSemaphore( &base->Lock );
+
+	if ( unit->BeginPort )
+	{
 		unit->BeginPort = NULL;
 		unit->AbortPort = NULL;
 
 		PortDevice_ReplyClose( IExec, unit );
 
-		// Existing opens keep their original unit after the number is reused.
+		if ( ! unit->Opens )
+		{
+			PortDevice_UnlinkUnit( base, unit );
+		}
+
 		if ( ! unit->Opens )
 		{
 			IExec->FreeVec( unit );

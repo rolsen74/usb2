@@ -19,6 +19,7 @@
 #include <devices/newstyle.h>
 #include <devices/usb2defaults.h>
 #include <interfaces/usb2port.h>
+#include <interfaces/usb2unitidentity.h>
 
 // --
 
@@ -43,6 +44,7 @@ struct USB2PortUnit
 	U8 SerialSessions;
 	U8 SerialParamsValid;
 	struct IOExtSer SerialParams;
+	struct USB2UnitIdentity Identity;
 };
 
 struct USB2PortDevice
@@ -63,7 +65,10 @@ SEC_CODE void PortDevice_AbortIO( struct DeviceManagerInterface *Self, struct IO
 SEC_CODE void PortDevice_EnumUnits( struct USB2PortDevice *base, struct IOStdReq *request );
 SEC_CODE void PortDevice_Query( struct USB2PortDevice *base, struct IOStdReq *request );
 SEC_CODE struct USB2PortUnit *PortDevice_Register( struct USB2PortIFace *Self, struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
+SEC_CODE struct USB2PortUnit *PortDevice_RegisterDevice( struct USB2PortIFace *Self, struct MsgPort *begin,
+	struct MsgPort *abort, ULONG *number, const struct USB2_DriverMessage *msg );
 SEC_CODE void PortDevice_Unregister( struct USB2PortIFace *Self, struct USB2PortUnit *unit );
+SEC_CODE void PortDevice_UnlinkUnit( struct USB2PortDevice *base, struct USB2PortUnit *unit );
 SEC_CODE BOOL PortDevice_JobClosing( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 SEC_CODE void PortDevice_Quiesce( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 SEC_CODE void PortDevice_FinishJob( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
@@ -72,6 +77,7 @@ SEC_CODE struct USB2PortUnit *PortDevice_RegisterSession( struct USB2SerialIFace
 SEC_CODE enum USB2SerialSession PortDevice_SerialSession( struct USB2SerialIFace *Self, struct USB2PortUnit *unit );
 SEC_CODE void PortDevice_SerialFinishClose( struct USB2SerialIFace *Self, struct USB2PortUnit *unit );
 SEC_CODE void PortDevice_SetParams( struct USB2SerialIFace *Self, struct USB2PortUnit *unit, const struct IOExtSer *params );
+SEC_CODE BOOL PortDevice_GetParams( struct USB2SerialIFace *Self, struct USB2PortUnit *unit, struct IOExtSer *params );
 SEC_CODE void PortDevice_ReplyClose( struct ExecIFace *IExec, struct USB2PortUnit *unit );
 
 #endif

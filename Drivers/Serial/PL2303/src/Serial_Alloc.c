@@ -256,8 +256,6 @@ Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg, S32 
 		goto bailout;
 	}
 
-	unit->SerialInterface = (PTR)GetInterface( (PTR)unit->PortRequest.io_Device, "serial", 1, NULL );
-
 	Serial_BreakInit( unit );
 
 	stage = "open serial recovery timer";
@@ -270,12 +268,17 @@ Serial_Alloc ( struct SerialContext * ctx, struct USB2_DriverMessage * msg, S32 
 	stage = "register serial unit";
 
 	device = (PTR)unit->PortRequest.io_Device;
-	unit->Sessions = ( ( unit->SerialInterface ) && ( ( device->lib_Version > 1 ) || ( device->lib_Revision >= 5 ) ) );
+	unit->Sessions = ( device->lib_Version > 1 ) || ( device->lib_Revision >= USB2_SERIAL_MAIN_REVISION );
+	unit->Reconnect = ( device->lib_Version > 1 ) || ( device->lib_Revision >= USB2_SERIAL_RECONNECT_REVISION );
 	unit->SessionOpen = ! unit->Sessions;
 
-	if ( unit->Sessions )
+	if ( unit->Reconnect )
 	{
-		unit->PortUnit = unit->SerialInterface->RegisterSession( unit->BeginPort, unit->AbortPort, &number );
+		unit->PortUnit = unit->PortInterface->RegisterDevice( unit->BeginPort, unit->AbortPort, &number, msg );
+	}
+	else if ( unit->Sessions )
+	{
+		unit->PortUnit = unit->PortInterface->RegisterSession( unit->BeginPort, unit->AbortPort, &number );
 	}
 	else
 	{

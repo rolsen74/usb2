@@ -48,49 +48,45 @@ SupportedRate( struct SerialUnit *unit, U32 baud )
 
 // --
 
-SEC_CODE void
-Serial_Cmd_SetParams( struct SerialContext *ctx, struct SerialUnit *unit, struct IOExtSer *ioreq )
+SEC_CODE S32
+Serial_ApplyParams( struct SerialContext *ctx, struct SerialUnit *unit, const struct IOExtSer *params )
 {
 	U8 line[7];
 	U32 baud;
 	U32 index;
 	BOOL changed;
 
-	baud = ioreq->io_Baud;
+	baud = params->io_Baud;
 
-	if ( ( ! baud ) || ( ioreq->io_ReadLen != ioreq->io_WriteLen ) ||
-		( ioreq->io_ReadLen < 5 ) || ( ioreq->io_ReadLen > 8 ) ||
-		( ioreq->io_StopBits < 1 ) || ( ioreq->io_StopBits > 2 ) ||
-		( ioreq->io_SerFlags & SERF_7WIRE ) )
+	if ( ( ! baud ) || ( params->io_ReadLen != params->io_WriteLen ) ||
+		( params->io_ReadLen < 5 ) || ( params->io_ReadLen > 8 ) ||
+		( params->io_StopBits < 1 ) || ( params->io_StopBits > 2 ) ||
+		( params->io_SerFlags & SERF_7WIRE ) )
 	{
-		ioreq->IOSer.io_Error = SerErr_InvParam;
-
-		goto reply;
+		return ( SerErr_InvParam );
 	}
 
 	if ( ! SupportedRate( unit, baud ) )
 	{
-		ioreq->IOSer.io_Error = SerErr_BaudMismatch;
-
-		goto reply;
+		return ( SerErr_BaudMismatch );
 	}
 
 	line[0] = baud;
 	line[1] = baud >> 8;
 	line[2] = baud >> 16;
 	line[3] = baud >> 24;
-	line[4] = ( ioreq->io_StopBits == 2 ) ? 2 : 0;
+	line[4] = ( params->io_StopBits == 2 ) ? 2 : 0;
 	line[5] = 0;
-	line[6] = ioreq->io_ReadLen;
+	line[6] = params->io_ReadLen;
 
-	if ( ioreq->io_SerFlags & SERF_PARTY_ON )
+	if ( params->io_SerFlags & SERF_PARTY_ON )
 	{
-		line[5] = ( ioreq->io_SerFlags & SERF_PARTY_ODD ) ? 1 : 2;
+		line[5] = ( params->io_SerFlags & SERF_PARTY_ODD ) ? 1 : 2;
 	}
 
-	if ( ioreq->io_ExtFlags & SEXTF_MSPON )
+	if ( params->io_ExtFlags & SEXTF_MSPON )
 	{
-		line[5] = ( ioreq->io_ExtFlags & SEXTF_MARK ) ? 3 : 4;
+		line[5] = ( params->io_ExtFlags & SEXTF_MARK ) ? 3 : 4;
 	}
 
 	changed = FALSE;
@@ -109,29 +105,34 @@ Serial_Cmd_SetParams( struct SerialContext *ctx, struct SerialUnit *unit, struct
 	{
 		if ( ( unit->ACM ) && ( ! ( unit->ACMCapabilities & SERIAL_ACM_LINE ) ) )
 		{
-			ioreq->IOSer.io_Error = SerErr_InvParam;
-
-			goto reply;
+			return ( SerErr_InvParam );
 		}
 
 		if ( ( unit->WriteActive ) || ( unit->BreakActive ) ||
 			( ! Serial_Control( ctx, unit, REQTYPE_Write | REQTYPE_Class | REQTYPE_Interface,
 				0x20, 0, unit->ACM ? unit->StartMsg->InterfaceDescriptor->InterfaceNumber : 0, line, sizeof( line ) ) ) )
 		{
-			ioreq->IOSer.io_Error = SerErr_DevBusy;
-
-			goto reply;
+			return ( SerErr_DevBusy );
 		}
 
 		CopyMem( line, unit->Line, sizeof( line ) );
 	}
 
-	if ( unit->SerialInterface )
+	return ( 0 );
+}
+
+// --
+
+SEC_CODE void
+Serial_Cmd_SetParams( struct SerialContext *ctx, struct SerialUnit *unit, struct IOExtSer *ioreq )
+{
+	ioreq->IOSer.io_Error = Serial_ApplyParams( ctx, unit, ioreq );
+
+	if ( ( ! ioreq->IOSer.io_Error ) && ( unit->Sessions ) )
 	{
-		unit->SerialInterface->SetParams( unit->PortUnit, ioreq );
+		unit->PortInterface->SetParams( unit->PortUnit, ioreq );
 	}
 
-reply:
 	Serial_Reply( ctx, ioreq );
 }
 

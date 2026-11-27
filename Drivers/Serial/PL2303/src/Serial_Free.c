@@ -29,11 +29,6 @@ struct IOExtSer *ioreq;
 
 	Serial_RecoveryFree( unit );
 
-	if ( unit->SerialInterface )
-	{
-		DropInterface( (PTR)unit->SerialInterface );
-	}
-
 	if ( unit->PortInterface )
 	{
 		DropInterface( (PTR) unit->PortInterface );

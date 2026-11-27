@@ -77,6 +77,33 @@ PortDevice_SetParams( struct USB2SerialIFace *Self, struct USB2PortUnit *unit, c
 
 // --
 
+SEC_CODE BOOL
+PortDevice_GetParams( struct USB2SerialIFace *Self, struct USB2PortUnit *unit, struct IOExtSer *params )
+{
+	struct USB2PortDevice *base;
+	struct ExecIFace *IExec;
+
+	BOOL valid;
+
+	base = (PTR)Self->Data.LibBase;
+	IExec = base->IExec;
+
+	IExec->ObtainSemaphore( &base->Lock );
+
+	valid = unit->SerialParamsValid;
+
+	if ( valid )
+	{
+		CopyLineParams( params, &unit->SerialParams );
+	}
+
+	IExec->ReleaseSemaphore( &base->Lock );
+
+	return ( valid );
+}
+
+// --
+
 SEC_CODE S32
 PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request, U32 number, U32 flags UNUSED )
 {
@@ -210,7 +237,8 @@ PortDevice_Open( struct DeviceManagerInterface *Self, struct IORequest *request,
 
 		shared = SharedOpen( base, request );
 
-		if ( ( unit->Closing ) || ( unit->Quiescing ) || ( ( unit->Opens ) && ( ( ! unit->Shared ) || ( ! shared ) ) ) )
+		if ( ( ! unit->BeginPort ) || ( unit->Closing ) || ( unit->Quiescing ) ||
+			( ( unit->Opens ) && ( ( ! unit->Shared ) || ( ! shared ) ) ) )
 		{
 			goto bailout;
 		}

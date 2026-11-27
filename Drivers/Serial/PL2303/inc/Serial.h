@@ -19,8 +19,8 @@
 
 #define SERIAL_DRIVER_NAME	   "ser_PL2303.Driver"
 #define SERIAL_DRIVER_VERSION  1
-#define SERIAL_DRIVER_REVISION 7
-#define SERIAL_DRIVER_ID	   SERIAL_DRIVER_NAME " 1.7 (25.11.2026)\r\n"
+#define SERIAL_DRIVER_REVISION 8
+#define SERIAL_DRIVER_ID	   SERIAL_DRIVER_NAME " 1.8 (27.11.2026)\r\n"
 
 #define SERIAL_RX_SIZE		   4096
 #define SERIAL_TX_CHUNK		   4096
@@ -83,8 +83,7 @@ struct SerialDriverBase
 struct SerialUnit
 {
 	struct IORequest	   PortRequest;
-	struct USB2PortIFace * PortInterface;
-	struct USB2SerialIFace *SerialInterface;
+	struct USB2SerialIFace *PortInterface;
 	struct USB2PortUnit *  PortUnit;
 
 	struct USB2_Interface * DataInterface;
@@ -127,6 +126,7 @@ struct SerialUnit
 	U8							Line[7];
 	U8							UartState;
 	U8							Sessions;
+	U8							Reconnect;
 	U8							SessionOpen;
 	U8							Stopped;
 	U8							Detached;
@@ -182,6 +182,7 @@ SEC_CODE void Serial_Cmd_Clear ( struct SerialContext * ctx, struct SerialUnit *
 SEC_CODE void Serial_Cmd_Stop ( struct SerialContext * ctx, struct SerialUnit * unit, struct IOExtSer * ioreq );
 SEC_CODE void Serial_Cmd_Start ( struct SerialContext * ctx, struct SerialUnit * unit, struct IOExtSer * ioreq );
 SEC_CODE void Serial_Cmd_SetParams ( struct SerialContext * ctx, struct SerialUnit * unit, struct IOExtSer * ioreq );
+SEC_CODE S32 Serial_ApplyParams( struct SerialContext *ctx, struct SerialUnit *unit, const struct IOExtSer *params );
 SEC_CODE void Serial_Cmd_Query ( struct SerialContext * ctx, struct SerialUnit * unit, struct IOExtSer * ioreq );
 SEC_CODE void Serial_BreakInit( struct SerialUnit *unit );
 SEC_CODE void Serial_BreakFree( struct SerialContext *ctx, struct SerialUnit *unit );

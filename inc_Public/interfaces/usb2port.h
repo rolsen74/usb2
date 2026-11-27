@@ -20,8 +20,13 @@
 #define USB2_PARALLEL_DEVICE "usb2parallel.device"
 #define USB2_PRINTER_DEVICE "usb2printer.device"
 #define USB2_PORT_BACKEND_UNIT 0xffffffffUL
+#define USB2_SERIAL_MAIN_REVISION 8
+#define USB2_SERIAL_RECONNECT_REVISION 9
+#define USB2_PARALLEL_RECONNECT_REVISION 7
+#define USB2_PRINTER_RECONNECT_REVISION 11
 
 struct USB2PortUnit;
+struct USB2_DriverMessage;
 
 /*
  * Open the device on USB2_PORT_BACKEND_UNIT with an IORequest, then obtain
@@ -47,7 +52,25 @@ struct USB2PortIFace
 	void APICALL (*Unregister)( struct USB2PortIFace *Self, struct USB2PortUnit *unit );
 };
 
-/* Serial device revision 5 extends "serial" v1 with session notifications. */
+/*
+ * RegisterDevice uses the class driver message to identify a returning unit.
+ * Use it on the matching device with its RECONNECT_REVISION or later.
+ * Unregister stops routing and the worker must still finish previously queued I/O.
+ */
+struct USB2ParallelIFace
+{
+	struct InterfaceData Data;
+	ULONG APICALL (*Obtain)( struct USB2ParallelIFace *Self );
+	ULONG APICALL (*Release)( struct USB2ParallelIFace *Self );
+	void APICALL (*Expunge)( struct USB2ParallelIFace *Self );
+	struct Interface *APICALL (*Clone)( struct USB2ParallelIFace *Self );
+	struct USB2PortUnit *APICALL (*Register)( struct USB2ParallelIFace *Self,
+		struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
+	void APICALL (*Unregister)( struct USB2ParallelIFace *Self, struct USB2PortUnit *unit );
+	struct USB2PortUnit *APICALL (*RegisterDevice)( struct USB2ParallelIFace *Self,
+		struct MsgPort *begin, struct MsgPort *abort, ULONG *number, const struct USB2_DriverMessage *msg );
+};
+
 enum USB2SerialSession
 {
 	USB2_SERIAL_IDLE,
@@ -57,6 +80,7 @@ enum USB2SerialSession
 
 struct IOExtSer;
 
+/* Serial device 1.8 extends "main" v1 after Register and Unregister. */
 struct USB2SerialIFace
 {
 	struct InterfaceData Data;
@@ -64,12 +88,18 @@ struct USB2SerialIFace
 	ULONG APICALL (*Release)( struct USB2SerialIFace *Self );
 	void APICALL (*Expunge)( struct USB2SerialIFace *Self );
 	struct Interface *APICALL (*Clone)( struct USB2SerialIFace *Self );
+	struct USB2PortUnit *APICALL (*Register)( struct USB2SerialIFace *Self,
+		struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
+	void APICALL (*Unregister)( struct USB2SerialIFace *Self, struct USB2PortUnit *unit );
 	void APICALL (*SetParams)( struct USB2SerialIFace *Self, struct USB2PortUnit *unit,
 		const struct IOExtSer *params );
 	struct USB2PortUnit *APICALL (*RegisterSession)( struct USB2SerialIFace *Self,
 		struct MsgPort *begin, struct MsgPort *abort, ULONG *number );
 	enum USB2SerialSession APICALL (*Session)( struct USB2SerialIFace *Self, struct USB2PortUnit *unit );
 	void APICALL (*FinishClose)( struct USB2SerialIFace *Self, struct USB2PortUnit *unit );
+	struct USB2PortUnit *APICALL (*RegisterDevice)( struct USB2SerialIFace *Self,
+		struct MsgPort *begin, struct MsgPort *abort, ULONG *number, const struct USB2_DriverMessage *msg );
+	BOOL APICALL (*GetParams)( struct USB2SerialIFace *Self, struct USB2PortUnit *unit, struct IOExtSer *params );
 };
 
 /*
@@ -93,6 +123,8 @@ struct USB2PrinterIFace
 	BOOL APICALL (*JobClosing)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 	void APICALL (*FinishJob)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
 	void APICALL (*Quiesce)( struct USB2PrinterIFace *Self, struct USB2PortUnit *unit );
+	struct USB2PortUnit *APICALL (*RegisterDevice)( struct USB2PrinterIFace *Self,
+		struct MsgPort *begin, struct MsgPort *abort, ULONG *number, const struct USB2_DriverMessage *msg );
 };
 
 #endif
