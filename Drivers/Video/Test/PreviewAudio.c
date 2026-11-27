@@ -9,18 +9,21 @@
 // --
 
 #include <stdio.h>
+#include <string.h>
 #include <exec/errors.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <devices/ahi.h>
 #include <devices/usb2.h>
+#include "../inc/VideoDevice.h"
+#include "Preview.h"
 #include "PreviewAudio.h"
 
 // --
 
 #define PREVIEW_AUDIO_CHUNK_US 32000U
-#define PREVIEW_USB_WRITE_BLOCKS 2
 #define PREVIEW_AUDIO_AHI ~0U
+#define PREVIEW_MONITOR_RATE_ADJUSTMENT 10
 
 // --
 
@@ -338,16 +341,58 @@ OpenAudioStream( struct PreviewAudioStream *stream, struct MsgPort *port, U32 un
 // --
 
 static void
-SendAudio( struct PreviewAudioStream *stream, U32 command, U32 bytes )
+SendAudioRequest( struct IOStdReq *request, U8 *buffer, U32 command, U32 bytes )
 {
-	stream->Request->io_Command = command;
-	stream->Request->io_Data = stream->Buffer;
-	stream->Request->io_Length = bytes;
-	stream->Request->io_Offset = 0;
-	stream->Request->io_Flags = 0;
+	request->io_Command = command;
+	request->io_Data = buffer;
+	request->io_Length = bytes;
+	request->io_Offset = 0;
+	request->io_Flags = 0;
+
+	SendIO( (PTR) request );
+}
+
+// --
+
+static void
+OpenMonitorRequests( struct PreviewAudio *audio )
+{
+	struct PreviewAudioStream *output;
+	struct IOStdReq *request;
+
+	U32 maximum;
+
+	output = &audio->Output;
+	maximum = output->AHI ? 1 : Audio_QueuedWriteDepth( &output->Request->io_Device->dd_Library );
+	audio->Writes[0] = output->Request;
+	audio->WriteDepth = 1;
+
+	while ( audio->WriteDepth < maximum )
+	{
+		request = AudioRequest( audio->Port );
+
+		if ( ! request )
+		{
+			break;
+		}
+
+		request->io_Device = output->Request->io_Device;
+		request->io_Unit = output->Request->io_Unit;
+		audio->Writes[audio->WriteDepth++] = request;
+	}
+}
+
+// --
+
+static void
+StartAudioInput( struct PreviewAudio *audio, U32 bytes )
+{
+	struct PreviewAudioStream *stream;
+
+	stream = &audio->Input;
 	stream->Pending = TRUE;
 
-	SendIO( (PTR) stream->Request );
+	SendAudioRequest( stream->Request, stream->Buffer, audio->TimedRead ? AUDIO_CMD_READ_TIMED : CMD_READ, bytes );
 }
 
 // --
@@ -355,13 +400,56 @@ SendAudio( struct PreviewAudioStream *stream, U32 command, U32 bytes )
 static void
 CloseMonitor( struct PreviewAudio *audio )
 {
+	struct IOStdReq *request;
+
+	U32 index;
+	U32 slot;
+
+	for ( index = audio->WriteCount; index; index-- )
+	{
+		slot = ( audio->WriteHead + index - 1 ) % audio->WriteDepth;
+		request = audio->Writes[slot];
+
+		if ( ! CheckIO( (PTR) request ) )
+		{
+			AbortIO( (PTR) request );
+		}
+	}
+
+	for ( index = 0; index < audio->WriteCount; index++ )
+	{
+		slot = ( audio->WriteHead + index ) % audio->WriteDepth;
+
+		WaitIO( (PTR) audio->Writes[slot] );
+	}
+
+	for ( index = 1; index < audio->WriteDepth; index++ )
+	{
+		FreeSysObject( ASOT_IOREQUEST, audio->Writes[index] );
+
+		audio->Writes[index] = NULL;
+	}
+
+	audio->Writes[0] = NULL;
+	audio->WriteDepth = 0;
+	audio->WriteHead = 0;
+	audio->WriteCount = 0;
+
 	CloseAudioStream( & audio->Output );
 
 	FreeVec( audio->MonitorBuffer );
 
+	FreeVec( audio->Silence );
+
 	audio->MonitorBuffer = NULL;
+	audio->Silence = NULL;
 	audio->MonitorRead = 0;
 	audio->MonitorCount = 0;
+	audio->MonitorOffset = 0;
+	audio->MonitorBytes = 0;
+	audio->MonitorPhase = 0;
+	audio->SilencePhase = 0;
+	audio->MonitorEmptySince = 0;
 	audio->ShortWrites = 0;
 	audio->MonitorPrimed = FALSE;
 }
@@ -381,7 +469,9 @@ ValidInput( const struct PreviewAudioStream *input, S32 error, U32 bytes )
 	frameBytes = input->Format.Channels * 2;
 
 	return ( ( ( ! error ) || ( error == AUDIO_ERR_SHORT_READ ) ) && ( frameBytes ) &&
-		( bytes ) && ( bytes <= input->Frames * frameBytes ) && ( bytes % frameBytes == 0 ) );
+		( ( bytes ) || ( ( error == AUDIO_ERR_SHORT_READ ) && ( input->Request->io_Offset ) &&
+			( input->Request->io_Command == AUDIO_CMD_READ_TIMED ) ) ) &&
+		( bytes <= input->Frames * frameBytes ) && ( bytes % frameBytes == 0 ) );
 }
 
 // --
@@ -443,6 +533,7 @@ PreviewAudio_Stop( struct PreviewAudio *audio )
 {
 	struct PreviewAudioStream *input;
 
+	U64 elapsed;
 	S32 error;
 	U32 bytes;
 
@@ -461,11 +552,36 @@ PreviewAudio_Stop( struct PreviewAudio *audio )
 
 		if ( ValidInput( input, error, bytes ) )
 		{
-			UpdateRecording( audio, input->Buffer, bytes );
+			if ( error == AUDIO_ERR_SHORT_READ )
+			{
+				audio->ShortReads++;
+			}
+
+			audio->CapturedFrames += bytes / ( input->Format.Channels * 2 );
+
+			if ( bytes )
+			{
+				UpdateRecording( audio, input->Buffer, bytes );
+			}
 		}
 	}
 
 	CloseAudioStream( input );
+
+	if ( ( audio->Trace ) && ( audio->Port ) )
+	{
+		elapsed = audio->Started ? VideoTest_UptimeUS( audio->Clock ) - audio->Started : 0;
+
+		DebugPrintF( "USB2VideoTest: audio input %lu Hz, output %lu Hz, %lu input buffers with USB packet loss, "
+			"%lu bytes of silence added, "
+			"%lu short output writes, %lu monitor underruns, %lu dropped monitor blocks\n",
+			audio->Input.Format.SampleRate, audio->Output.Format.SampleRate, audio->ShortReads, audio->PaddedBytes,
+			audio->ShortWriteTotal, audio->MonitorUnderruns, audio->MonitorDrops );
+
+		DebugPrintF( "USB2VideoTest: audio in %lu ms captured %lu frames, completed %lu output frames, "
+			"longest observed refill %lu us\n",
+			(U32) ( elapsed / 1000 ), (U32) audio->CapturedFrames, (U32) audio->PlayedFrames, (U32) audio->MonitorRefillUS );
+	}
 
 	if ( audio->ShortReads )
 	{
@@ -531,6 +647,7 @@ PreviewAudio_Start( struct PreviewAudio *audio, const struct PreviewAudioChoices
 
 	U32 bytes;
 	U32 outputBytes;
+	U64 minimumStep;
 	U32 input;
 	U32 output;
 	U32 rate;
@@ -564,6 +681,9 @@ PreviewAudio_Start( struct PreviewAudio *audio, const struct PreviewAudioChoices
 		audio->Input.Buffer = AllocVecTags( bytes, TAG_END );
 
 		audio->Input.Spare = AllocVecTags( bytes, TAG_END );
+
+		audio->TimedRead = monitor && LIB_IS_AT_LEAST( &audio->Input.Request->io_Device->dd_Library,
+			AUDIO_DEVICE_VERSION, AUDIO_TIMED_READ_REVISION );
 	}
 
 	if ( ( ! audio->Input.Buffer ) || ( ! audio->Input.Spare ) )
@@ -619,18 +739,34 @@ PreviewAudio_Start( struct PreviewAudio *audio, const struct PreviewAudioChoices
 
 		if ( sink->Request )
 		{
-			// Round up the buffer to cover the converted samples.
-			sink->Frames = ( (U64) audio->Input.Frames * sink->Format.SampleRate +
-				audio->Input.Format.SampleRate - 1 ) / audio->Input.Format.SampleRate;
+			OpenMonitorRequests( audio );
+
+			sink->Frames = audio->Input.Frames;
+
+			if ( ! sink->AHI )
+			{
+				minimumStep = (U64) audio->Input.Format.SampleRate *
+					( AUDIO_WAV_RATE_SCALE - PREVIEW_MONITOR_RATE_ADJUSTMENT );
+				sink->Frames = ( (U64) audio->Input.Frames * sink->Format.SampleRate * AUDIO_WAV_RATE_SCALE +
+					minimumStep - 1 ) / minimumStep;
+				sink->Frames = MAX( sink->Frames,
+					( (U64) sink->Format.SampleRate * PREVIEW_AUDIO_CHUNK_US + 999999 ) / 1000000 );
+			}
+
 			outputBytes = sink->Frames * sink->Format.Channels * 2;
 			audio->MonitorStride = outputBytes;
 
-			sink->Buffer = AllocVecTags( outputBytes * ( sink->AHI ? 1 : PREVIEW_USB_WRITE_BLOCKS ), TAG_END );
+			sink->Buffer = AllocVecTags( outputBytes * audio->WriteDepth, TAG_END );
 
 			audio->MonitorBuffer = AllocVecTags( outputBytes * PREVIEW_MONITOR_BUFFERS, TAG_END );
+
+			if ( audio->TimedRead )
+			{
+				audio->Silence = AllocVecTags( bytes, AVT_ClearWithValue, 0, TAG_END );
+			}
 		}
 
-		if ( ( ! sink->Buffer ) || ( ! audio->MonitorBuffer ) )
+		if ( ( ! sink->Buffer ) || ( ! audio->MonitorBuffer ) || ( ( audio->TimedRead ) && ( ! audio->Silence ) ) )
 		{
 			Printf( "Could not start the selected audio output.\n" );
 
@@ -639,10 +775,17 @@ PreviewAudio_Start( struct PreviewAudio *audio, const struct PreviewAudioChoices
 	}
 
 	audio->Record = path != NULL;
+	audio->TimedRead = audio->TimedRead && audio->Output.Request != NULL;
+	audio->MonitorVolume = audio->Volume;
 
 	if ( ( audio->Output.Request ) || ( audio->Record ) )
 	{
-		SendAudio( & audio->Input, CMD_READ, bytes );
+		if ( ( audio->Trace ) && ( audio->Clock ) )
+		{
+			audio->Started = VideoTest_UptimeUS( audio->Clock );
+		}
+
+		StartAudioInput( audio, bytes );
 	}
 	else
 	{
@@ -732,36 +875,82 @@ ReportAudioBandwidth( S32 error )
 // --
 
 static void
-ScaleMonitorSamples( U8 *data, U32 bytes, U32 volume, S32 ahi )
+ScaleMonitorSamples( struct PreviewAudio *audio, U8 *data, U32 bytes )
 {
 	U32 index;
+	U32 channel;
+	U32 frameBytes;
 	U32 high;
 	U32 low;
+	U32 ramp;
+	U32 remaining;
+	S32 gain;
+	S32 target;
+	S32 change;
 	S32 sample;
 	U16 value;
 
-	if ( volume >= 100 )
+	target = audio->Volume * 256;
+	change = target - (S32) audio->MonitorVolume * 256;
+	gain = target;
+	audio->MonitorVolume = audio->Volume;
+
+	if ( ( ! change ) && ( audio->Volume == 100 ) )
 	{
 		return;
 	}
 
+	frameBytes = audio->Output.Format.Channels * 2;
+	ramp = change ? MIN( bytes / frameBytes, MAX( 1U, audio->Output.Format.SampleRate / 200 ) ) : 0;
+	remaining = ramp;
+
 	// AHI uses native big-endian words. USB playback uses little-endian PCM.
-	high = ahi ? 0 : 1;
+	high = audio->Output.AHI ? 0 : 1;
 	low = 1 - high;
 
-	for ( index = 0; index + 1 < bytes; index += 2 )
+	for ( index = 0; index < bytes; index += frameBytes )
 	{
-		sample = ( data[index + high] << 8 ) | data[index + low];
-
-		if ( sample >= 32768 )
+		if ( remaining )
 		{
-			sample -= 65536;
+			remaining--;
+			gain = target - (S64) change * remaining / ramp;
 		}
 
-		value = (U16) ( sample * (S32) volume / 100 );
-		data[index + high] = value >> 8;
-		data[index + low] = value;
+		for ( channel = index; channel < index + frameBytes; channel += 2 )
+		{
+			sample = ( data[channel + high] << 8 ) | data[channel + low];
+
+			if ( sample >= 32768 )
+			{
+				sample -= 65536;
+			}
+
+			value = (U16) ( sample * gain / 25600 );
+			data[channel + high] = value >> 8;
+			data[channel + low] = value;
+		}
 	}
+}
+
+// --
+
+static void
+MonitorWriteSize( const struct PreviewAudio *audio, U32 blocks, U32 *bytes, U32 *phase )
+{
+	U64 samples;
+
+	if ( audio->Output.AHI )
+	{
+		*bytes = audio->MonitorCount ? audio->MonitorLengths[audio->MonitorRead] - audio->MonitorOffset : 0;
+		*phase = 0;
+
+		return;
+	}
+
+	// Match the USB packet cadence across resampled input blocks.
+	samples = (U64) audio->Output.Format.SampleRate * PREVIEW_AUDIO_CHUNK_US * blocks + audio->MonitorPhase;
+	*bytes = ( samples / 1000000U ) * audio->Output.Format.Channels * 2;
+	*phase = samples % 1000000U;
 }
 
 // --
@@ -769,40 +958,86 @@ ScaleMonitorSamples( U8 *data, U32 bytes, U32 volume, S32 ahi )
 static void
 PlayQueuedAudio( struct PreviewAudio *audio )
 {
-	struct PreviewAudioStream *output;
-
-	U32 slot;
+	U8 *buffer;
+	U32 write;
+	U32 read;
 	U32 bytes;
-	U32 blocks;
-	U32 total;
+	U32 copied;
+	U32 part;
+	U32 command;
+	U32 priming;
+	U32 phase;
+	U64 now;
 
-	output = & audio->Output;
+	priming = MAX( 2, audio->WriteDepth );
 
-	if ( ( output->Pending ) || ( ! audio->MonitorCount ) ||
-		( ( ! audio->MonitorPrimed ) && ( audio->MonitorCount < 2 ) ) )
+	if ( ( audio->WriteCount == audio->WriteDepth ) || ( ! audio->MonitorCount ) ||
+		( ( ! audio->MonitorPrimed ) && ( audio->MonitorCount < priming ) ) )
 	{
 		return;
 	}
 
-	audio->MonitorPrimed = TRUE;
-	total = 0;
-	blocks = output->AHI ? 1 : MIN( audio->MonitorCount, PREVIEW_USB_WRITE_BLOCKS );
-
-	while ( blocks-- )
+	if ( ( ! audio->MonitorPrimed ) && ( ! audio->Output.AHI ) && ( audio->WriteDepth > 1 ) )
 	{
-		slot = audio->MonitorRead;
-		bytes = audio->MonitorLengths[slot];
-		audio->MonitorRead = ( slot + 1 ) % PREVIEW_MONITOR_BUFFERS;
-		audio->MonitorCount--;
+		// The resampler can leave the first few input blocks a few samples short.
+		MonitorWriteSize( audio, audio->WriteDepth, &bytes, &phase );
 
-		CopyMem( audio->MonitorBuffer + slot * audio->MonitorStride, output->Buffer + total, bytes );
-
-		total += bytes;
+		if ( audio->MonitorBytes < bytes )
+		{
+			return;
+		}
 	}
 
-	ScaleMonitorSamples( output->Buffer, total, audio->Volume, output->AHI );
+	command = ( audio->WriteDepth > 1 ) ? AUDIO_CMD_QUEUE_WRITE : CMD_WRITE;
 
-	SendAudio( output, CMD_WRITE, total );
+	while ( ( audio->WriteCount < audio->WriteDepth ) && ( audio->MonitorCount ) )
+	{
+		MonitorWriteSize( audio, 1, &bytes, &phase );
+
+		if ( ( ! bytes ) || ( bytes > audio->MonitorBytes ) )
+		{
+			break;
+		}
+
+		write = ( audio->WriteHead + audio->WriteCount ) % audio->WriteDepth;
+		buffer = audio->Output.Buffer + write * audio->MonitorStride;
+		copied = 0;
+
+		while ( copied < bytes )
+		{
+			read = audio->MonitorRead;
+			part = MIN( bytes - copied, audio->MonitorLengths[read] - audio->MonitorOffset );
+
+			CopyMem( audio->MonitorBuffer + read * audio->MonitorStride + audio->MonitorOffset, buffer + copied, part );
+
+			copied += part;
+			audio->MonitorOffset += part;
+
+			if ( audio->MonitorOffset == audio->MonitorLengths[read] )
+			{
+				audio->MonitorOffset = 0;
+				audio->MonitorRead = ( read + 1 ) % PREVIEW_MONITOR_BUFFERS;
+				audio->MonitorCount--;
+			}
+		}
+
+		audio->MonitorBytes -= bytes;
+		audio->MonitorPhase = phase;
+		audio->MonitorPrimed = TRUE;
+
+		ScaleMonitorSamples( audio, buffer, bytes );
+
+		audio->WriteCount++;
+
+		SendAudioRequest( audio->Writes[write], buffer, command, bytes );
+
+		if ( audio->MonitorEmptySince )
+		{
+			now = VideoTest_UptimeUS( audio->Clock );
+			audio->MonitorRefillUS = MAX( audio->MonitorRefillUS, now - audio->MonitorEmptySince );
+			audio->MonitorEmptySince = 0;
+		}
+	}
 }
 
 // --
@@ -817,6 +1052,8 @@ QueueMonitorAudio( struct PreviewAudio *audio, U8 *input, U32 bytes )
 	U32 slot;
 	U32 index;
 	U32 frames;
+	S32 adjustment;
+	S32 queued;
 
 	output = & audio->Output;
 
@@ -828,8 +1065,11 @@ QueueMonitorAudio( struct PreviewAudio *audio, U8 *input, U32 bytes )
 	if ( audio->MonitorCount == PREVIEW_MONITOR_BUFFERS )
 	{
 		// Keep monitoring close to live if the output falls behind.
+		audio->MonitorBytes -= audio->MonitorLengths[audio->MonitorRead] - audio->MonitorOffset;
+		audio->MonitorOffset = 0;
 		audio->MonitorRead = ( audio->MonitorRead + 1 ) % PREVIEW_MONITOR_BUFFERS;
 		audio->MonitorCount--;
+		audio->MonitorDrops++;
 	}
 
 	slot = ( audio->MonitorRead + audio->MonitorCount ) % PREVIEW_MONITOR_BUFFERS;
@@ -839,9 +1079,28 @@ QueueMonitorAudio( struct PreviewAudio *audio, U8 *input, U32 bytes )
 	samples.Rate = audio->Input.Format.SampleRate;
 	samples.Channels = audio->Input.Format.Channels;
 	samples.Frames = bytes / ( samples.Channels * 2 );
+	adjustment = 0;
 
-	frames = Audio_Wav_ConvertBlock( & audio->MonitorResampler, & samples, buffer,
-		output->Format.SampleRate, output->Format.Channels );
+	if ( ( ! output->AHI ) && ( audio->MonitorPrimed ) )
+	{
+		// Correct small clock differences around one block of queued PCM.
+		queued = audio->MonitorBytes;
+		adjustment = ( queued - (S32) audio->MonitorStride ) *
+			PREVIEW_MONITOR_RATE_ADJUSTMENT / (S32) audio->MonitorStride;
+		adjustment = MIN( PREVIEW_MONITOR_RATE_ADJUSTMENT, MAX( -PREVIEW_MONITOR_RATE_ADJUSTMENT, adjustment ) );
+	}
+
+	if ( output->AHI )
+	{
+		frames = samples.Frames;
+
+		Audio_Wav_Convert( & samples, buffer, frames, output->Format.SampleRate, output->Format.Channels );
+	}
+	else
+	{
+		frames = Audio_Wav_ConvertBlock( & audio->MonitorResampler, & samples, buffer,
+			output->Format.SampleRate, output->Format.Channels, adjustment );
+	}
 
 	if ( ! frames )
 	{
@@ -864,6 +1123,7 @@ QueueMonitorAudio( struct PreviewAudio *audio, U8 *input, U32 bytes )
 	}
 
 	audio->MonitorLengths[slot] = bytes;
+	audio->MonitorBytes += bytes;
 	audio->MonitorCount++;
 }
 
@@ -872,32 +1132,65 @@ QueueMonitorAudio( struct PreviewAudio *audio, U8 *input, U32 bytes )
 static void
 FinishMonitorWrite( struct PreviewAudio *audio )
 {
-	struct PreviewAudioStream *output;
+	struct IOStdReq *request;
 
 	S32 error;
 	S32 partial;
 	U32 actual;
 	U32 wanted;
+	U32 nextBytes;
+	U32 phase;
 
-	output = & audio->Output;
+	request = audio->Writes[audio->WriteHead];
 
-	error = WaitIO( (PTR) output->Request );
+	error = WaitIO( (PTR) request );
 
-	output->Pending = FALSE;
-	actual = output->Request->io_Actual;
-	wanted = output->Request->io_Length;
-	partial = ( ! output->AHI ) && ( ( error == AUDIO_ERR_SHORT_WRITE ) ||
+	audio->WriteHead = ( audio->WriteHead + 1 ) % audio->WriteDepth;
+	audio->WriteCount--;
+	actual = request->io_Actual;
+	wanted = request->io_Length;
+	partial = ( ! audio->Output.AHI ) && ( ( error == AUDIO_ERR_SHORT_WRITE ) ||
 		( error == IOERR_BADLENGTH ) || ( ( ! error ) && ( actual != wanted ) ) );
+	audio->PlayedFrames += MIN( actual, wanted ) / ( audio->Output.Format.Channels * 2 );
 
 	if ( ( ! error ) && ( ! partial ) )
 	{
 		audio->ShortWrites = 0;
 
+		MonitorWriteSize( audio, 1, &nextBytes, &phase );
+
+		if ( ( audio->MonitorPrimed ) && ( ! audio->WriteCount ) )
+		{
+			audio->MonitorUnderruns++;
+
+			if ( audio->Clock )
+			{
+				audio->MonitorEmptySince = VideoTest_UptimeUS( audio->Clock );
+			}
+
+			if ( ( ( ! nextBytes ) || ( audio->MonitorBytes < nextBytes ) ) &&
+				( ( ! audio->Input.Pending ) || ( ! CheckIO( (PTR) audio->Input.Request ) ) ) )
+			{
+				audio->MonitorPrimed = FALSE;
+			}
+		}
+
 		return;
 	}
 
-	if ( ( partial ) && ( ++audio->ShortWrites < 3 ) )
+	if ( partial )
 	{
+		audio->ShortWriteTotal++;
+		audio->ShortWrites++;
+	}
+
+	if ( ( partial ) && ( audio->ShortWrites < 3 ) )
+	{
+		if ( ! audio->WriteCount )
+		{
+			audio->MonitorPrimed = FALSE;
+		}
+
 		if ( audio->ShortWrites == 1 )
 		{
 			Printf( "USB audio short write (error %ld, %lu of %lu bytes). Continuing monitoring.\n",
@@ -925,12 +1218,17 @@ PreviewAudio_Update( struct PreviewAudio *audio )
 	U8 *ready;
 	U32 bytes;
 	U32 wanted;
+	U32 gap;
+	U32 frameBytes;
+	U32 silenceFrames;
+	U32 frames;
+	U64 samples;
 	S32 error;
 
 	input = & audio->Input;
 	output = & audio->Output;
 
-	if ( ( output->Pending ) && ( CheckIO( (PTR) output->Request ) ) )
+	while ( ( audio->WriteCount ) && ( CheckIO( (PTR) audio->Writes[audio->WriteHead] ) ) )
 	{
 		FinishMonitorWrite( audio );
 	}
@@ -953,7 +1251,9 @@ PreviewAudio_Update( struct PreviewAudio *audio )
 
 	input->Pending = FALSE;
 	bytes = input->Request->io_Actual;
-	wanted = input->Frames * input->Format.Channels * 2;
+	frameBytes = input->Format.Channels * 2;
+	wanted = input->Frames * frameBytes;
+	gap = ( audio->TimedRead && ( error == AUDIO_ERR_SHORT_READ ) ) ? input->Request->io_Offset : 0;
 
 	if ( ! ValidInput( input, error, bytes ) )
 	{
@@ -976,11 +1276,46 @@ PreviewAudio_Update( struct PreviewAudio *audio )
 	input->Buffer = input->Spare;
 	input->Spare = ready;
 
-	SendAudio( input, CMD_READ, wanted );
+	StartAudioInput( audio, wanted );
 
-	UpdateRecording( audio, ready, bytes );
+	audio->CapturedFrames += bytes / frameBytes;
 
-	QueueMonitorAudio( audio, ready, bytes );
+	if ( bytes )
+	{
+		UpdateRecording( audio, ready, bytes );
+	}
+
+	if ( ( output->Request ) && ( ! gap ) && ( bytes < wanted ) )
+	{
+		memset( ready + bytes, 0, wanted - bytes );
+
+		audio->PaddedBytes += wanted - bytes;
+		bytes = wanted;
+	}
+
+	if ( bytes )
+	{
+		QueueMonitorAudio( audio, ready, bytes );
+	}
+
+	if ( ( output->Request ) && ( gap ) )
+	{
+		samples = (U64) gap * input->Format.SampleRate + audio->SilencePhase;
+		silenceFrames = samples / 1000000U;
+		audio->SilencePhase = samples % 1000000U;
+
+		while ( silenceFrames )
+		{
+			frames = MIN( silenceFrames, input->Frames );
+
+			PlayQueuedAudio( audio );
+
+			QueueMonitorAudio( audio, audio->Silence, frames * frameBytes );
+
+			audio->PaddedBytes += frames * frameBytes;
+			silenceFrames -= frames;
+		}
+	}
 
 	PlayQueuedAudio( audio );
 

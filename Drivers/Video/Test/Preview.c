@@ -62,6 +62,7 @@ struct DataTypesIFace * IDataTypes;
 #define PREVIEW_OUTPUT_RATE	  17
 #define PREVIEW_WIDTH		  640
 #define PREVIEW_HEIGHT		  480
+#define PREVIEW_BANDWIDTH_RETRIES 3
 
 enum SettingsClass
 {
@@ -524,12 +525,12 @@ RenderPreviewFrame ( struct Preview * preview, const struct VideoFormat * format
 // --
 
 static void
-StartPreviewTimer ( struct TimeRequest * timer, U32 seconds )
+StartPreviewTimer ( struct TimeRequest * timer, U32 milliseconds )
 {
 	timer->Request.io_Command = TR_ADDREQUEST;
 	timer->Request.io_Flags	  = 0;
-	timer->Time.Seconds	  = seconds;
-	timer->Time.Microseconds  = 0;
+	timer->Time.Seconds		  = milliseconds / 1000;
+	timer->Time.Microseconds  = ( milliseconds % 1000 ) * 1000;
 
 	SendIO ( &timer->Request );
 }
@@ -545,7 +546,7 @@ StartFrame ( struct IOStdReq * ioreq, struct TimeRequest * timer, U8 * frame, U3
 	ioreq->io_Data = frame;
 	ioreq->io_Length = size;
 
-	StartPreviewTimer ( timer, VIDEO_FRAME_TIMEOUT_SECONDS + 11 );
+	StartPreviewTimer ( timer, ( VIDEO_FRAME_TIMEOUT_SECONDS + 11 ) * 1000 );
 
 	submitted = clock ? VideoTest_UptimeUS ( clock ) : 0;
 
@@ -1913,7 +1914,7 @@ WaitForPreviewCamera ( struct Preview * preview, struct TimeRequest * timer, str
 
 	ShowPreviewTimings ( preview->Window, fields, 0, 0, 0, 0 );
 
-	StartPreviewTimer ( timer, 1 );
+	StartPreviewTimer ( timer, 1000 );
 }
 
 // --
@@ -1960,10 +1961,13 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 	U32	  failures;
 	U32	  audioMask;
 	U32	  selectedMode;
+	U32	  bandwidthRetries;
 	S32	  pending;
 	S32	  streaming;
 	S32	  canReconnect;
 	S32	  retrying;
+	S32	  bandwidthError;
+	S32	  retryBandwidth;
 	S32	  quit;
 	S32	  interrupted;
 	S32	  timedout;
@@ -1986,6 +1990,7 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 	mask		 = windowMask | SIGBREAKF_CTRL_C;
 	audio		 = (struct PreviewAudio){ 0 };
 	audio.Volume = preview->Volume;
+	audio.Trace = preview->Trace;
 	avi			 = (struct PreviewAvi){ 0 };
 	saveVideo	 = preview->Video && preview->RecordVideo;
 	saveAudio	 = preview->AudioCapture && preview->RecordAudio;
@@ -1999,6 +2004,8 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 	canReconnect = preview->Video && LIB_IS_AT_LEAST ( (struct Library *)ioreq->io_Device,
 		VIDEO_DEVICE_VERSION, VIDEO_RECONNECT_REVISION );
 	retrying = FALSE;
+	bandwidthRetries = 0;
+	bandwidthError = FALSE;
 	selectedMode = preview->Choices->ModeCount ? preview->Choices->Modes[preview->Choices->ActiveMode].Number : 0;
 
 	if ( ( preview->Video ) && ( ! PrepareFrameBuffers ( &frame, &spare, &capacity, format->MaxFrameSize ) ) )
@@ -2057,10 +2064,15 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 	layoutTime	 = 0;
 	drawTime	 = 0;
 
-	if ( preview->Video )
+	if ( ( preview->Video ) || ( preview->Trace && preview->AudioCapture ) )
 	{
 		clock = (PTR)GetInterface ( (PTR)timer->Request.io_Device, "main", 1, NULL );
 
+		audio.Clock = clock;
+	}
+
+	if ( preview->Video )
+	{
 		timing.Clock = clock;
 
 		mask |= ( 1UL << ioreq->io_Message.mn_ReplyPort->mp_SigBit )
@@ -2151,18 +2163,44 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 
 			if ( bufferError == USB2Err_Device_Detached )
 			{
-				StartPreviewTimer ( timer, 1 );
+				if ( ( canReconnect ) && ( ! preview->CameraLost ) )
+				{
+					WaitForPreviewCamera ( preview, timer, fields );
+				}
+				else if ( canReconnect )
+				{
+					StartPreviewTimer ( timer, 1000 );
+				}
 
-				retrying = TRUE;
+				preview->CameraLost = TRUE;
+				retrying = canReconnect;
 			}
 			else if ( bufferError )
 			{
+				if ( recordVideo )
+				{
+					videoResult = PreviewAvi_Close ( &avi, videoFile.Path, format );
+
+					recordVideo = FALSE;
+				}
+
 				SetWindowTitles ( window, "USB2VideoTest - Could not resume capture", (CONST_STRPTR)-1 );
 
 				Printf ( "Could not resume video capture (error %ld).\n", bufferError );
 			}
 			else
 			{
+				if ( ( recordVideo ) && ( avi.Frames ) &&
+					( ( restored.Format != format->Format ) || ( restored.Width != format->Width ) ||
+					  ( restored.Height != format->Height ) || ( restored.FrameInterval != format->FrameInterval ) ) )
+				{
+					videoResult = PreviewAvi_Close ( &avi, videoFile.Path, format );
+
+					recordVideo = FALSE;
+
+					Printf ( "AVI recording stopped because the resumed camera mode changed.\n" );
+				}
+
 				*format = restored;
 				preview->CameraLost = FALSE;
 				pending = TRUE;
@@ -2206,9 +2244,12 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 
 			if ( ( timedout ) || ( ioreq->io_Error ) )
 			{
-				Printf ( "Video USB %04lx:%04lx %s %lu x %lu, frame interval %lu.\n", format->VendorID, format->DeviceID,
-						 format->Format == VIDEO_FORMAT_MJPEG ? "MJPEG" : "YUY2", format->Width, format->Height,
-						 format->FrameInterval );
+				if ( ( timedout ) || ( ioreq->io_Error != USB2Err_Host_NoBandWidth ) )
+				{
+					Printf ( "Video USB %04lx:%04lx %s %lu x %lu, frame interval %lu.\n", format->VendorID, format->DeviceID,
+							 format->Format == VIDEO_FORMAT_MJPEG ? "MJPEG" : "YUY2", format->Width, format->Height,
+							 format->FrameInterval );
+				}
 
 				if ( ( timedout ) || ( ioreq->io_Error == VIDEO_ERR_FRAME_TIMEOUT ) )
 				{
@@ -2223,6 +2264,10 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 					SetWindowTitles ( window, "USB2VideoTest - Camera disconnected", (CONST_STRPTR)-1 );
 
 					Printf ( "The USB camera disconnected during capture.\n" );
+				}
+				else if ( ioreq->io_Error == USB2Err_Host_NoBandWidth )
+				{
+					bandwidthError = TRUE;
 				}
 				else
 				{
@@ -2241,6 +2286,7 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 			}
 			else
 			{
+				bandwidthRetries = 0;
 				size  = ioreq->io_Actual;
 				ready = frame;
 				frame = spare;
@@ -2384,6 +2430,12 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 
 			stopError = VideoTest_StopCapture ( ioreq, &usbBuffers );
 
+			if ( ( ! quit ) && ( canReconnect ) && ( stopError ) && ( stopError != USB2Err_Device_Detached ) &&
+				( VideoTest_QueryCamera ( ioreq, &restored ) == USB2Err_Device_Detached ) )
+			{
+				stopError = USB2Err_Device_Detached;
+			}
+
 			if ( preview->Trace )
 			{
 				VideoTest_ReportCaptureStats ( ioreq );
@@ -2398,7 +2450,20 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 				Printf ( "Could not stop the video stream (error %ld).\n", stopError );
 			}
 
-			if ( recordVideo )
+			retryBandwidth = ( ! quit ) && ( ! preview->CameraLost ) && ( ! stopError ) && ( bandwidthError ) &&
+				( bandwidthRetries < PREVIEW_BANDWIDTH_RETRIES );
+
+			if ( ( bandwidthError ) && ( ! retryBandwidth ) && ( ! preview->CameraLost ) )
+			{
+				SetWindowTitles ( window, "USB2VideoTest - Insufficient USB bandwidth", (CONST_STRPTR)-1 );
+
+				Printf ( "Could not schedule video alongside the active USB streams. "
+					"Try a lower camera mode or use another USB controller for audio output.\n" );
+			}
+
+			bandwidthError = FALSE;
+
+			if ( ( recordVideo ) && ( ! retryBandwidth ) )
 			{
 				videoResult = PreviewAvi_Close ( &avi, videoFile.Path, format );
 
@@ -2415,12 +2480,31 @@ RunPreview ( struct Preview * preview, Object * capture, struct IOStdReq * ioreq
 
 				retrying = TRUE;
 			}
+			else if ( retryBandwidth )
+			{
+				bandwidthRetries++;
+
+				ReleasePreviewPicture ( preview );
+
+				SetWindowTitles ( window, "USB2VideoTest - Retrying USB video bandwidth", (CONST_STRPTR)-1 );
+
+				ShowPreviewTimings ( window, fields, 0, 0, 0, 0 );
+
+				StartPreviewTimer ( timer, bandwidthRetries * 200 );
+
+				retrying = TRUE;
+			}
 		}
 	}
 
 	if ( retrying )
 	{
 		FinishRequest ( &timer->Request );
+	}
+
+	if ( recordVideo )
+	{
+		videoResult = PreviewAvi_Close ( &avi, videoFile.Path, format );
 	}
 
 	if ( preview->Trace )

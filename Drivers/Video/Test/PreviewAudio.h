@@ -6,7 +6,7 @@
 #include "../../Audio/Test/Wav.h"
 
 #define PREVIEW_AUDIO_CHOICES ( AUDIO_MAX_UNITS - AUDIO_PLAYBACK_UNIT_BASE + 1 )
-#define PREVIEW_MONITOR_BUFFERS 3
+#define PREVIEW_MONITOR_BUFFERS 4
 
 struct PreviewAudioRates
 {
@@ -45,26 +45,48 @@ struct PreviewAudioStream
 
 struct PreviewAudio
 {
+	struct TimerIFace *Clock;
 	struct MsgPort *Port;
 	struct PreviewAudioStream Input;
 	struct PreviewAudioStream Output;
+	struct IOStdReq *Writes[AUDIO_MAX_QUEUED_WRITES];
 	struct AudioWavResampler MonitorResampler;
 
 	BPTR File;
 	const char *Path;
 	U8 *MonitorBuffer;
+	U8 *Silence;
+	U64 Started;
+	U64 MonitorEmptySince;
+	U64 MonitorRefillUS;
+	U64 CapturedFrames;
+	U64 PlayedFrames;
 	U32 MonitorStride;
 	U32 MonitorLengths[PREVIEW_MONITOR_BUFFERS];
 	U32 MonitorRead;
 	U32 MonitorCount;
+	U32 MonitorOffset;
+	U32 MonitorBytes;
+	U32 MonitorPhase;
+	U32 SilencePhase;
+	U32 WriteDepth;
+	U32 WriteHead;
+	U32 WriteCount;
 	U32 ShortReads;
+	U32 PaddedBytes;
 	U32 ShortWrites;
+	U32 ShortWriteTotal;
+	U32 MonitorUnderruns;
+	U32 MonitorDrops;
 	U32 Written;
 	U32 Volume;
+	U32 MonitorVolume;
 	S32 Record;
 	S32 WriteFailed;
 	enum PreviewRecordingResult RecordingResult;
 	S32 MonitorPrimed;
+	S32 TimedRead;
+	S32 Trace;
 };
 
 void PreviewAudio_Find( struct PreviewAudioChoices *inputs, struct PreviewAudioChoices *outputs,

@@ -99,8 +99,17 @@ finalized recording separately and displays its path.
 
 Live video, recording and monitoring can share an EHCI controller when the
 streams fit within its [periodic schedule](EHCI.md).
-Monitoring buffers two audio blocks before playback starts. If a USB
-output write is short, monitoring can continue with the next block.
+The preview retries briefly when the controller cannot schedule a video
+transfer. If the retries fail, the window reports insufficient USB bandwidth
+and keeps the active audio session running.
+Monitoring buffers three audio blocks before playback starts on a USB audio
+device with a three-write queue. Other outputs buffer two blocks. Monitoring
+keeps playing queued writes after a short write and refills the buffer when
+the queue runs dry. USB playback carries leftover resampled samples into the
+next 32 ms write so block boundaries follow the USB packet cadence.
+Monitoring fills the unused part of a short input block with silence.
+`TRACE` reports USB input losses, short output writes,
+underruns, and dropped monitor blocks when the audio session ends.
 Recording continues if the monitoring output stops.
 
 Run `USB2VideoTest MODES` in a Shell to list unit 0's resolutions and frame

@@ -69,6 +69,11 @@ PreviewRecording_Stage( struct PreviewRecording *recording, const char *destinat
 	{
 		snprintf( name, sizeof( name ), "USB2Capture-%04lu", (unsigned long) index );
 
+		if ( ! strcasecmp( name, leaf ) )
+		{
+			continue;
+		}
+
 		strlcpy( recording->Drawer, full, sizeof( recording->Drawer ) );
 
 		if ( ! AddPart( recording->Drawer, name, sizeof( recording->Drawer ) ) )

@@ -324,7 +324,12 @@ U32 camera;
 	{
 		unit = FindFirstCamera( ioreq );
 
-		if ( unit < 0 )
+		if ( ( unit < 0 ) && ( ! options[0] ) && ( ! options[1] ) && ( ! setmode ) )
+		{
+			unit = 0;
+			setunit = FALSE;
+		}
+		else if ( unit < 0 )
 		{
 			Printf( "No first USB video unit is available.\n" );
 
@@ -355,6 +360,12 @@ U32 camera;
 			goto cleanup;
 		}
 
+		if ( ( setunit ) && ( ! options[3] ) && ( ! setmode ) &&
+			( ( ! cameras.Count ) || ( cameras.Units[cameras.Selected] != (U32) unit ) ) )
+		{
+			setunit = FALSE;
+		}
+
 		if ( ( ! setunit ) && ( cameras.Count ) )
 		{
 			unit = cameras.Units[cameras.Selected];
@@ -375,6 +386,14 @@ U32 camera;
 
 	if ( error )
 	{
+		if ( ( ! options[0] ) && ( ! options[1] ) && ( ! options[3] ) && ( ! setmode ) )
+		{
+			cameras = (struct PreviewCameras) { 0 };
+			format = (struct VideoFormat) { 0 };
+
+			goto open_timer;
+		}
+
 		Printf( "Could not open %s unit %lu (error %ld).\n", VIDEO_DEVICE_NAME, (U32) unit, error );
 		goto cleanup;
 	}

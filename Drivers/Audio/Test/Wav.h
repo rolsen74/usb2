@@ -2,6 +2,7 @@
 #define USB2_AUDIO_TEST_WAV_H
 
 #define AUDIO_WAV_MAX_HEADER_SIZE 68
+#define AUDIO_WAV_RATE_SCALE 1000U
 
 struct AudioWav
 {
@@ -25,6 +26,6 @@ U32 Audio_Wav_Header( U8 *header, U32 length, U32 rate, U32 channels );
 void Audio_Wav_Convert( const struct AudioWav *wav, U8 *output, U32 frames, U32 rate, U32 channels );
 
 U32 Audio_Wav_ConvertBlock( struct AudioWavResampler *state, const struct AudioWav *wav,
-	U8 *output, U32 rate, U32 channels );
+	U8 *output, U32 rate, U32 channels, S32 adjustment );
 
 #endif

@@ -333,8 +333,10 @@ Audio_Wav_Convert( const struct AudioWav *wav, U8 *output, U32 frames, U32 rate,
 // --
 U32
 Audio_Wav_ConvertBlock( struct AudioWavResampler *state, const struct AudioWav *wav,
-	U8 *output, U32 rate, U32 channels )
+	U8 *output, U32 rate, U32 channels, S32 adjustment )
 {
+	U64 interval;
+	U64 step;
 	S32 next[2];
 	S32 fraction;
 	S32 sample;
@@ -347,13 +349,8 @@ Audio_Wav_ConvertBlock( struct AudioWavResampler *state, const struct AudioWav *
 		return ( 0 );
 	}
 
-	if ( wav->Rate == rate )
-	{
-		Audio_Wav_Convert( wav, output, wav->Frames, rate, channels );
-
-		return ( wav->Frames );
-	}
-
+	interval = (U64) rate * AUDIO_WAV_RATE_SCALE;
+	step = (U64) wav->Rate * ( AUDIO_WAV_RATE_SCALE + adjustment );
 	written = 0;
 
 	for ( input = 0; input < wav->Frames; input++ )
@@ -365,10 +362,9 @@ Audio_Wav_ConvertBlock( struct AudioWavResampler *state, const struct AudioWav *
 
 		if ( state->Ready )
 		{
-			// Keep the next output position in units of 1/rate input intervals.
-			while ( state->Phase < rate )
+			while ( state->Phase < interval )
 			{
-				fraction = ( state->Phase * 32768 ) / rate;
+				fraction = ( state->Phase * 32768 ) / interval;
 
 				for ( channel = 0; channel < channels; channel++ )
 				{
@@ -380,11 +376,11 @@ Audio_Wav_ConvertBlock( struct AudioWavResampler *state, const struct AudioWav *
 					output += 2;
 				}
 
-				state->Phase += wav->Rate;
+				state->Phase += step;
 				written++;
 			}
 
-			state->Phase -= rate;
+			state->Phase -= interval;
 		}
 
 		for ( channel = 0; channel < channels; channel++ )
