@@ -292,7 +292,7 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 	ASYNC_INIT ( &usbbase->usb_HCDASync, NULL );
 
 	usbbase->usb_CPU_CacheSize = 32;
-	usbbase->usb_Exec_PageSize  = 4096;
+	usbbase->usb_Exec_PageSize = 4096;
 	usbbase->usb_CPU_Type	   = CPUTYPE_UNKNOWN;
 
 	IExpansion = usbbase->usb_IExpansion;
@@ -415,7 +415,7 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 
 	if ( ! HCD_CONTROLLERS_START () )
 	{
-		IExec->DebugPrintF ( "USB2: controller startup failed, releasing startup resources\n" );
+		IExec->DebugPrintF ( "USB : controller startup failed, releasing startup resources\n" );
 		goto bailout;
 	}
 
@@ -447,7 +447,7 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 
 	if ( ! MediaDevice_Create ( usbbase ) )
 	{
-		IExec->DebugPrintF ( "USB2: could not register USB audio and video devices\n" );
+		IExec->DebugPrintF ( "USB : could not register USB audio and video devices\n" );
 	}
 
 	SEMAPHORE_OBTAIN ( &usbbase->usb_FDriver_Semaphore );
@@ -461,7 +461,7 @@ ROMInit ( PTR Dummy UNUSED, PTR SegList, struct ExecBase * mySysBase )
 #ifdef DRV_MSD
 	if ( ! MSD_CreateDevice ( usbbase ) )
 	{
-		IExec->DebugPrintF ( "USB2: could not register usb2disk.device\n" );
+		IExec->DebugPrintF ( "USB : could not register usb2disk.device\n" );
 	}
 #endif
 

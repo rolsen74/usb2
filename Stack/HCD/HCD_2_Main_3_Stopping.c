@@ -13,9 +13,9 @@
 // --
 
 SEC_CODE static void
-__Stopping( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct intern *in )
+__Stopping ( struct USBBase * usbbase, struct USB2_HCDNode * hn, struct intern * in )
 {
-	struct RealRequest *ioreq;
+	struct RealRequest * ioreq;
 
 	U32 mask;
 	U32 wait;
@@ -27,30 +27,30 @@ __Stopping( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct intern *in 
 	wait |= hn->hn_TTClearPort.ump_Signal.sig_Signal_Mask;
 
 	stopped = FALSE;
-	warned = FALSE;
+	warned	= FALSE;
 
 	while ( TRUE )
 	{
-		__myHandle_Begin( usbbase, hn );
+		__myHandle_Begin ( usbbase, hn );
 
-		while ( ( ioreq = NODE_REMHEAD( & hn->hn_HUB_Interrupts ) ) )
+		while ( ( ioreq = NODE_REMHEAD ( &hn->hn_HUB_Interrupts ) ) )
 		{
 			ioreq->req_Public.io_Error = USB2Err_Device_Detached;
 
-			HCD_REPLY( ioreq );
+			HCD_REPLY ( ioreq );
 		}
 
 		if ( ! stopped )
 		{
-			stopped = HCD_StopDMA( hn );
+			stopped = HCD_StopDMA ( hn );
 
 			if ( stopped )
 			{
-				DrainStoppedTransfers( usbbase, hn, USB2Err_Device_Detached );
+				DrainStoppedTransfers ( usbbase, hn, USB2Err_Device_Detached );
 			}
 			else if ( ! warned )
 			{
-				usbbase->usb_IExec->DebugPrintF( "USB2: HCD %lu has not stopped DMA, retaining resources\n", hn->hn_HCDIndex );
+				usbbase->usb_IExec->DebugPrintF ( "USB : HCD %lu has not stopped DMA, retaining resources\n", hn->hn_HCDIndex );
 
 				warned = TRUE;
 			}
@@ -58,23 +58,23 @@ __Stopping( struct USBBase *usbbase, struct USB2_HCDNode *hn, struct intern *in 
 
 		if ( hn->hn_TTClearPending )
 		{
-			HCD_TT_Complete( hn );
+			HCD_TT_Complete ( hn );
 		}
 
-		if ( ( stopped ) && ( ! hn->hn_TTClearPending ) &&
-			( hn->hn_HUB_ASync.ua_Counter <= 0 ) && ( __Shutdown( usbbase, hn ) ) )
+		if ( ( stopped ) && ( ! hn->hn_TTClearPending ) && ( hn->hn_HUB_ASync.ua_Counter <= 0 )
+			 && ( __Shutdown ( usbbase, hn ) ) )
 		{
 			break;
 		}
 
-		mask = TASK_WAIT( wait );
+		mask = TASK_WAIT ( wait );
 
-		if ( ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask ) && ( MSGPORT_GETMSG( & in->Tick_MsgPort ) ) )
+		if ( ( mask & in->Tick_MsgPort.ump_Signal.sig_Signal_Mask ) && ( MSGPORT_GETMSG ( &in->Tick_MsgPort ) ) )
 		{
-			in->Tick_TimeRequest.Time.Seconds = 1;
+			in->Tick_TimeRequest.Time.Seconds	   = 1;
 			in->Tick_TimeRequest.Time.Microseconds = 0;
 
-			IO_SEND( & in->Tick_TimeRequest );
+			IO_SEND ( &in->Tick_TimeRequest );
 		}
 	}
 }

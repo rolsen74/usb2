@@ -201,7 +201,7 @@ USB2_PromoteWorker ( struct USBBase * usbbase, const struct USB2_WorkerHandoff *
 
 	if ( MISC_DOCOMMAND ( &start.Command ) != TASK_Return_Stack_Okay )
 	{
-		IExec->DebugPrintF ( "USB2: could not promote '%s'\n", worker->Node->tn_Name );
+		IExec->DebugPrintF ( "USB : could not promote '%s'\n", worker->Node->tn_Name );
 
 		return ( FALSE );
 	}

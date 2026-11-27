@@ -50,7 +50,7 @@ __EndPointRes_Release ( struct USBBase * usbbase, struct USB2_EPResource * epr )
 		}
 		else if ( ( real->epr_ReplyOwner ) && ( real->epr_ReplyOwner != TASK_FIND () ) )
 		{
-			usbbase->usb_IExec->DebugPrintF ( "USB2: release endpoint resource on its reply-port task\n" );
+			usbbase->usb_IExec->DebugPrintF ( "USB : release endpoint resource on its reply-port task\n" );
 
 			stat = FSTAT_Error;
 		}

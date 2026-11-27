@@ -18,54 +18,54 @@
 
 // --
 
-SEC_CODE static void __myFree( struct USBBase *usbbase, PTR userdata, PTR in_ptr )
+SEC_CODE static void
+__myFree ( struct USBBase * usbbase, PTR userdata, PTR in_ptr )
 {
-//struct USB2_DriverNode *dn;
-struct USB2_HCDNode *hn;
-struct intern *in;
+	// struct USB2_DriverNode *dn;
+	struct USB2_HCDNode * hn;
+	struct intern *		  in;
 
 	hn = userdata;
 	in = in_ptr;
 
-	USBDEBUG( "__myFree (HCD)           : Enter : HN    %p", hn );
-	TASK_NAME_ENTER( "HCD : __myFree" );
+	USBDEBUG ( "__myFree (HCD)           : Enter : HN    %p", hn );
+	TASK_NAME_ENTER ( "HCD : __myFree" );
 
 	// --
 
-	if ( HCD_VALID( hn ) != VSTAT_Okay )
+	if ( HCD_VALID ( hn ) != VSTAT_Okay )
 	{
-		USBDEBUG( "__myFree (HCD)           : Invalid HCD (%p)", hn );
+		USBDEBUG ( "__myFree (HCD)           : Invalid HCD (%p)", hn );
 		goto bailout;
 	}
 
 	// --
 
-	if ( ! HCD_StopDMA( hn ) )
+	if ( ! HCD_StopDMA ( hn ) )
 	{
-		usbbase->usb_IExec->DebugPrintF( "USB2: HCD %lu has not stopped DMA, retaining resources\n", hn->hn_HCDIndex );
+		usbbase->usb_IExec->DebugPrintF ( "USB : HCD %lu has not stopped DMA, retaining resources\n", hn->hn_HCDIndex );
 
 		do
 		{
-			HCD_WAIT_MS( hn, 1000 );
-		}
-		while ( ! HCD_StopDMA( hn ) );
+			HCD_WAIT_MS ( hn, 1000 );
+		} while ( ! HCD_StopDMA ( hn ) );
 	}
 
-	__Free_3_Rem_HUB( usbbase, hn, in );
+	__Free_3_Rem_HUB ( usbbase, hn, in );
 
-	__Free_3_Rem_Int( usbbase, hn, in );
+	__Free_3_Rem_Int ( usbbase, hn, in );
 
 	if ( hn->HCD_Functions.Chip_Deinit )
 	{
-		 hn->HCD_Functions.Chip_Deinit( hn );
+		hn->HCD_Functions.Chip_Deinit ( hn );
 	}
 
 	if ( hn->HCD_Functions.Chip_Dealloc )
 	{
-		 hn->HCD_Functions.Chip_Dealloc( hn );
+		hn->HCD_Functions.Chip_Dealloc ( hn );
 	}
 
-	__Free_3_Misc( usbbase, hn, in );
+	__Free_3_Misc ( usbbase, hn, in );
 
 	// --
 
@@ -73,9 +73,9 @@ bailout:
 
 	// -- Exit
 
-	USBDEBUG( "__myFree (HCD)           : Leave" );
+	USBDEBUG ( "__myFree (HCD)           : Leave" );
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
 	return;
 }

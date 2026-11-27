@@ -16,11 +16,11 @@ SEC_CODE S32
 XHCI_Chip_Stop ( struct USB2_HCDNode * hn )
 {
 	struct XHCI_State * state;
-	struct USBBase * usbbase;
+	struct USBBase *	usbbase;
 
 	U32 count;
 
-	state = hn->hn_HCD.XHCI.State;
+	state	= hn->hn_HCD.XHCI.State;
 	usbbase = hn->hn_USBBase;
 
 	if ( ! state )
@@ -37,10 +37,10 @@ XHCI_Chip_Stop ( struct USB2_HCDNode * hn )
 		{
 			if ( ( state->Iso_Empty_Ring ) || ( state->Iso_Missed_Service ) )
 			{
-				usbbase->usb_IExec->DebugPrintF ( "USB2: xHCI HCD %lu iso empty-ring %lu, missed service %lu\n",
-					hn->hn_HCDIndex, state->Iso_Empty_Ring, state->Iso_Missed_Service );
+				usbbase->usb_IExec->DebugPrintF ( "USB : xHCI HCD %lu iso empty-ring %lu, missed service %lu\n", hn->hn_HCDIndex,
+												  state->Iso_Empty_Ring, state->Iso_Missed_Service );
 
-				state->Iso_Empty_Ring = 0;
+				state->Iso_Empty_Ring	  = 0;
 				state->Iso_Missed_Service = 0;
 			}
 

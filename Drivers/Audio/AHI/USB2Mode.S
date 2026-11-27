@@ -6,7 +6,7 @@
 */
 
 #define AHI_DRIVER "usb2"
-#define AHI_MODE_NAME "USB2: 16-bit stereo playback"
+#define AHI_MODE_NAME "USB : 16-bit stereo playback"
 
 	.section .rodata
 	.ascii "FORM"

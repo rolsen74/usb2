@@ -18,7 +18,7 @@ SEC_CODE static S32
 OwnsReplyPorts ( struct USBBase * usbbase, struct RealRegister * reg )
 {
 	struct RealEndPointResource * epr;
-	struct Task * task;
+	struct Task *				  task;
 
 	task = TASK_FIND ();
 
@@ -170,7 +170,7 @@ __Register_Free ( struct USBBase * usbbase, struct RealRegister * reg )
 	}
 	else if ( ! OwnsReplyPorts ( usbbase, reg ) )
 	{
-		usbbase->usb_IExec->DebugPrintF ( "USB2: unregister on the task owning the registration and reply ports\n" );
+		usbbase->usb_IExec->DebugPrintF ( "USB : unregister on the task owning the registration and reply ports\n" );
 
 		fstat = FSTAT_Error;
 	}

@@ -49,30 +49,30 @@
 
 // --
 
-#define EHCI_SOC_USBMODE		( 0x1a8 - 0x100 )
-#define EHCI_USBMODE_MODE_MASK	3
-#define EHCI_USBMODE_IDLE	0
-#define EHCI_USBMODE_HOST	3
+#define EHCI_SOC_USBMODE	   ( 0x1a8 - 0x100 )
+#define EHCI_USBMODE_MODE_MASK 3
+#define EHCI_USBMODE_IDLE	   0
+#define EHCI_USBMODE_HOST	   3
 
 SEC_CODE static S32
-SetHostMode( struct USB2_HCDNode *hn )
+SetHostMode ( struct USB2_HCDNode * hn )
 {
-	struct USBBase *usbbase;
+	struct USBBase * usbbase;
 
 	U32 mode;
 
 	usbbase = hn->hn_USBBase;
 
-	PCI_WRITELONG( EHCI_SOC_USBMODE, EHCI_USBMODE_HOST );
+	PCI_WRITELONG ( EHCI_SOC_USBMODE, EHCI_USBMODE_HOST );
 
-	HCD_WAIT_MS( hn, 2 );
+	HCD_WAIT_MS ( hn, 2 );
 
-	mode = PCI_READLONG( EHCI_SOC_USBMODE );
+	mode = PCI_READLONG ( EHCI_SOC_USBMODE );
 
 	if ( ( mode & EHCI_USBMODE_MODE_MASK ) != EHCI_USBMODE_HOST )
 	{
-		usbbase->usb_IExec->DebugPrintF( "USB2: EHCI HCD %lu could not enter host mode, USBMODE $%08lx\n",
-			hn->hn_HCDIndex, mode );
+		usbbase->usb_IExec->DebugPrintF ( "USB : EHCI HCD %lu could not enter host mode, USBMODE $%08lx\n", hn->hn_HCDIndex,
+										  mode );
 
 		return ( FALSE );
 	}
@@ -82,52 +82,53 @@ SetHostMode( struct USB2_HCDNode *hn )
 
 // --
 
-SEC_CODE S32 EHCI_Chip_Reset( struct USB2_HCDNode *hn )
+SEC_CODE S32
+EHCI_Chip_Reset ( struct USB2_HCDNode * hn )
 {
-S32 retval;
-S32 uses_usbmode;
-U32 cnt;
-U32 val;
-U32 mode;
+	S32 retval;
+	S32 uses_usbmode;
+	U32 cnt;
+	U32 val;
+	U32 mode;
 
-	struct USBBase *usbbase = hn->hn_USBBase;
-	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Reset" );
+	struct USBBase * usbbase = hn->hn_USBBase;
+	TASK_NAME_ENTER ( "EHCI : EHCI_Chip_Reset" );
 
 	retval = FALSE;
-	uses_usbmode = ( hn->hn_HCDType == HCDTYPE_TABOR ) ||
-		( hn->hn_HCDType == HCDTYPE_P5020 ) || ( hn->hn_HCDType == HCDTYPE_P5040 );
+	uses_usbmode
+		= ( hn->hn_HCDType == HCDTYPE_TABOR ) || ( hn->hn_HCDType == HCDTYPE_P5020 ) || ( hn->hn_HCDType == HCDTYPE_P5040 );
 	mode = 0;
 
 	if ( uses_usbmode )
 	{
-		mode = PCI_READLONG( EHCI_SOC_USBMODE );
+		mode = PCI_READLONG ( EHCI_SOC_USBMODE );
 
 		// A previous reset can leave the controller idle, outside host mode.
 		if ( ( mode & EHCI_USBMODE_MODE_MASK ) == EHCI_USBMODE_IDLE )
 		{
-			if ( ! SetHostMode( hn ) )
+			if ( ! SetHostMode ( hn ) )
 			{
 				goto bailout;
 			}
 		}
 	}
 
-	USBDEBUG( "EHCI_Chip_Reset          : 1 : Reset Stop" );
+	USBDEBUG ( "EHCI_Chip_Reset          : 1 : Reset Stop" );
 
 	// --
-	// EHCI : Needs an explicit Stop/Halt before Reset 
+	// EHCI : Needs an explicit Stop/Halt before Reset
 	// (because the spec says you must halt before HCRESET)
 
-	if ( ! hn->HCD_Functions.Chip_Stop( hn ))
+	if ( ! hn->HCD_Functions.Chip_Stop ( hn ) )
 	{
-		usbbase->usb_IExec->DebugPrintF( "USB2: EHCI HCD %lu could not halt for reset, USBSTS $%08lx\n",
-			hn->hn_HCDIndex, PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) );
+		usbbase->usb_IExec->DebugPrintF ( "USB : EHCI HCD %lu could not halt for reset, USBSTS $%08lx\n", hn->hn_HCDIndex,
+										  PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_USBSTS ) );
 
 		if ( uses_usbmode )
 		{
-			usbbase->usb_IExec->DebugPrintF( "USB2: EHCI HCD %lu initial USBMODE $%08lx, current USBMODE $%08lx, USBCMD $%08lx\n",
-				hn->hn_HCDIndex, mode, PCI_READLONG( EHCI_SOC_USBMODE ),
-				PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD ) );
+			usbbase->usb_IExec->DebugPrintF (
+				"USB : EHCI HCD %lu initial USBMODE $%08lx, current USBMODE $%08lx, USBCMD $%08lx\n", hn->hn_HCDIndex, mode,
+				PCI_READLONG ( EHCI_SOC_USBMODE ), PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD ) );
 		}
 
 		goto bailout;
@@ -136,51 +137,51 @@ U32 mode;
 	// --
 	// Reset controller
 
-	USBDEBUG( "EHCI_Chip_Reset          : 2 : Reset Chip" );
+	USBDEBUG ( "EHCI_Chip_Reset          : 2 : Reset Chip" );
 
-	val = PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );
+	val = PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD );
 
 	val |= EHCI_CMD_HCRESET;
 
-	PCI_WRITELONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD, val );
+	PCI_WRITELONG ( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD, val );
 
 	// --
 	// Small settle delay
 
-	HCD_WAIT_MS( hn, 10 );	// Wait 10ms
+	HCD_WAIT_MS ( hn, 10 ); // Wait 10ms
 
-	// --
-	#define MAXMS	20		// max 5x20 = 100ms
+// --
+#define MAXMS 20 // max 5x20 = 100ms
 
-	for( cnt=0 ; cnt<MAXMS ; cnt++ )
+	for ( cnt = 0; cnt < MAXMS; cnt++ )
 	{
-		if ( ! ( PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD ) & EHCI_CMD_HCRESET ))
+		if ( ! ( PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD ) & EHCI_CMD_HCRESET ) )
 		{
 			break;
 		}
 		else
 		{
-			HCD_WAIT_MS( hn, 5 );	// Wait 5ms
+			HCD_WAIT_MS ( hn, 5 ); // Wait 5ms
 		}
 	}
 
 	if ( cnt == MAXMS )
 	{
-		usbbase->usb_IExec->DebugPrintF( "USB2: EHCI HCD %lu reset timed out, USBCMD $%08lx\n",
-			hn->hn_HCDIndex, PCI_READLONG( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD ) );
+		usbbase->usb_IExec->DebugPrintF ( "USB : EHCI HCD %lu reset timed out, USBCMD $%08lx\n", hn->hn_HCDIndex,
+										  PCI_READLONG ( hn->hn_HCD.EHCI.CapLength + EHCI_USBCMD ) );
 		goto bailout;
 	}
 
-	#undef MAXMS
+#undef MAXMS
 	// --
 
 	if ( uses_usbmode )
 	{
-		USBDEBUG( "EHCI_Chip_Reset          : 3 : Change Host Mode" );
+		USBDEBUG ( "EHCI_Chip_Reset          : 3 : Change Host Mode" );
 
-		HCD_WAIT_MS( hn, 10 );	// Wait 10ms
+		HCD_WAIT_MS ( hn, 10 ); // Wait 10ms
 
-		if ( ! SetHostMode( hn ) )
+		if ( ! SetHostMode ( hn ) )
 		{
 			goto bailout;
 		}
@@ -192,9 +193,9 @@ U32 mode;
 
 bailout:
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( retval );
+	return ( retval );
 }
 
 // --

@@ -51,29 +51,29 @@
 
 #define EHCI_PCI_LEGACY_CAP 1U
 #define EHCI_PCI_BIOS_OWNED 0x00010000U
-#define EHCI_PCI_OS_OWNED 0x01000000U
+#define EHCI_PCI_OS_OWNED	0x01000000U
 
 SEC_CODE static S32
-PCIHandoff( struct USB2_HCDNode *hn, U32 offset )
+PCIHandoff ( struct USB2_HCDNode * hn, U32 offset )
 {
-	struct PCIDevice *pcidev;
-	struct USBBase *usbbase;
+	struct PCIDevice * pcidev;
+	struct USBBase *   usbbase;
 
 	U32 capability;
 	U32 count;
 	U32 steps;
 
-	pcidev = hn->hn_PCIDevice;
+	pcidev	= hn->hn_PCIDevice;
 	usbbase = hn->hn_USBBase;
 
-	for ( steps = 0 ; ( offset ) && ( steps < 48 ) ; steps++ )
+	for ( steps = 0; ( offset ) && ( steps < 48 ); steps++ )
 	{
 		if ( ( offset < 0x40 ) || ( offset & 3 ) || ( offset > 0xfc ) )
 		{
 			break;
 		}
 
-		capability = pcidev->ReadConfigLong( offset );
+		capability = pcidev->ReadConfigLong ( offset );
 
 		if ( ( capability & 0xff ) == EHCI_PCI_LEGACY_CAP )
 		{
@@ -83,20 +83,20 @@ PCIHandoff( struct USB2_HCDNode *hn, U32 offset )
 			}
 
 			// The ownership semaphores occupy separate bytes.
-			pcidev->WriteConfigByte( offset + 3, 1 );
+			pcidev->WriteConfigByte ( offset + 3, 1 );
 
-			for ( count = 0 ; count < 100 ; count++ )
+			for ( count = 0; count < 100; count++ )
 			{
-				capability = pcidev->ReadConfigLong( offset );
+				capability = pcidev->ReadConfigLong ( offset );
 
 				if ( ( capability & ( EHCI_PCI_BIOS_OWNED | EHCI_PCI_OS_OWNED ) ) == EHCI_PCI_OS_OWNED )
 				{
-					pcidev->WriteConfigLong( offset + 4, 0 );
+					pcidev->WriteConfigLong ( offset + 4, 0 );
 
 					return ( TRUE );
 				}
 
-				HCD_WAIT_MS( hn, 10 );
+				HCD_WAIT_MS ( hn, 10 );
 			}
 
 			break;
@@ -107,7 +107,7 @@ PCIHandoff( struct USB2_HCDNode *hn, U32 offset )
 
 	if ( offset )
 	{
-		hn->hn_USBBase->usb_IExec->DebugPrintF( "USB2: EHCI HCD %lu PCI firmware handoff failed\n", hn->hn_HCDIndex );
+		hn->hn_USBBase->usb_IExec->DebugPrintF ( "USB : EHCI HCD %lu PCI firmware handoff failed\n", hn->hn_HCDIndex );
 
 		return ( FALSE );
 	}
@@ -117,46 +117,47 @@ PCIHandoff( struct USB2_HCDNode *hn, U32 offset )
 
 // --
 
-SEC_CODE S32 EHCI_Chip_Preinit( struct USB2_HCDNode *hn )
+SEC_CODE S32
+EHCI_Chip_Preinit ( struct USB2_HCDNode * hn )
 {
-//struct USBBase *usbbase;
-S32 retval;
-U32 val;
+	// struct USBBase *usbbase;
+	S32 retval;
+	U32 val;
 
-	#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
-	struct USBBase *usbbase = hn->hn_USBBase;
-	#endif
+#if defined( DO_PANIC ) || defined( DO_ERROR ) || defined( DO_DEBUG ) || defined( DO_INFO )
+	struct USBBase * usbbase = hn->hn_USBBase;
+#endif
 
-	TASK_NAME_ENTER( "EHCI : EHCI_Chip_Preinit" );
-//	usbbase = hn->hn_USBBase;
+	TASK_NAME_ENTER ( "EHCI : EHCI_Chip_Preinit" );
+	//	usbbase = hn->hn_USBBase;
 
 	retval = FALSE;
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Preinit        : 1 : Get CapLength" );
+	USBDEBUG ( "EHCI_Chip_Preinit        : 1 : Get CapLength" );
 
-	hn->hn_HCD.EHCI.CapLength = PCI_READBYTE( EHCI_CAPLENGTH );
+	hn->hn_HCD.EHCI.CapLength = PCI_READBYTE ( EHCI_CAPLENGTH );
 
 	// --
 
-	USBDEBUG( "EHCI_Chip_Preinit        : 2 : Get Number of Ports" );
+	USBDEBUG ( "EHCI_Chip_Preinit        : 2 : Get Number of Ports" );
 
-	val = PCI_READLONG( EHCI_HCSPARAMS );
+	val = PCI_READLONG ( EHCI_HCSPARAMS );
 
-	hn->hn_HUB_NumPorts = EHCI_HCS_N_PORTS( val );
+	hn->hn_HUB_NumPorts = EHCI_HCS_N_PORTS ( val );
 
 	if ( ! hn->hn_HUB_NumPorts )
 	{
-		USBDEBUG( "EHCI_Chip_Preinit        : HCD has no Ports connected" );
+		USBDEBUG ( "EHCI_Chip_Preinit        : HCD has no Ports connected" );
 		goto bailout;
 	}
 
 	if ( hn->hn_PCIDevice )
 	{
-		val = PCI_READLONG( EHCI_HCCPARAMS );
+		val = PCI_READLONG ( EHCI_HCCPARAMS );
 
-		if ( ! PCIHandoff( hn, ( val >> 8 ) & 0xff ) )
+		if ( ! PCIHandoff ( hn, ( val >> 8 ) & 0xff ) )
 		{
 			goto bailout;
 		}
@@ -166,9 +167,9 @@ U32 val;
 
 bailout:
 
-	TASK_NAME_LEAVE();
+	TASK_NAME_LEAVE ();
 
-	return( retval );
+	return ( retval );
 }
 
 // --

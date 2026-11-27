@@ -14,94 +14,94 @@
 // --
 
 SEC_CODE static S32
-__myProcess_ScanDriverDir( struct USBBase *usbbase )
+__myProcess_ScanDriverDir ( struct USBBase * usbbase )
 {
-	struct ExamineData *dat;
-	struct DOSIFace *IDOS;
+	struct ExamineData * dat;
+	struct DOSIFace *	 IDOS;
 
-	PTR context;
-	S32 oldlock;
-	S32 oldwindow;
-	S32 error;
-	STR operation;
+	PTR	 context;
+	S32	 oldlock;
+	S32	 oldwindow;
+	S32	 error;
+	STR	 operation;
 	char pattern[64];
 	BPTR lock;
 
 	IDOS = usbbase->usb_IDOS;
 
-	oldwindow = MISC_SETPROCWINDOW( -1 );
+	oldwindow = MISC_SETPROCWINDOW ( -1 );
 
 	operation = "lock";
 
-	lock = IDOS->Lock( DRIVERDIR, ACCESS_READ );
+	lock = IDOS->Lock ( DRIVERDIR, ACCESS_READ );
 
 	if ( ! lock )
 	{
-		error = IDOS->IoErr();
+		error = IDOS->IoErr ();
 
 		goto bailout;
 	}
 
-	oldlock = MISC_SETCURRENTDIR( lock );
+	oldlock = MISC_SETCURRENTDIR ( lock );
 
 	operation = "parse match pattern";
 
-	if ( IDOS->ParsePatternNoCase( "#?.class", pattern, sizeof( pattern ) ) == -1 )
+	if ( IDOS->ParsePatternNoCase ( "#?.class", pattern, sizeof ( pattern ) ) == -1 )
 	{
-		error = IDOS->IoErr();
+		error = IDOS->IoErr ();
 
 		goto restore;
 	}
 
 	operation = "open enumeration";
 
-	context = IDOS->ObtainDirContextTags( EX_LockInput, lock,
-		EX_MatchString, pattern, EX_DataFields, EXF_TYPE | EXF_NAME, TAG_END );
+	context = IDOS->ObtainDirContextTags ( EX_LockInput, lock, EX_MatchString, pattern, EX_DataFields, EXF_TYPE | EXF_NAME,
+										   TAG_END );
 
 	if ( ! context )
 	{
-		error = IDOS->IoErr();
+		error = IDOS->IoErr ();
 
 		goto restore;
 	}
 
 	operation = "enumerate";
 
-	while ( ( dat = IDOS->ExamineDir( context ) ) )
+	while ( ( dat = IDOS->ExamineDir ( context ) ) )
 	{
-		if ( EXD_IS_FILE( dat ) )
+		if ( EXD_IS_FILE ( dat ) )
 		{
-			FDRIVER_LOAD( dat->Name );
+			FDRIVER_LOAD ( dat->Name );
 		}
 	}
 
-	error = IDOS->IoErr();
+	error = IDOS->IoErr ();
 
-	IDOS->ReleaseDirContext( context );
+	IDOS->ReleaseDirContext ( context );
 
 	if ( error == ERROR_NO_MORE_ENTRIES )
 	{
 		usbbase->usb_DriverDirLock = lock;
-		operation = NULL;
+		operation				   = NULL;
 	}
 
 restore:
 
-	MISC_SETCURRENTDIR( oldlock );
+	MISC_SETCURRENTDIR ( oldlock );
 
 	if ( operation )
 	{
-		IDOS->UnLock( lock );
+		IDOS->UnLock ( lock );
 	}
 
 bailout:
 
-	MISC_SETPROCWINDOW( oldwindow );
+	MISC_SETPROCWINDOW ( oldwindow );
 
 	if ( operation )
 	{
-		usbbase->usb_IExec->DebugPrintF( "USB2: Could not %s driver directory %s (DOS error %ld)\n",
-			operation, DRIVERDIR, error );
+		usbbase->usb_IExec->DebugPrintF ( "USB : Could not %s driver directory %s (DOS error %ld)\n", operation, DRIVERDIR,
+										  error );
 	}
 
 	return ( ! operation );

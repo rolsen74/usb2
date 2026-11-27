@@ -41,7 +41,7 @@ __Task_Stop_TN ( struct USBBase * usbbase, struct USB2_TaskNode * tn )
 		tm->tm_Cmd.cm_Command = CMD_STOP_PROCESS;
 		tm->tm_Task			  = tn;
 
-		if ( USB2_Master_QueueCommand( usbbase, &tm->tm_Cmd ) )
+		if ( USB2_Master_QueueCommand ( usbbase, &tm->tm_Cmd ) )
 		{
 			return;
 		}
@@ -67,8 +67,8 @@ __Task_Stop_TN ( struct USBBase * usbbase, struct USB2_TaskNode * tn )
 
 	if ( task )
 	{
-		usbbase->usb_IExec->DebugPrintF ( "USB2: requested stop for '%s' without a tracking message\n",
-			tn->tn_Name[0] ? tn->tn_Name : "USB worker" );
+		usbbase->usb_IExec->DebugPrintF ( "USB : requested stop for '%s' without a tracking message\n",
+										  tn->tn_Name[0] ? tn->tn_Name : "USB worker" );
 	}
 
 	TASK_UNLOCK ( tn );

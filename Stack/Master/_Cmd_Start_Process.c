@@ -14,18 +14,18 @@
 
 struct WorkerState
 {
-	void ( *Free )( struct USBBase *usbbase, struct USB2_DriverNode *dn, PTR in );
-	struct USB2_TaskNode *Node;
-	struct USB2_HCDNode *HCD;
-	struct USB2_ASync *ASync;
-	struct USBBase *Base;
-	struct Task *Replacement;
-	PTR UserData;
-	PTR Intern;
-	STR OriginalName;
-	U32 StackSize;
-	U32 ResumeMask;
-	S32 PromotionAttempted;
+	void ( *Free ) ( struct USBBase * usbbase, struct USB2_DriverNode * dn, PTR in );
+	struct USB2_TaskNode * Node;
+	struct USB2_HCDNode *  HCD;
+	struct USB2_ASync *	   ASync;
+	struct USBBase *	   Base;
+	struct Task *		   Replacement;
+	PTR					   UserData;
+	PTR					   Intern;
+	STR					   OriginalName;
+	U32					   StackSize;
+	U32					   ResumeMask;
+	S32					   PromotionAttempted;
 #ifdef DO_DEBUG
 	U32 OriginalSignals;
 #endif
@@ -34,71 +34,71 @@ struct WorkerState
 // --
 
 SEC_CODE static void
-CmdStart_Finish( struct WorkerState *worker )
+CmdStart_Finish ( struct WorkerState * worker )
 {
-	struct USB2_TaskNode *tn;
-	struct USB2_HCDNode *hn;
-	struct ExecIFace *IExec;
-	struct USBBase *usbbase;
-	struct Task *self;
+	struct USB2_TaskNode * tn;
+	struct USB2_HCDNode *  hn;
+	struct ExecIFace *	   IExec;
+	struct USBBase *	   usbbase;
+	struct Task *		   self;
 
-	tn = worker->Node;
-	hn = worker->HCD;
+	tn		= worker->Node;
+	hn		= worker->HCD;
 	usbbase = worker->Base;
-	IExec = usbbase->usb_IExec;
+	IExec	= usbbase->usb_IExec;
 
-	self = TASK_FIND();
+	self = TASK_FIND ();
 
-	IExec->Disable();
+	IExec->Disable ();
 
-	tn->tn_State = TASK_State_Stopping;
+	tn->tn_State   = TASK_State_Stopping;
 	tn->tn_TaskAdr = NULL;
 
-	IExec->Enable();
+	IExec->Enable ();
 
 	if ( worker->Free )
 	{
-		worker->Free( usbbase, worker->UserData, worker->Intern );
+		worker->Free ( usbbase, worker->UserData, worker->Intern );
 	}
 
 #ifdef DO_DEBUG
-	if ( worker->OriginalSignals != TASK_SETSIGNAL( 0, 0 ) )
+	if ( worker->OriginalSignals != TASK_SETSIGNAL ( 0, 0 ) )
 	{
-		IExec->DebugPrintF( "USB2: changed pending signals at exit for '%s'\n", self->tc_Node.ln_Name );
+		IExec->DebugPrintF ( "USB : changed pending signals at exit for '%s'\n", self->tc_Node.ln_Name );
 	}
 #endif
 
 	if ( worker->Intern )
 	{
-		MEM_FREEVEC( worker->Intern );
+		MEM_FREEVEC ( worker->Intern );
 	}
 
 	self->tc_Node.ln_Name = worker->OriginalName;
-	self->tc_UserData = NULL;
+	self->tc_UserData	  = NULL;
 
 	if ( hn )
 	{
-		SEMAPHORE_OBTAIN( &usbbase->usb_LockSemaphore );
+		SEMAPHORE_OBTAIN ( &usbbase->usb_LockSemaphore );
 
-		hn->hn_Task = NULL;
+		hn->hn_Task	 = NULL;
 		tn->tn_Owner = NULL;
 
-		TASK_UNLOCK( tn );
+		TASK_UNLOCK ( tn );
 
-		SEMAPHORE_RELEASE( &usbbase->usb_LockSemaphore );
+		SEMAPHORE_RELEASE ( &usbbase->usb_LockSemaphore );
 	}
 
-	IExec->Disable();
+	IExec->Disable ();
 
-	ASYNC_SUB( worker->ASync );
+	ASYNC_SUB ( worker->ASync );
 
 	tn->tn_State = TASK_State_Stopped;
 
-	TASK_SIGNAL( tn->tn_Parent, tn->tn_Mask );
+	TASK_SIGNAL ( tn->tn_Parent, tn->tn_Mask );
 
-	TASK_SIGNAL( usbbase->usb_Master_Task.tn_TaskAdr, SIGBREAKF_CTRL_D );
+	TASK_SIGNAL ( usbbase->usb_Master_Task.tn_TaskAdr, SIGBREAKF_CTRL_D );
 
-	USBDEBUG( "CmdStart_Entry           :  2 : Leave" );
+	USBDEBUG ( "CmdStart_Entry           :  2 : Leave" );
 }
 
 // --
@@ -134,7 +134,7 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 
 	// Get Pointers, before msg is freed
 	usbbase = tm->tm_Cmd.cm_usbbase;
-	IExec = usbbase->usb_IExec;
+	IExec	= usbbase->usb_IExec;
 	USBDEBUG ( "CmdStart_Entry           :  1 : Enter" );
 
 	// Reset return Status
@@ -159,7 +159,7 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 
 	self	 = TASK_FIND ();
 	org_name = self->tc_Node.ln_Name;
-	process = self->tc_Node.ln_Type == NT_PROCESS;
+	process	 = self->tc_Node.ln_Type == NT_PROCESS;
 	if ( task_name )
 	{
 		name_len = sizeof ( "USB ' " ) - 1;
@@ -233,20 +233,20 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 	tn->tn_Parent  = tm->tm_Cmd.cm_Task;
 	tn->tn_Mask	   = tm->tm_Cmd.cm_Mask;
 
-	worker.Free = free;
-	worker.Node = tn;
-	worker.HCD = user_hn;
-	worker.ASync = as;
-	worker.Base = usbbase;
-	worker.Replacement = NULL;
-	worker.UserData = user_data;
-	worker.Intern = in;
-	worker.OriginalName = org_name;
-	worker.StackSize = tm->tm_StackSize;
-	worker.ResumeMask = 0;
+	worker.Free				  = free;
+	worker.Node				  = tn;
+	worker.HCD				  = user_hn;
+	worker.ASync			  = as;
+	worker.Base				  = usbbase;
+	worker.Replacement		  = NULL;
+	worker.UserData			  = user_data;
+	worker.Intern			  = in;
+	worker.OriginalName		  = org_name;
+	worker.StackSize		  = tm->tm_StackSize;
+	worker.ResumeMask		  = 0;
 	worker.PromotionAttempted = FALSE;
 #ifdef DO_DEBUG
-	worker.OriginalSignals = TASK_SETSIGNAL( 0, 0 );
+	worker.OriginalSignals = TASK_SETSIGNAL ( 0, 0 );
 #endif
 
 	// Alloc Intern Struct
@@ -305,7 +305,7 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 
 		if ( ( ! process ) && ( usbbase->usb_WorkerPromotionReady ) )
 		{
-			IExec->Signal( self, SIGBREAKF_CTRL_E );
+			IExec->Signal ( self, SIGBREAKF_CTRL_E );
 		}
 
 		if ( main )
@@ -328,15 +328,15 @@ CmdStart_Entry ( struct USB2_TaskMsg * tm )
 	{
 		// The replacement now owns the worker state and will run its cleanup.
 		self->tc_Node.ln_Name = org_name;
-		self->tc_UserData = NULL;
+		self->tc_UserData	  = NULL;
 
-		IExec->Signal( worker.Replacement, worker.ResumeMask );
+		IExec->Signal ( worker.Replacement, worker.ResumeMask );
 
 		return;
 	}
 
 bailout:
-	CmdStart_Finish( &worker );
+	CmdStart_Finish ( &worker );
 }
 
 // --
@@ -352,7 +352,7 @@ CmdStart_Process ( void )
 
 	self = IExec->FindTask ( NULL );
 
-	tm = (PTR)self->tc_UserData;
+	tm				  = (PTR)self->tc_UserData;
 	self->tc_UserData = NULL;
 
 	CmdStart_Entry ( tm );

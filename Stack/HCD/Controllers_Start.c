@@ -47,7 +47,7 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 	TASK_NAME_ENTER ( "HCD : __HCD_Controllers_Start" );
 
 	retval = FALSE;
-	IExec = usbbase->usb_IExec;
+	IExec  = usbbase->usb_IExec;
 
 	// -- Figure out what pri to run HCD at
 
@@ -88,17 +88,17 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 								TASK_Tag_Name, name, TAG_END );
 
 			//			usbbase->usb_IExec->DebugPrintF( "\n##\n## __HCD_Controllers_Start   :  1 : Stat $%08lx\n##\n\n", (U32)
-			//stat );
+			// stat );
 
 			if ( myIS_TASKRETURN_ERR ( stat ) )
 			{
-				IExec->DebugPrintF ( "USB2: HCD %lu %s worker startup failed ($%08lx)\n", hn->hn_HCDIndex, name, (U32)stat );
+				IExec->DebugPrintF ( "USB : HCD %lu %s worker startup failed ($%08lx)\n", hn->hn_HCDIndex, name, (U32)stat );
 				break;
 			}
 
 			if ( ( ! tn ) || ( TASK_VALID ( tn ) != VSTAT_Okay ) )
 			{
-				IExec->DebugPrintF ( "USB2: HCD %lu %s has no valid worker\n", hn->hn_HCDIndex, name );
+				IExec->DebugPrintF ( "USB : HCD %lu %s has no valid worker\n", hn->hn_HCDIndex, name );
 				break;
 			}
 
@@ -111,7 +111,7 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 			// well we may fall throu Main and exit.. just checking its still running
 			if ( ! running )
 			{
-				IExec->DebugPrintF ( "USB2: HCD %lu %s worker stopped during startup\n", hn->hn_HCDIndex, name );
+				IExec->DebugPrintF ( "USB : HCD %lu %s worker stopped during startup\n", hn->hn_HCDIndex, name );
 				break;
 			}
 
@@ -135,11 +135,11 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 			//			usbbase->usb_IExec->DebugPrintF( "Function Init : Stat %lx\n", stat );
 
 			//			usbbase->usb_IExec->DebugPrintF( "\n##\n## __HCD_Controllers_Start   : 2.1 : Stat %ld\n##\n\n", (S32)
-			//stat );
+			// stat );
 
 			if ( ! stat )
 			{
-				IExec->DebugPrintF ( "USB2: HCD %lu %s root hub initialization failed\n", hn->hn_HCDIndex, name );
+				IExec->DebugPrintF ( "USB : HCD %lu %s root hub initialization failed\n", hn->hn_HCDIndex, name );
 				break;
 			}
 
@@ -156,7 +156,7 @@ __HCD_Controllers_Start ( struct USBBase * usbbase )
 
 			if ( ! stat )
 			{
-				IExec->DebugPrintF ( "USB2: HCD %lu %s root hub binding failed\n", hn->hn_HCDIndex, name );
+				IExec->DebugPrintF ( "USB : HCD %lu %s root hub binding failed\n", hn->hn_HCDIndex, name );
 				break;
 			}
 
