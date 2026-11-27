@@ -15,7 +15,8 @@
 #define AUDIO_PACKET_COUNT 256
 #define AUDIO_BATCH_US 32000U
 #define AUDIO_WRITE_BATCH_US 16000U
-#define AUDIO_STREAM_REQUESTS 2
+#define AUDIO_USB_REQUESTS 3
+#define AUDIO_WRITE_REQUESTS AUDIO_MAX_QUEUED_WRITES
 #define AUDIO_XHCI_PACKET_COUNT 254U
 #define AUDIO_CLOCK_PROBE_LIMIT 4U
 #define AUDIO_READ_TIMEOUT ( 5U * 1000000U )
@@ -87,9 +88,9 @@ struct AudioUnit
 	struct IOStdReq *ReadActive;
 	const U8 *RateDescriptor;
 	const U8 *ParseNext;
-	struct AudioWrite Writes[AUDIO_STREAM_REQUESTS];
-	struct AudioWrite *WriteOwners[AUDIO_STREAM_REQUESTS];
-	struct AudioReadBatch Reads[AUDIO_STREAM_REQUESTS];
+	struct AudioWrite Writes[AUDIO_WRITE_REQUESTS];
+	struct AudioWrite *WriteOwners[AUDIO_USB_REQUESTS];
+	struct AudioReadBatch Reads[AUDIO_USB_REQUESTS];
 	struct AudioFormat Format;
 	struct AudioEndpoint Endpoint;
 	char PortID[AUDIO_ENDPOINT_ID_SIZE];
@@ -109,9 +110,9 @@ struct AudioUnit
 	U32 WriteSlot;
 	U32 EmptyBatches;
 	U32 EmptyFailedPackets;
-	U32 WriteBytes[AUDIO_STREAM_REQUESTS];
+	U32 WriteBytes[AUDIO_USB_REQUESTS];
 	U32 WritePhase;
-	U16 WritePacketLengths[AUDIO_STREAM_REQUESTS][AUDIO_PACKET_COUNT];
+	U16 WritePacketLengths[AUDIO_USB_REQUESTS][AUDIO_PACKET_COUNT];
 	U16 ClockKeys[AUDIO_CLOCK_PROBE_LIMIT];
 	U32 ClockRates[AUDIO_CLOCK_PROBE_LIMIT];
 	U32 ClockProbes;

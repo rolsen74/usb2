@@ -57,11 +57,15 @@ Audio_Read_Buffered( struct AudioUnit *unit )
 			batch->Offset += length;
 			batch->Bytes -= length;
 
-			if ( ( unit->DataUsed == read->io_Length ) && ( Audio_Read_Reply( unit, 0 ) == IOERR_ABORTED ) )
+			// Return the available PCM after a gap instead of pulling samples from the next batch.
+			if ( ( unit->DataUsed == read->io_Length ) || ( ( ! batch->Bytes ) && ( unit->ReadDiscontinuity ) ) )
 			{
-				Audio_Read_Stop( unit );
+				if ( Audio_Read_Reply( unit, 0 ) == IOERR_ABORTED )
+				{
+					Audio_Read_Stop( unit );
 
-				return;
+					return;
+				}
 			}
 		}
 		else
@@ -88,6 +92,18 @@ Audio_Read_Buffered( struct AudioUnit *unit )
 		{
 			unit->ReadHead = ( unit->ReadHead + 1 ) % unit->ReadSlots;
 			unit->ReadCount--;
+
+			if ( ( unit->ReadActive ) && ( read->io_Command == AUDIO_CMD_READ_TIMED ) && ( batch->Missed ) )
+			{
+				read->io_Offset = unit->PacketCount * unit->IntervalUS;
+
+				if ( Audio_Read_Reply( unit, 0 ) == IOERR_ABORTED )
+				{
+					Audio_Read_Stop( unit );
+				}
+
+				return;
+			}
 		}
 	}
 }
@@ -183,7 +199,13 @@ Audio_Read_Done( struct AudioUnit *unit )
 
 	while(( ioreq = (PTR) GetMsg( unit->Stream->MsgPort ) ))
 	{
-		slot = ( ioreq == unit->Stream->IORequests[0] ) ? 0 : 1;
+		slot = ioreq->io_UserValue;
+
+		if ( ( slot >= unit->ReadSlots ) || ( ioreq != unit->Stream->IORequests[slot] ) ||
+			( ! unit->Reads[slot].Pending ) )
+		{
+			continue;
+		}
 
 		Audio_Read_Complete( unit, ioreq, & unit->Reads[slot] );
 	}

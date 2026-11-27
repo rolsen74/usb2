@@ -54,7 +54,7 @@ Audio_Activate( struct AudioUnit *unit )
 		USB2Tag_EPRes_InterfaceNr, unit->InterfaceNr,
 		USB2Tag_EPRes_EndPointNr, unit->EndPoint,
 		USB2Tag_EPRes_BufferSize, unit->PacketBytes * unit->PacketCount,
-		USB2Tag_EPRes_NrOfIORequest, ( unit->EndPoint & EPADR_Dir_Mask ) ? unit->ReadSlots : AUDIO_STREAM_REQUESTS,
+		USB2Tag_EPRes_NrOfIORequest, ( unit->EndPoint & EPADR_Dir_Mask ) ? unit->ReadSlots : AUDIO_USB_REQUESTS,
 		USB2Tag_EPRes_AllowShortPackets, TRUE,
 		TAG_END
 	);

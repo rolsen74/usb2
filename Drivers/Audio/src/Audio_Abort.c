@@ -27,7 +27,7 @@ Audio_Abort( struct AudioUnit *unit )
 
 	for( index = 0; index < unit->WriteCount; index++ )
 	{
-		write = & unit->Writes[( unit->WriteHead + index ) % AUDIO_STREAM_REQUESTS];
+		write = & unit->Writes[( unit->WriteHead + index ) % AUDIO_WRITE_REQUESTS];
 
 		if ( write->Request->io_Flags & AUDIO_IO_ABORT )
 		{

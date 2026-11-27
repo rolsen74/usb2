@@ -143,7 +143,8 @@ Audio_Begin( struct AudioUnit *unit )
 		{
 			Audio_GainCommand( unit, ioreq );
 		}
-		else if ( ( unit->EndPoint & EPADR_Dir_Mask ) && ( ioreq->io_Command == CMD_READ ) )
+		else if ( ( unit->EndPoint & EPADR_Dir_Mask ) &&
+			( ( ioreq->io_Command == CMD_READ ) || ( ioreq->io_Command == AUDIO_CMD_READ_TIMED ) ) )
 		{
 			if ( ( unit->ReadActive ) || ( ! unit->RateValid ) )
 			{
@@ -164,9 +165,17 @@ Audio_Begin( struct AudioUnit *unit )
 				unit->ReadActive = ioreq;
 				unit->DataUsed = 0;
 				unit->ReadDiscontinuity = FALSE;
-				unit->EmptyBatches = 0;
-				unit->EmptyFailedPackets = 0;
 				unit->RatePending = FALSE;
+
+				if ( ioreq->io_Command == AUDIO_CMD_READ_TIMED )
+				{
+					ioreq->io_Offset = 0;
+				}
+				else
+				{
+					unit->EmptyBatches = 0;
+					unit->EmptyFailedPackets = 0;
+				}
 
 				Audio_Read_Buffered( unit );
 
@@ -178,7 +187,7 @@ Audio_Begin( struct AudioUnit *unit )
 		else if ( ( ! ( unit->EndPoint & EPADR_Dir_Mask ) ) &&
 			( ( ioreq->io_Command == CMD_WRITE ) || ( ioreq->io_Command == AUDIO_CMD_QUEUE_WRITE ) ) )
 		{
-			if ( ( ! unit->RateValid ) || ( unit->WriteCount == AUDIO_STREAM_REQUESTS ) ||
+			if ( ( ! unit->RateValid ) || ( unit->WriteCount == AUDIO_WRITE_REQUESTS ) ||
 				( ( unit->WriteCount ) && ( ioreq->io_Command == CMD_WRITE ) ) )
 			{
 				ioreq->io_Error = IOERR_UNITBUSY;
@@ -190,7 +199,7 @@ Audio_Begin( struct AudioUnit *unit )
 			}
 			else
 			{
-				index = ( unit->WriteHead + unit->WriteCount ) % AUDIO_STREAM_REQUESTS;
+				index = ( unit->WriteHead + unit->WriteCount ) % AUDIO_WRITE_REQUESTS;
 				write = & unit->Writes[index];
 				write->Request = ioreq;
 				write->Queued = 0;

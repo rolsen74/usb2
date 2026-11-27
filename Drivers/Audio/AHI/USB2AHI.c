@@ -22,7 +22,7 @@
 // --
 
 #define DRIVER_NAME "usb2.audio"
-#define DRIVER_ID DRIVER_NAME " 6.4 (25.11.2026)\r\n"
+#define DRIVER_ID DRIVER_NAME " 6.5 (27.11.2026)\r\n"
 #define WORKER_NAME "USB2 AHI playback"
 #define OUTPUT_NAME "USB audio"
 #define DEFAULT_RATE 48000
@@ -120,12 +120,10 @@ MixPlayback( struct Playback *play, U8 *pcm )
 // --
 
 static void
-Playback_Run( struct Playback *play, struct IOStdReq *next )
+Playback_Run( struct Playback *play, struct IOStdReq **requests, ULONG depth )
 {
-	struct IOStdReq *requests[2];
 	struct IOStdReq *io;
 
-	ULONG depth;
 	ULONG count;
 	ULONG head;
 	ULONG slot;
@@ -134,9 +132,6 @@ Playback_Run( struct Playback *play, struct IOStdReq *next )
 	ULONG bufferBytes;
 	BOOL sourceEnded;
 
-	requests[0] = play->Request;
-	requests[1] = next;
-	depth = next ? 2 : 1;
 	count = 0;
 	head = 0;
 	sourceEnded = FALSE;
@@ -160,7 +155,7 @@ Playback_Run( struct Playback *play, struct IOStdReq *next )
 				break;
 			}
 
-			io->io_Command = ( depth == 2 ) ? AUDIO_CMD_QUEUE_WRITE : CMD_WRITE;
+			io->io_Command = ( depth > 1 ) ? AUDIO_CMD_QUEUE_WRITE : CMD_WRITE;
 			io->io_Length = length;
 			count++;
 
@@ -203,9 +198,9 @@ Playback_Run( struct Playback *play, struct IOStdReq *next )
 		}
 	}
 
-	for( slot = 0; slot < count; slot++ )
+	for( slot = count; slot; slot-- )
 	{
-		io = requests[( head + slot ) % depth];
+		io = requests[( head + slot - 1 ) % depth];
 
 		if ( ! CheckIO( (APTR) io ) )
 		{
@@ -230,7 +225,11 @@ Playback_Entry( void )
 	struct Task *task;
 	struct Playback *play;
 	struct MsgPort *port;
+	struct IOStdReq *requests[AUDIO_MAX_QUEUED_WRITES];
 	struct IOStdReq *next;
+
+	ULONG depth;
+	ULONG index;
 
 	task = FindTask( NULL );
 	play = task->tc_UserData;
@@ -250,25 +249,29 @@ Playback_Entry( void )
 
 	if ( port )
 	{
-		next = NULL;
+		requests[0] = play->Request;
+		depth = 1;
 
-		if ( play->WriteDepth == 2 )
+		while ( depth < play->WriteDepth )
 		{
 			next = AllocSysObjectTags( ASOT_IOREQUEST, ASOIOR_Size, sizeof( *next ),
 				ASOIOR_ReplyPort, port, TAG_END );
 
-			if ( next )
+			if ( ! next )
 			{
-				next->io_Device = play->Request->io_Device;
-				next->io_Unit = play->Request->io_Unit;
+				break;
 			}
+
+			next->io_Device = play->Request->io_Device;
+			next->io_Unit = play->Request->io_Unit;
+			requests[depth++] = next;
 		}
 
-		Playback_Run( play, next );
+		Playback_Run( play, requests, depth );
 
-		if ( next )
+		for ( index = 1; index < depth; index++ )
 		{
-			FreeSysObject( ASOT_IOREQUEST, next );
+			FreeSysObject( ASOT_IOREQUEST, requests[index] );
 		}
 
 		play->Request->io_Message.mn_ReplyPort = play->CallerPort;
@@ -487,9 +490,7 @@ TryUSBPlayback( struct Playback *play, ULONG unit )
 		( play->Format.Encoding == AUDIO_ENCODING_PCM_S16LE ) &&
 		( ( play->Format.Channels == 1 ) || ( play->Format.Channels == 2 ) ) )
 	{
-		play->WriteDepth = ( io->io_Device->dd_Library.lib_Version > 1 ||
-			( ( io->io_Device->dd_Library.lib_Version == 1 ) &&
-			  ( io->io_Device->dd_Library.lib_Revision >= 1 ) ) ) ? 2 : 1;
+		play->WriteDepth = Audio_QueuedWriteDepth( &io->io_Device->dd_Library );
 
 		return ( TRUE );
 	}
@@ -813,7 +814,7 @@ Library_Init( struct AHIBase *base, BPTR seglist, struct ExecIFace *exec )
 	base->Library.lib_Node.ln_Name = DRIVER_NAME;
 	base->Library.lib_Flags = LIBF_SUMUSED | LIBF_CHANGED;
 	base->Library.lib_Version = 6;
-	base->Library.lib_Revision = 4;
+	base->Library.lib_Revision = 5;
 	base->Library.lib_IdString = DRIVER_ID;
 
 	return ( base );

@@ -20,8 +20,10 @@ Audio_Read_Start( struct AudioUnit *unit )
 	U32 slot;
 	U32 index;
 
-	while( ( ! unit->Detached ) && ( unit->ReadActive ) &&
-		( ! ( unit->ReadActive->io_Flags & AUDIO_IO_ABORT ) ) && ( unit->ReadCount < unit->ReadSlots ) )
+	// Keep an established pipeline fed while the app handles the last reply.
+	// Completed batches occupy their slots until the app takes the samples.
+	while( ( ! unit->Detached ) && ( ! unit->ResetStream ) && ( unit->ReadCount < unit->ReadSlots ) &&
+		( unit->ReadActive ? ( ! ( unit->ReadActive->io_Flags & AUDIO_IO_ABORT ) ) : ( unit->ReadCount != 0 ) ) )
 	{
 		slot = ( unit->ReadHead + unit->ReadCount ) % unit->ReadSlots;
 		batch = & unit->Reads[slot];
@@ -33,6 +35,7 @@ Audio_Read_Start( struct AudioUnit *unit )
 		ioreq->io_IsoPacketLengths = batch->PacketLengths;
 		ioreq->io_IsoPacketCount = unit->PacketCount;
 		ioreq->io_TimeOut = AUDIO_READ_TIMEOUT;
+		ioreq->io_UserValue = slot;
 
 		for( index = 0; index < unit->PacketCount; index++ )
 		{

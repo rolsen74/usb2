@@ -23,12 +23,19 @@
 #define AUDIO_CMD_SET_GAIN 0x8003
 // CHECK_RATE validates a native U32 rate in Hz without changing the stream.
 #define AUDIO_CMD_CHECK_RATE 0x8004
-// QUEUE_WRITE accepts a second write while the first is active.
+// QUEUE_WRITE can keep three writes outstanding from device revision 7.
 #define AUDIO_CMD_QUEUE_WRITE 0x8005
+#define AUDIO_THREE_WRITES_REVISION 7
+#define AUDIO_MAX_QUEUED_WRITES 3
 // Query-unit command. io_Offset is AUDIO_ENDPOINT_VERSION, and io_Data points
 // to a caller-owned array of AudioEndpoint records. io_Actual is the required
 // byte count. A short buffer returns IOERR_BADLENGTH without copying records.
 #define AUDIO_CMD_ENUM_ENDPOINTS 0x8006
+// Like CMD_READ. On AUDIO_ERR_SHORT_READ, io_Offset is the duration in
+// microseconds of a lost batch following the valid PCM, or zero when no
+// whole batch was lost. io_Actual may be zero when io_Offset is nonzero.
+#define AUDIO_CMD_READ_TIMED 0x8007
+#define AUDIO_TIMED_READ_REVISION 9
 #define AUDIO_ENDPOINT_VERSION 1
 #define AUDIO_UNIT_ENDPOINT 0xfffffffeUL
 #define AUDIO_UNIT_FIRST_OUTPUT 0xfffffffdUL

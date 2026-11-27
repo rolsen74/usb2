@@ -20,9 +20,9 @@ Audio_Read_Stop( struct AudioUnit *unit )
 	U32 slot;
 	U32 index;
 
-	for( index = 0; index < unit->ReadCount; index++ )
+	for( index = unit->ReadCount; index; index-- )
 	{
-		slot = ( unit->ReadHead + index ) % unit->ReadSlots;
+		slot = ( unit->ReadHead + index - 1 ) % unit->ReadSlots;
 
 		if ( unit->Reads[slot].Pending )
 		{
@@ -49,6 +49,8 @@ Audio_Read_Stop( struct AudioUnit *unit )
 
 	unit->ReadHead = 0;
 	unit->ReadCount = 0;
+	unit->EmptyBatches = 0;
+	unit->EmptyFailedPackets = 0;
 }
 
 // --

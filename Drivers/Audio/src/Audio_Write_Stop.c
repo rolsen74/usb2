@@ -18,9 +18,12 @@ Audio_Write_Stop( struct AudioUnit *unit, S8 error )
 	struct USB2_IORequest *ioreq;
 
 	U32 slot;
+	U32 index;
 
-	for( slot = 0; slot < AUDIO_STREAM_REQUESTS; slot++ )
+	for( index = AUDIO_USB_REQUESTS; index; index-- )
 	{
+		slot = ( unit->WriteSlot + index - 1 ) % AUDIO_USB_REQUESTS;
+
 		if ( unit->WriteOwners[slot] )
 		{
 			ioreq = unit->Stream->IORequests[slot];
@@ -32,7 +35,7 @@ Audio_Write_Stop( struct AudioUnit *unit, S8 error )
 		}
 	}
 
-	for( slot = 0; slot < AUDIO_STREAM_REQUESTS; slot++ )
+	for( slot = 0; slot < AUDIO_USB_REQUESTS; slot++ )
 	{
 		if ( unit->WriteOwners[slot] )
 		{

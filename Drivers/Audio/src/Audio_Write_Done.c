@@ -22,7 +22,13 @@ Audio_Write_Done( struct AudioUnit *unit )
 
 	while(( ioreq = (PTR) GetMsg( unit->Stream->MsgPort ) ))
 	{
-		slot = ( ioreq == unit->Stream->IORequests[0] ) ? 0 : 1;
+		slot = ioreq->io_UserValue;
+
+		if ( ( slot >= AUDIO_USB_REQUESTS ) || ( ioreq != unit->Stream->IORequests[slot] ) ||
+			( ! unit->WriteOwners[slot] ) )
+		{
+			continue;
+		}
 
 		Audio_Write_Account( unit, slot );
 

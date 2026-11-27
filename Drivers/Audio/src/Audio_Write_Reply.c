@@ -21,7 +21,7 @@ Audio_Write_Reply( struct AudioUnit *unit, S8 error )
 	write = & unit->Writes[unit->WriteHead];
 	request = write->Request;
 	request->io_Actual = write->Actual;
-	unit->WriteHead = ( unit->WriteHead + 1 ) % AUDIO_STREAM_REQUESTS;
+	unit->WriteHead = ( unit->WriteHead + 1 ) % AUDIO_WRITE_REQUESTS;
 	unit->WriteCount--;
 
 	ObtainSemaphore( & unit->Base->Semaphore );

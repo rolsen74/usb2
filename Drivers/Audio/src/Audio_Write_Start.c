@@ -35,7 +35,7 @@ Audio_Write_Start( struct AudioUnit *unit )
 
 	for( request = 0; request < unit->WriteCount; request++ )
 	{
-		write = & unit->Writes[( unit->WriteHead + request ) % AUDIO_STREAM_REQUESTS];
+		write = & unit->Writes[( unit->WriteHead + request ) % AUDIO_WRITE_REQUESTS];
 
 		if ( write->Request->io_Flags & AUDIO_IO_ABORT )
 		{
@@ -59,6 +59,7 @@ Audio_Write_Start( struct AudioUnit *unit )
 			ioreq->io_AllowShortPackets = FALSE;
 			ioreq->io_IsoPacketLengths = unit->WritePacketLengths[slot];
 			ioreq->io_TimeOut = AUDIO_READ_TIMEOUT;
+			ioreq->io_UserValue = slot;
 
 			for( index = 0; ( index < unit->PacketCount ) &&
 				( write->Queued < write->Request->io_Length ); index++ )
@@ -79,7 +80,7 @@ Audio_Write_Start( struct AudioUnit *unit )
 			ioreq->io_IsoPacketCount = index;
 			unit->WriteBytes[slot] = write->Queued - offset;
 			unit->WriteOwners[slot] = write;
-			unit->WriteSlot = ( slot + 1 ) % AUDIO_STREAM_REQUESTS;
+			unit->WriteSlot = ( slot + 1 ) % AUDIO_USB_REQUESTS;
 
 			SendIO( (PTR) ioreq );
 		}

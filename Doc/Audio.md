@@ -10,11 +10,15 @@ channels for monitoring.
 Capture units start at 0 and playback units
 start at 16. Use `AUDIO_CMD_QUERY` to get the selected format. `CMD_READ`
 and `CMD_WRITE` transfer interleaved little-endian PCM in whole sample frames.
-`AUDIO_CMD_QUEUE_WRITE` accepts up to two playback requests and replies in
+`AUDIO_CMD_QUEUE_WRITE` accepts up to three playback requests and replies in
 submission order. Aborting an active queued write stops the pending playback
 queue and returns the completed PCM byte count for each request.
-`AUDIO_ERR_SHORT_READ` reports lost USB intervals. `io_Actual` still counts
-valid PCM in the buffer, which may contain a discontinuity.
+Playback and EHCI/OHCI capture use up to three USB transfers. The third can
+wait in the host controller's queue while two are scheduled. Capture can
+refill a free slot between application reads while space remains in the ring.
+`AUDIO_ERR_SHORT_READ` reports lost USB intervals. The driver can return
+early after a batch with missing packets. `io_Actual` counts valid PCM in the
+buffer, which may contain a discontinuity.
 The driver selects the first usable alternate setting and checks the rate
 against its USB service interval and packet capacity. With no read or write
 active, `AUDIO_CMD_SET_RATE` takes a native `U32` rate in Hz supported by

@@ -458,9 +458,11 @@ U8 endpoints;
 	unit->EndPoint = endpoint;
 	unit->PacketBytes = packet;
 	unit->IntervalUS = interval;
+	// Give EHCI a full preview write of lead when linking a playback continuation.
 	unit->PacketCount = MAX( 1U, MIN( ( hcd == HCDTYPE_XHCI ) ? AUDIO_XHCI_PACKET_COUNT : AUDIO_PACKET_COUNT,
-		( ( endpoint & EPADR_Dir_Mask ) ? AUDIO_BATCH_US : AUDIO_WRITE_BATCH_US ) / interval ) );
-	unit->ReadSlots = ( ohci || ehci ) ? AUDIO_STREAM_REQUESTS : 1;
+		( ( ( endpoint & EPADR_Dir_Mask ) || ( ( ehci ) && ( speed == USBSPEED_Full ) ) ) ?
+			AUDIO_BATCH_US : AUDIO_WRITE_BATCH_US ) / interval ) );
+	unit->ReadSlots = ( ohci || ehci ) ? AUDIO_USB_REQUESTS : 1;
 	unit->SingleSplitRate = 0;
 	unit->GainEntity = 0;
 	unit->GainValid = FALSE;
