@@ -95,7 +95,7 @@ SEC_CODE struct EHCI_TD *EHCI_Get_TDBuffer( struct USB2_HCDNode *hn );
 
 SEC_CODE U32	EHCI_Interrupt_Cost( U32 endpoint, U32 schedule );
 SEC_CODE S32	EHCI_Split_Interrupt_FitsSlot( U32 endpoint, U32 start );
-SEC_CODE S32	EHCI_Periodic_Fits( struct USB2_HCDNode *hn, U32 frame, U32 mask, U32 cost, U32 hub, U32 split_start, S32 iso );
+SEC_CODE S32	EHCI_Periodic_Fits( struct USB2_HCDNode *hn, U32 frame, U32 mask, U32 cost, U32 hub, U32 split_start, S32 iso, S32 *split_overlap );
 SEC_CODE S32	EHCI_Slot_Find( struct USB2_HCDNode *hn, struct RealRequest *ioreq );
 SEC_CODE void	EHCI_Handler_HCD( struct USB2_HCDNode *hn, U32 mask );
 SEC_CODE U32	EHCI_Handler_Interrupt( struct ExceptionContext *Context, struct ExecBase *SysBase, PTR userData );

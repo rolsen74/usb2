@@ -71,7 +71,11 @@ EHCI_Slot_Find( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 	U32 cost;
 	U32 limit;
 	U32 index;
+	U32 slot;
+	U32 fallback_slot;
+	U32 fallback_schedule;
 	S32 split;
+	S32 overlap;
 
 	qh = ioreq->req_HCD.EHCI.QH_Header;
 	endpoint = LE_SWAP32( qh->qh_ep1 );
@@ -109,6 +113,9 @@ EHCI_Slot_Find( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 	cost = EHCI_Interrupt_Cost( endpoint, schedule );
 	limit = hn->hn_HCD.EHCI.IsoScheduled ? hn->hn_HCD.EHCI.FrameList_Size : ( 1U << ( EHCI_IPOLLRATES - 1 ) );
 
+	fallback_slot = 0;
+	fallback_schedule = 0;
+
 	for ( frame = 0 ; frame < frames ; frame++ )
 	{
 		for ( phase = 0 ; phase < phases ; phase++ )
@@ -116,6 +123,7 @@ EHCI_Slot_Find( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 			mask = 1U << phase;
 			complete = 0;
 			split_start = 0;
+			overlap = FALSE;
 
 			if ( split )
 			{
@@ -136,21 +144,43 @@ EHCI_Slot_Find( struct USB2_HCDNode *hn, struct RealRequest *ioreq )
 
 			for ( index = frame ; index < limit ; index += frames )
 			{
-				if ( ! EHCI_Periodic_Fits( hn, index, mask | complete, cost, hub, split_start, FALSE ) )
+				if ( ! EHCI_Periodic_Fits( hn, index, mask | complete, cost, hub, split_start, FALSE,
+					split ? &overlap : NULL ) )
 				{
 					break;
 				}
 			}
 
-			if ( index >= limit )
+			if ( index < limit )
 			{
-				ioreq->req_HCD.EHCI.Start_Slot = EHCI_IQHIDX( level + 1, EHCI_Reverse_Bits( frame, level ) );
+				continue;
+			}
 
+			slot = EHCI_IQHIDX( level + 1, EHCI_Reverse_Bits( frame, level ) );
+
+			if ( ! overlap )
+			{
+				ioreq->req_HCD.EHCI.Start_Slot = slot;
 				qh->qh_ep2 = LE_SWAP32( schedule | EHCI_QH_SET_SMASK( mask ) | EHCI_QH_SET_CMASK( complete ) );
 
 				return ( TRUE );
 			}
+
+			// Prefer separate split windows across TTs when the poll interval allows it.
+			if ( ! fallback_schedule )
+			{
+				fallback_slot = slot;
+				fallback_schedule = schedule | EHCI_QH_SET_SMASK( mask ) | EHCI_QH_SET_CMASK( complete );
+			}
 		}
+	}
+
+	if ( fallback_schedule )
+	{
+		ioreq->req_HCD.EHCI.Start_Slot = fallback_slot;
+		qh->qh_ep2 = LE_SWAP32( fallback_schedule );
+
+		return ( TRUE );
 	}
 
 	return ( FALSE );

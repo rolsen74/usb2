@@ -140,7 +140,7 @@ SchedulePackets ( struct USB2_HCDNode * hn, struct RealRequest * req, U32 count,
 				}
 			}
 
-			if ( ! EHCI_Periodic_Fits( hn, frame, mask, itd->Usecs, itd->Hub, 0, TRUE ) )
+			if ( ! EHCI_Periodic_Fits( hn, frame, mask, itd->Usecs, itd->Hub, 0, TRUE, NULL ) )
 			{
 				break;
 			}

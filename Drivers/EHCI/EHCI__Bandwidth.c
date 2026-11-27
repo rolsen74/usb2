@@ -154,7 +154,7 @@ AddBudget( U32 *usecs, U32 mask, U32 other, U32 cost )
 // --
 
 SEC_CODE S32
-EHCI_Periodic_Fits( struct USB2_HCDNode *hn, U32 frame, U32 mask, U32 cost, U32 hub, U32 split_start, S32 iso )
+EHCI_Periodic_Fits( struct USB2_HCDNode *hn, U32 frame, U32 mask, U32 cost, U32 hub, U32 split_start, S32 iso, S32 *split_overlap )
 {
 	struct EHCI_ITD *itd;
 	struct EHCI_QH *qh;
@@ -184,6 +184,11 @@ EHCI_Periodic_Fits( struct USB2_HCDNode *hn, U32 frame, U32 mask, U32 cost, U32 
 			other_start = EHCI_QH_GET_SMASK( schedule );
 			other = other_start | EHCI_QH_GET_CMASK( schedule );
 
+			if ( ( split_overlap ) && ( EHCI_QH_GET_EPS( endpoint ) != EHCI_QH_SPEED_HIGH ) && ( other & mask ) )
+			{
+				*split_overlap = TRUE;
+			}
+
 			if ( ( hub ) && ( EHCI_QH_GET_EPS( endpoint ) != EHCI_QH_SPEED_HIGH ) &&
 				( ( EHCI_QH_GET_HUBA( schedule ) ? EHCI_QH_GET_HUBA( schedule ) : EHCI_ROOT_TT ) == hub ) &&
 				( other & mask ) )
@@ -210,6 +215,11 @@ EHCI_Periodic_Fits( struct USB2_HCDNode *hn, U32 frame, U32 mask, U32 cost, U32 
 		if ( ( hub ) && ( itd->Hub == hub ) && ( ( iso ) || ( itd->Mask & mask ) ) )
 		{
 			return ( FALSE );
+		}
+
+		if ( ( split_overlap ) && ( itd->Hub ) && ( itd->Mask & mask ) )
+		{
+			*split_overlap = TRUE;
 		}
 
 		if ( ! AddBudget( usecs, mask, itd->Mask, itd->Usecs ) )

@@ -133,13 +133,14 @@ S32 err;
 			ioreq->req_Public.io_Error = err;
 			caps = LE_SWAP32( qh->qh_ep2 );
 
-			usbbase->usb_IExec->DebugPrintF( "[%s] EHCI interrupt halt: Addr %lu EP $%02lx TT hub %lu port %lu qTD $%08lx QH $%08lx error %ld\n",
+			usbbase->usb_IExec->DebugPrintF( "[%s] EHCI interrupt halt: Addr %lu EP $%02lx TT hub %lu port %lu "
+				"slot %lu S/C $%02lx/$%02lx qTD $%08lx QH $%08lx error %ld\n",
 				usbbase->usb_IExec->FindTask( NULL )->tc_Node.ln_Name,
 				(U32) ioreq->req_Function->fkt_Address,
 				ioreq->req_EndPoint->ep_Number |
 					( ioreq->req_Public.io_Command == CMD_READ ? EPADR_Dir_In : EPADR_Dir_Out ),
-				EHCI_QH_GET_HUBA( caps ), EHCI_QH_GET_PORT( caps ),
-				status, LE_SWAP32( qh->qh_status ), err );
+				EHCI_QH_GET_HUBA( caps ), EHCI_QH_GET_PORT( caps ), ioreq->req_HCD.EHCI.Start_Slot,
+				EHCI_QH_GET_SMASK( caps ), EHCI_QH_GET_CMASK( caps ), status, LE_SWAP32( qh->qh_status ), err );
 
 			break;
 		}
