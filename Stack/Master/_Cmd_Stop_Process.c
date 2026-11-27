@@ -58,9 +58,9 @@ __Cmd_Stop_Process ( struct USBBase * usbbase, struct intern * in, struct USB2_T
 SEC_CODE static void
 myHandle_Task_Timeout ( struct USBBase * usbbase, struct intern * in )
 {
-	struct USB2_TaskMsg * tm;
+	struct USB2_TaskMsg *  tm;
 	struct USB2_TaskNode * tn;
-	struct Message *	  msg;
+	struct Message *	   msg;
 
 	while ( TRUE )
 	{
@@ -71,9 +71,9 @@ myHandle_Task_Timeout ( struct USBBase * usbbase, struct intern * in )
 			break;
 		}
 
-		tm = (PTR)msg->mn_Node.ln_Name;
+		tm					  = (PTR)msg->mn_Node.ln_Name;
 		tm->tm_TimeReq_Active = FALSE;
-		tn = tm->tm_Task;
+		tn					  = tm->tm_Task;
 
 		if ( ( ! tn ) || ( tn->tn_State == TASK_State_Stopped ) )
 		{
@@ -84,13 +84,13 @@ myHandle_Task_Timeout ( struct USBBase * usbbase, struct intern * in )
 
 		if ( ! tm->tm_StopReported )
 		{
-			usbbase->usb_IExec->DebugPrintF ( "USB2: '%s' overdue after 30 seconds (task type %lu, state %lu)\n",
-				tn->tn_Name[0] ? tn->tn_Name : "USB worker", (U32)tn->tn_Type, (U32)tn->tn_State );
+			usbbase->usb_IExec->DebugPrintF ( "USB : '%s' overdue after 30 seconds (task type %lu, state %lu)\n",
+											  tn->tn_Name[0] ? tn->tn_Name : "USB worker", (U32)tn->tn_Type, (U32)tn->tn_State );
 
 			tm->tm_StopReported = TRUE;
 		}
 
-		tm->tm_TimeReq_Active = TRUE;
+		tm->tm_TimeReq_Active				 = TRUE;
 		tm->tm_TimeRequest.Time.Seconds		 = 5;
 		tm->tm_TimeRequest.Time.Microseconds = 0;
 		IO_SEND ( &tm->tm_TimeRequest );
